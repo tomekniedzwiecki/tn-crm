@@ -1340,6 +1340,21 @@
         // galeria artefaktów kroku — makiety desktop / mobile / reszta, każda grupa z osobną
         // nawigacją lightbox (Tomek chce wygodnie przeglądać makiety po powiększeniu).
         let lbGroupSeq = 0;
+        // doki fabryki (PRYWATNY bucket wf2-docs — koszty/marże w kartach): signed URL na klik.
+        // Okno otwierane synchronnie (user gesture) → location po otrzymaniu URL (popup-blocker).
+        async function openPrivateDoc(path) {
+            const w = window.open('', '_blank');
+            try {
+                const objPath = path.replace(/^wf2-docs\//, '');
+                const { data, error } = await supabaseClient.storage.from('wf2-docs').createSignedUrl(objPath, 3600);
+                if (error || !data?.signedUrl) throw error || new Error('brak signedUrl');
+                w.location = data.signedUrl;
+            } catch (e) {
+                if (w) w.close();
+                showToast('Nie udało się otworzyć dokumentu: ' + (e?.message || e), 'error');
+            }
+        }
+
         function artifactsGallery(list) {
             if (!list.length) return '';
             const KIND_ICON = { mockup:'ph-layout', makieta:'ph-layout', makieta_mobile:'ph-device-mobile', brand:'ph-palette', branding:'ph-palette', styl_master:'ph-paint-brush', proof:'ph-git-diff', dowod:'ph-git-diff', scena:'ph-image', gallery:'ph-images', ad_creative:'ph-megaphone', video:'ph-film-slate', doc:'ph-file-text', link:'ph-link', screenshot_final:'ph-monitor', gate_check:'ph-seal-check', landing_live:'ph-rocket-launch' };
@@ -1363,9 +1378,13 @@
                         <span class="art-label">${escapeHtml(a.label || a.kind)}</span></a>`;
                 }
                 const icon = KIND_ICON[a.kind] || 'ph-file';
-                const clickable = a.url && /^https?:/.test(a.url);
+                // doki fabryki w PRYWATNYM buckecie wf2-docs: url = 'wf2-docs/<slug>/<plik>' → signed URL on-click
+                const privDoc = a.url && /^wf2-docs\//.test(a.url);
+                const clickable = a.url && (/^https?:/.test(a.url) || privDoc);
                 // chipy (repo/desktop storage, dokumenty) — bez data-lb, poza nawigacją lightbox
-                return `<${clickable?'a':'div'} ${clickable?`href="${escapeHtml(a.url)}" target="_blank"`:''} class="art-tile flex items-center gap-2 p-2.5" style="aspect-ratio:auto">
+                const openAttr = privDoc ? `href="javascript:void(0)" onclick="openPrivateDoc('${escapeHtml(a.url)}')"`
+                    : (clickable ? `href="${escapeHtml(a.url)}" target="_blank"` : '');
+                return `<${clickable?'a':'div'} ${openAttr} class="art-tile flex items-center gap-2 p-2.5" style="aspect-ratio:auto">
                     <i class="ph ${icon} text-[#52a8ff]"></i><span class="text-[11px] text-zinc-300 truncate">${escapeHtml(a.label || a.kind)}</span>
                     ${!clickable ? `<span class="text-[9px] text-zinc-600 font-mono ml-auto">${escapeHtml(a.storage)}</span>` : ''}</${clickable?'a':'div'}>`;
             };

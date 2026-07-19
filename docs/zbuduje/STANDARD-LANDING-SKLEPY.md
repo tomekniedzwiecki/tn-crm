@@ -116,9 +116,9 @@ preview ma projekt — np. loczek/odpalak). Pełna tabela artefakt→krok+kind+f
 **Mapa faza → krok panelu** (scope=produkt; ceny/koszt/status/slug = KOLUMNY przez `product_meta`, NIE fields):
 - **wybór/kalkulacja** → `link_product(proj, tt, name, slug, sort, cover)` (dosiewa kroki `wf2_ensure_steps`)
   + `product_meta(pid, {price, cost_purchase, cost_shipping, fees_pct, margin_mode:'test', status:'w_budowie', slug, repo_path})`. `unit_profit` = kolumna GENERATED — NIE pisać.
-- **F0 dane/karta/paszport** → `lp_dane` · fields {source_ok, cena_pl, koszt_landed, marza, ocena, zdjecia_keep, wideo_keep, karta_url, paszport_url} · artefakty: `gallery` (kadry keep), `doc` KARTA-PRAWDY.md + PASZPORT.md (`storage='desktop'` → chip).
-- **F1 plan + F1.7 przewodnik** → `lp_plan` · fields {motyw, sekcje, tor_i_demo, plan_url, przewodnik_url} · artefakty: `doc` PLAN.md + PRZEWODNIK-GRAFICZNY.md (desktop).
-- **F2.5 branding + styl-master + tokeny** → `lp_styl_marka` · fields {marka_nazwa, slug, font, paleta, styl_master_url, tokens_url, brand_dir} · artefakty: `styl_master` + `branding` (favicon / wordmark / logo-combo z Storage) + `doc` TOKENS-MAKIETY.md (SSOT tokenów makiety, `storage='desktop'` → chip).
+- **F0 dane/karta/paszport** → `lp_dane` · fields {source_ok, cena_pl, koszt_landed, marza, ocena, zdjecia_keep, wideo_keep, karta_url, paszport_url} · artefakty: `gallery` (kadry keep), `doc` KARTA-PRAWDY.md + PASZPORT.md + GALERIA.md + WIDEO.md + LEDGER.md (**`panel-sync.py doc` → PRYWATNY bucket `wf2-docs/<slug>/` → KLIKALNY chip**; ⛔ `storage='desktop'` ZAKAZANE — patrz „📄 DOKI FABRYKI" niżej).
+- **F1 plan + F1.7 przewodnik** → `lp_plan` · fields {motyw, sekcje, tor_i_demo, plan_url, przewodnik_url} · artefakty: `doc` PLAN.md + PRZEWODNIK-GRAFICZNY.md (`panel-sync.py doc` → wf2-docs).
+- **F2.5 branding + styl-master + tokeny** → `lp_styl_marka` · fields {marka_nazwa, slug, font, paleta, styl_master_url, tokens_url, brand_dir} · artefakty: `styl_master` + `branding` (favicon / wordmark / logo-combo z Storage) + `doc` TOKENS-MAKIETY.md (SSOT tokenów makiety, `panel-sync.py doc` → wf2-docs).
 - **F2 makiety 🏁** → `lp_makiety` · fields {sekcje_count, makiety, tor_i, akcept} · REHOST każdej makiety do `bud-assets/<slug>/makiety/` (`storage_upload(..., max_width=1440, to_webp=True, quality=82)`) → `artifact_add` kind `makieta` (mobile → `makieta_mobile`), `meta={section:'03-problem', viewport:'desktop'|'mobile'}`.
 - **F3 grafiki** → `lp_grafiki` · fields {assets_dir, distinct_views, mapa_url, waga_first} · artefakty: `scena`/`image` (grafiki produkcyjne), `doc` MAPA-ASSETOW.md.
 - **F4 kod** → `lp_kod` · `product_meta(pid, {repo_path})` + fields {preview_url, video_count} · artefakt `link`/`screenshot_final` (podgląd).
@@ -130,8 +130,20 @@ preview ma projekt — np. loczek/odpalak). Pełna tabela artefakt→krok+kind+f
 `tn-sklepy/projekt.html` — panel merguje po dokładnym `t`; literówka/„ulepszenie" = sierota (najprościej:
 wyciągnąć `WS[step_key].check` skryptem z projekt.html). (2) **ceny/koszt/marża/status/slug = KOLUMNY**
 (`product_meta`, whitelista) — panel ich NIE czyta z `data.fields`. (3) **storage:** `supabase`/`external`
-+ rozszerzenie obrazu (lub kind graficzny: makieta/scena/branding/styl_master…) = MINIATURA; `repo`/`desktop`
-= chip (lokalne .md: url = ścieżka Desktop, nieklikalne). (4) **wiązanie** artefaktu z krokiem = `product_id` + `step_key`.
++ rozszerzenie obrazu (lub kind graficzny: makieta/scena/branding/styl_master…) = MINIATURA; `repo`
+= chip (tylko pliki realnie commitowane do repo). (4) **wiązanie** artefaktu z krokiem = `product_id` + `step_key`.
+
+**📄 DOKI FABRYKI = PRYWATNY BUCKET `wf2-docs`, NIGDY desktop-only (Tomek 19.07 — incydent masażer:
+KARTA-PRAWDY żyła tylko na Desktopie = martwy chip, niedostępna z innego miejsca).** KAŻDY dokument
+fazy (.md/.json: KARTA-PRAWDY / PASZPORT / GALERIA / WIDEO / PLAN / PRZEWODNIK-GRAFICZNY /
+TOKENS-MAKIETY / MAPA-ASSETOW / WIERNOSC / DOPASOWANIE / SEMANTYKA / RETRO / **LEDGER po każdej
+fazie, x-upsert nadpisuje**) idzie przez **`panel-sync.py doc <proj> <prod> <step> <plik> --slug <slug>`**
+(= upload do `wf2-docs/<slug>/<plik>` + artefakt `storage='supabase'`, url `wf2-docs/…` → panel robi
+signed URL na klik). Bucket jest PRYWATNY (RLS team_members; migracja `20260719e_wf2_docs_bucket`),
+bo karta/ledger niosą koszty zakupu i marże — ⛔ NIE wolno ich do publicznego `attachments`
+(klienci sklepów mogliby odkryć marżę). Desktop `FABRYKA-*/<slug>/` pozostaje KOPIĄ ROBOCZĄ
+(narzędzia czytają lokalnie), ale źródłem dostępnym zdalnie jest wf2-docs. `storage='desktop'`
+dla NOWYCH artefaktów = ZAKAZ.
 
 **§1a — FORMAT KARTY PRAWDY PRODUKTU (F0.6; zapis `FABRYKA-*/<slug>/KARTA-PRAWDY.md`).**
 Jeden blok markdown, sekcje: **0. Tożsamość** (klasa z title+categories — kategoria Ali
@@ -1104,6 +1116,16 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-19 (DOKI FABRYKI → PRYWATNY BUCKET wf2-docs; dyrektywa Tomka „to musi być dostępne
+  z każdego miejsca, nie tylko na moim dysku")**: KAŻDY dokument fazy (.md/.json) jest uploadowany
+  do PRYWATNEGO bucketa `wf2-docs/<slug>/` (migracja `20260719e_wf2_docs_bucket`; RLS team_members —
+  karta/ledger niosą koszty i marże, publiczny `attachments` ZAKAZANY dla doków) przez nową
+  subkomendę **`panel-sync.py doc`** (upload + artefakt w jednym; LEDGER re-upload po każdej fazie).
+  Panel (`projekt.html`): chip doka z url `wf2-docs/…` jest KLIKALNY — `openPrivateDoc()` robi
+  signed URL (1 h) z sesji team. `storage='desktop'` dla nowych artefaktów = ZAKAZ; Desktop
+  `FABRYKA-*/` zostaje kopią roboczą narzędzi. Backfill wykonany: drapek (9 doków) + masazer (5).
+  Szczegóły: §1-sync „📄 DOKI FABRYKI" + MOST-PANEL.md.
 
 - **2026-07-19 (PEŁNY ZESTAW ULEPSZEŃ DESIGNU MAKIET — decyzja Tomka „pełny zestaw"; synteza
   3 analiz: audyt procesu + research desktop + research mobile)**: NOWY SSOT

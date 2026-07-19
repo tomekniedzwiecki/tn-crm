@@ -73,11 +73,15 @@ i `import panel_sync as ps`. Każda funkcja loguje `insert/update/skip + id`.
     makieta_mobile, scena, dowod, proof, ad_creative, screenshot_final, styl_master, gallery,
     branding, brand} )`.
   - `isImg` → **miniatura** (render API `…/render/image/public/…?width=360&resize=contain`; działa też
-    na WebP), klik = lightbox. Inaczej → **chip** z ikoną (klikalny gdy url `http(s)`, w innym razie
+    na WebP), klik = lightbox. Inaczej → **chip** z ikoną (klikalny gdy url `http(s)` LUB url
+    `wf2-docs/…` — wtedy `openPrivateDoc()` robi signed URL 1 h z sesji team; w innym razie
     pokazuje badge `storage`).
 - **Wniosek:** makiety/branding/sceny/dowody → `storage='supabase'` + URL Storage = miniatury.
-  Lokalne `.md` (KARTA/PASZPORT/PLAN/PRZEWODNIK/MAPA) → `storage='desktop'`, `url` = ścieżka Desktop
-  = chip (nieklikalny). Repo (kod) → `storage='repo'` = chip.
+  **DOKI (.md/.json) → `panel-sync.py doc` = upload do PRYWATNEGO `wf2-docs/<slug>/` + artefakt
+  `storage='supabase'` z url `wf2-docs/…` = KLIKALNY chip** (Tomek 19.07: „dostępne z każdego
+  miejsca"; bucket prywatny, bo karta/ledger niosą koszty i marże — publiczny `attachments`
+  ZAKAZANY dla doków; migracja `20260719e_wf2_docs_bucket`). ⛔ `storage='desktop'` dla nowych
+  artefaktów = ZAKAZ (martwy chip). Repo (kod) → `storage='repo'` = chip.
 
 ## 🗺️ KATALOG MAPOWAŃ (artefakt/etap fabryki → krok panelu + kind + fields) — EGZEKWOWANY
 **To jest tabela prawdy mostu.** Każdy etap/artefakt fabryki ma DOKŁADNIE JEDNO miejsce w panelu.
@@ -88,15 +92,15 @@ Egzekwuje `gate-check.py` blok `panel_sync` (severity FAIL) — kolumna „Gate"
 |---|---|---|---|---|
 | wybór/kalkulacja produktu | *(wiersz produktu)* | — | KOLUMNY `price, cost_purchase, cost_shipping, fees_pct, margin_mode, status, slug, repo_path` | `karta_kolumny_wymagane` |
 | F0 kadry keep (galeria ref) | `lp_dane` | `gallery` | `{source_ok, cena_pl, koszt_landed, marza, ocena, zdjecia_keep, wideo_keep}` | `kroki_done[lp_dane]` |
-| F0 KARTA-PRAWDY.md / PASZPORT.md | `lp_dane` | `doc` (storage=desktop→chip) | `{karta_url, paszport_url}` | `kroki_done[lp_dane]` |
-| F1 PLAN.md / PRZEWODNIK-GRAFICZNY.md | `lp_plan` | `doc` (desktop) | `{motyw, sekcje, tor_i_demo, plan_url, przewodnik_url}` | `kroki_done[lp_plan]` |
+| F0 KARTA-PRAWDY.md / PASZPORT.md / GALERIA.md / WIDEO.md / LEDGER.md | `lp_dane` | `doc` (**`panel-sync doc` → wf2-docs, klikalny chip**) | `{karta_url, paszport_url}` (url = `wf2-docs/<slug>/…`) | `kroki_done[lp_dane]` |
+| F1 PLAN.md / PRZEWODNIK-GRAFICZNY.md | `lp_plan` | `doc` (wf2-docs) | `{motyw, sekcje, tor_i_demo, plan_url, przewodnik_url}` | `kroki_done[lp_plan]` |
 | F2.5 styl-master | `lp_styl_marka` | `styl_master` | `{marka_nazwa, slug, font, paleta, styl_master_url, brand_dir}` | `kroki_done[lp_styl_marka]` |
 | F2.5 favicon / wordmark / logo-combo | `lp_styl_marka` | `branding` | *(j.w.)* | `kroki_done[lp_styl_marka]` |
 | F2 makiety desktop | `lp_makiety` | `makieta` | `meta{section, viewport:'desktop'}` · `{sekcje_count, akcept}` | `artefakty_liczba[makiety desktop]` (stem, tol 2) |
 | **F2 makiety mobile** *(nowe 18.07)* | `lp_makiety` | **`makieta_mobile`** | `meta{viewport:'mobile'}` | `artefakty_liczba[makiety mobile]` (stem, tol 2) |
 | F3 sceny produkcyjne (full-bleed) | `lp_grafiki` | `scena` / `image` | `{assets_dir, distinct_views, waga_first}` | `artefakty_liczba[grafiki produktowe]` (stem, tol 2) |
 | **F3 galeria HIGH (`g*-hq`)** *(nowe 18.07)* | `lp_grafiki` | `gallery` / `image` | *(j.w.)* | `artefakty_liczba[grafiki produktowe]` (stem, tol 2) |
-| F3 MAPA-ASSETOW.md | `lp_grafiki` | `doc` (desktop) | `{mapa_url}` | `kroki_done[lp_grafiki]` |
+| F3 MAPA-ASSETOW.md | `lp_grafiki` | `doc` (wf2-docs) | `{mapa_url}` | `kroki_done[lp_grafiki]` |
 | **F3A WIERNOSC.md** *(nowe 18.07)* | `lp_grafiki` | **`doc`** (token `wiernosc`) | — | **`doc_wymagane[WIERNOSC.md]`** |
 | F4 kod (index.html) | `lp_kod` | `link` / `screenshot_final` | `{preview_url, repo_path, video_count, moduly_uzyte}` | `kroki_done[lp_kod]` |
 | **F4 footer (`footer@1`)** *(nowe 18.07)* | `lp_kod` | *(fields)* | `moduly_uzyte` zawiera `footer@1` | **`kod_wzmianki[footer]`** (FAIL) |
@@ -121,7 +125,8 @@ Progi tolerancji i severity są DANE w manifeście (tuning tam, nie w kodzie che
    `WS[step_key].check` skryptem z projekt.html (parser stringów w `[]` respektujący cudzysłowy).
 2. **Ceny w KOLUMNACH, nie w fields.** `product_meta(...)`, nie `step_update(fields=...)`.
 3. **`unit_profit` GENERATED** — nie pisać (400/„cannot insert into generated column").
-4. **Storage rozróżnia miniaturę** — `repo`/`desktop` NIGDY nie dają miniatury (celowo, dla lokaliów).
+4. **Storage rozróżnia miniaturę** — `repo`/`desktop` NIGDY nie dają miniatury; **doki = ZAWSZE
+   `panel-sync doc` (wf2-docs, klikalny chip), `storage='desktop'` dla nowych artefaktów ZAKAZANY**.
 5. **Wiązanie** = `product_id` + `step_key`. Zły `step_key` = artefakt „w kosmosie".
 6. **Duży PNG** (makieta ~2 MB) → `storage_upload(max_width=1440, to_webp=True, quality=82)` (~40–160 KB).
 7. **Projekt vs produkt scope**: kroki `lp_*/pl_*/ads_*` są per-produkt (`product` ≠ None); statusy
@@ -141,7 +146,7 @@ ps.step_update(PROJ, pid, "lp_dane", status="done",
             "ocena":"★4,7 / 182 / 94,3%","zdjecia_keep":4,"wideo_keep":5},
     checklist=[{"t":t,"done":True} for t in WS_lp_dane_check])   # ← VERBATIM z projekt.html
 ps.artifact_add(PROJ, pid, "lp_dane", "gallery", cover, label="Referencja produktu 1")
-ps.artifact_add(PROJ, pid, "lp_dane", "doc", r"…\drapek\KARTA-PRAWDY.md", label="KARTA-PRAWDY.md", storage="desktop")
+ps.doc_add(PROJ, pid, "lp_dane", r"…\drapek\KARTA-PRAWDY.md", slug="drapek", label="KARTA-PRAWDY.md")  # → wf2-docs, klikalny chip
 url = ps.storage_upload(r"…\makiety\03-problem.png", "bud-assets/drapek/makiety/03-problem.webp",
                         max_width=1440, to_webp=True, quality=82)
 ps.artifact_add(PROJ, pid, "lp_makiety", "makieta", url, label="03 · Problem",

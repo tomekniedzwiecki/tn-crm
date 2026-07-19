@@ -20,14 +20,22 @@ Importowalne funkcje:
   artifact_add(project, product, step, kind, url, label, meta, storage) -> artifact_id
   product_meta(product, patch: dict) -> dict            # WHITELISTA kolumn
   project_link_add(project, label, url, icon) -> links
-  storage_upload(local, dest, bucket, ...) -> public_url  # rehost do Storage (+opcjonalny PIL)
+  storage_upload(local, dest, bucket, ...) -> url  # rehost do Storage (+opcjonalny PIL);
+                                                   # bucket prywatny -> zwraca 'bucket/ścieżkę'
+  doc_add(project, product, step, local, slug, ...) -> artifact_id
+      # DOKUMENTY FABRYKI (.md/.json): upload do PRYWATNEGO bucketa wf2-docs/<slug>/<plik>
+      # + artefakt storage='supabase' url='wf2-docs/<slug>/<plik>' -> KLIKALNY chip w panelu
+      # (signed URL po stronie panelu). Desktop = tylko kopia robocza, NIE źródło prawdy.
 
 ⚠️ PUŁAPKI (patrz docs/zbuduje/MOST-PANEL.md):
   • Checklisty panelu mergują po DOKŁADNYM tekście `t` z obiektu WS w projekt.html — teksty
     muszą być VERBATIM, inaczej sieroty. (Backfill wyciąga je wprost z projekt.html.)
   • Ceny/koszt/marża panel czyta z KOLUMN produktu (product_meta), NIE z step.data.fields.
   • Miniatura w panelu: storage∈{supabase,external} I (rozszerzenie obrazu LUB kind graficzny).
-    storage∈{repo,desktop} → chip (nie miniatura) — dobre dla lokalnych .md.
+  • DOKI (.md/.json) → ZAWSZE doc_add() / CLI `doc` (bucket wf2-docs, PRYWATNY — karta/ledger
+    niosą koszty i marże, NIE wolno ich do publicznego 'attachments'). storage='desktop'
+    = ZAKAZ dla nowych artefaktów (martwy chip, plik niedostępny poza tym komputerem —
+    incydent masażer 19.07); 'repo' tylko dla plików realnie commitowanych do repo.
   • Wiązanie artefaktu z krokiem = (product_id + step_key).
 
 CLI: patrz `panel-sync.py -h`.
@@ -55,6 +63,8 @@ STORAGE = f"https://{PROJECT_REF}.supabase.co/storage/v1"
 PUBLIC_BASE = f"{STORAGE}/object/public"
 ENV_PATH = os.environ.get("TN_CRM_ENV", r"C:\repos_tn\tn-crm\.env")
 DEFAULT_BUCKET = "attachments"
+DOCS_BUCKET = "wf2-docs"                       # PRYWATNY bucket dokumentów fabryki (migracja 20260719e)
+PRIVATE_BUCKETS = {"wf2-docs", "contracts", "wf2-video", "wfa-intake", "wfa-test-shots"}
 
 PRODUCT_META_WHITELIST = {
     "price", "cost_purchase", "cost_shipping", "fees_pct", "margin_mode", "status",
@@ -360,13 +370,26 @@ def storage_upload(local_path, dest_path, bucket=DEFAULT_BUCKET, content_type=No
     r = requests.post(f"{STORAGE}/object/{bucket}/{dest_path}", headers=hdr, data=blob, timeout=180)
     if r.status_code >= 300:
         raise RuntimeError(f"UPLOAD {dest_path} {r.status_code}: {r.text}")
-    pub = f"{PUBLIC_BASE}/{bucket}/{dest_path}"
+    # bucket prywatny nie ma URL-a public — zwracamy 'bucket/ścieżkę' (panel robi signed URL)
+    pub = f"{bucket}/{dest_path}" if bucket in PRIVATE_BUCKETS else f"{PUBLIC_BASE}/{bucket}/{dest_path}"
     log(f"storage_upload: {os.path.basename(local_path)} → {pub} ({len(blob)} B, {ct})")
     return pub
 
 
 def public_url(path, bucket=DEFAULT_BUCKET):
     return f"{PUBLIC_BASE}/{bucket}/{path}"
+
+
+# ── 5b. doc_add — dokumenty fabryki (.md/.json) do PRYWATNEGO wf2-docs + klikalny chip ──
+def doc_add(project, product, step, local_path, slug, label=None, kind="doc"):
+    """Upload dokumentu fabryki do wf2-docs/<slug>/<basename> (PRYWATNY bucket; Content-Type
+    text/plain → renderuje się inline w karcie po signed URL) + artefakt kroku panelu.
+    Idempotentne (x-upsert + dedup artefaktu po url). Zwraca artifact_id."""
+    base = os.path.basename(local_path)
+    ct = "application/json" if base.lower().endswith(".json") else "text/plain; charset=utf-8"
+    obj_path = storage_upload(local_path, f"{slug}/{base}", bucket=DOCS_BUCKET, content_type=ct)
+    return artifact_add(project, product, step, kind, obj_path,
+                        label=label or base, storage="supabase")
 
 
 # ── CLI ──
@@ -420,6 +443,12 @@ def main(argv=None):
     p.add_argument("--max-width", type=int); p.add_argument("--webp", action="store_true")
     p.add_argument("--quality", type=int, default=82)
 
+    p = sub.add_parser("doc", help="dokument fabryki (.md/.json) → PRYWATNY wf2-docs + klikalny chip")
+    p.add_argument("project"); p.add_argument("product", help="uuid produktu lub '-' dla kroku projektu")
+    p.add_argument("step"); p.add_argument("local")
+    p.add_argument("--slug", required=True, help="slug landingu (folder w buckecie)")
+    p.add_argument("--label"); p.add_argument("--kind", default="doc")
+
     a = ap.parse_args(argv)
     if a.cmd == "link":
         print(link_product(a.project, a.tt, a.name, slug=a.slug, sort=a.sort,
@@ -440,6 +469,9 @@ def main(argv=None):
     elif a.cmd == "upload":
         print(storage_upload(a.local, a.dest, bucket=a.bucket, max_width=a.max_width,
                             to_webp=a.webp, quality=a.quality))
+    elif a.cmd == "doc":
+        print(doc_add(a.project, _norm_product(a.product), a.step, a.local,
+                      slug=a.slug, label=a.label, kind=a.kind))
 
 
 if __name__ == "__main__":
