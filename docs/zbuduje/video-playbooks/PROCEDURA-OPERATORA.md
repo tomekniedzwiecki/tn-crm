@@ -13,7 +13,26 @@ Proces MUSI być widoczny w panelu `/tn-sklepy` na bieżąco (decyzja Tomka 19.0
 ---
 
 ## KROK 0 — Wejście i archetyp
-1. Weź produkt z /trendy: wzorcowe video (`bud_tt_products` / `tt_shop.videos[]`, top wg plays) + galerię Ali white-label (`gallery_curated`, NIGDY shop-packshot — bywa innym produktem).
+0. **INTEGRALNOŚĆ REKORDU (incydent stolik 19.07 — rekord radaru SKAŻONY danymi innego
+   produktu przez nocny cron):** pobierz `cover` rekordu i OBEJRZYJ własnymi oczami — czy
+   pokazuje produkt z nazwy? Sprawdź `tt_shop.title` i `ali_snapshot.title`. Rozjazd →
+   prawda jest w BLIŹNIACZYCH rekordach (trajektoria `max_plays` + `ali_candidates`);
+   napraw rekord PRZED przebiegiem.
+1. **WYBÓR WZORCA = proces, nie „top wg plays" (decyzja Tomka 19.07):**
+   - **Oś A (liczby, automat):** `python wzorzec_score.py <tt_product_id>` — ranking
+     kandydatów (rekord główny + `tt_shop.videos[]` + bliźniaki) wg: plays/followers
+     (viral-ratio: 2M plays na koncie 1,8k = algorytm pchał SCHEMAT), engagement z wagą
+     saves/shares, log-plays, świeżość, powtarzalność (twins).
+   - **Oś B (odtwarzalność stackiem)** — obejrzyj covery top-2-3 i oceń: archetyp
+     (hands-POV bez twarzy = tanio/pewnie; talking-head = drożej + ryzyko tożsamości),
+     fizyka (płyny/sypkie/szybkie ruchy = ryzyko renderów), **zgodność wariantu produktu
+     z naszą galerią Ali** (inny kolor/materiał = tarcie forbidden_leaks — stolik!), czy
+     schemat przeżyje wymianę audio na nasze (viral z trending-soundu traci najwięcej).
+   - **Oś C (zdatność reklamowa Meta/cold):** hook czytelny w 2 s BEZ dźwięku, produkt
+     duży i jasny; problem→rozwiązanie > czysta estetyka; po 5 s wiadomo co to jest.
+   - **Wybór + uzasadnienie LOGUJESZ w `blueprint.wzorzec`** (pole `wybor`: score, co
+     przeważyło, które osie). Wzorce #2-3 NIE idą do kosza → KROK 10b (hook z innego wzorca).
+   Galerię bierz z Ali white-label (`gallery_curated`/snapshot `detail`, NIGDY shop-packshot).
 2. Pobierz mp4 wzorca szybko (linki TikTok gniją): `python -m yt_dlp`.
 3. **Rozpoznaj archetyp z WZORCA** (nie z produktu): hands-POV / beauty-talkinghead / auto-POV. Otwórz właściwy playbook — on ustawia mapę silników, szkielet i domyślne pola KARTY. To decyzja #1: dobór silników zależy od archetypu (0d/1).
    - **Reguła rozstrzygająca — gadżet + gadająca/reagująca głowa (UGC reakcja/testimonial):** wybieraj **gadzet-handsPOV**, bo kondensacja 15 s (0c) i tak tnie gadanie jako pierwsze; **beauty-talkinghead WYŁĄCZNIE**, gdy twarz/emocja JEST treścią dowodu (produkt działa NA ciele/twarzy).
@@ -166,7 +185,7 @@ Plan JSON (sceny {id,plik,ss,dur,vo,vf_extra,has_physical_action,sfx[],handheld}
 ## KROK 10b — PACK WARIANTÓW HOOKA (max 3 wersje — decyzja Tomka 19.07)
 Po akceptacji bazy dorób do ad setu **do 2 wariantów hooka na wspólnym rdzeniu** (razem MAX 3 pliki):
 1. **Cold-open re-cut** ($0): technika z HOOK-STANDARD — 1,2 s money-shotu na przód, body ≤16 s.
-2. **Świeże ujęcie hookowe** (~$0,45): 1-2 klatki nano ($0,039) + 1 Kling FLF 5 s ($0,35) + remontaż $0; INNY typ hooka z rankingu (nie odcień tego samego).
+2. **Świeże ujęcie hookowe** (~$0,45): 1-2 klatki nano ($0,039) + 1 Kling FLF 5 s ($0,35) + remontaż $0; INNY typ hooka z rankingu (nie odcień tego samego). **Najlepiej: hook wg schematu WZORCA #2 z rankingu `wzorzec_score`** (KROK 0) — jedna kreacja testuje wtedy DWA udowodnione schematy naraz zamiast dwóch odcieni jednego.
 Warianty przechodzą bramkę hooka (jasność/typ/ruch) i trafiają do `wf2_creatives.variants`; każdy wariant = ta sama pętla wyników po publikacji.
 
 ## KROK 11 — REJESTR KREACJI + PĘTLA WYNIKÓW (obowiązkowy po finale)
