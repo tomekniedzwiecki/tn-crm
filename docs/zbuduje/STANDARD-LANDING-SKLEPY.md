@@ -457,6 +457,14 @@ reguły [D-art] [pkt 4].)*
    (b) strefa treści WTAPIA SIĘ w jednolity kolor tła („fades seamlessly into flat solid #HEX")
    — a kod dokłada dopasowany scrim-gradient nad sceną w strefie treści (Tomek 16.07: bez tego
    makieta wygląda dobrze, finał gorzej).**
+   **⚠️ SCRIM = PLATEAU, NIE MIĘKKI FADE (Tomek 19.07 na masażerze — „tam gdzie miało być białe
+   miejsce na tekst, w ogóle tego nie ma"): gdy makieta ma SPLIT (solidny kremowy panel pod
+   treścią ~40-50% szerokości), scrim w kodzie MUSI odtworzyć plateau: solidny `var(--paper)`
+   od krawędzi DO KRAWĘDZI BLOKU TREŚCI (~46-50%), dopiero potem fade do 0 (~62-70%). Miękki
+   gradient od ~34% daje opacity ~0.4 przy krawędzi treści = scena prześwituje pod tekstem,
+   mimo że PLIK sceny ma strefę czystą (F3 nie zawiodło — zawiódł most makieta→kod). Self-check
+   kodera: krawędź bloku treści leży na scrimie o opacity ≥~0.9. Egzekucja maszynowa: check
+   `scrim_plateau` w detail-lint (PASS 4).**
    **Gate: side-by-side wygenerowanego tła z makietą — inne pomieszczenie/kadr/światło/skala
    produktu = odrzut i ponowna generacja. + CHECK „CZYSTA STREFA NEGATYWNA" (masażer 19.07):
    skanuj strefę negatywną każdej sceny POMIAREM piksela (dev-map/residual vs kolor tła), NIE

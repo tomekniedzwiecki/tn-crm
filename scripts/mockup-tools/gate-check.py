@@ -142,10 +142,17 @@ def section_has_attr(html, sec_id, attr):
     return False
 
 def image_urls(html):
-    """Wszystkie URL-e bud-assets (obrazy + mp4) z HTML (rozkodowane &amp;)."""
+    """Wszystkie URL-e bud-assets (obrazy + mp4) z HTML (rozkodowane &amp;).
+    Pomija PREFIKSY konkatenacji JS (np. var SB=".../bud-assets/masazer/" w hero-video):
+    URL konczacy sie na '/' lub ktorego ostatni segment nie ma rozszerzenia pliku
+    to nie asset — pelne URL-e powstaja dopiero w runtime (hero-loop standard 19.07)."""
     urls = set()
     for m in re.finditer(r'https://[^\s"\'<>]*bud-assets/[^\s"\'<>)]+', html or ""):
         u = m.group(0).replace("&amp;", "&")
+        path = u.split("?")[0]
+        last = path.rstrip("/").rsplit("/", 1)[-1]
+        if path.endswith("/") or "." not in last:
+            continue
         urls.add(u)
     return sorted(urls)
 
