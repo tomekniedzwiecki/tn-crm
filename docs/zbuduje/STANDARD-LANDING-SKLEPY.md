@@ -480,6 +480,13 @@ reguły [D-art] [pkt 4].)*
    product placement; REMOVE all text, UI elements, buttons, cards and icons; output a clean
    photographic background with empty negative space exactly where the content was".
    Produkt ZOSTAJE w scenie (NIE „plate + wycięty packshot" — szwy/skala/światło = źle).
+   **⚠️ FOTO-INSETY KOLAŻU ≠ UI (masażer 19.07 — „remove UI" zjadło inset makro USB-C z makiety):**
+   gdy makieta niesie fotograficzny INSET (bańka/ramka z makro-detalem: port, splot, głowica),
+   lista REMOVE nie może zawierać ogólników „callout circle / inset zoom bubble"; doklej jawny
+   WYJĄTEK: „KEEP the small [round] photographic INSET in the [corner] showing the [detail]
+   close-up — part of the photographic collage, NOT a UI element; reproduce its position, size
+   and frame from Image 1". Rozróżnienie tekst-UI (usuwać) vs foto-inset (zachować) MUSI być
+   w prompcie explicite.
    **Prompt sceny MUSI wymagać: (a) produkt w TEJ SAMEJ skali i pozycji co na makiecie
    („SAME size and position as in the reference" — bez tego wychodzi mniejszy; Uśmieszek 16.07),
    (b) strefa treści WTAPIA SIĘ w jednolity kolor tła („fades seamlessly into flat solid #HEX")
