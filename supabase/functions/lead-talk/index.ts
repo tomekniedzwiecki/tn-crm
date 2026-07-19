@@ -143,10 +143,26 @@ function jsonResponse(obj: unknown, status: number, cors: Record<string, string>
 }
 
 // ── Budowa messages dla OpenAI ───────────────────────────────────────────────
+// Mózg rozmowy = 9 sekcji edytowalnych osobno w /settings (tab „Rozmowa AI — sklep"),
+// sklejanych tu w ustalonej kolejności. Fallback: stary monolit rozmowa_prompt.
+const PROMPT_PARTS = [
+  'rozmowa_rola', 'rozmowa_cel', 'rozmowa_format', 'rozmowa_dramaturgia',
+  'rozmowa_pieniadze', 'rozmowa_zarobki', 'rozmowa_proces', 'rozmowa_obiekcje', 'rozmowa_zakazy',
+]
+async function getBasePrompt(): Promise<string> {
+  const hit = promptCache.get('__parts')
+  if (hit && Date.now() - hit.at < PROMPT_CACHE_TTL_MS) return hit.value
+  const { data } = await supabase.from('settings').select('key,value').in('key', PROMPT_PARTS)
+  const map = Object.fromEntries((data || []).map((r) => [r.key, (r.value || '').trim()]))
+  const joined = PROMPT_PARTS.map((k) => map[k]).filter(Boolean).join('\n\n')
+  const value = joined || (await getSetting('rozmowa_prompt'))
+  promptCache.set('__parts', { value, at: Date.now() })
+  return value
+}
 // deno-lint-ignore no-explicit-any
 async function buildMessages(lead: any, session: any, history: { role: string; content: string }[]) {
-  const base = await getSetting('rozmowa_prompt')
-  if (!base) throw new Error('brak rozmowa_prompt w settings')
+  const base = await getBasePrompt()
+  if (!base) throw new Error('brak promptu rozmowy w settings')
   const tags = Array.isArray(session.tags) ? session.tags.map((t: { t: string }) => t.t).slice(-12).join(', ') : ''
   const system = base
     + `\n\n## KONTEKST LEADA (z ankiety /zapisy — używaj naturalnie, nie recytuj)\n${leadContext(lead)}`

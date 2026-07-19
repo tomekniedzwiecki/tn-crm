@@ -638,7 +638,7 @@
                                     <i class="ph ph-info text-emerald-400 text-lg mt-0.5"></i>
                                     <div class="text-sm text-zinc-400 leading-relaxed">
                                         <p class="text-emerald-200 font-medium mb-1">Jak to działa</p>
-                                        <p><b class="text-zinc-300">Główny prompt</b> = cała wiedza i sposób prowadzenia: rola i głos, dramaturgia (beaty), fakty procesu i warunki (500 zł / 9400 zł / ~1000 zamówień), obiekcje, zakazy, chipy podpowiedzi. <b class="text-zinc-300">Instrukcja otwarcia</b> = jak brzmi pierwsza wiadomość po ankiecie. Zmiany wchodzą w życie automatycznie do <b class="text-zinc-300">~5 minut</b> (cache funkcji).</p>
+                                        <p>Mózg rozmowy jest podzielony na <b class="text-zinc-300">sekcje tematyczne</b> — AI skleja je w jedną instrukcję w kolejności z tej listy. Edytujesz tylko to, co chcesz zmienić (np. warunki i raty w „Pieniądze", odpowiedzi w „Obiekcje"). Pusta sekcja = pominięta. Zmiany wchodzą w życie automatycznie do <b class="text-zinc-300">~5 minut</b> (cache funkcji).</p>
                                     </div>
                                 </div>
 
@@ -650,39 +650,8 @@
                                     <button id="rozmowa-enabled-toggle" onclick="toggleRozmowaEnabled()" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-zinc-800 text-zinc-400">…</button>
                                 </div>
 
-                                <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 space-y-3">
-                                    <div class="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p class="text-sm text-white font-medium">Główny prompt rozmowy</p>
-                                            <p class="text-xs text-zinc-500 mt-0.5">Rola, dramaturgia, fakty, warunki, obiekcje, zakazy — cała wiedza AI.</p>
-                                        </div>
-                                        <span id="rozmowa-prompt-len" class="text-[10px] font-mono text-zinc-600 whitespace-nowrap"></span>
-                                    </div>
-                                    <textarea id="rozmowa-prompt" rows="26" spellcheck="false"
-                                        class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-mono leading-relaxed focus:outline-none focus:border-emerald-500/40 resize-y"
-                                        placeholder="Ładowanie…"></textarea>
-                                    <div class="flex items-center gap-3">
-                                        <button onclick="saveRozmowaSetting('rozmowa_prompt','rozmowa-prompt')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                            <i class="ph ph-floppy-disk"></i> Zapisz prompt
-                                        </button>
-                                        <span id="rozmowa-prompt-status" class="text-xs text-zinc-500"></span>
-                                    </div>
-                                </div>
-
-                                <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 space-y-3">
-                                    <div>
-                                        <p class="text-sm text-white font-medium">Instrukcja pierwszej wiadomości (otwarcie)</p>
-                                        <p class="text-xs text-zinc-500 mt-0.5">Jak AI otwiera rozmowę zaraz po ankiecie (potwierdzenie aplikacji, rama selekcji, pytanie z ankiety).</p>
-                                    </div>
-                                    <textarea id="rozmowa-otwarcie" rows="7" spellcheck="false"
-                                        class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-mono leading-relaxed focus:outline-none focus:border-emerald-500/40 resize-y"
-                                        placeholder="Ładowanie…"></textarea>
-                                    <div class="flex items-center gap-3">
-                                        <button onclick="saveRozmowaSetting('rozmowa_otwarcie','rozmowa-otwarcie')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                            <i class="ph ph-floppy-disk"></i> Zapisz otwarcie
-                                        </button>
-                                        <span id="rozmowa-otwarcie-status" class="text-xs text-zinc-500"></span>
-                                    </div>
+                                <div id="rozmowa-fields" class="space-y-4">
+                                    <div class="text-zinc-500 text-sm text-center py-8">Ładowanie sekcji…</div>
                                 </div>
                             </div>
 
@@ -2133,23 +2102,56 @@
         // Czyta je edge function lead-talk (cache ~5 min — zmiany wchodzą same, bez deployu).
         // =============================================
 
+        // Mózg rozmowy = sekcje sklejane przez lead-talk w tej kolejności (rozmowa_otwarcie osobno).
+        const ROZMOWA_FIELDS = [
+            { key: 'rozmowa_rola',        label: 'Rola i głos',                     desc: 'Kim jest AI, jak mówi o Tomku (3. osoba), ton z WhatsAppa, track record.', rows: 8 },
+            { key: 'rozmowa_cel',         label: 'Cel, ankieta i rama selekcji',    desc: 'Prowadzenie do rezerwacji (kompas), użycie odpowiedzi z ankiety, gra niedostępnością.', rows: 12 },
+            { key: 'rozmowa_format',      label: 'Format odpowiedzi (techniczne)',  desc: 'Limity długości, dawkowanie, chipy, markery. Zmieniaj ostrożnie.', rows: 10 },
+            { key: 'rozmowa_otwarcie',    label: 'Pierwsza wiadomość (instrukcja)', desc: 'Jak AI otwiera rozmowę zaraz po ankiecie.', rows: 6 },
+            { key: 'rozmowa_dramaturgia', label: 'Dramaturgia rozmowy (beaty)',     desc: 'Warianty otwarcia, beaty 1-7, momenty magii.', rows: 16 },
+            { key: 'rozmowa_pieniadze',   label: 'Pieniądze: cena, raty 0%, ratunek', desc: '9400 zł, raty, logika budżetu z ankiety, protokół ratunkowy 2000 zł. TU edytujesz warunki.', rows: 16 },
+            { key: 'rozmowa_zarobki',     label: 'Zarobki („ile mogę zarobić")',    desc: 'Mechanika marży i faz, widełki, kamienie zamówień, rama uczciwości.', rows: 12 },
+            { key: 'rozmowa_proces',      label: 'Proces po rezerwacji',            desc: 'Co się dzieje po wpłacie 500 zł — telefon Tomka, plan, 7 etapów, stery.', rows: 8 },
+            { key: 'rozmowa_obiekcje',    label: 'Obiekcje (bank odpowiedzi)',      desc: 'Pieniądze, scam, „za darmo", Chiny/AI, wędka, agencja, czas, raty.', rows: 12 },
+            { key: 'rozmowa_zakazy',      label: 'Stemple i twarde zakazy',         desc: 'Lista faz do CRM + czego AI nie wolno powiedzieć.', rows: 12 },
+        ];
         let rozmowaEnabled = true;
         async function loadRozmowaSettings() {
-            const keys = ['rozmowa_prompt', 'rozmowa_otwarcie', 'rozmowa_enabled'];
+            const keys = ROZMOWA_FIELDS.map(f => f.key).concat(['rozmowa_enabled']);
             const { data, error } = await supabaseClient.from('settings').select('key, value').in('key', keys);
             if (error) { console.error('[rozmowa settings]', error); return; }
             const map = Object.fromEntries((data || []).map(r => [r.key, r.value]));
-            const p = document.getElementById('rozmowa-prompt');
-            const o = document.getElementById('rozmowa-otwarcie');
-            if (p) { p.value = map.rozmowa_prompt || ''; updateRozmowaLen(); p.addEventListener('input', updateRozmowaLen); }
-            if (o) o.value = map.rozmowa_otwarcie || '';
+            const wrap = document.getElementById('rozmowa-fields');
+            if (wrap) {
+                wrap.innerHTML = ROZMOWA_FIELDS.map(f => `
+                    <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm text-white font-medium">${f.label}</p>
+                                <p class="text-xs text-zinc-500 mt-0.5">${f.desc}</p>
+                            </div>
+                            <span id="rz-${f.key}-len" class="text-[10px] font-mono text-zinc-600 whitespace-nowrap"></span>
+                        </div>
+                        <textarea id="rz-${f.key}" rows="${f.rows}" spellcheck="false"
+                            class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-mono leading-relaxed focus:outline-none focus:border-emerald-500/40 resize-y"
+                            placeholder="(puste — sekcja pominięta)"></textarea>
+                        <div class="flex items-center gap-3">
+                            <button onclick="saveRozmowaSetting('${f.key}','rz-${f.key}')" class="bg-white text-black hover:bg-zinc-200 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-2">
+                                <i class="ph ph-floppy-disk"></i> Zapisz
+                            </button>
+                            <span id="rz-${f.key}-status" class="text-xs text-zinc-500"></span>
+                        </div>
+                    </div>`).join('');
+                ROZMOWA_FIELDS.forEach(f => {
+                    const el = document.getElementById('rz-' + f.key);
+                    el.value = map[f.key] || '';
+                    const len = document.getElementById('rz-' + f.key + '-len');
+                    const upd = () => { if (len) len.textContent = el.value.length.toLocaleString('pl-PL') + ' zn.'; };
+                    upd(); el.addEventListener('input', upd);
+                });
+            }
             rozmowaEnabled = String(map.rozmowa_enabled || 'true').toLowerCase() !== 'false';
             renderRozmowaToggle();
-        }
-        function updateRozmowaLen() {
-            const p = document.getElementById('rozmowa-prompt');
-            const l = document.getElementById('rozmowa-prompt-len');
-            if (p && l) l.textContent = p.value.length.toLocaleString('pl-PL') + ' zn.';
         }
         function renderRozmowaToggle() {
             const b = document.getElementById('rozmowa-enabled-toggle');
