@@ -274,7 +274,10 @@ Deno.serve(async (req) => {
       messages: openaiMessages,
       stream: true,
       stream_options: { include_usage: true },
-      max_completion_tokens: 1500,
+      /* TWARDY sufit długości: ~450 tokenów ≈ maks. ~1300 znaków PL — fizyczna
+         blokada ścian tekstu (Tomek 19.07: „nikt tego nie przeczyta").
+         Styl 2-3 zdań nigdy tu nie dobija; dawkowanie pilnuje prompt. */
+      max_completion_tokens: 450,
     })
   } catch (e) {
     console.error('[lead-talk] openai fail', e)
