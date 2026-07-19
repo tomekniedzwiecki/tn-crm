@@ -102,6 +102,9 @@
                 <button onclick="switchSettingsTab('prompts')" data-tab="prompts" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
                     <i class="ph ph-robot"></i> Prompty AI
                 </button>
+                <button onclick="switchSettingsTab('rozmowa')" data-tab="rozmowa" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-chat-circle-text"></i> Rozmowa AI
+                </button>
                 <button onclick="switchSettingsTab('zapisy')" data-tab="zapisy" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
                     <i class="ph ph-clipboard-text"></i> Zapisy
                 </button>
@@ -147,6 +150,10 @@
                             <button onclick="switchSettingsTab('prompts')" data-tab="prompts" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
                                 <i class="ph ph-robot text-lg"></i>
                                 <span class="text-sm font-medium">Prompty AI</span>
+                            </button>
+                            <button onclick="switchSettingsTab('rozmowa')" data-tab="rozmowa" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                                <i class="ph ph-chat-circle-text text-lg"></i>
+                                <span class="text-sm font-medium">Rozmowa AI — sklep</span>
                             </button>
                             <button onclick="switchSettingsTab('zapisy')" data-tab="zapisy" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
                                 <i class="ph ph-clipboard-text text-lg"></i>
@@ -617,6 +624,65 @@
                                 <div id="prompts-list" class="space-y-4">
                                     <!-- Templates loaded dynamically -->
                                     <div class="text-zinc-500 text-sm text-center py-8">Ładowanie szablonów...</div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: Rozmowa AI — sklep (lejek /zapisy → /rozmowa, edge lead-talk) -->
+                            <div id="tab-rozmowa" class="settings-panel hidden space-y-6">
+                                <div>
+                                    <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Rozmowa AI — sklep</h1>
+                                    <p class="text-zinc-500 text-sm">Kompletna wiedza rozmowy z leadami na tomekniedzwiecki.pl/rozmowa — wszystko, co AI mówi, pochodzi z tych dwóch pól.</p>
+                                </div>
+
+                                <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 flex items-start gap-3">
+                                    <i class="ph ph-info text-emerald-400 text-lg mt-0.5"></i>
+                                    <div class="text-sm text-zinc-400 leading-relaxed">
+                                        <p class="text-emerald-200 font-medium mb-1">Jak to działa</p>
+                                        <p><b class="text-zinc-300">Główny prompt</b> = cała wiedza i sposób prowadzenia: rola i głos, dramaturgia (beaty), fakty procesu i warunki (500 zł / 9400 zł / ~1000 zamówień), obiekcje, zakazy, chipy podpowiedzi. <b class="text-zinc-300">Instrukcja otwarcia</b> = jak brzmi pierwsza wiadomość po ankiecie. Zmiany wchodzą w życie automatycznie do <b class="text-zinc-300">~5 minut</b> (cache funkcji).</p>
+                                    </div>
+                                </div>
+
+                                <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm text-white font-medium">Rozmowa włączona</p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">Wyłączenie zatrzymuje czat na /rozmowa (leady zobaczą komunikat o niedostępności).</p>
+                                    </div>
+                                    <button id="rozmowa-enabled-toggle" onclick="toggleRozmowaEnabled()" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-zinc-800 text-zinc-400">…</button>
+                                </div>
+
+                                <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 space-y-3">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p class="text-sm text-white font-medium">Główny prompt rozmowy</p>
+                                            <p class="text-xs text-zinc-500 mt-0.5">Rola, dramaturgia, fakty, warunki, obiekcje, zakazy — cała wiedza AI.</p>
+                                        </div>
+                                        <span id="rozmowa-prompt-len" class="text-[10px] font-mono text-zinc-600 whitespace-nowrap"></span>
+                                    </div>
+                                    <textarea id="rozmowa-prompt" rows="26" spellcheck="false"
+                                        class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-mono leading-relaxed focus:outline-none focus:border-emerald-500/40 resize-y"
+                                        placeholder="Ładowanie…"></textarea>
+                                    <div class="flex items-center gap-3">
+                                        <button onclick="saveRozmowaSetting('rozmowa_prompt','rozmowa-prompt')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                            <i class="ph ph-floppy-disk"></i> Zapisz prompt
+                                        </button>
+                                        <span id="rozmowa-prompt-status" class="text-xs text-zinc-500"></span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 space-y-3">
+                                    <div>
+                                        <p class="text-sm text-white font-medium">Instrukcja pierwszej wiadomości (otwarcie)</p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">Jak AI otwiera rozmowę zaraz po ankiecie (potwierdzenie aplikacji, rama selekcji, pytanie z ankiety).</p>
+                                    </div>
+                                    <textarea id="rozmowa-otwarcie" rows="7" spellcheck="false"
+                                        class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 font-mono leading-relaxed focus:outline-none focus:border-emerald-500/40 resize-y"
+                                        placeholder="Ładowanie…"></textarea>
+                                    <div class="flex items-center gap-3">
+                                        <button onclick="saveRozmowaSetting('rozmowa_otwarcie','rozmowa-otwarcie')" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                            <i class="ph ph-floppy-disk"></i> Zapisz otwarcie
+                                        </button>
+                                        <span id="rozmowa-otwarcie-status" class="text-xs text-zinc-500"></span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2045,6 +2111,7 @@
                     loadLegalCompanyData();
                     loadPromptTemplates();
                     loadZapisySettings();
+                    loadRozmowaSettings();
                 }
 
                 // Check for tab URL parameter
@@ -2060,6 +2127,62 @@
             }
         }
         init();
+
+        // =============================================
+        // ROZMOWA AI — SKLEP (tabela settings: rozmowa_prompt / rozmowa_otwarcie / rozmowa_enabled)
+        // Czyta je edge function lead-talk (cache ~5 min — zmiany wchodzą same, bez deployu).
+        // =============================================
+
+        let rozmowaEnabled = true;
+        async function loadRozmowaSettings() {
+            const keys = ['rozmowa_prompt', 'rozmowa_otwarcie', 'rozmowa_enabled'];
+            const { data, error } = await supabaseClient.from('settings').select('key, value').in('key', keys);
+            if (error) { console.error('[rozmowa settings]', error); return; }
+            const map = Object.fromEntries((data || []).map(r => [r.key, r.value]));
+            const p = document.getElementById('rozmowa-prompt');
+            const o = document.getElementById('rozmowa-otwarcie');
+            if (p) { p.value = map.rozmowa_prompt || ''; updateRozmowaLen(); p.addEventListener('input', updateRozmowaLen); }
+            if (o) o.value = map.rozmowa_otwarcie || '';
+            rozmowaEnabled = String(map.rozmowa_enabled || 'true').toLowerCase() !== 'false';
+            renderRozmowaToggle();
+        }
+        function updateRozmowaLen() {
+            const p = document.getElementById('rozmowa-prompt');
+            const l = document.getElementById('rozmowa-prompt-len');
+            if (p && l) l.textContent = p.value.length.toLocaleString('pl-PL') + ' zn.';
+        }
+        function renderRozmowaToggle() {
+            const b = document.getElementById('rozmowa-enabled-toggle');
+            if (!b) return;
+            b.textContent = rozmowaEnabled ? 'Włączona' : 'Wyłączona';
+            b.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-colors ' +
+                (rozmowaEnabled ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/10 text-red-300 border border-red-500/30');
+        }
+        async function toggleRozmowaEnabled() {
+            rozmowaEnabled = !rozmowaEnabled;
+            renderRozmowaToggle();
+            const { error } = await supabaseClient.from('settings')
+                .upsert({ key: 'rozmowa_enabled', value: rozmowaEnabled ? 'true' : 'false' }, { onConflict: 'key' });
+            if (error) { showToast('Błąd zapisu: ' + error.message, 'error'); rozmowaEnabled = !rozmowaEnabled; renderRozmowaToggle(); }
+            else showToast(rozmowaEnabled ? 'Rozmowa włączona' : 'Rozmowa wyłączona', 'success');
+        }
+        async function saveRozmowaSetting(key, elId) {
+            const el = document.getElementById(elId);
+            const status = document.getElementById(elId + '-status');
+            if (!el) return;
+            const value = el.value.trim();
+            if (value.length < 50) { showToast('Treść podejrzanie krótka — nie zapisano (min. 50 znaków).', 'error'); return; }
+            if (status) status.textContent = 'Zapisywanie…';
+            const { error } = await supabaseClient.from('settings').upsert({ key, value }, { onConflict: 'key' });
+            if (error) {
+                if (status) status.textContent = '';
+                showToast('Błąd zapisu: ' + error.message, 'error');
+            } else {
+                if (status) status.textContent = 'Zapisano · zmiana wejdzie do ~5 min';
+                showToast('Zapisano — działa w rozmowach do ~5 minut', 'success');
+                setTimeout(() => { if (status) status.textContent = ''; }, 6000);
+            }
+        }
 
         // =============================================
         // AI PROMPT TEMPLATES

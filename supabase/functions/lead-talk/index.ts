@@ -209,9 +209,12 @@ Deno.serve(async (req) => {
     // nowa sesja → wygeneruj otwarcie (nie-streaming; front pokazuje "pisze…")
     if (messages.length === 0) {
       try {
+        // instrukcja otwarcia edytowalna z panelu /settings (fallback = wersja wbudowana)
+        const openingInstr = (await getSetting('rozmowa_otwarcie'))
+          || '[SYSTEM: To sam początek rozmowy — lead właśnie złożył aplikację (ankietę). Napisz PIERWSZĄ wiadomość wg sekcji OTWARCIE promptu: potwierdź przyjęcie aplikacji, jedno zdanie ramy selekcji, jedno pytanie z konkretu ankiety. MAX 3 krótkie zdania + pytanie, do ~320 znaków. Dodaj chipy <opcje> (2-4 słowa każdy) i stempel <faza> profilu.]'
         const openaiMessages = await buildMessages(lead, session, [{
           role: 'user',
-          content: '[SYSTEM: To sam początek rozmowy — lead właśnie złożył aplikację (ankietę). Napisz PIERWSZĄ wiadomość wg sekcji OTWARCIE promptu, struktura obowiązkowa: (1) potwierdź przyjęcie aplikacji, (2) rama selekcji w jednym zdaniu (zanim aplikacja trafi na biurko Tomka, dopytasz o parę rzeczy — on bierze kilka osób naraz), (3) jedno pytanie zbudowane na konkrecie z jego ankiety (albo neutralne, jeśli pola puste). MAX 3 krótkie zdania + pytanie, do ~320 znaków. Dodaj chipy <opcje> z 2-3 ULTRAKRÓTKIMI odpowiedziami głosem leada (2-4 słowa, max ~25 znaków, bez kropki) i stempel <faza> profilu.]',
+          content: openingInstr,
         }])
         const res = await openaiFetch({ model: MODEL, messages: openaiMessages, max_completion_tokens: 700 })
         const j = await res.json()
