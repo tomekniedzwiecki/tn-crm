@@ -100,7 +100,14 @@ Zmiana ceny produktu = (1) update `wf2_products.price` → landing-api od razu s
 (3) zmiana ceny na platformie (do czasu endpointu ceny: klient w panelu; strażnik
 wf2-orders-sync audytuje rozjazd `platform_price` ↔ `price`).
 
-## Luki vs wymagania SSOT (do zgłoszenia developerowi)
+## Fabryka: `scripts/mockup-tools/platform-sync.py` (19.07) — jedyny zalecany sposób użycia
+
+Sesje fabryki NIE wołają adaptera ręcznie — używają mostu (idempotentne komendy + DOWODY):
+`shops · link-shop · status · branding · product · publish · home · page · unpublish`.
+`product` = ensure_product + slug + kolumny platform_* + test kasy; `publish` = placeholdery
+({{WF2_PRODUCT_ID}}/{{CANONICAL_URL}}/{{PIXEL_ID}}) + noindex wg domeny (starter = zostaje)
++ weryfikacja 200/runtime + platform_page_url + link w Podglądach. Panel: picker sklepu
+i live-stan w kroku pl_sklep. Sekrety z `tn-crm/.env` (WF2_GEN_SECRET + service key).
 
 1. ~~PUT html not implemented~~ **WDROŻONE i przetestowane 16.07 wieczór** (kontrakt `{isHtml, html}`; pilot: Uśmieszek na sklepie „test").
 2. ~~POST /pages = 502~~ **NAPRAWIONE 16.07 wieczór.**

@@ -70,11 +70,18 @@ const s = (v: unknown) => (typeof v === 'string' ? v : '');
 
 // ── akcje złożone ──────────────────────────────────────────────────────────
 
+// odpowiedź /pages to OBIEKT {websiteId, activeDomain, pages:[...]} (NIE tablica) — bug naprawiony 19.07
+function pagesList(data: unknown): Array<{ id: string; path: string; url?: string }> {
+  if (Array.isArray(data)) return data as Array<{ id: string; path: string; url?: string }>;
+  const inner = (data as { pages?: unknown })?.pages;
+  return Array.isArray(inner) ? inner as Array<{ id: string; path: string; url?: string }> : [];
+}
+
 // ensure page (po path) → PUT html. path '' = strona główna sklepu.
 async function publishLanding(shopId: string, path: string, html: string, name?: string) {
   const pagesR = await pf('GET', `/stores/${shopId}/pages`);
   if (pagesR.status !== 200) return { status: pagesR.status, data: { error: 'pages_list_failed', upstream: pagesR.data } };
-  const pages = Array.isArray(pagesR.data) ? pagesR.data as Array<{ id: string; path: string; url?: string }> : [];
+  const pages = pagesList(pagesR.data);
   let page = pages.find((p) => (p.path || '') === path);
   if (!page) {
     if (path === '') return { status: 404, data: { error: 'home_page_missing', hint: 'sklep bez strony głównej? sprawdź pages' } };
@@ -89,7 +96,7 @@ async function publishLanding(shopId: string, path: string, html: string, name?:
 
 async function unpublishLanding(shopId: string, path: string) {
   const pagesR = await pf('GET', `/stores/${shopId}/pages`);
-  const pages = Array.isArray(pagesR.data) ? pagesR.data as Array<{ id: string; path: string }> : [];
+  const pages = pagesList(pagesR.data);
   const page = pages.find((p) => (p.path || '') === path);
   if (!page) return { status: 404, data: { error: 'page_not_found' } };
   const put = await pf('PUT', `/stores/${shopId}/pages/${page.id}/html`, { body: { isHtml: false, html: '' } });

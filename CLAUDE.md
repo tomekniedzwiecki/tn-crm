@@ -136,6 +136,15 @@ Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego pro
   NIE jedyna.** DOM self-checki nie wymagają IR (18.07: FAIL Odpalak wideo+zamów+hero+final, PASS Drapek+Loczek).
   `gate-check.py` egzekwuje rubrykę + LAYOUT + IR komplet.
 
+### Fabryka → platforma e-commerce: MOST `platform-sync.py`
+Kroki Etapu 3 (pl_*) = `scripts/mockup-tools/platform-sync.py` (adapter wf2-platform; sekrety z .env):
+`shops`/`link-shop` (przypięcie sklepu partnera — WIELU merchantów na koncie; picker też w panelu,
+krok pl_sklep) · `status` (produkty/kasy/strony/integracje + rozjazd cen) · `branding` · `product`
+(ensure+slug kasy+kolumny platform_*) · `publish` (placeholdery+noindex wg domeny+weryfikacja) ·
+`home` · `page` · `unpublish`. Gate: publish bez {{WF2_PRODUCT_ID}} = FAIL (runtime-snippet!);
+noindex zdejmowany TYLKO na domenie docelowej. Zmiana ceny = re-publish (JSON-LD zapieczony —
+README platforma-api). Referencja API: `docs/zbuduje/platforma-api/README.md`.
+
 ### Fabryka → panel `/tn-sklepy`: MOST `panel-sync.py`
 - **Na końcu KAŻDEJ fazy sync do panelu** (`scripts/mockup-tools/panel-sync.py`; kontrakt+mapa
   `docs/zbuduje/MOST-PANEL.md`, skrót w STANDARD §1-sync): faza→krok (`lp_dane/lp_plan/lp_styl_marka/

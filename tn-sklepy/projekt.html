@@ -1228,7 +1228,7 @@
                 check:['F6 twarda: 0 konsoli, 0 h-scroll (390/768/1280), img OK','Grep zakazów + shop.name nie występuje w HTML','GATE-CHECK gate-check.py = 0 FAIL','Finalny pass: PASS 0-4 czyste','PASS 5 semantyka: SEMANTYKA.md komplet','Wersja + grafiki zarchiwizowane (Desktop)','RETRO F8: NOWE WNIOSKI + LEKSYKON + CHANGELOG','Koszty landinga zalogowane w wf2_costs (zakładka Koszty)','Status produktu → gotowy'], prompt:'lp_finisz' },
 
             // ── ETAP 3: SKLEP NA PLATFORMIE (Trevio przez wf2-platform) ──
-            pl_sklep: { desc:'Przypięcie sklepu partnera do projektu: lista sklepów z API (akcja stores), wybór wolnego, zapis platform_shop_id + domeny startowej. Nowy sklep provisionuje developer platformy.',
+            pl_sklep: { desc:'Przypięcie sklepu partnera do projektu — PICKER poniżej: „Pobierz sklepy z platformy" pokazuje wszystkie sklepy konta partnera (wolne vs zajęte przez inne projekty), klik „Przypnij" zapisuje platform_shop_id. Konto+sklep zakłada KLIENT (provisioning: developer platformy). Po przypięciu: „Pobierz stan platformy" = live-podgląd produktów/kas/landingów/integracji/domeny.',
                 fields:[{k:'shop_id',l:'Shop ID (websiteId)', col:'project.platform_shop_id'},{k:'starter_domain',l:'Domena startowa'},],
                 check:['Sklep wybrany z listy partnera (akcja stores)','platform_shop_id zapisany na projekcie','Domena startowa znana'], prompt:'pl_sklep' },
             pl_dane: { check:['Numer konta do pobrań (NRB, 26 cyfr)','Dane firmy do faktur/regulaminu','Akceptacja treści prawnych'],
@@ -1469,6 +1469,10 @@
             if (d.key === 'ads_wyniki') h += adsWynikiBlock();
             // special-case: opieka — karty decyzyjne strażnika (wf2_proposals)
             if (d.key === 'ads_opieka') h += adsOpiekaBlock();
+            // special-case: platforma — picker sklepu partnera + live-stan (krok pl_sklep)
+            if (d.key === 'pl_sklep') h += platformBlock();
+            // platforma: stan produktu (kasa/landing) w krokach produktowych Etapu 3
+            if (['pl_produkt', 'pl_landing'].includes(d.key) && p) h += platformProductInfo(p);
 
             const fields = ws.fields || [];
             if (fields.length) {
@@ -1521,6 +1525,114 @@
             document.getElementById('sd-skip').textContent = st.status === 'skipped' ? 'Przywróć krok' : 'Pomiń krok';
             document.getElementById('sd-statusbtns').innerHTML = ['pending', 'in_progress', 'done'].map(s =>
                 `<button onclick="sdSetStatus('${s}')" class="st-btn ${st.status === s ? 'st-' + s : 'st-pending opacity-50 hover:opacity-100'}">${STEP_LABELS[s]}</button>`).join('');
+        }
+
+        // ── special-case: platforma e-commerce (Trevio) — picker sklepu + live-stan (krok pl_sklep) ──
+        // Konto/sklep zakłada KLIENT; na koncie partnera jest WIELE sklepów — przypięcie do projektu
+        // (platform_shop_id) robi się tutaj. Wywołania przez adapter wf2-platform (team JWT).
+        function platformBlock() {
+            let h = '<div class="space-y-3">';
+            if (project.platform_shop_id) {
+                h += `<div class="bg-[#111] border border-[#262626] rounded-md px-3.5 py-3 flex items-center justify-between gap-3">
+                    <div class="min-w-0"><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">Sklep przypięty do projektu</div>
+                    <div class="text-[12.5px] text-white font-mono truncate">${escapeHtml(project.platform_shop_id)}</div></div>
+                    <button onclick="plLoadStores()" class="text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0">Zmień sklep</button></div>`;
+                h += `<button onclick="plPlatformStatus()" class="w-full inline-flex items-center justify-center gap-2 bg-[#111] hover:border-[#0070f3]/60 border border-[#2e2e2e] rounded-md px-4 py-2.5 text-xs text-zinc-300 transition-colors"><i class="ph ph-arrows-clockwise text-[#3291ff]"></i> Pobierz stan platformy (produkty · kasy · landingi · integracje · domena)</button>`;
+            } else {
+                h += `<div class="text-[12.5px] text-zinc-400">Konto i sklep na platformie zakłada KLIENT (provisioning po stronie developera platformy). Gdy sklep pojawi się na koncie partnera — przypnij go do projektu z listy poniżej.</div>`;
+                h += `<button onclick="plLoadStores()" class="w-full inline-flex items-center justify-center gap-2 bg-[#0070f3]/10 hover:bg-[#0070f3]/20 text-[#52a8ff] border border-[#0070f3]/40 rounded-md px-4 py-2.5 text-xs font-medium transition-colors"><i class="ph ph-storefront"></i> Pobierz sklepy z platformy</button>`;
+            }
+            h += '<div id="pl-stores"></div><div id="pl-status"></div></div>';
+            return h;
+        }
+        async function plCall(body) {
+            const { data, error } = await supabaseClient.functions.invoke('wf2-platform', { body });
+            if (error) throw new Error(error.message || 'edge error');
+            if (!data || data.status !== 200) throw new Error('platforma: ' + JSON.stringify(data && data.data).slice(0, 180));
+            return data.data;
+        }
+        async function plLoadStores() {
+            const box = document.getElementById('pl-stores');
+            if (!box) return;
+            box.innerHTML = '<div class="text-xs text-zinc-500 py-2">Pobieram sklepy z platformy…</div>';
+            try {
+                const [stores, takenQ] = await Promise.all([
+                    plCall({ action: 'stores' }),
+                    supabaseClient.from('wf2_projects').select('id,name,customer_name,platform_shop_id').not('platform_shop_id', 'is', null),
+                ]);
+                const taken = {}; (takenQ.data || []).forEach(r => { taken[r.platform_shop_id] = r; });
+                box.innerHTML = `<div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2 mt-1">Sklepy na koncie partnera (${stores.length})</div>`
+                    + '<div class="space-y-1.5">' + stores.map(s => {
+                        const t = taken[s.id]; const mine = t && t.id === projectId; const free = !t;
+                        const tag = mine ? '<span class="text-[10px] text-[#45a557] font-mono">TEN PROJEKT</span>'
+                            : t ? `<span class="text-[10px] text-[#f5a623] font-mono">zajęty → ${escapeHtml(t.name || t.customer_name || t.id.slice(0, 8))}</span>`
+                            : '<span class="text-[10px] text-zinc-500 font-mono">wolny</span>';
+                        return `<div class="flex items-center justify-between gap-3 bg-[#111] border ${mine ? 'border-[#45a557]/50' : 'border-[#262626]'} rounded-md px-3.5 py-2.5">
+                            <div class="min-w-0"><div class="text-[12.5px] text-zinc-200 truncate">${escapeHtml(s.name)} ${tag}</div>
+                            <a href="https://${escapeHtml(s.activeDomain)}" target="_blank" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] font-mono truncate block">${escapeHtml(s.activeDomain)}</a></div>
+                            ${free ? `<button onclick="plPickShop('${s.id}', '${escapeHtml(s.activeDomain)}', '${escapeHtml(s.name)}')" class="st-btn st-pending flex-shrink-0">Przypnij</button>` : ''}
+                        </div>`;
+                    }).join('') + '</div>';
+            } catch (e) { box.innerHTML = `<div class="text-xs text-[#f26d78] py-2">Błąd pobierania sklepów: ${escapeHtml(e.message)}</div>`; }
+        }
+        async function plPickShop(shopId, domain, name) {
+            if (project.platform_shop_id && !confirm(`Projekt ma już przypięty sklep.\nPodmienić na „${name}" (${domain})?`)) return;
+            const { error } = await supabaseClient.from('wf2_projects').update({ platform_shop_id: shopId }).eq('id', projectId);
+            if (error) { showToast('Nie zapisano: ' + error.message, 'error'); return; }
+            project.platform_shop_id = shopId;
+            const links = (Array.isArray(project.links) ? project.links : []).filter(l => l.label !== 'Sklep (platforma)');
+            links.push({ label: 'Sklep (platforma)', url: 'https://' + domain, icon: 'ph-storefront' });
+            const upd = await supabaseClient.from('wf2_projects').update({ links }).eq('id', projectId);
+            if (!upd.error) project.links = links;
+            logActivity('platform_shop_linked', `Sklep „${name}" (${domain}) przypięty do projektu`);
+            showToast('Sklep przypięty: ' + name, 'success');
+            renderLinks(); renderDrawer();
+        }
+        async function plPlatformStatus() {
+            const box = document.getElementById('pl-status');
+            if (!box) return;
+            box.innerHTML = '<div class="text-xs text-zinc-500 py-2">Pobieram stan platformy…</div>';
+            try {
+                const sid = project.platform_shop_id;
+                const [dom, prods, pages, ints] = await Promise.all([
+                    plCall({ action: 'domains', shop_id: sid }),
+                    plCall({ action: 'products', shop_id: sid, page_size: 50 }),
+                    plCall({ action: 'pages', shop_id: sid }),
+                    plCall({ action: 'integrations', shop_id: sid }),
+                ]);
+                const byPid = {}; products.forEach(pp => { if (pp.platform_product_id) byPid[pp.platform_product_id] = pp; });
+                const items = prods.data || [];
+                const SYS = ['', 'products', 'search', 'cart', 'checkout', 'contact', 'regulation', 'privacy-policy', 'payment/result', 'order', 'return'];
+                const custom = (pages.pages || []).filter(g => !SYS.includes(g.path || '') && !(g.path || '').includes('['));
+                const actInts = (Array.isArray(ints) ? ints : []).filter(i => i.isActive).map(i => i.type);
+                let h = '<div class="bg-[#111] border border-[#262626] rounded-md p-3.5 space-y-3 mt-1">';
+                h += `<div class="flex items-center justify-between"><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Stan platformy (na żywo)</div>
+                    <span class="text-[10.5px] font-mono ${dom.isOnCustomDomain ? 'text-[#45a557]' : 'text-[#f5a623]'}">${escapeHtml(dom.activeDomain || dom.starterDomain || '—')}${dom.isOnCustomDomain ? '' : ' (starter)'}</span></div>`;
+                h += `<div><div class="text-[10.5px] text-zinc-500 mb-1.5">Produkty na platformie (${items.length}):</div>`
+                    + (items.map(pp => {
+                        const v = (pp.variants || [])[0] || {};
+                        const loc = byPid[pp.id];
+                        const drift = loc && loc.price != null && v.price != null && Number(loc.price) !== Number(v.price);
+                        return `<div class="flex items-center justify-between gap-2 text-[12px] py-0.5"><span class="text-zinc-300 truncate">${escapeHtml(pp.name)}${loc ? '' : ' <span class="text-zinc-600">(spoza portfela)</span>'}</span>
+                            <span class="font-mono flex-shrink-0 ${drift ? 'text-[#e5484d]' : 'text-zinc-400'}">${v.price != null ? moneyPL(v.price) : '—'}${drift ? ' ⚠ panel ' + moneyPL(loc.price) : ''} · ${v.checkoutUrl ? '<span class="text-[#45a557]">kasa ✓</span>' : 'kasa —'}</span></div>`;
+                    }).join('') || '<div class="text-xs text-zinc-600">brak</div>') + '</div>';
+                h += `<div><div class="text-[10.5px] text-zinc-500 mb-1.5">Landingi (podstrony custom, ${custom.length}):</div>`
+                    + (custom.map(g => `<a href="${escapeHtml(g.url || ('https://' + (dom.activeDomain || '') + '/' + g.path))}" target="_blank" class="block text-[12px] text-[#52a8ff] hover:text-[#78b6ff] font-mono py-0.5">/${escapeHtml(g.path)}</a>`).join('') || '<div class="text-xs text-zinc-600">brak</div>') + '</div>';
+                h += `<div class="text-[10.5px] text-zinc-500">Integracje aktywne: <span class="text-zinc-300">${actInts.length ? actInts.map(escapeHtml).join(', ') : 'żadna (pixel → Etap 4)'}</span></div>`;
+                h += '</div>';
+                box.innerHTML = h;
+            } catch (e) { box.innerHTML = `<div class="text-xs text-[#f26d78] py-2">Błąd stanu platformy: ${escapeHtml(e.message)}</div>`; }
+        }
+        // ── platforma: stan produktu (kolumny platform_*) w krokach pl_produkt / pl_landing ──
+        function platformProductInfo(p) {
+            const rows = [
+                ['Nazwa na platformie', p.platform_name ? escapeHtml(p.platform_name) : '—'],
+                ['Link do kasy', p.checkout_url ? `<a href="${escapeHtml(p.checkout_url)}" target="_blank" class="text-[#52a8ff] hover:text-[#78b6ff] break-all">${escapeHtml(p.checkout_url)}</a>` : '— (zrobi krok „Produkt + kasa")'],
+                ['Landing na platformie', p.platform_page_url ? `<a href="${escapeHtml(p.platform_page_url)}" target="_blank" class="text-[#52a8ff] hover:text-[#78b6ff] break-all">${escapeHtml(p.platform_page_url)}</a>` : '— (zrobi krok „Publikacja landinga")'],
+            ];
+            return `<div class="bg-[#111] border border-[#262626] rounded-md p-3.5 space-y-1.5">
+                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Platforma — stan produktu</div>`
+                + rows.map(r => `<div class="text-[12px]"><span class="text-zinc-500">${r[0]}:</span> <span class="text-zinc-300">${r[1]}</span></div>`).join('') + '</div>';
         }
 
         // ── special-case: fabryka statycznych banerów (silnik = ad-forge/fal, nano-banana-pro/nb2) ──
@@ -1895,15 +2007,15 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 lp_dopasowanie: `KROK DOPASOWANIE dla ${S} (id ${PID}). Wg STANDARD F7.1: dla KAŻDEJ sekcji kompozyt makieta|render|heatmapa (sekcja-diff.py <preview_url> ${S}, viewport 1280 ORAZ 390), lista rozjazdów → poprawa gpt-5.6-sol → re-render, do progów (desktop SSIM ≥0.85 / mobile ≥0.78) + werdykt vision „ten sam projekt?". Rewrite-not-patch przy istotnym rozjeździe. Komplet dowodów dopasowanie/NN-*.png (+ -m mobile) = WARUNEK zamknięcia. Contact-sheet dowodów wgraj do bud-assets/${S}/panel/ + wf2_artifacts (kind dowod, meta.ssim).`,
                 lp_zycie: `KROK ŻYCIE dla ${S} (id ${PID}). Strona stabilna po dopasowaniu. Wg STANDARD F5 + CHOREOGRAFIA-ANIMACJI.md + INTERAKCJE-KATALOG.md + SEKCJE-INTERAKTYWNE.md: choreograf (MOTION-DNA + spec per sekcja), zestaw obowiązkowy (scroll-reveal+stagger, count-up, sticky slide-in, mikrointerakcje CTA), min. jedno interaktywne demo DEMONSTRUJĄCE korzyść (filtr sensu: kontrolka steruje CAŁĄ SCENĄ). Sekcje TOR-I osobnym przebiegiem: SPEC-I → sandbox → test stanów (SSIM<0.9 + klatki A/mid/B × 2 viewporty) → montaż markerowy; pętla max 4 → świadomy downgrade z notą. Zero martwych interakcji.`,
                 lp_finisz: `KROK FINISZ dla ${S} (id ${PID}). Wg STANDARD F6/F7.2/F7.3 + FINALNY-PASS.md: weryfikacja twarda (0 konsoli, 0 h-scroll 390/768/1280, img OK, grep zakazów + shop.name), potem python scripts/mockup-tools/gate-check.py ${S} — MUSI dać 0 FAIL (jedyna prawda o kompletności), finalny pass 4 + PASS 5 semantyka do czystej rundy. Zarchiwizuj wersję na Desktop (TN-Sklepy-grafiki/FABRYKA-*/), wgraj full-1280/390 do bud-assets/${S}/panel/ + wf2_artifacts (kind screenshot_final, gate_check). Ustaw wf2_products.status='gotowy'. Na końcu RETRO F8: NOWE WNIOSKI + konsolidacja do LEKSYKONU + wpis CHANGELOG w STANDARD-LANDING-SKLEPY.md.`,
-                pl_sklep: `KROK SKLEP NA PLATFORMIE. Przez wf2-platform: action 'stores' → wybierz wolny sklep partnera (jeśli >1 wolny — zapytaj Tomka w wf2_notes i weź pierwszy), zapisz wf2_projects.platform_shop_id + domenę startową w polach kroku. Action 'domains' dla potwierdzenia starterDomain/activeDomain.`,
-                pl_branding: `KROK LOGO + FAVICON SKLEPU. Źródło: wf2_projects.logo_url (lockup PNG) + wf2_projects.favicon_url (favicon-512 PNG) z kroku „Marka sklepu" (artefakty: wf2_artifacts kind='brand'; storefront/checkout = parasol, NIE mini-marka produktu). Przez wf2-platform: action 'upload_logo' i 'upload_favicon' — body {shop_id, base64, file_name}; base64 = SUROWY base64 zawartości PNG (bez prefiksu data:). Zweryfikuj podmianę w headerze storefrontu (URL sklepu) i zapisz URL-e CDN w polach kroku. ⚡ RÓWNOLEGLE: można odpalić zaraz po kroku „Marka sklepu" (wymaga tylko logo + platform_shop_id).`,
+                pl_sklep: `KROK SKLEP NA PLATFORMIE. Narzędzie: python scripts/mockup-tools/platform-sync.py (MOST fabryka↔platforma). Komendy: 'shops' (lista sklepów partnera + zajętość per projekt) → 'link-shop ${projectId} <shop_id>' (zapis platform_shop_id + link w Podglądach; sklep zajęty przez inny projekt = odmowa bez --force). Jeśli >1 wolny sklep i nie wiadomo który — zapytaj Tomka w wf2_notes i weź pierwszy. Weryfikacja: 'status ${projectId}' (domena starter/custom + produkty + strony + integracje). Tomek może też przypiąć sklep sam PICKEREM w warsztacie tego kroku.`,
+                pl_branding: `KROK LOGO + FAVICON SKLEPU. Jedna komenda: python scripts/mockup-tools/platform-sync.py branding ${projectId} — bierze wf2_projects.logo_url + favicon_url (kontrakt marki PARASOLOWEJ z kroku „Marka sklepu"; storefront/checkout = parasol, NIE mini-marka produktu) i wgrywa przez adapter (upload_logo/upload_favicon, surowy base64). Wypisze DOWODY (URL-e CDN) — wklej do pól kroku. Zweryfikuj podmianę w headerze storefrontu (propagacja natychmiastowa). ⚡ RÓWNOLEGLE: można odpalić zaraz po kroku „Marka sklepu" (wymaga tylko logo + platform_shop_id).`,
                 pl_dostawy: `KROK DOSTAWY + COD. Przez wf2-platform: 'delivery_options' (broker Apaczka + priceGroups) → 'set_cod_account' {broker_id, nrb: NRB z kroku „Dane rozliczeniowe"} → raw GET /stores/{id}/delivery-brokers/{brokerId}/services (externalServiceId) → 'add_delivery' (Kurier COD DoorToDoor isCashOnDelivery:true + InPost DoorToPoint pointsType:'inpost'; ceny wg settings/decyzji) → 'set_delivery_order' (COD NA GÓRZE — filar risk-reversal). Zweryfikuj w kasie sklepu.`,
                 pl_domena: `KROK DOMENA (domenę kupuje TOMEK przez LH.pl). Kolejność: (1) jeśli domena z kroku „Marka sklepu" NIE jest jeszcze kupiona — sprawdź dostępność (RDAP rdap.dns.pl → 404 = wolna; 429 → WHOIS whois.dns.pl:43) i poproś Tomka o zakup w LH.pl (bramka wydatku; krok in_progress, koniec sesji). (2) Po zakupie: wf2-platform 'add_domain' {domain} → zapisz zwrócone rekordy DNS (z www) w polu kroku. (3) Podaj Tomkowi rekordy do wpisania 1:1 w panelu LH.pl: panel.lh.pl → Domeny → wybierz domenę → Zarządzanie DNS / edytor stref (domena zostaje na NS LH.pl — wpisujemy tylko rekordy A/CNAME z API; NIE przełączaj na zewnętrzne NS). (4) Aktywacją NIE musisz się zajmować: strażnik w cronie wf2-orders-sync sam wykryje weryfikację, aktywuje domenę ('activate_domain'), uzupełni wf2_projects.domain i odhaczy ten krok. Po aktywacji sanity: https://domena = 200 + SSL.`,
                 pl_integracje: `KROK INTEGRACJE. Przez wf2-platform: 'integrations' (stan) → 'set_integration' {type:'FacebookPixel', config:{pixelId: wf2_projects.pixel_id, apiKey: <token CAPI jeśli mamy>}} — UWAGA: PUT AUTO-WŁĄCZA. GA4 opcjonalnie {type:'GoogleAnalytics'}. Jeśli pixel_id jeszcze nie istnieje (Etap Kampanie) — krok zostaje in_progress z notą; jest idempotentny. Zweryfikuj w źródle storefrontu, że pixel się wstrzykuje.`,
-                pl_produkt: `KROK PRODUKT + KASA dla ${S} (id ${PID}). Przez wf2-platform: 'ensure_product' {name: nazwa wyświetleniowa mini-marki, price: wf2_products.price} (idempotentny po nazwie — platforma NIE MA DELETE produktu!) → 'set_checkout_slug' {product_id, variant_id, slug: '${S}'} → poczekaj na materializację checkout_url (akcja robi polling; fallback: https://<activeDomain>/checkout?p=${S}). Zapisz na wf2_products: platform_product_id, checkout_url, platform_name. Test: kasa odpowiada 200.`,
-                pl_landing: `KROK PUBLIKACJA LANDINGA dla ${S} (id ${PID}). Źródło: tn-crm/sklepy/<klient>/${S}/index.html (WYŁĄCZNIE po gate-check 0 FAIL z kroku Finisz). Podmień placeholdery: {{WF2_PRODUCT_ID}}→${PID}, {{CHECKOUT_URL}}→wf2_products.checkout_url, {{CANONICAL_URL}}→https://<domena>/${S}, zdejmij noindex. Landing MUSI zawierać runtime-snippet (data-checkout/data-price + trevio + INIT-GUARD — zero własnego fbq init). Przez wf2-platform: 'publish_landing' {shop_id, path:'${S}', html}. Zweryfikuj: URL 200, treść 1:1, CTA→kasa, hydratacja ceny z wf2-landing-api w konsoli. Zapisz wf2_products.platform_page_url + dopisz link do paska Podglądy.`,
-                pl_prawne: `KROK PODSTRONY PRAWNE. Zbuduj 4 podstrony custom-HTML sklepu: /regulamin (sprzedaż z COD, odstąpienie 14 dni, reklamacje — polskie prawo konsumenckie), /polityka-prywatnosci (RODO + pixel Meta/analityka platformy), /zwroty (procedura krok po kroku, przyjazny ton), /kontakt (dane firmy + e-mail sklepu). Dane firmy = pola kroku „Dane rozliczeniowe + prawne" (brak danych = krok in_progress z notą, NIE zmyślaj). Styl: lekki statyczny HTML w tokenach marki parasolowej (wf2_projects.palette/fonts, jasne tła), self-contained. Publikacja przez wf2-platform 'publish_landing' {path:'regulamin'|…}. Weryfikacja: 4× HTTP 200. Dopisz linki do stopki strony głównej (i przekaż notę do stopek landingów produktowych).`,
-                pl_glowna: `KROK STRONA GŁÓWNA. Zbuduj galerię marki parasolowej — tokeny marki z wf2_projects: name/tagline/brand_opis/palette/fonts/logo_url (krok „Marka sklepu"); kafle WSZYSTKICH produktów ze statusem gotowy/live — zdjęcie, nazwa mini-marki, cena, link do landinga platform_page_url. Lekki statyczny HTML (self-contained; window.trevio.viewItemList z listą produktów). Przez wf2-platform: 'publish_landing' {shop_id, path:'', html}. Aktualizuj przy każdym nowym gotowym produkcie. Zapisz URL w polu kroku.`,
+                pl_produkt: `KROK PRODUKT + KASA dla ${S} (id ${PID}). Jedna komenda: python scripts/mockup-tools/platform-sync.py product ${projectId} ${PID} [--name 'nazwa mini-marki — czym jest'] — robi CAŁOŚĆ: ensure_product (idempotentny po nazwie; platforma NIE MA DELETE produktu!) → set_checkout_slug ('${S}') → checkout_url składany deterministycznie z activeDomain → zapis kolumn platform_* na wf2_products → test kasy (HTTP). Domyślna nazwa = platform_name albo name produktu; nazwa widoczna W KASIE — format „Mini-marka — czym jest". Kasa nie-200 tuż po utworzeniu = materializacja, ponów komendę za kilka minut. Dowody z outputu wklej do checklisty.`,
+                pl_landing: `KROK PUBLIKACJA LANDINGA dla ${S} (id ${PID}). WARUNEK: gate-check 0 FAIL z kroku Finisz (źródło: repo_path produktu, fallback tn-crm/sklepy/tomek-niedzwiecki/${S}/index.html). Jedna komenda: python scripts/mockup-tools/platform-sync.py publish ${projectId} ${PID} — sama podmienia placeholdery ({{WF2_PRODUCT_ID}}, {{CANONICAL_URL}} z aktywnej domeny, {{PIXEL_ID}} gdy projekt go ma, {{CHECKOUT_URL}} gdy w HTML), noindex zdejmuje TYLKO na domenie docelowej (na starterze zostaje — anty-indeksacja złej domeny), publikuje (publish_landing), weryfikuje 200 + obecność runtime product_id, zapisuje platform_page_url + link w Podglądach. HTML bez {{WF2_PRODUCT_ID}} = FAIL (brak runtime-snippetu — wróć do lp_kod). Po publish: test hydratacji w konsoli (cena z wf2-landing-api + CTA→kasa) — najlepiej agentem visual-verify. ZMIANA CENY test→scale = re-publish (JSON-LD/meta mają cenę zapieczoną — README platforma-api „REGUŁA ZMIANY CENY").`,
+                pl_prawne: `KROK PODSTRONY PRAWNE. Zbuduj 4 podstrony custom-HTML sklepu: /regulamin (sprzedaż z COD, odstąpienie 14 dni, reklamacje — polskie prawo konsumenckie), /polityka-prywatnosci (RODO + pixel Meta/analityka platformy), /zwroty (procedura krok po kroku, przyjazny ton), /kontakt (dane firmy + e-mail sklepu). Dane firmy = pola kroku „Dane rozliczeniowe + prawne" (brak danych = krok in_progress z notą, NIE zmyślaj). Styl: lekki statyczny HTML w tokenach marki parasolowej (wf2_projects.palette/fonts, jasne tła), self-contained. Publikacja per podstrona: python scripts/mockup-tools/platform-sync.py page ${projectId} regulamin <plik.html> (analogicznie polityka-prywatnosci/zwroty/kontakt). Weryfikacja: 4× HTTP 200. Dopisz linki do stopki strony głównej (i przekaż notę do stopek landingów produktowych).`,
+                pl_glowna: `KROK STRONA GŁÓWNA. Zbuduj galerię marki parasolowej — tokeny marki z wf2_projects: name/tagline/brand_opis/palette/fonts/logo_url (krok „Marka sklepu"); kafle WSZYSTKICH produktów ze statusem gotowy/live — zdjęcie, nazwa mini-marki, cena, link do landinga platform_page_url. Lekki statyczny HTML (self-contained; window.trevio.viewItemList z listą produktów). Publikacja: python scripts/mockup-tools/platform-sync.py home ${projectId} <plik.html> (path:'' = strona główna; noindex wg domeny jak przy landingach). Aktualizuj przy każdym nowym gotowym produkcie. Zapisz URL w polu kroku.`,
                 pl_test: `KROK TEST ZAKUPOWY (BRAMKA). Złóż realne zamówienie testowe COD end-to-end: landing → CTA → checkout → zamówienie. Zweryfikuj: zamówienie widoczne przez wf2-platform 'orders' (zapisz id), zdarzenia trevio/pixel złapane, ceny landing↔kasa zgodne. Dowody (id zamówienia + zrzut) do notatki kroku. To bramka „sklep sprzedaje".`,
                 ads_pixel: `KROK PIXEL + POMIAR (Etap 4 Środowisko reklamowe). Zweryfikuj/utwórz pixel w BM z kontem reklamowym klienta (${project.meta_ad_account_id || 'act_?'}): pixel w TYM SAMYM BM (inny BM = WCA nie działają), OBIE domeny zweryfikowane w BM (domena parasolowa + domena checkoutu platformy), pixel ustawiony na platformie przez wf2-platform 'set_integration' (FacebookPixel: pixelId + apiKey=token CAPI). Dual tracking wg WORKFLOW-V2-TESTY §7.2: pixel przeglądarkowy + CAPI serwerowe Z DEDUPLIKACJĄ po wspólnym event_id (Test Events: JEDNO zdarzenie, nie dwa), hashowane email/telefon/fbp/fbc w CAPI (COD je ma z formularza — cel EMQ 8+, min. 6), link decoration fbclid/_fbp/_fbc na przejściu landing→kasa (runtime-snippet). Purchase testowy w Events Managerze jako GATE. Zapisz pixel_id na projekcie.`,
                 ads_grafiki: `KROK BANERY REKLAMOWE dla ${S} (id ${PID}). SILNIK GŁÓWNY = fabryka ad-forge v8 (scripts/mockup-tools/ad-forge.py; venv scripts/mockup-tools/.venv/Scripts/python.exe) — NIE Manus. NAJPIERW przeczytaj CAŁY docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md (SSOT: zasady ZG1–ZG9) + playbooki docs/zbuduje/ad-playbooks/PLAYBOOK-ad-{demo,problem,lifestyle,proof}.md; ad-forge czyta SAM z bazy dane produktu, refy (multi-ref z gallery_curated), logo/styl-master/paletę/fonty i cenę. TRYB FULL-DESIGN (default nano-banana-pro przez fal): model komponuje CAŁY baner (foto+typografia+pigułki+linie+logo zintegrowane, nie „naklejki” Pillow), best-of-2 na kąt, kąty demo/problem/lifestyle 4:5 1536×1920; tekst PL renderuje model VERBATIM z copy (diakrytyki w wersalikach) — bramka tekstu pilnuje litera-po-literze. PRZEBIEG: (1) GENERACJA: python ad-forge.py ${PID} [--angles demo,problem,lifestyle] ([--dry] pokazuje plan+koszt bez generacji) — best-of-2/kąt, buduje out/dowody/ (kompozyty wierności + ciągłości) i ustawia krok „Banery reklamowe” na in_progress (agr_brief/generacja/qa wypełnione z faktów). (2) 4 BRAMKI (obejrzyj kompozyty w out/dowody/ — werdykt robisz TY, vision, nie skrypt): litery PL (verbatim/diakrytyki) · wierność produktu (multi-ref side-by-side vs realny packshot, DWIE PARY OCZU) · ciągłość (WIERNOSC-CIAGLOSC.png: ten sam obiekt między scenami) · powód kliknięcia (co widz rozumie w 0,5 s / jaki hak / czy USP-mechanizm widoczny). Werdykty zapisz do out/KARTA.json / VERDICTS.json / KLIK.json (ad-forge wciąga je do not bramek). (3) POPRAWKI do wyczerpania: --fix ANGLE='opis cechy' (chirurgiczna korekta geometrii produktu, litery nietknięte) · --regen ANGLE (regeneracja best-of-2) · --pick ANGLE=cN (wybór kandydata). (4) WARIANTY HOOKÓW (~$0): python ad-forge.py ${PID} --hook-variants 3 [--ab-engine nano-banana-2] — baza „bez nagłówka” + N nagłówków nakładanych KODEM (font marki) = A/B hooka bez re-generacji; A/B silników = kompozyt do decyzji (NIE publikowany). (5) PUBLIKACJA: python ad-forge.py ${PID} --finalize — JEDYNY krok piszący do panelu na twardo: MERGE ads_creatives (blob), rejestr wf2_creatives (media_type='image', angle, format, ai_labeled=true), dowody kind='proof' → bud-assets/${S}/ads/dowody/, koszt fal → wf2_costs (kind='fal', step='agr_generacja') ORAZ PEŁNA emisja przez panel-sync (kontrakt docs/zbuduje/MOST-PANEL.md): sub-kroki agr_brief/agr_generacja/agr_qa/agr_final → done z notami z FAKTÓW przebiegu + krok główny ads_grafiki → done + checklista VERBATIM + activity. NIE dubluj tych zapisów ręcznie — ad-forge robi je idempotentnie. BRAMKA TOMKA: każdy baner akceptujesz w panelu toggle ✓ (pozycja „Banery zaakceptowane” zostaje OFF do jego decyzji). ŚWIĘTOŚCI: wierność produktu (refy=OBIEKTY {url,type:'product'}, nigdy stringi), zero zmyślonych liczb/pilności/obietnic dostawy (risk-reversal COD), flaga AI obowiązkowa (Meta 2026). Koszt ad-forge ~$0.45/baner (best-of-2). Wynik: 3 zaakceptowane banery + rejestr = done.`,

@@ -143,5 +143,28 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   rc.status < 300 ? ok('wf2_creatives ma media_type/angle/format (rejestr obrazów)') : bad('wf2_creatives schemat', `status ${rc.status} — migracja W2 (20260719d) zaaplikowana? (${String(rc.data).slice(0, 120)})`);
 }
 
+// ── 8. Most fabryka↔platforma (platform-sync.py) + picker sklepu w panelu ──
+{
+  const psPath = join(ROOT, 'scripts', 'mockup-tools', 'platform-sync.py');
+  const psSrc = existsSync(psPath) ? readFileSync(psPath, 'utf8') : '';
+  psSrc ? ok('platform-sync.py istnieje (most fabryka↔platforma)') : bad('platform-sync.py', 'brak scripts/mockup-tools/platform-sync.py');
+  const wantCmds = ['cmd_shops', 'cmd_link_shop', 'cmd_status', 'cmd_branding', 'cmd_product', 'cmd_publish', 'cmd_home', 'cmd_page', 'cmd_unpublish'];
+  const missing = wantCmds.filter((c) => !psSrc.includes(`def ${c}(`));
+  missing.length ? bad('platform-sync.py komendy', `brak: ${missing.join(', ')}`) : ok(`platform-sync.py: komplet komend (${wantCmds.length})`);
+  psSrc.includes('{{WF2_PRODUCT_ID}}') && psSrc.includes('strip_noindex')
+    ? ok('platform-sync.py: publish pilnuje runtime-snippetu i noindex-wg-domeny')
+    : bad('platform-sync.py publish', 'brak gate runtime ({{WF2_PRODUCT_ID}}) lub logiki noindex');
+
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  ['platformBlock', 'plLoadStores', 'plPickShop', 'plPlatformStatus', 'platformProductInfo'].every((f) => panelSrc.includes(f))
+    ? ok('panel: picker sklepu + stan platformy (platformBlock/plPickShop/plPlatformStatus)')
+    : bad('panel platforma', 'brak funkcji pickera/stanu platformy w projekt.html');
+
+  const adapterSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-platform', 'index.ts'), 'utf8');
+  adapterSrc.includes('function pagesList(')
+    ? ok('wf2-platform: pagesList (fix parsowania {pages:[…]} — unpublish/home działają)')
+    : bad('wf2-platform pagesList', 'brak fixu parsowania odpowiedzi /pages (obiekt, nie tablica)');
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

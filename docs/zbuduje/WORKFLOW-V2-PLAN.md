@@ -74,6 +74,16 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   nano-banana-pro/nb2) w sesji Claude Code; edge `wf2-ads` (Manus) SKASOWANY 19.07, kolumny
   `ads_manus_*` zdjęte migracją `20260719l`, gałąź routingu w `manus-webhook` wycięta (patrz §0a-quater).
   Sync statystyk Meta = `wf2-ads-sync` (OSOBNA funkcja, nietknięta).
+- **MOST fabryka↔platforma: `scripts/mockup-tools/platform-sync.py` (19.07)** — kroki pl_*
+  JEDNĄ komendą z dowodami: `shops` (zajętość sklepów per projekt) · `link-shop` · `status`
+  (produkty/kasy/strony/integracje + rozjazd cen) · `branding` · `product` (ensure+slug+kolumny
+  platform_*+test kasy) · `publish` (placeholdery+noindex-wg-domeny+weryfikacja+platform_page_url)
+  · `home` · `page` (prawne) · `unpublish`. Gate: publish bez `{{WF2_PRODUCT_ID}}` = FAIL;
+  noindex zdejmowany TYLKO na domenie docelowej. **Panel (krok pl_sklep): PICKER sklepu**
+  (lista partnera, wolne/zajęte, przypięcie = platform_shop_id + link) + „Stan platformy"
+  live (produkty/kasy/landingi/integracje/domena); kroki pl_produkt/pl_landing pokazują
+  stan produktu (kasa/landing). Fix adaptera: odpowiedź `/pages` to OBIEKT `{pages:[…]}`
+  (pagesList) — wcześniej unpublish/home były martwe.
 - **Landing runtime:** `docs/zbuduje/assets/landing-runtime-snippet.html` — kontrakt
   data-checkout/data-price + {{WF2_PRODUCT_ID}}; window.trevio (viewItem/addToCart/
   beginCheckout) + Meta VC/ATC/IC z **INIT-GUARD** (platforma wstrzykuje pixel na stronach
