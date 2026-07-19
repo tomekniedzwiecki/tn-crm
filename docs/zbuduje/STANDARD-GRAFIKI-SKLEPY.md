@@ -443,3 +443,19 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
   Fix FABRYKI: twarda reguła w prompcie — samokontrola wizualna każdego napisu litera po
   literze po wygenerowaniu; zgubiony znak = regeneracja / zapis zdaniowy. Bramka G4 ma
   wersalikowe diakrytyki jako osobny punkt kontroli.
+
+- **2026-07-19 — SILNIK B „ad-forge" (tor lokalny bez Manusa; powód: 2× timeout kredytowy
+  Manusa + dyrektywa Tomka „może przez image 2.0 / fal.ai"):** `scripts/mockup-tools/ad-forge.py`
+  — pełny lokalny orkiestrator: dane+refy z REST (port buildProductRefs/readBranding) →
+  copy+wizje scen (wf2-gpt, z dezambiguacją produktu po tytule aukcji) → sceny gpt-image-2
+  quality HIGH bezpośrednio z api.openai.com (bez limitu edge; `--engine gemini` alternatywnie)
+  → crop 4:5 + upscale 1536×1920 → **CAŁA typografia PL + logo NAKŁADANE KODEM** (Pillow,
+  font marki z resolvera, fallback Montserrat-Black; logo zawsze na jasnej pigułce
+  z bounding-checkiem i heurystyką jasności rogu) → ad-gate → publikacja panel-sync
+  (storage kanoniczny, blob MERGE po kącie, rejestr, koszt, agr_generacja). PROMPTY SCEN =
+  KIERUNKOWE (zasada Tomka: cel/wizja/nastrój w 3–6 zdaniach; wygląd produktu niosą WYŁĄCZNIE
+  referencje; dla demo wizja sceny = wskazówka studyjna bez ludzi). Sceny surowe zapisywane →
+  `--recompose` = poprawki typografii/logo za $0. Walidacja E2E Drapek: 3 kreacje HIGH ~7 min
+  ~$1.00, diakrytyki (też wersaliki) 100% poprawne — klasa niedostępna dla silnika A (Manus
+  renderuje litery sam). Tor A (Manus, edge wf2-ads) zostaje jako alternatywa; wybór silnika
+  = decyzja operatora per przebieg.
