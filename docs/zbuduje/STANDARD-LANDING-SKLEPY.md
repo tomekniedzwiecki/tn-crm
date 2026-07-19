@@ -487,7 +487,9 @@ reguły [D-art] [pkt 4].)*
    — na scenie tylko cutout z alfą). Klasa spoza allowlisty = BLOK. Arkusze (ikony) z planem cięcia (PIL, biel→alpha) i adresem każdego
    wycinka. 100% assetów użytych; 0 sekcji bez assetu. OG = 1200×630 w stylu master.
    **Kolumna `ujecie` per asset produktowy** (hero/problem/demo-seq/detail/packshot/
-   galeria-angle/scale). Gate anty-monotonii: **`min_distinct_product_views ≥ 5`**; ten sam
+   galeria-angle/scale). **Sekcja PORÓWNANIA = 2 assety w mapie (masażer 19.07):** nasz
+   produkt + KONKURENT/stary sposób — konkurent to najtaniej CROP z makiety 09 (rekwizyt,
+   gate F3A go nie dotyczy); bez wiersza w mapie F4 musi doraźnie cropować sam. Gate anty-monotonii: **`min_distinct_product_views ≥ 5`**; ten sam
    kadr >1× (poza oferta↔sticky) = BLOK z fixem „nowe ujęcie wg katalogu sek. 2"; sekcja
    sekwencja/„jak działa" z <2 ujęciami produktu = BLOK. **Mapa wskazuje też KARTĘ
    PRZEWODNIKA (F1.7) per asset** — każdy plik ma przypisany świat {kontekst/skala/
