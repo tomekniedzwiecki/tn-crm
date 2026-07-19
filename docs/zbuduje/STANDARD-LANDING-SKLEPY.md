@@ -287,16 +287,21 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    paleta z rolami · **2 fonty z rolami** (display vs label/liczby/body) · swash · plusiki/hairlines ·
    **JEDEN radius serii** · **styl ikon filled|outline** · **styl trust-pill** · próbka warstwowej
    głębi + grain — plus motyw przewodni jako klimat (żeby dalej służył jako referencja stylu KAŻDEJ
-   generacji). ⛔ styl-master ≠ druga hero-scena. Gate: motyw↔korzyść, jasno, hierarchia, minimalny
-   fake-tekst, **czy plansza pokazuje KOMPLET DNA (paleta+2 fonty+radius+ikony+trust-pill+głębia)**;
-   FAIL→regeneracja promptu. **Z tej planszy agent SPISUJE `TOKENS-MAKIETY.md` (F2.5) — SSOT tokenów
+   generacji). ⛔ styl-master ≠ druga hero-scena. **⚠️ REF styl-mastera = `{type:'ref'}` (lub bez
+   refu + dokładne hexy), NIGDY `{type:'product'}`** — typ 'product' dokleja w edge „reproduce
+   product unchanged, change ONLY the scene", co wymusza SCENĘ i uniemożliwia planszę DNA
+   (masażer 19.07; kolor produktu kotwiczyć kaflem PRODUKT na planszy). Gate: motyw↔korzyść,
+   jasno, hierarchia, minimalny fake-tekst, **czy plansza pokazuje KOMPLET DNA
+   (paleta+2 fonty+radius+ikony+trust-pill+głębia)**; FAIL→regeneracja promptu. **Z tej planszy agent SPISUJE `TOKENS-MAKIETY.md` (F2.5) — SSOT tokenów
    makiety wstrzykiwany do KAŻDEGO promptu makiety (pełny format: `docs/zbuduje/TOKENS-MAKIETY.md`).**
 1.5. **BRANDING (F2.5) — favicon + wordmark; PO styl-masterze, PRZED hero** (`scripts/
    mockup-tools/brand-forge.py`; SSOT rezerwacji: `bud_brand_names`, F0). **FAVICON/znak:**
    gpt-image-2 (przez wf2-gen, `type:'logo'`, quality high, 1:1, BIAŁE tło → biel→alpha PIL),
    ref = styl-master `{type:'ref'}` (NIE packshot); prompt-recepta: jeden prosty geometryczny
    znak z 2-3 prymitywów (koło/łuk/linia), grube kreski, czytelny @32px, 1-2 kolory z palety,
-   pure-white tło, margines ~20%, zero tekstu/gradientu/3D. **N=4-6 kandydatów (1 call
+   pure-white tło, margines ~20%, zero tekstu/gradientu/3D. **Znak ZWARTY/GŁĘBOKI — wypełnienie
+   bboxa ~0.55–0.80; cienka szeroka linia (fill <0.30) OBLEWA selektor @32px (masażer 19.07:
+   „łuk" jako hairline = odrzut; prompt ma wymuszać „bold solid filled mark", nie outline-linię).** **N=4-6 kandydatów (1 call
    count=N) → selektor skryptowy @32px** (n_kolorów ≤3, gęstość krawędzi, kontrast, BRAK
    TEKSTU/OCR, margines-wypełnienie 55-80%; odrzuty twarde) → **werdykt vision top-2** (6/6:
    czytelny w 32px / oddaje korzyść / paleta+charakter / 1-2 kolory flat zero 3D / zero liter /
