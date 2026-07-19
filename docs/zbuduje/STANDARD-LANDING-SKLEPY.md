@@ -338,7 +338,11 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    kolejność, gęstość). Kadr 2:3 makiety mobile = FOLD telefonu: WSZYSTKO decydujące MUSI być
    w kadrze — dla hero: kompaktowa scena (produkt duży, ale scena NIE zjada >45% wysokości) +
    hook big-type + karta mikro-oferty (cena → CTA → pay-row) WIDOCZNA W KADRZE; max 1 linia
-   korzyści (sub 3-liniowy = desktopowa gęstość = FAIL). Sekcje: treść ZREDUKOWANA vs desktop
+   korzyści (sub 3-liniowy = desktopowa gęstość = FAIL). **WZORZEC STRUKTURALNY hero mobile
+   w KODZIE (Tomek 19.07: „w Drapku to jest dobrze zrobione"): scena ~43-50svh + WYRAŹNA karta
+   mikro-oferty (bg --card, border, cień sepia, radius) NACHODZĄCA na dół sceny ujemnym
+   marginesem — nie „gołe elementy na kremie"; cel pomiarowy: karta nad foldem @844, cena+CTA
+   @750 (pasek Safari). Skórka per landing (Z6), mechanika układu wspólna.** Sekcje: treść ZREDUKOWANA vs desktop
    (mobile = mniej), tap-targety duże, pion. KRYTYK F2 dostaje nowe pytanie (7): „czy ta makieta
    wygląda jak zaprojektowana OD ZERA pod telefon (fold z ceną/CTA dla hero), czy jak zmniejszony
    desktop?" — zmniejszony desktop = REGENERACJA.
@@ -527,6 +531,13 @@ reguły [D-art] [pkt 4].)*
    PRZEWODNIKA (F1.7) per asset** — każdy plik ma przypisany świat {kontekst/skala/
    światło/człowiek/perspektywa}; asset spoza świata swojej karty = regeneracja.
 5. KAŻDA generacja obejrzana (Read) przed użyciem; wtopiony tekst/UI w tle = odrzut.
+6. **SEKWENCJA WDROŻENIA NA LIVE (incydent „pustka przejściowa" masażera 19.07 — nowa scena
+   z kremową strefą nadpisała URL, a stary kod na live układał treść POD sceną → Tomek oglądał
+   wielki pusty blok):** asset, którego zmiana WYMAGA zmiany kodu (inny układ stref/kadr/aspekt),
+   ⛔ NIE nadpisuje produkcyjnego URL-a x-upsertem — idzie pod NOWĄ wersjonowaną ścieżką (lub
+   z parametrem `?v=N` OD RAZU zmienianym w kodzie) i przełącza się RAZEM z kodem w jednym
+   commicie. x-upsert na ten sam URL dozwolony TYLKO dla zmian nie wymagających kodu
+   (retusz/kompresja/kosmetyka przy tym samym układzie).
 
 **F3A — GATE WIERNOŚCI DO SKUTKU (bramka F3→F4; pełny proces: `GRAFIKA-Z-MAKIETY.md §4b`).**
 **Wejście do kodu (F4) jest ZABLOKOWANE, dopóki KAŻDA grafika produktowa (klasa S/P użyta
