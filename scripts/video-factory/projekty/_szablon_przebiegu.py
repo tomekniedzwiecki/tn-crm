@@ -108,10 +108,14 @@ def check_music(path, kreacja_s=15.0, floor_db=-30.0):
         out = subprocess.run(["ffmpeg", "-v", "info", "-ss", str(s), "-t", "1", "-i", path,
                               "-af", "volumedetect", "-f", "null", "-"],
                              capture_output=True, text=True).stderr
+        m = x = None
         for ln in out.splitlines():
-            if "mean_volume" in ln:
-                v = float(ln.split(":")[1].strip().split()[0])
-                if v < floor_db: holes.append((s, v))
+            if "mean_volume" in ln: m = float(ln.split(":")[1].strip().split()[0])
+            if "max_volume" in ln: x = float(ln.split(":")[1].strip().split()[0])
+        # dziura = PRAWDZIWA cisza (mean pod progiem I max bez beatu); groove-pauzy
+        # (mean niski, ale beat uderza max > -10) sa legalne — zestaw 19.07
+        if m is not None and m < floor_db and (x is None or x < -10.0):
+            holes.append((s, m))
     if holes:
         print(f"[MUZYKA] DZIURY ENERGII {holes} — wytnij okno (atrim+acrossfade=0.2) "
               f"lub przesun mus_offset; NIE montuj z dziura w oknie 0..{kreacja_s}s!")

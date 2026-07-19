@@ -66,14 +66,19 @@ def score_product(key_or_id):
     p = rows[0]
     cands = {}
 
+    def _vid(url):
+        # klucz twin = ID video (ostatni segment) - ten sam film potrafi wystapic pod URL-ami
+        # z roznymi autorami w sciezce (bug wykryty na zestawie: duplikat jade niewykryty)
+        return (url or "").rstrip("/").rsplit("/", 1)[-1]
+
     def add(url, plays, likes, author, src, cover=None, comments=0, saves=0, shares=0, followers=None):
-        if not url or url in cands:
-            # duplikat = "twin" (dowod powtarzalnosci)
-            if url in cands:
-                cands[url]["twins"] += 1
-                cands[url]["plays"] = max(cands[url]["plays"], plays or 0)
+        vid = _vid(url)
+        if not vid or vid in cands:
+            if vid in cands:
+                cands[vid]["twins"] += 1
+                cands[vid]["plays"] = max(cands[vid]["plays"], plays or 0)
             return
-        cands[url] = {"url": url, "plays": plays or 0, "likes": likes or 0, "author": author,
+        cands[vid] = {"url": url, "plays": plays or 0, "likes": likes or 0, "author": author,
                       "zrodla": [src], "cover": cover, "comments": comments or 0,
                       "saves": saves or 0, "shares": shares or 0, "followers": followers, "twins": 0}
 
@@ -86,16 +91,16 @@ def score_product(key_or_id):
         add(v.get("url") or v.get("tiktok_url"), v.get("plays"), v.get("likes"),
             v.get("author"), "tt_shop.videos", cover=v.get("cover"))
     # 3) blizniacze rekordy radaru (to samo video w innych wpisach)
-    urls = [u for u in cands if u]
+    urls = [c["url"] for c in cands.values() if c.get("url")]
     if urls:
         twins = ps._get("bud_tt_products", {"tiktok_url": f"in.({','.join(urls)})",
                                             "select": "tiktok_url,max_plays,author_followers,newest_days,status"})
         for t in twins:
-            u = t["tiktok_url"]
-            if u in cands and u != p.get("tiktok_url"):
-                cands[u]["twins"] += 1
-            if u in cands and t.get("author_followers") and not cands[u]["followers"]:
-                cands[u]["followers"] = t["author_followers"]
+            vid = _vid(t["tiktok_url"])
+            if vid in cands and t["tiktok_url"] != p.get("tiktok_url"):
+                cands[vid]["twins"] += 1
+            if vid in cands and t.get("author_followers") and not cands[vid]["followers"]:
+                cands[vid]["followers"] = t["author_followers"]
 
     out = []
     for c in cands.values():

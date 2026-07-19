@@ -70,6 +70,15 @@ Generuj wg `PROMPTY-BIBLIOTEKA.md` (1) role obrazów + (2) pary FLF. **Master-fr
 ### ⛔ BRAMKA TOMKA #2 (30 s): ARKUSZ KLATEK-KLUCZY — przed renderami. Reszta autonomiczna (retro-akceptacja). W trybie autonomicznym: samoakcept agenta z uzasadnieniem w raporcie (patrz nota przy BRAMCE #1).
 - **Na arkuszu zweryfikuj kluczowe POD-ELEMENTY produktu** (końcówka/dysza/przycisk/gniazdo) — nie tylko sylwetkę. Jeśli **master ma zły pod-element**, **przegeneruj MASTER przed chainowaniem** (błąd mastera propaguje się na wszystkie klatki produktowe).
 
+### REFY kref — ZDROWA PROPORCJA (zestaw 19.07: 2 martwe joby po $0.56)
+Frontal/reference o ekstremalnej proporcji (wąski pionowy crop ~1:3, np. pędzel 130×400)
+= job kref umiera na serwerze BEZ statusu FAILED (response_url zwraca 422; poll wisi
+w nieskończoność). Wąskie cropy narzędzi PADDUJ do proporcji ≥ ~2:3
+(`ffmpeg pad=iw*2.2:ih*1.1:...:white`) PRZED użyciem jako element. Objaw rozpoznasz po:
+render biegnie >2× dłużej niż siostrzane sceny + reclaim nie widzi wyniku.
+Przy okazji: `reclaim` zapisuje pod tag_full Z PREFIKSEM projektu (zestaw_hook.mp4), a
+render_scenes bez prefiksu (hook.mp4) — po reclaim sprawdź duplikaty i uporządkuj nazwy.
+
 ## KROK 6 — RENDER
 `render.render_scenes(scenes, outdir, project="<proj>")`. Silnik per scena z playbooka: `flf` / `mc` (driving 3-10 s, character_orientation) / `omnihuman` (audio+prompt ekspresji).
 **best-of-N (`n:2`) TYLKO na:** sceny `mc`, sceny `omnihuman`, sceny fizyki płynów. FLF i klatki nano — bez N. Auto-wybór PO werdyktach bramki (KROK 7): `qa_gate.select_best(gen_dir, tag)` — bierze PASS z najmniejszą liczbą flag i kopiuje na `<tag>.mp4` (+`.pass`); żaden kandydat bez PASS → pętla poprawek, NIE wybór „najmniej złego".
