@@ -90,7 +90,9 @@ grafika do poprawy, nie „sufit danych".
 
 **🔒 RUBRYKA WERDYKTU (R13 — OBOWIĄZKOWA w DOPASOWANIE.md, egzekwowana przez `gate-check.py`).**
 Każdy werdykt sekcji NIE jest prozą — to 5 pól T/N + WERDYKT. Format wiersza (kolumna „werdykt"):
-`skala_elem:T · AR_proporcje:T · guttery:T · tresc_od_krawedzi:T · wys_vs_makieta:T → WERDYKT: TAK`.
+`skala_elem:T · ar_proporcje:T · guttery:T · krawedz:T · wys_vs_makieta:T → WERDYKT: TAK`.
+(⚠️ pole 4 = `krawedz`, NIE `tresc_od_krawedzi` — gate matchuje `\bkraw` i podkreślnik przed
+„kraw" psuje match = cichy FAIL 4/5 pól; masażer 19.07.)
 - **WERDYKT=TAK bez kompletu 5×T = FAIL** (nie wolno „zaliczyć" sekcji z otwartym defektem).
 - **Sekcje KODOWE:** fraza-wytrych w wierszu werdyktu = FAIL. Zbanowane: `bez wpływu`, `reflow`,
   `sufit`, `cap ~0`, `świadoma`, `pomijalne`, `do decyzji` (to były usprawiedliwienia odpuszczające

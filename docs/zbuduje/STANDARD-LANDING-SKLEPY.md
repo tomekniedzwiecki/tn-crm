@@ -528,6 +528,16 @@ sandbox izolowany → test automatyczny stanów → pętla do zgodności → mon
 końcu) wg `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`. Do index.html wchodzą dopiero jako
 zielony sandbox.**
 Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
+**WZORCE ANTY-FLAKY dla gate'ów F7.1 (masażer 19.07 — dwa niedeterministyczne LAYOUT-FAIL-e
+z winy KODU, nie layoutu):** (1) scena sekcyjna `<picture>` ZAWSZE `position:absolute;inset:0`
+pod treścią (position:static = detekcja full-bleed zależy od timingu lazy-load = flaky gutter-FAIL);
+(2) etykiety/teksty kafli = elementy SEMANTYCZNE (`<p>`/`<hN>`), nigdy gołe `<div>` (contentBlock
+DOM self-checków ich nie liczy → fałszywa „pusta kolumna"). (3) **Skala nagłówków per sekcja:**
+makiety edytorialnie WARIUJĄ H1/H2 (55–80px oversized display) — jeden globalny clamp `.h2` daje
+jednolite ~51px i 13 patchy w F7.1; koder od razu daje per-sekcja override tam, gdzie makieta ma
+oversized H. (4) **Desktop re-CTA (§4) NIE jako osobny `<section id>`** — wstawka w obrębie
+sekcji sąsiedniej (aside/div), inaczej potyka gate'y „IR komplet == sekcje" i rubrykę
+(sekcja bez makiety).
 **🧩 MODUŁY KANONICZNE (R13 — `docs/zbuduje/moduly/` + `MODULY.md`).** Gdy sekcja ma
 odpowiednik w bibliotece, koder MUSI użyć modułu jako **BAZY MECHANIKI** — nie pisze
 mechaniki od zera. Dostępne @1: `wideo-rail` (rail 9:16, IO-autoplay, unmute-exclusive),
