@@ -294,24 +294,37 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    jasno, hierarchia, minimalny fake-tekst, **czy plansza pokazuje KOMPLET DNA
    (paleta+2 fonty+radius+ikony+trust-pill+głębia)**; FAIL→regeneracja promptu. **Z tej planszy agent SPISUJE `TOKENS-MAKIETY.md` (F2.5) — SSOT tokenów
    makiety wstrzykiwany do KAŻDEGO promptu makiety (pełny format: `docs/zbuduje/TOKENS-MAKIETY.md`).**
-1.5. **BRANDING (F2.5) — favicon + wordmark; PO styl-masterze, PRZED hero** (`scripts/
-   mockup-tools/brand-forge.py`; SSOT rezerwacji: `bud_brand_names`, F0). **FAVICON/znak:**
-   gpt-image-2 (przez wf2-gen, `type:'logo'`, quality high, 1:1, BIAŁE tło → biel→alpha PIL),
-   ref = styl-master `{type:'ref'}` (NIE packshot); prompt-recepta: jeden prosty geometryczny
-   znak z 2-3 prymitywów (koło/łuk/linia), grube kreski, czytelny @32px, 1-2 kolory z palety,
-   pure-white tło, margines ~20%, zero tekstu/gradientu/3D. **Znak ZWARTY/GŁĘBOKI — wypełnienie
-   bboxa ~0.55–0.80; cienka szeroka linia (fill <0.30) OBLEWA selektor @32px (masażer 19.07:
-   „łuk" jako hairline = odrzut; prompt ma wymuszać „bold solid filled mark", nie outline-linię).** **N=4-6 kandydatów (1 call
-   count=N) → selektor skryptowy @32px** (n_kolorów ≤3, gęstość krawędzi, kontrast, BRAK
-   TEKSTU/OCR, margines-wypełnienie 55-80%; odrzuty twarde) → **werdykt vision top-2** (6/6:
-   czytelny w 32px / oddaje korzyść / paleta+charakter / 1-2 kolory flat zero 3D / zero liter /
-   czyste krawędzie; brak → regeneracja z zaostrzeniem, pętla do wyczerpania, zero udziału
-   Tomka). **WORDMARK: NIGDY z gpt-image (diakrytyki PL = hazard)** — render z webfontu landingu
-   (Pillow ImageFont / headless), transparent; **LOCKUP: favicon LEWA + wordmark PRAWA**,
-   flex align-center gap ~.5ch, NIGDY pion. Deliverables → `bud-assets/<slug>/brand/`:
-   favicon-512/256/32.png, wordmark.png, logo-combo.png, (OG 1200×630 opcjonalnie). Znak jako
-   `{type:'logo'}` ref do makiet z topbarem (wordmark w makiecie = tekst; kod odtwarza live-text).
-   Każdy plik obejrzany (Read) przed użyciem.
+1.5. **BRANDING (F2.5, pipeline R3 19.07) — favicon + wordmark; PO styl-masterze, PRZED hero**
+   (`scripts/mockup-tools/brand-forge.py`; SSOT rezerwacji: `bud_brand_names`, F0; parasol =
+   claim `wf2_projects.name` przez `--project-id`, reserve-before-generate). **FAVICON/znak —
+   DIVERSITY-FIRST: 2-3 RÓŻNE metafory (`--metafory 'a;b;c'`) × 2-3 warianty, NIE N klonów
+   jednej (fixation = lokalne optimum; Trafionek 19.07: koncept #2 „metka+ptaszek" pobił
+   zwycięzcę v1 „tarcza+rzutka" — generyczny trope).** Kanał domyślny: **LOKALNY OpenAI
+   `/v1/images/generations` quality HIGH** (OPENAI_API_KEY z .env; zero wall-clock edge;
+   ⚠️ gpt-image-2 NIE wspiera `background:transparent` — generacja na czystej bieli); fallback
+   edge wf2-gen medium. **Favicon NIE dostaje referencji styl-mastera** (styl-master = referencja
+   MAKIET; `/edits` ze sceną bleeduje tło i psuje alfę) — paleta idzie hexami w prompcie.
+   Prompt-recepta: jeden prosty geometryczny znak z 2-3 prymitywów, **„bold solid filled mark"
+   nie outline** (masażer 19.07: hairline-łuk = odrzut), czytelny @32px, 1-2 kolory z palety,
+   pure-white tło, margines ~20%, zero tekstu/gradientu/3D. **ALFA: natywna gdy jest; inaczej
+   tło→alpha z PRÓBKI ROGÓW (nie zakładanej bieli — kremowe tła robiły halo/dziury) + DEFRINGE
+   (bez niego jasna obwódka na ciemnym tle checkoutu); tło niejednolite = twardy odrzut (bleed).**
+   **Selektor skryptowy @32px** (n_kolorów ≤3, gęstość krawędzi, kontrast, BRAK TEKSTU/OCR —
+   skrypt RAPORTUJE dostępność tesseracta, margines-wypełnienie 55-80%, test MONO: sylwetka
+   musi żyć kształtem nie kolorem; odrzuty twarde) → **werdykt vision top-2 Z RÓŻNYCH konceptów,
+   RUBRYKĄ 6×T/N** (czytelny @32 / czytelny @16 na obu tłach brand-context / metafora oddaje
+   nazwę-korzyść nie clipart / flat 1-2 kolory zero 3D / zero liter / mono czytelne; TAK bez
+   6×T = FAIL, frazy-wytrychy = FAIL, + JEDNA najsłabsza rzecz wymuszona; brak → regeneracja
+   z zaostrzeniem, pętla do wyczerpania, zero udziału Tomka). **WORDMARK: NIGDY z gpt-image
+   (diakrytyki PL = hazard)** — render z webfontu landingu (Pillow ImageFont; **guard glifów:
+   brak znaku nazwy w cmap = twardy STOP, brak pełnego latin-ext = WARN**), transparent, wariant
+   `-dark` (biały); **LOCKUP: favicon LEWA + wordmark PRAWA, skala znaku do wysokości GLIFÓW
+   (~1.18×), nie pudełka** — flex align-center, NIGDY pion; wariant `-dark`. Deliverables →
+   `bud-assets/<slug>/brand/`: favicon-512/256/32/**16**/**mono**.png, wordmark(+dark).png,
+   logo-combo(+dark).png, **brand-context.png (DOWÓD: favicon @16/32/64 na jasnym I ciemnym +
+   lockupy na tłach — do wf2_artifacts)**, brand.json (SSOT: nazwa/paleta/font/pliki),
+   (OG 1200×630 opcjonalnie). Znak jako `{type:'logo'}` ref do makiet z topbarem (wordmark
+   w makiecie = tekst; kod odtwarza live-text). Każdy plik obejrzany (Read) przed użyciem.
 2. **HERO-MAKIETA** (pełny 1. ekran: topbar, nagłówek PL, scena z produktem, karta wtopiona
    w scenę, pay-row; gate WOW — iterować max 3, wybrać najlepszą).
 3. **MAKIETY WSZYSTKICH SEKCJI planu** (pokrycie CAŁEGO planu — tylko czysta stopka bez
@@ -1197,6 +1210,21 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-19 (BRANDING R3 — pytanie Tomka „czy flow loga i marki jest tak dobre, jak się da?";
+  synteza: research best-practices + audyt adwersarialny brand-forge, 2× Sonnet)**: F2.5
+  przebudowane: (1) **DIVERSITY-FIRST** — 2-3 różne metafory znaku zamiast N klonów jednej
+  (fixation; walidacja na Trafionku: koncept #2 pobił zwycięzcę v1); (2) kanał **lokalny OpenAI
+  HIGH** (fallback edge medium; gpt-image-2 NIE wspiera background:transparent — potwierdzone 400);
+  (3) **favicon BEZ referencji styl-mastera** (/edits ze sceną = bleed tła; styl-master zostaje
+  referencją makiet); (4) **alfa: próbka rogów + DEFRINGE** zamiast progowania bieli (kremowe
+  tła = halo/dziury; bleed = twardy odrzut); (5) selektor + **test MONO** + raport dostępności
+  OCR; (6) **werdykt RUBRYKĄ 6×T/N** (w tym @16 na obu tłach) + wymuszona „jedna najsłabsza
+  rzecz" — koniec grzecznościowych werdyktów; (7) deliverables + favicon-16/mono, wordmark-dark,
+  logo-combo-dark, **brand-context.png (dowód kontekstowy)**, brand.json; (8) **guard glifów
+  fontu** (znak spoza cmap = STOP, brak latin-ext = WARN); (9) lockup: skala znaku do wysokości
+  glifów (~1.18×), nie pudełka z paddingiem; (10) parasol: claim wf2_projects.name PRZED
+  generacją (reserve-before-generate; UNIQUE INDEX w migracji 20260719k — do zaaplikowania).
 
 - **2026-07-19 (DOKI FABRYKI → PRYWATNY BUCKET wf2-docs; dyrektywa Tomka „to musi być dostępne
   z każdego miejsca, nie tylko na moim dysku")**: KAŻDY dokument fazy (.md/.json) jest uploadowany
