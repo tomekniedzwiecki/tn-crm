@@ -455,8 +455,10 @@ Deno.serve(async (req) => {
         }
         await persistOnce()
         // <rezerwacja> = wystaw ofertę (7 dni) i podaj frontowi token → karta linkuje /p/<token>
+        // Samonaprawa: marker w HISTORII bez tokena (sesje sprzed fixa self-closing) → dogeneruj.
+        const histHasRsv = history.some((m) => m.role === 'assistant' && /<rezerwacja\s*\/?>/i.test(m.content))
         let offerToken: string | null = session.offer_token || null
-        if (/<rezerwacja\s*\/?>/i.test(full)) offerToken = await ensureOffer(session)
+        if (/<rezerwacja\s*\/?>/i.test(full) || histHasRsv) offerToken = await ensureOffer(session)
         send('talk_meta', {
           sessionId,
           phase: extractFazy(full).pop() || session.last_phase || null,
