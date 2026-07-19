@@ -1029,6 +1029,11 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   stopka — zapas 7k); plan-call MAX 2 obrazy i cap ~4-5k; `max_output_tokens` ≠ bezpiecznik.
 - Limit inputu 400k znaków (`input_za_dlugi`): screenshoty jako data-URI JPEG q~47 szer.400
   w body (nie argv); wysoki mobile na 2 wywołania.
+- **PLAN F1 = 2 calle z góry (masażer 19.07):** cap 4200 + 2 obrazy NIE mieści pełnego planu
+  (gpt-5.6-sol pisze bogate sekcje i ucina paletę/grafiki/HOOKS). Wzorzec: call #1 rdzeń
+  (motyw+sekcje, z obrazami) → call #2 krótki TEKSTOWY ogon (paleta/grafiki/CTA/HOOKS, bez
+  obrazów). Ogon też **medium** — `high` przy małym capie zwraca PUSTY tekst (cały budżet
+  w reasoning; potwierdzone 2× — Blasik i masażer).
 - Odpowiedź czytać jako SUROWE BAJTY UTF-8 (python/urllib); PS Invoke-RestMethod = mojibake.
 - SŁOWNIK KLAS wspólny dla chunków (inaczej CSS↔body rozjazd, gołe `<svg>` = ikony 300px);
   lightboxy w JEDNYM chunku (inaczej zduplikowane ID). Montaż: cross-check + grep.
@@ -1050,6 +1055,14 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 ### 7c. Materiał źródłowy (aukcja/snapshot)
 - **`source='detail'` = warunek konieczny budowy**; `search`/`have` = STOP (galeria bywa
   INNYM produktem — Latarek 17.07). Kuracja galerii → `bud_tt_products.gallery_curated`.
+- **Sekcja wideo = WARUNKOWA, nie domyślna (masażer 19.07):** kolumny `videos`/`max_plays`
+  w `bud_tt_products` bywają niezerowe, gdy `tt_shop` = **null** i `video_url` = null → 0 realnych
+  źródeł. Przed planowaniem sekcji wideo ZAWSZE zweryfikować `tt_shop.videos`/`video_url`
+  w SNAPSHOCIE (nie w kolumnach ani briefie); 0 źródeł = sekcję pominąć, `videos_curated`
+  zapisać ze `skip=true`.
+- **„Battery Powered" + „Batteries Included=No" = pułapka POZORNA** dla elektroniki: opis
+  (`Charging Method`/mAh) rozstrzyga, czy to akumulator USB — czytać pełny `description`
+  PRZED interpretacją specs (specs niosą odziedziczone tagi, jak „NAILCLIPPERS" Drapka).
 - Dane ZAWSZE ze snapshotu (nie z odziedziczonego briefu); puste specs → komunikaty
   jakościowe **+ wymiary z rozmiarówek galerii (kuracja DANE) uzupełniają specs**.
 - Vision-gate zdjęć, opinii i WIDEO (off-product w obie strony) — obowiązkowy (F0).
