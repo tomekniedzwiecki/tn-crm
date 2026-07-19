@@ -274,10 +274,11 @@ Deno.serve(async (req) => {
       messages: openaiMessages,
       stream: true,
       stream_options: { include_usage: true },
-      /* TWARDY sufit długości: ~450 tokenów ≈ maks. ~1300 znaków PL — fizyczna
+      /* TWARDY sufit długości: ~350 tokenów ≈ maks. ~1000 znaków PL — fizyczna
          blokada ścian tekstu (Tomek 19.07: „nikt tego nie przeczyta").
-         Styl 2-3 zdań nigdy tu nie dobija; dawkowanie pilnuje prompt. */
-      max_completion_tokens: 450,
+         Cel promptu to ~600 zn; przy uderzeniu w sufit persistOnce ścina do
+         pełnego zdania i front dostaje cut:true w talk_meta. */
+      max_completion_tokens: 350,
     })
   } catch (e) {
     console.error('[lead-talk] openai fail', e)
@@ -291,6 +292,21 @@ Deno.serve(async (req) => {
       const send = (event: string, data: unknown) =>
         controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
       let full = ''
+      let persisted = false // guard: rozłączenie klienta po zapisie NIE może zapisać drugi raz
+      let finishReason = ''
+      const persistOnce = async () => {
+        if (persisted) return
+        persisted = true
+        // ucięcie sufitem tokenów: zetnij wiszące pół-słowa/pół-tagi do pełnego zdania
+        if (finishReason === 'length') {
+          full = full
+            .replace(/<[a-z_/]*$/i, '')
+            .replace(/<opcje>[\s\S]*$/i, '')
+            .replace(/[^.!?]*$/, '')
+            .trimEnd() || full
+        }
+        await persistAssistant(session, full)
+      }
       try {
         const reader = openaiRes.body!.getReader()
         const dec = new TextDecoder()
@@ -309,6 +325,7 @@ Deno.serve(async (req) => {
             try {
               const j = JSON.parse(payload)
               if (j.error) throw new Error(j.error.message || 'stream error')
+              if (j.choices?.[0]?.finish_reason) finishReason = j.choices[0].finish_reason
               const delta = j.choices?.[0]?.delta?.content
               if (delta) {
                 full += delta
@@ -320,16 +337,17 @@ Deno.serve(async (req) => {
             }
           }
         }
-        await persistAssistant(session, full)
+        await persistOnce()
         send('talk_meta', {
           sessionId,
           phase: extractFazy(full).pop() || session.last_phase || null,
           reservation: /<rezerwacja>/i.test(full),
+          cut: finishReason === 'length' || undefined,
         })
       } catch (e) {
         console.error('[lead-talk] stream fail', e)
-        await persistAssistant(session, full).catch(() => {})
-        send('talk_meta', { sessionId, error: 'stream' })
+        await persistOnce().catch(() => {})
+        try { send('talk_meta', { sessionId, error: 'stream' }) } catch { /* klient rozłączony */ }
       } finally {
         controller.close()
       }
