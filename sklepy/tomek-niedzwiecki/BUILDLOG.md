@@ -136,3 +136,20 @@ Feedback Tomka → 3 korekty systemowe (wszystkie w STANDARD-LANDING-SKLEPY.md):
 Wynik: 15 generacji (0 odrzutów po v2), kod 100% agent (0 calli wf2-gpt — odstępstwo; werdykt v4: GPT pisze sekcje dobrze), Playwright 8/8 PASS.
 **Wnioski fabryczne:** (a) VISION-GATE zdjęć opinii OBOWIĄZKOWY — ae-* bywają zrzutami apki AliExpress/obcą marką (VOLLYC)/off-topic; (b) rehost tylko bud-assets/<slug>/ (whitelist edge); (c) reduced-motion: treść ukrywana dopiero klasą .anim z JS; (d) koszt V5: ~15 obrazów ≈ 3,3 zł + plan 15,4k tok ≈ 0,4 zł.
 Otwarte: pixel/canonical placeholdery (gate przed kampanią); cross-model review wf2-gpt.
+
+
+## 2026-07-19 — Sesja: ETAP 3 wykonany przez API (sklep na platformie)
+
+**Zrobione (wszystko przez adapter wf2-platform, sklep test 019f650b…):**
+- pl_branding DONE: logo-combo + favicon Trafionka wgrane (upload_logo/upload_favicon), widoczne na storefroncie.
+- pl_produkt DONE ×2: „Odprężek — masażer karku i ramion" 299,00 (slug masazer) + „Drapek — drapak ścierający pazury" 149,90 (slug drapek); checkout_url zmaterializowane, kasy 200; kolumny platform_* zapisane.
+- pl_landing DONE ×2: publish_landing masazer (131 KB) + drapek (130 KB); WF2_PRODUCT_ID + canonical podmienione, NOINDEX ZOSTAJE do aktywacji trafionek.pl. Weryfikacja agenta (desktop+mobile): render PASS, CTA hydratowany do kasy, ceny live z wf2-landing-api, window.trevio true, konsola czysta.
+- pl_dostawy IN_PROGRESS: metoda COD „Kurier — płatność przy odbiorze" 14,99 (broker Sandbox, pobranie NA GÓRZE); set_cod_account czeka na NRB (pl_dane). Apaczka: supportsCashOnDelivery=true, konto COD nieskonfigurowane.
+- pl_integracje IN_PROGRESS: pixel czeka na Etap 4 (pixel_id); GA4 nie używamy.
+- Pasek Podglądy: linki do obu landingów; pilot Uśmieszka usunięty z linków (strona-widmo: nie ma jej w pages, ale URL nadal serwuje stary HTML — zgłosić Adrianowi).
+
+**Decyzje:** noindex na starter-domenie ZOSTAJE (indeksację włączamy dopiero z trafionek.pl — wtedy re-publish z finalnym canonical); nazwa platformowa produktu = mini-marka + czym jest (widoczna w kasie).
+
+**Czeka na Tomka:** zakup trafionek.pl (LH.pl) → pl_domena · NRB do pobrań + dane prawne (pl_dane) · Etap 4 kroki klienckie (konto ads, strona FB, budżet).
+**Następne w kolejce (auto):** pl_glowna (galeria Trafionka, publish_landing path:'') · pl_prawne (po pl_dane) · landingi 4 kandydatów (fabryka) · pl_test na końcu.
+**Kosmetyka do fabryki:** masażer mobile — pusty pas ~500 px między zdjęciem hero a nagłówkiem (agent, nie blokuje).
