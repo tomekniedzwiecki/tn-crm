@@ -227,6 +227,7 @@
                                 <th class="px-4 py-3 font-medium">Lead</th>
                                 <th class="px-4 py-3 font-medium">Status</th>
                                 <th class="px-4 py-3 font-medium w-16 text-center">Ankieta</th>
+                                <th class="px-4 py-3 font-medium w-20 text-center" title="Liczba odpowiedzi leada w rozmowach AI (/rozmowa + /sklep)">Rozmowa AI</th>
                                 <th class="px-4 py-3 font-medium">Pozyskanie</th>
                                 <th class="px-4 py-3 font-medium">Marketing</th>
                                 <th class="px-4 py-3 font-medium">Handlowiec</th>
@@ -1019,6 +1020,32 @@
             renderLeads();
         }
 
+        // „Rozmowa AI" — liczba odpowiedzi leada w rozmowach AI (talk_* + bud_*, RPC lead_ai_reply_counts).
+        // Cache per lead; doładowywane per widoczna strona po renderze (bez blokowania tabeli).
+        const aiReplyCounts = {};
+        function renderAiCount(leadId) {
+            const c = aiReplyCounts[leadId];
+            if (c === undefined) return '<span class="text-zinc-700 text-[10px]">…</span>';
+            if (!c) return '<span class="text-zinc-700">—</span>';
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-500/25 bg-emerald-500/10 text-emerald-300 text-[10px] font-medium"><i class="ph ph-chat-circle-text"></i>${c}</span>`;
+        }
+        async function loadAiCounts(leads) {
+            const missing = leads.filter(l => aiReplyCounts[l.id] === undefined).map(l => l.id);
+            if (!missing.length) return;
+            try {
+                const { data, error } = await supabaseClient.rpc('lead_ai_reply_counts', { p_lead_ids: missing });
+                if (error) throw error;
+                const got = Object.fromEntries((data || []).map(r => [r.lead_id, Number(r.replies) || 0]));
+                missing.forEach(id => { aiReplyCounts[id] = got[id] || 0; });
+            } catch (e) {
+                console.error('[leads] ai counts:', e);
+                missing.forEach(id => { aiReplyCounts[id] = 0; });
+            }
+            leads.forEach(l => {
+                const cell = document.getElementById('ai-cnt-' + l.id);
+                if (cell) cell.innerHTML = renderAiCount(l.id);
+            });
+        }
         function renderLeads() {
             const tbody = document.getElementById('leads-table');
             const emptyState = document.getElementById('empty-state');
@@ -1078,6 +1105,7 @@
                             <i class="ph ph-clipboard-text text-base"></i>
                         </button>` : `<span class="text-zinc-700">—</span>`}
                     </td>
+                    <td class="px-4 py-3 text-center" id="ai-cnt-${lead.id}">${renderAiCount(lead.id)}</td>
                     <td class="px-4 py-3">
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border ${leadSrc.border} ${leadSrc.bg} ${leadSrc.color} text-[10px] font-medium">
                             <i class="ph ${leadSrc.icon}"></i>${leadSrc.name}
@@ -1113,6 +1141,8 @@
                     </td>
                 </tr>
             `}).join('');
+
+            loadAiCounts(pageLeads);
         }
 
         function openLead(id) {
