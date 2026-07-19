@@ -177,12 +177,17 @@ async function openaiFetch(body: Record<string, unknown>): Promise<any> {
 async function generateMail(supabase: any, prompts: Record<string, string>, lead: any, sess: any, kindIdx: number): Promise<{ subject: string; body: string }> {
   const system = `${prompts.rozmowa_followup_system}\n\n=== CEL TEGO MAILA (krok ${kindIdx + 1}/5) ===\n${prompts['rozmowa_followup_krok' + (kindIdx + 1)]}`
 
-  // transkrypt rozmowy (jeśli była)
+  // transkrypt rozmowy (jeśli była) + wiek kotwicy (model dopasowuje naturalność po czasie)
   let talkBlock = 'Lead NIE rozpoczął jeszcze rozmowy z AI Tomka — jedyny kontekst to ankieta. CTA maila = zacznij rozmowę (dostanie w niej konkretny plan i wycenę, bez zobowiązań).'
+  let anchorMs = Date.parse(lead.created_at || '') || 0
   if (sess) {
     const { data: msgs } = await supabase.from('talk_messages')
-      .select('role, content').eq('session_id', sess.id).order('id', { ascending: true }).limit(500)
-    const history = (msgs || []) as { role: string; content: string }[]
+      .select('role, content, created_at').eq('session_id', sess.id).order('id', { ascending: true }).limit(500)
+    const history = (msgs || []) as { role: string; content: string; created_at?: string }[]
+    for (const m of history) {
+      if (m.role === 'user') anchorMs = Math.max(anchorMs, Date.parse(m.created_at || '') || 0)
+    }
+    anchorMs = Math.max(anchorMs, Date.parse(sess.last_seen_at || '') || 0, Date.parse(sess.created_at || '') || 0)
     const userCnt = history.filter((m) => m.role === 'user').length
     if (userCnt > 0) {
       const transcript = history.slice(-HISTORY_CAP)
@@ -206,8 +211,11 @@ async function generateMail(supabase: any, prompts: Record<string, string>, lead
         .map((p, i) => `${i + 1}. Temat: „${cleanStr(p.subject, 90)}" — treść (skrót): ${cleanStr(p.body_text, 280)}`).join('\n')
     : 'brak (to pierwszy mail serii)'
 
+  const ageH = anchorMs ? Math.round((Date.now() - anchorMs) / 3_600_000) : 0
+  const ageStr = !anchorMs ? 'nieznany' : ageH < 48 ? `${ageH} godz.` : `${Math.round(ageH / 24)} dni`
   const user = [
     `DANE LEADA Z ANKIETY /zapisy:\n${leadContext(lead)}`,
+    `CZAS OD OSTATNIEJ AKTYWNOŚCI LEADA (rozmowa/rejestracja): ${ageStr} temu — dopasuj do tego naturalność (świeże = nawiąż wprost; po tygodniach NIE udawaj, że zgłoszenie „właśnie dotarło" — nawiąż uczciwie po czasie).`,
     `STAN ROZMOWY Z AI:\n${talkBlock}`,
     `WCZEŚNIEJSZE MAILE TEJ SERII (NIE powtarzaj ich treści, argumentów ani tematów):\n${prevBlock}`,
     `LINK: dokładnie JEDEN link w treści, wyłącznie tokenem [tekst kotwicy](LINK_ROZMOWA) — prowadzi z powrotem do TEJ SAMEJ rozmowy (zapisany stan, lead wraca w to samo miejsce). Nie wypisuj żadnych innych URL-i.`,
