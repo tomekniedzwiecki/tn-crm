@@ -587,15 +587,17 @@ lub „stopka jednolinijkowa" = ODSTĘPSTWO (LEDGER).
 16.07: „brakuje animacji w JS, czegoś co doda życia, pokaże profesjonalizm i ZAANGAŻUJE;
 nie robić wszystkiego naraz — etapami").** Wykonywany DOPIERO po zamknięciu dopasowania
 wizualnego (F7.1) i audytu grafika-first — na stabilnej stronie, jako dedykowana runda:
-**⛔ Z2 OBOWIĄZUJE TAKŻE W F5 (Tomek 19.07 na masażerze — „struna": choreografia wstrzyknęła
-scroll-drawn SVG-linię z węzełkiem pod nagłówki, której NIE MA na żadnej makiecie sekcji;
-na stronie wyglądała jak przypadkowa kreska-artefakt): etap życia ANIMUJE elementy istniejące
-na makietach (reveal/stagger/count-up/hover/sceny-crossfade) — NIE dodaje nowych bytów
-wizualnych (linie, ornamenty, ilustracje). „Motyw przewodni" ze styl-mastera to klimat DLA
-MAKIET (F2) — jeśli motyw ma być na stronie, musi najpierw być NA MAKIECIE sekcji. Wyjątek
-dozwolony: elementy niewidoczne w spoczynku (particle CTA? nie — zakaz tandety; realnie:
-NIC nowego). Luka procesu: dowody F7.1 powstają PRZED F5 — dlatego F7.2 sanity po F5
-sprawdza też: „czy F5 dodał nowe elementy wizualne spoza makiet?" = FAIL.**
+**⛔ DEKORACJE-SYGNATURY: WIERNIE ALBO WCALE (incydent „struna" masażera 19.07 — Tomek:
+„wygląda jak głupia kreska"; usunięta na jego dyspozycję).** Fakty incydentu: motyw struny
+BYŁ na wszystkich 7 makietach (splątany ręczny węzeł + wyraźny łuk), ale (a) koder F4 dekorację
+POMINĄŁ, a rubryka F7.1 tego nie złapała (drobny element — 5 pól rubryki go nie widzi);
+(b) F5 „nadrobił" motyw JEDNYM generycznym współdzielonym PATH-em (płaska kreska + pętelka,
+opacity .5) — zdegradowane przybliżenie bogatej dekoracji czyta się na stronie jak artefakt.
+Reguły: (1) dekoracja-sygnatura z makiet = odtworzyć WIERNIE per-sekcja (kształt z TEJ makiety,
+np. przez CROP/trace) ALBO świadomie pominąć z notą LEDGER — **tanie przybliżenie dekoracji
+jest GORSZE niż jej brak**; (2) F5 nadal NIE dodaje bytów wizualnych, których nie ma na
+makietach — animuje istniejące; (3) F7.2 sanity po F5 porównuje sekcje z makietami także
+pod kątem dekoracji (dowody F7.1 powstają PRZED F5, więc to jedyny moment, który to łapie).**
 F5.0. **CHOREOGRAF (NOWE, Tomek 17.07) — procedura `docs/zbuduje/CHOREOGRAFIA-ANIMACJI.md`
    (CZYTAĆ):** 1 call gpt-5.6-sol (high, tekst, cap ~4k) → MOTION-DNA landingu (tokeny
    ruchu z osobowości marki) + SPEC animacji per KAŻDA sekcja (motyw z TREŚCI sekcji,
