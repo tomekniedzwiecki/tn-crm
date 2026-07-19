@@ -14,9 +14,18 @@ copy+wizje scen (1 call wf2-gpt, json) → sceny (gpt-image-2 /images/edits albo
 wf2-gen) → format 4:5 1536×1920 → kompozycja tekst/logo (Pillow) → QA (ad-gate.py) →
 publikacja (panel-sync: storage/creatives/artefakty/koszty/krok).
 
+PIPELINE ETAPOWY v5 (2026-07-19, feedback Tomka „efekt ręki grafika; podziel na etapy jak w video"):
+  A. SCENA — engine 'nbpro' (fal-ai/nano-banana-pro/edit, 2K 4:5) z refami rehostowanymi przez
+     fal.store; BEST-OF-2 (auto-wybór: ostrość Laplace'a + jasność strefy negative-space layoutu).
+  B. KOMPOZYCJA — typografia w górę: hook letter-spacing −1% / interlinia 1.04 / akcent [[słowo]];
+     pigułki z gradientem + 1px highlight; cienie dwuwarstwowe; grain gaussa sklejający warstwy.
+  C. FINISHER — złożony baner → nbpro („ręka grafika": realistyczne cienie/vignette/grade, głębia).
+  D. BRAMKA LITER — pHash cropów nakładek B vs C; przekroczenie progu = finisher odrzucony (zostaje B).
+  Koszt ~$0.68/grafika (best-of-2 + finisher) ≈ 2,7 zł. Fal → wf2_costs kind='fal'.
+
 CLI:
-  python ad-forge.py <product_id> [--angles demo,problem,lifestyle] [--engine gptimage|gemini]
-    [--out DIR] [--dry] [--no-register] [--quality high|medium]
+  python ad-forge.py <product_id> [--angles demo,problem,lifestyle] [--engine nbpro|gptimage|gemini]
+    [--out DIR] [--dry] [--no-register] [--no-finisher] [--quality high|medium]
   --dry: pobierz dane+refy, zbuduj prompty i copy, wypisz plan — BEZ generacji i BEZ rejestracji.
 
 Uruchamiać venv: scripts/mockup-tools/.venv/Scripts/python.exe
@@ -27,6 +36,8 @@ import io
 import re
 import json
 import time
+import math
+import shutil
 import base64
 import argparse
 import subprocess
@@ -64,6 +75,42 @@ ALLOWED_ANGLES = ["demo", "problem", "lifestyle"]
 
 # Koszt szacunkowy 1 obrazu gpt-image-2 high 1024×1536 ≈ $0.25 — konfigurowalny env.
 ADFORGE_IMG_USD = float(os.environ.get("ADFORGE_IMG_USD", "0.25"))
+
+# ── PIPELINE ETAPOWY v5 (nbpro = fal-ai/nano-banana-pro) ──────────────────────
+# Domyślny silnik. gptimage/gemini zostają jako fallback.
+NBPRO_EDIT = "fal-ai/nano-banana-pro/edit"           # scena z produktem (image_urls wymagane)
+NBPRO_T2I = "fal-ai/nano-banana-pro"                 # scena bez produktu (PAIN); base model —
+# UWAGA: subpath '/text-to-image' ma zepsutą ścieżkę kolejki fal (response_url 404 przy pobraniu);
+# base 'fal-ai/nano-banana-pro' dzieli działającą ścieżkę z '/edit'. (incydent drapek 19.07)
+NBPRO_USD = float(os.environ.get("ADFORGE_NBPRO_USD", "0.225"))  # 1 obraz 2K
+FAL_DIR = os.path.abspath(os.path.join(HERE, "..", "video-factory"))
+BEST_OF = 2                                          # kandydatów sceny (auto-wybór ostrość+neg-space)
+
+# Strefa „negative-space" per (angle, kind) — gdzie layout kładzie hook/callouty/CTA (dobór best-of-2).
+# Box we frakcjach finalnego kadru 1536×1920.
+NEG_ZONES = {
+    ("demo", "hero"): (0.06, 0.02, 0.94, 0.30),
+    ("problem", "pain"): (0.00, 0.00, 1.00, 0.30),
+    ("problem", "fakt"): (0.00, 0.00, 1.00, 0.30),
+    ("lifestyle", "ugc"): (0.06, 0.04, 0.94, 0.36),
+}
+NEG_ZONE_DEFAULT = (0.06, 0.02, 0.94, 0.30)
+
+# ETAP C — FINISHER PASS („ręka grafika"): integracja nakładek ze zdjęciem BEZ ruszania liter.
+FINISHER_PROMPT = (
+    "Professional graphic designer finishing pass on this ad banner. Integrate the graphic overlays "
+    "with the photo: add soft realistic drop shadows under the pills and buttons as if printed in the "
+    "scene, unify color grade between photo and graphics, subtle vignette, very subtle film grain. "
+    "Where a text pill overlaps the dog or a person, make the subject's edge slightly overlap the pill "
+    "for depth. CRITICAL: do NOT change, redraw, move or restyle ANY letters, words, numbers, logos or "
+    "icons — every glyph must remain pixel-identical in shape; do not add any new text."
+)
+# ETAP D — bramka ochrony liter: pHash Hamming crop B vs C. > próg na KTÓRYMKOLWIEK regionie = odrzuć finisher.
+LETTER_GATE_PHASH_MAX = int(os.environ.get("ADFORGE_LETTER_GATE_PHASH", "12"))
+
+# ETAP B — grain gaussa sklejający warstwy (bardzo subtelny).
+GRAIN_SIGMA = 26
+GRAIN_ALPHA = 5
 
 # Kolory bazowe (fallback, gdy paleta marki nie dostarczy) — kremowa biel + ciemny pas.
 CREAM = (245, 241, 232)          # #F5F1E8
@@ -111,7 +158,9 @@ LIFESTYLE = (
 # prompt-lint jako prefiks referencji (wymóg --expect-product-ref dla scen z produktem).
 PRODUCT_PREFIX = (
     "Reproduce the product from the first reference image UNCHANGED — same shape, colors, materials, "
-    "details; it is the single source of truth for the product. Change ONLY the scene."
+    "details; it is the single source of truth for the product. Reproduce ONLY the physical product "
+    "itself — IGNORE and DROP any arrows, chevrons, badges, watermarks, text or graphic overlays that "
+    "appear in the reference image. Change ONLY the scene."
 )
 STYLE_NOTE = " Match the mood and palette of the style reference image."
 
@@ -457,14 +506,27 @@ def call_copy(bundle, angles):
 # ══════════════════════════════════════════════════════════════════════════════
 # PLAN SCEN — mapa kąt → lista scen (nazwa, szablon, czy z produktem).
 # ══════════════════════════════════════════════════════════════════════════════
+# Negative-space per kind (dopasowanie sceny do layoutu banera — jawne miejsce na tekst).
+LAYOUT_NOTE = {
+    "hero": (" Keep the top third AND the very bottom strip of the frame calm, clean and uncluttered "
+             "(empty negative space) so a large headline can sit on top and a call-to-action bar at the "
+             "bottom; place the product in the lower-central area, clearly separated from the background."),
+    "fakt": (" Keep the top third of the frame calm and uncluttered for a headline; place the product and "
+             "action in the lower two-thirds."),
+    "ugc": (" Keep the upper area of the frame calm and uncluttered; place the product in the lower two-thirds "
+            "with clean space just above it for a small hand-written sticker note."),
+    "pain": (" Keep the top and bottom edges of the frame relatively calm; center the emotional moment."),
+}
+
+
 def build_scene_prompt(kind, copy_angle):
     """Zwraca (prompt, with_product) dla danej sceny."""
     if kind == "pain":
         pv = str(copy_angle.get("pain_vision") or "").strip()
-        return PAIN.replace("{pain_vision}", pv), False
+        return PAIN.replace("{pain_vision}", pv) + LAYOUT_NOTE.get("pain", ""), False
     sv = str(copy_angle.get("scene_vision") or "").strip()
     tpl = {"hero": HERO_DEMO, "fakt": FAKT, "ugc": LIFESTYLE}[kind]
-    scene = tpl.replace("{scene_vision}", sv)
+    scene = tpl.replace("{scene_vision}", sv) + LAYOUT_NOTE.get(kind, "")
     return scene, True
 
 
@@ -571,6 +633,126 @@ def gen_gemini(prompt, ref_objs, slug, angle, timeout=600):
         raise RuntimeError("wf2-gen nie zwrócił obrazu: " + json.dumps(r.json())[:300])
     blob, _ = _download(imgs[0]["url"])
     return blob
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ETAP A — SILNIK 'nbpro' (fal-ai/nano-banana-pro przez bud-fal-proxy).
+# Refy MUSZĄ być PUBLICZNE (rehost przez fal.store RAZ, cache w state). Best-of-2:
+# 2 kandydatów sceny, auto-wybór (ostrość Laplace'a + jasność strefy negative-space).
+# ══════════════════════════════════════════════════════════════════════════════
+_FAL_MOD = None
+
+
+def _fal():
+    """Import fal.py z scripts/video-factory (importlib jak panel-sync). Cache modułu."""
+    global _FAL_MOD
+    if _FAL_MOD is None:
+        spec = importlib.util.spec_from_file_location("fal_client", os.path.join(FAL_DIR, "fal.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        try:
+            m.set_project("adforge")                               # izolacja budżetu w ledgerze fal
+        except Exception:
+            pass
+        _FAL_MOD = m
+    return _FAL_MOD
+
+
+def rehost_ref(local_path, dest, src_url, state):
+    """Rehost lokalnego refa przez fal.store() RAZ; cache URL w state['fal_refs'] po src_url.
+    Zwraca publiczny URL, który serwery fal na pewno pobiorą (AliExpress/CDN bywają niepobieralne)."""
+    cache = state.setdefault("fal_refs", {})
+    key = src_url or dest
+    ent = cache.get(key)
+    if isinstance(ent, dict) and ent.get("fal_url"):
+        log("  ref cache HIT: %s → %s" % (os.path.basename(local_path), ent["fal_url"]))
+        return ent["fal_url"]
+    url = _fal().store(local_path, dest)
+    cache[key] = {"src": src_url, "fal_url": url}
+    log("  ref rehost fal.store: %s → %s" % (os.path.basename(local_path), url))
+    return url
+
+
+def gen_nbpro_batch(jobs, out_candidates_dir):
+    """RÓWNOLEGŁA generacja kandydatów scen (fal.gen_batch). jobs: lista
+    {tag, model, image_urls, prompt}. Zwraca {tag: local_png_path}. Koszt naliczany osobno.
+    RESUME: pomija zadania z już istniejącym plikiem <tag>.png (odporność na pad/blip fal —
+    nie płacimy 2× za sceny wygenerowane w poprzednim biegu)."""
+    fal = _fal()
+    os.makedirs(out_candidates_dir, exist_ok=True)
+    out, fjobs = {}, []
+    for j in jobs:
+        p = os.path.join(out_candidates_dir, j["tag"] + ".png")
+        if os.path.isfile(p) and os.path.getsize(p) > 10000:
+            out[j["tag"]] = p                                      # już mamy — resume
+            continue
+        for stale in (p.rsplit(".", 1)[0] + ".failed", p.rsplit(".", 1)[0] + ".timeout"):
+            try:
+                os.remove(stale)
+            except OSError:
+                pass
+        payload = {"prompt": j["prompt"], "aspect_ratio": "4:5", "resolution": "2K", "num_images": 1}
+        if j.get("image_urls"):
+            payload["image_urls"] = j["image_urls"]
+        fjobs.append({"tag": j["tag"], "model": j["model"], "payload": payload})
+    if out:
+        log("nbpro batch RESUME: %d/%d kandydatów już na dysku (bez ponownej generacji)" % (len(out), len(jobs)))
+    log("nbpro batch: %d nowych zadań (best-of-%d) → %s" % (len(fjobs), BEST_OF, out_candidates_dir))
+    done = fal.gen_batch(fjobs, outdir=out_candidates_dir, project="adforge") if fjobs else {}
+    for tag, val in done.items():
+        if isinstance(val, str) and os.path.isfile(val):
+            out[tag] = val
+        else:
+            log("  ⚠ nbpro FAILED %s: %s" % (tag, str(val)[:200]))
+    return out
+
+
+def gen_nbpro_one(prompt, image_urls, tag):
+    """Pojedyncza generacja nbpro (finisher / fallback). Zwraca bytes PNG."""
+    fal = _fal()
+    model = NBPRO_EDIT if image_urls else NBPRO_T2I
+    payload = {"prompt": prompt, "aspect_ratio": "4:5", "resolution": "2K", "num_images": 1}
+    if image_urls:
+        payload["image_urls"] = image_urls
+    res = fal.gen(model, payload, tag=tag)
+    url = (res.get("images") or [{}])[0].get("url")
+    if not url:
+        raise RuntimeError("nbpro brak url w wyniku: " + json.dumps(res)[:300])
+    blob, _ = _download(url)
+    return blob
+
+
+def _laplacian_var(img_rgb):
+    """Wariancja Laplace'a (ostrość) — wyższa = ostrzej. Bez numpy (kernel Pillow)."""
+    Image, _, _, ImageFilter, _ = _pil()
+    g = img_rgb.convert("L").resize((256, 256), Image.LANCZOS)
+    k = ImageFilter.Kernel((3, 3), [0, 1, 0, 1, -4, 1, 0, 1, 0], scale=1, offset=128)
+    px = list(g.filter(k).getdata())
+    n = len(px) or 1
+    mean = sum(px) / n
+    return sum((p - mean) ** 2 for p in px) / n
+
+
+def _zone_brightness(img_rgb, zone_frac):
+    """Średnia luminancja strefy negative-space (0..255)."""
+    W, H = img_rgb.size
+    box = (int(zone_frac[0] * W), int(zone_frac[1] * H), int(zone_frac[2] * W), int(zone_frac[3] * H))
+    return _region_lum(img_rgb, box)[0]
+
+
+def pick_best_candidate(finals, zone):
+    """finals: lista RGB (final 1536×1920). Zwraca (index, oceny) — ostrość 0.65 + neg-space 0.35."""
+    metrics = [(_laplacian_var(f), _zone_brightness(f, zone)) for f in finals]
+    lmax = max((m[0] for m in metrics), default=1.0) or 1.0
+    bmax = max((m[1] for m in metrics), default=1.0) or 1.0
+    best_i, best_s = 0, -1.0
+    scores = []
+    for i, (lap, br) in enumerate(metrics):
+        s = 0.65 * (lap / lmax) + 0.35 * (br / bmax)
+        scores.append((round(lap, 1), round(br, 1), round(s, 3)))
+        if s > best_s:
+            best_s, best_i = s, i
+    return best_i, scores
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -718,15 +900,135 @@ def pick_text_fill(zone_rgb, palette):
 
 
 def draw_text_shadow(base_rgba, xy, text, font, fill, anchor="mm", canvas_h=FINAL_H):
+    """Tekst z DWUWARSTWOWYM miękkim cieniem (ETAP B): szeroki blur ~2% wys. alpha 60 +
+    ciasny blur ~0.5% alpha 90. Zwraca bbox narysowanego tekstu."""
     Image, ImageDraw, _, ImageFilter, _ = _pil()
-    off = max(2, int(canvas_h * 0.004))
-    shadow = Image.new("RGBA", base_rgba.size, (0, 0, 0, 0))
-    ds = ImageDraw.Draw(shadow)
-    ds.text((xy[0] + off, xy[1] + off), text, font=font, fill=(0, 0, 0, 90), anchor=anchor, stroke_width=0)
-    shadow = shadow.filter(ImageFilter.GaussianBlur(off))
-    base_rgba.alpha_composite(shadow)
+    for blur_frac, alpha, off_frac in ((0.02, 60, 0.004), (0.005, 90, 0.002)):
+        blur = max(1, int(canvas_h * blur_frac))
+        off = max(1, int(canvas_h * off_frac))
+        sh = Image.new("RGBA", base_rgba.size, (0, 0, 0, 0))
+        ImageDraw.Draw(sh).text((xy[0] + off, xy[1] + off), text, font=font,
+                                fill=(0, 0, 0, alpha), anchor=anchor, stroke_width=0)
+        base_rgba.alpha_composite(sh.filter(ImageFilter.GaussianBlur(blur)))
     dd = ImageDraw.Draw(base_rgba)
-    dd.text(xy, text, font=font, fill=fill + (255,) if len(fill) == 3 else fill, anchor=anchor, stroke_width=0)
+    tcol = fill + (255,) if len(fill) == 3 else fill
+    dd.text(xy, text, font=font, fill=tcol, anchor=anchor, stroke_width=0)
+    return dd.textbbox(xy, text, font=font, anchor=anchor)
+
+
+# ── HOOK: letter-spacing ~-1% + interlinia 1.04 + opcjonalny akcent koloru na słowie [[tak]] ──
+def parse_accent(text):
+    """'[[słowo]]' → akcent na tym słowie. Zwraca listę (word, is_accent) i czyści nawiasy."""
+    toks = []
+    for chunk in re.split(r"(\[\[.*?\]\])", str(text or "")):
+        if not chunk:
+            continue
+        m = re.match(r"^\[\[(.*?)\]\]$", chunk)
+        body = m.group(1) if m else chunk
+        for w in body.split():
+            toks.append((w, bool(m)))
+    return toks
+
+
+def _tok_width(draw, word, font, tracking):
+    return sum(draw.textlength(ch, font=font) + tracking for ch in word)
+
+
+def _line_tokens_width(draw, line_toks, font, tracking):
+    space = draw.textlength(" ", font=font) + tracking
+    w = 0.0
+    for i, (word, _acc) in enumerate(line_toks):
+        w += _tok_width(draw, word, font, tracking)
+        if i < len(line_toks) - 1:
+            w += space
+    return w
+
+
+def wrap_tokens(draw, toks, font, max_w, tracking):
+    space = draw.textlength(" ", font=font) + tracking
+    lines, cur, curw = [], [], 0.0
+    for (word, acc) in toks:
+        ww = _tok_width(draw, word, font, tracking)
+        add = ww if not cur else space + ww
+        if cur and curw + add > max_w:
+            lines.append(cur)
+            cur, curw = [(word, acc)], ww
+        else:
+            cur.append((word, acc))
+            curw += add
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def fit_hook(draw, toks, font_path, max_w, max_h, max_lines=2, hi=230, lo=44,
+             tracking_frac=-0.01, leading=1.04):
+    for size in range(hi, lo - 1, -4):
+        font = _font(font_path, size)
+        tr = tracking_frac * size
+        lines = wrap_tokens(draw, toks, font, max_w, tr)
+        if len(lines) > max_lines:
+            continue
+        widths = [_line_tokens_width(draw, ln, font, tr) for ln in lines] or [0]
+        bb = font.getbbox("ĄĘÓg")
+        line_h = bb[3] - bb[1]
+        block_h = line_h * len(lines) * (leading + 0.10)
+        if max(widths) <= max_w and block_h <= max_h:
+            return font, lines, line_h, tr
+    font = _font(font_path, lo)
+    tr = tracking_frac * lo
+    bb = font.getbbox("ĄĘÓg")
+    return font, wrap_tokens(draw, toks, font, max_w, tr)[:max_lines], (bb[3] - bb[1]), tr
+
+
+def _render_line(d, x, y, line_toks, font, tracking, color_fn):
+    space = d.textlength(" ", font=font) + tracking
+    cx = x
+    for i, (word, acc) in enumerate(line_toks):
+        col = color_fn(acc)
+        for ch in word:
+            d.text((cx, y), ch, font=font, fill=col, anchor="la")
+            cx += d.textlength(ch, font=font) + tracking
+        if i < len(line_toks) - 1:
+            cx += space
+    return cx
+
+
+def render_hook(canvas, topleft, text, font_path, max_w, max_h, base_fill, accent_fill,
+                hi, lo, max_lines=2, leading=1.04, canvas_h=FINAL_H):
+    """Rysuje HOOK z trackingiem −1%, interlinią 1.04, dwuwarstwowym cieniem i akcentem 1 słowa.
+    Zwraca listę bboxów linii (ochrona liter w ETAPIE D)."""
+    Image, ImageDraw, _, ImageFilter, _ = _pil()
+    toks = parse_accent(text)
+    draw = ImageDraw.Draw(canvas)
+    font, lines, line_h, tr = fit_hook(draw, toks, font_path, max_w, max_h, max_lines, hi, lo, leading=leading)
+    x0, y = int(topleft[0]), int(topleft[1])
+    base = tuple(base_fill[:3]) + (255,)
+    acc = (tuple(accent_fill[:3]) + (255,)) if accent_fill else base
+    regions = []
+    for line_toks in lines:
+        for blur_frac, alpha, off_frac in ((0.02, 60, 0.004), (0.005, 90, 0.002)):
+            blur = max(1, int(canvas_h * blur_frac))
+            off = max(1, int(canvas_h * off_frac))
+            sh = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+            _render_line(ImageDraw.Draw(sh), x0 + off, y + off, line_toks, font, tr,
+                         lambda a, al=alpha: (0, 0, 0, al))
+            canvas.alpha_composite(sh.filter(ImageFilter.GaussianBlur(blur)))
+        _render_line(ImageDraw.Draw(canvas), x0, y, line_toks, font, tr,
+                     lambda a: acc if a else base)
+        w = _line_tokens_width(draw, line_toks, font, tr)
+        regions.append((x0 - 2, int(y), x0 + int(w) + 3, int(y + line_h * 1.12)))
+        y += line_h * leading
+    return regions
+
+
+def apply_grain(canvas):
+    """Delikatny grain gaussa (alpha ~5) na całości — sklejenie warstw (ETAP B)."""
+    Image, _, _, _, _ = _pil()
+    W, H = canvas.size
+    noise = Image.effect_noise((W, H), GRAIN_SIGMA).convert("L")
+    veil = Image.merge("RGBA", (noise, noise, noise, Image.new("L", (W, H), GRAIN_ALPHA)))
+    canvas.alpha_composite(veil)
 
 
 def edge_variance(img, box):
@@ -813,7 +1115,7 @@ def place_logo(canvas, logo_img, height_frac, allow_top=False, margin_frac=0.06,
     where = ("GÓRA" if y < H // 2 else "DÓŁ") + "-" + ("LEWO" if x < W // 2 else "PRAWO")
     desc = "%s (pigułka %d×%dpx = %.1f%% wys.)" % (where, pw, ph, 100.0 * ph / H)
     log("logo → " + desc)
-    return desc
+    return (x, y, x + pw, y + ph)                                  # bbox (ochrona liter/logo — ETAP D)
 
 
 def place_logo_titlebar(canvas, logo_img, bar_h):
@@ -847,6 +1149,36 @@ def _accent(palette):
     return palette[1] if len(palette) > 1 else ORANGE_LABEL
 
 
+def _lighten(rgb, f):
+    return tuple(min(255, int(c + (255 - c) * f)) for c in rgb[:3])
+
+
+def _hook_accent(palette):
+    """Kolor akcentu 1 słowa hooka na CIEMNYM scrimie — czytelny (≥3:1), inaczej rozjaśniony."""
+    a = _accent(palette)
+    return a if contrast_ratio(a, DARK_BAR) >= 3.0 else _lighten(a, 0.45)
+
+
+def _grad_pill_tile(W_, H_, radius, top_rgba, bot_rgba):
+    """Kafel pigułki: pionowy gradient (top→bottom) maskowany zaokrąglonym prostokątem
+    + subtelny 1px wewnętrzny highlight. Zwraca RGBA."""
+    from PIL import ImageChops
+    Image, ImageDraw, _, _, _ = _pil()
+    W_, H_ = max(1, int(W_)), max(1, int(H_))
+    col = Image.new("RGBA", (1, H_))
+    for y in range(H_):
+        t = y / max(1, H_ - 1)
+        col.putpixel((0, y), tuple(int(top_rgba[i] + (bot_rgba[i] - top_rgba[i]) * t) for i in range(4)))
+    tile = col.resize((W_, H_))
+    mask = Image.new("L", (W_, H_), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, W_ - 1, H_ - 1], radius=radius, fill=255)
+    tile.putalpha(ImageChops.multiply(tile.getchannel("A"), mask))
+    # 1px wewnętrzny highlight (delikatny „druk")
+    ImageDraw.Draw(tile).rounded_rectangle(
+        [1, 1, W_ - 2, H_ - 2], radius=max(1, radius - 1), outline=(255, 255, 255, 48), width=1)
+    return tile
+
+
 def _text_on(bg_rgb):
     """Kolor tekstu o WYŻSZYM kontraście vs tło (kremowy albo ciemny) — ≥4,5:1."""
     bg = tuple(bg_rgb[:3])
@@ -877,7 +1209,8 @@ def measure_pill(canvas, text, font, pad):
 
 
 def draw_pill(canvas, text, font, bg_rgba, text_rgb, topleft, pad, radius=None):
-    """Wypełniona zaokrąglona pigułka z tekstem (top-left = topleft). Zwraca (x0,y0,x1,y1)."""
+    """Zaokrąglona pigułka z tekstem — subtelny pionowy gradient (+8% u góry) + 1px wewnętrzny
+    highlight (ETAP B). top-left = topleft. Zwraca (x0,y0,x1,y1)."""
     Image, ImageDraw, _, _, _ = _pil()
     tw = ImageDraw.Draw(canvas).textlength(text, font=font)
     r = font.getbbox(_PILL_REF)
@@ -885,9 +1218,11 @@ def draw_pill(canvas, text, font, bg_rgba, text_rgb, topleft, pad, radius=None):
     x0, y0 = int(topleft[0]), int(topleft[1])
     if radius is None:
         radius = H_ // 2
-    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    ImageDraw.Draw(layer).rounded_rectangle([x0, y0, x0 + W_, y0 + H_], radius=radius, fill=bg_rgba)
-    canvas.alpha_composite(layer)
+    a = bg_rgba[3] if len(bg_rgba) == 4 else 255
+    top = _lighten(bg_rgba, 0.08) + (a,)
+    bot = tuple(bg_rgba[:3]) + (a,)
+    tile = _grad_pill_tile(W_, H_, radius, top, bot)
+    canvas.alpha_composite(tile, (x0, y0))
     tb = font.getbbox(text)
     tcol = (text_rgb + (255,)) if len(text_rgb) == 3 else text_rgb
     ImageDraw.Draw(canvas).text((x0 + pad[0], y0 + (H_ - (tb[3] - tb[1])) // 2 - tb[1]), text, font=font, fill=tcol)
@@ -987,7 +1322,8 @@ def _logo_corner(canvas, logo_img, h_px, corner="tl", margin_frac=0.05):
 
 def compose_demo(scene_img, ca, logo_img, palette, cena_pl, out_path):
     """CALLOUT/ANATOMIA: scena w użyciu + górny scrim z hookiem + 3 callouty-pigułki z liniami
-    do części produktu + dolny pas (COD badge + CTA). Logo małe top-left."""
+    do części produktu + dolny pas (COD badge + CTA). Logo małe top-left.
+    Zwraca listę bboxów nakładek tekstowych/logo (ochrona liter — ETAP D)."""
     Image, ImageDraw, _, _, _ = _pil()
     canvas = _rgba_canvas(scene_img)
     W, H = canvas.size
@@ -998,6 +1334,7 @@ def compose_demo(scene_img, ca, logo_img, palette, cena_pl, out_path):
     fontp = resolve_font_path_glob
     hook = (ca.get("hook_baner") or ca.get("headline") or "").strip()
     callouts = [str(c).strip() for c in (ca.get("callouts_demo") or []) if str(c).strip()][:3]
+    regions = []
 
     # ── górny scrim (0-20%) + logo top-left + HOOK biały bold, wyrównany do lewej ──
     scrim_h = int(H * 0.20)
@@ -1007,14 +1344,12 @@ def compose_demo(scene_img, ca, logo_img, palette, cena_pl, out_path):
         pill = _logo_pill(logo_img, px(56), max_w=int(W * 0.30))
         canvas.alpha_composite(pill, (m, int(H * 0.022)))
         logo_bottom = int(H * 0.022) + pill.size[1]
+        regions.append((m, int(H * 0.022), m + pill.size[0], logo_bottom))
     if hook:
         hy = logo_bottom + px(12)
-        hf, lines, lh = fit_headline(ImageDraw.Draw(canvas), hook.upper(), fontp,
-                                     int(W * 0.88), scrim_h - hy - px(6), max_lines=2, hi=px(86), lo=px(44))
-        y = hy
-        for ln in lines:
-            draw_text_shadow(canvas, (m, int(y)), ln, hf, CREAM, anchor="la", canvas_h=H)
-            y += lh * 1.06
+        regions += render_hook(canvas, (m, hy), hook.upper(), fontp, int(W * 0.88),
+                               scrim_h - hy - px(6), CREAM, _hook_accent(palette),
+                               hi=px(86), lo=px(44), max_lines=2, leading=1.04, canvas_h=H)
 
     # ── dolny pas: 2 mikro-badge COD (rząd) + CTA-pigułka POD spodem (bez nachodzenia) ──
     band_top = int(H * 0.83)
@@ -1024,11 +1359,12 @@ def compose_demo(scene_img, ca, logo_img, palette, cena_pl, out_path):
     bpad = (px(14), px(9))
     by = band_top + px(18)
     b1 = draw_pill(canvas, "PŁATNOŚĆ ZA POBRANIEM", bf, (255, 255, 255, 235), DARK_BAR, (m, by), bpad)
-    draw_pill(canvas, "14 DNI NA ZWROT", bf, (255, 255, 255, 235), DARK_BAR, (b1[2] + px(12), by), bpad)
+    b2 = draw_pill(canvas, "14 DNI NA ZWROT", bf, (255, 255, 255, 235), DARK_BAR, (b1[2] + px(12), by), bpad)
     ctaf = _font(fontp, px(50))
     cta = "ZAMÓW ZA POBRANIEM  →"
     cw, ch = measure_pill(canvas, cta, ctaf, (px(28), px(15)))
-    draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), ((W - cw) // 2, b1[3] + px(16)), (px(28), px(15)))
+    cbox = draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), ((W - cw) // 2, b1[3] + px(16)), (px(28), px(15)))
+    regions += [b1, b2, cbox]
 
     # ── callouty-pigułki z liniami-wskaźnikami do części produktu (schowek/powierzchnia/krawędź) ──
     # deska = DOLNE ~40% kadru (nie ciemne tło nocy); cele docięte NAD dolnym pasem, żeby dot był na widocznej desce.
@@ -1062,8 +1398,11 @@ def compose_demo(scene_img, ca, logo_img, palette, cena_pl, out_path):
             cx = max(m, min(cx, W - m - pw_))
             tgt = targets[i] if i < len(targets) else (int((bx0 + bx1) / 2), int((by0 + by1) / 2))
             draw_pointer(canvas, anchor_pt, tgt, accent, px(3), px(7))
-            draw_pill(canvas, t, cf, accent + (255,), _text_on(accent), (cx, cy), pad)
+            regions.append(draw_pill(canvas, t, cf, accent + (255,), _text_on(accent), (cx, cy), pad))
+
+    apply_grain(canvas)
     canvas.convert("RGB").save(out_path, "PNG")
+    return regions
 
 
 def _draw_check(draw, x, y, size, color):
@@ -1093,6 +1432,7 @@ def compose_problem(pain_img, fakt_img, ca, marka, logo_img, palette, cena_pl, o
     draw.rectangle([half - lw // 2, 0, half + lw // 2 + (lw % 2), H], fill=(255, 255, 255, 255))  # biała linia styku
 
     # ── górny scrim + logo top-right + HOOK (transformacja) wyrównany do lewej (bez kolizji) ──
+    regions = []
     scrim_h = int(H * 0.16)
     draw_scrim(canvas, (0, 0, W, scrim_h), 210, 110)
     logo_left = W
@@ -1101,21 +1441,20 @@ def compose_problem(pain_img, fakt_img, ca, marka, logo_img, palette, cena_pl, o
         lx = W - int(W * 0.05) - pill.size[0]
         canvas.alpha_composite(pill, (lx, int(H * 0.022)))
         logo_left = lx
+        regions.append((lx, int(H * 0.022), lx + pill.size[0], int(H * 0.022) + pill.size[1]))
     hook = (ca.get("hook_baner") or ca.get("headline") or "").strip()
     if hook:
         hmax = max(int(W * 0.40), (logo_left - int(W * 0.02)) - m)
-        hf, lines, lh = fit_headline(ImageDraw.Draw(canvas), hook.upper(), fontp, hmax, scrim_h - px(18), max_lines=2, hi=px(82), lo=px(40))
-        y = (scrim_h - lh * len(lines) * 1.04) / 2
-        for ln in lines:
-            draw_text_shadow(canvas, (m, int(y)), ln, hf, CREAM, anchor="la", canvas_h=H)
-            y += lh * 1.04
+        regions += render_hook(canvas, (m, px(16)), hook.upper(), fontp, hmax,
+                               scrim_h - px(24), CREAM, _hook_accent(palette),
+                               hi=px(82), lo=px(40), max_lines=2, leading=1.04, canvas_h=H)
 
     # pigułki PRZED (szara) / PO (akcent) w górnych rogach połówek
     lf = _font(fontp, px(46))
     py = scrim_h + px(22)
-    draw_pill(canvas, "PRZED", lf, GRAY_LABEL + (240,), CREAM, (m, py), (px(22), px(11)))
+    regions.append(draw_pill(canvas, "PRZED", lf, GRAY_LABEL + (240,), CREAM, (m, py), (px(22), px(11))))
     pw2, _ = measure_pill(canvas, "PO", lf, (px(22), px(11)))
-    draw_pill(canvas, "PO", lf, accent + (255,), _text_on(accent), (W - m - pw2, py), (px(22), px(11)))
+    regions.append(draw_pill(canvas, "PO", lf, accent + (255,), _text_on(accent), (W - m - pw2, py), (px(22), px(11))))
 
     # ── dolny pas: BLOK CENY (prawdziwa) po LEWEJ + krótkie CTA po PRAWEJ (jeden rząd, bez nachodzenia) ──
     bot_h = int(H * 0.185)
@@ -1126,18 +1465,21 @@ def compose_problem(pain_img, fakt_img, ca, marka, logo_img, palette, cena_pl, o
         pf = _font(fontp, px(92))
         sf = _font(fontp, px(35))
         py2 = band_top + px(30)
-        draw_text_shadow(canvas, (m, py2), cena, pf, CREAM, anchor="la", canvas_h=H)
-        draw_text_shadow(canvas, (m + px(4), py2 + px(96)), "za pobraniem", sf, accent, anchor="la", canvas_h=H)
+        regions.append(draw_text_shadow(canvas, (m, py2), cena, pf, CREAM, anchor="la", canvas_h=H))
+        regions.append(draw_text_shadow(canvas, (m + px(4), py2 + px(96)), "za pobraniem", sf, accent, anchor="la", canvas_h=H))
         ctaf = _font(fontp, px(54))
         cta = "ZAMÓW  →"
         cw, ch = measure_pill(canvas, cta, ctaf, (px(30), px(16)))
-        draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), (W - m - cw, band_top + (bot_h - ch) // 2), (px(30), px(16)))
+        regions.append(draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), (W - m - cw, band_top + (bot_h - ch) // 2), (px(30), px(16))))
     else:
         ctaf = _font(fontp, px(52))
         cta = "ZAMÓW ZA POBRANIEM  →"
         cw, ch = measure_pill(canvas, cta, ctaf, (px(28), px(15)))
-        draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), ((W - cw) // 2, band_top + (bot_h - ch) // 2), (px(28), px(15)))
+        regions.append(draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), ((W - cw) // 2, band_top + (bot_h - ch) // 2), (px(28), px(15))))
+
+    apply_grain(canvas)
     canvas.convert("RGB").save(out_path, "PNG")
+    return regions
 
 
 def _pill_label(canvas, draw, text, font, color, center):
@@ -1168,11 +1510,12 @@ def compose_lifestyle(scene_img, ca, logo_img, palette, out_path):
     accent = _accent(palette)
     fontp = resolve_font_path_glob
     marker = (ca.get("hook_baner") or "").strip()
+    regions = []
 
     bbox = product_bbox(scene_img)
     if marker and bbox:
         bx0, by0, bx1, by1 = bbox
-        txt = marker.upper()
+        txt = re.sub(r"\[\[|\]\]", "", marker).upper()            # marker candid nie renderuje akcentu
         mf = _font(fontp, px(44))
         pad = (px(18), px(10))
         tw = ImageDraw.Draw(canvas).textlength(txt, font=mf)
@@ -1188,6 +1531,7 @@ def compose_lifestyle(scene_img, ca, logo_img, palette, out_path):
         sx = max(int(W * 0.06), min(int(bx0 + (bx1 - bx0) * 0.05), W - stamp.size[0] - int(W * 0.06)))
         sy = max(int(H * 0.30), by0 - stamp.size[1] - px(46))
         canvas.alpha_composite(stamp, (sx, sy))
+        regions.append((sx, sy, sx + stamp.size[0], sy + stamp.size[1]))
         draw_curved_arrow(canvas, (sx + stamp.size[0] // 2, sy + stamp.size[1] - px(4)),
                           (int(bx0 + (bx1 - bx0) * 0.5), int(by0 + (by1 - by0) * 0.35)), accent, px(5))
 
@@ -1195,14 +1539,144 @@ def compose_lifestyle(scene_img, ca, logo_img, palette, out_path):
     yf = _font(fontp, px(36))
     YEL = (245, 202, 60)
     pw2, _ = measure_pill(canvas, "za pobraniem", yf, (px(16), px(9)))
-    draw_pill(canvas, "za pobraniem", yf, YEL + (240,), DARK_BAR, (W - int(W * 0.06) - pw2, int(H * 0.055)), (px(16), px(9)))
+    regions.append(draw_pill(canvas, "za pobraniem", yf, YEL + (240,), DARK_BAR, (W - int(W * 0.06) - pw2, int(H * 0.055)), (px(16), px(9))))
 
-    place_logo(canvas, logo_img, 0.06, allow_top=True, pill_frac=0.058)   # logo malutkie, jasny róg
+    lbox = place_logo(canvas, logo_img, 0.06, allow_top=True, pill_frac=0.058)   # logo malutkie, jasny róg
+    if isinstance(lbox, tuple):
+        regions.append(lbox)
+
+    apply_grain(canvas)
     canvas.convert("RGB").save(out_path, "PNG")
+    return regions
 
 
 # Globalny uchwyt na ścieżkę fontu (ustawiany w run() po odczycie brandingu).
 resolve_font_path_glob = FALLBACK_FONT
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ETAP D — BRAMKA OCHRONY LITER (pHash crop B vs C; > próg = finisher odrzucony).
+# ══════════════════════════════════════════════════════════════════════════════
+_DCT_COS = {}
+
+
+def _dct_cos(N, K):
+    key = (N, K)
+    if key not in _DCT_COS:
+        _DCT_COS[key] = [[math.cos(math.pi * (2 * n + 1) * k / (2 * N)) for n in range(N)] for k in range(K)]
+    return _DCT_COS[key]
+
+
+def phash(img, hash_size=8, N=32):
+    """Perceptual hash (separable DCT, bez numpy). Zwraca 63-bit int (DC pominięty)."""
+    Image, _, _, _, _ = _pil()
+    g = img.convert("L").resize((N, N), Image.LANCZOS)
+    px = list(g.getdata())
+    f = [px[y * N:(y + 1) * N] for y in range(N)]
+    cos = _dct_cos(N, hash_size)
+    R = [[0.0] * hash_size for _ in range(N)]
+    for y in range(N):
+        fy = f[y]
+        for u in range(hash_size):
+            cu = cos[u]
+            R[y][u] = sum(fy[x] * cu[x] for x in range(N))
+    D = [[0.0] * hash_size for _ in range(hash_size)]
+    for v in range(hash_size):
+        cv = cos[v]
+        for u in range(hash_size):
+            D[v][u] = sum(R[y][u] * cv[y] for y in range(N))
+    vals = [D[v][u] for v in range(hash_size) for u in range(hash_size)][1:]   # pomiń DC
+    med = sorted(vals)[len(vals) // 2]
+    bits = 0
+    for val in vals:
+        bits = (bits << 1) | (1 if val > med else 0)
+    return bits
+
+
+def hamming(a, b):
+    return bin(a ^ b).count("1")
+
+
+def _rms(a, b):
+    Image, _, _, _, _ = _pil()
+    ga = list(a.convert("L").resize((64, 64), Image.LANCZOS).getdata())
+    gb = list(b.convert("L").resize((64, 64), Image.LANCZOS).getdata())
+    n = len(ga) or 1
+    return (sum((ga[i] - gb[i]) ** 2 for i in range(n)) / n) ** 0.5
+
+
+def letter_gate(imgB, imgC, regions, phash_max=LETTER_GATE_PHASH_MAX):
+    """Porównuje cropy bboxów (litery/loga) wersji B vs C. Przekroczenie progu pHash na
+    KTÓRYMKOLWIEK regionie = finisher odrzucony. Zwraca (ok, details, worst_phash)."""
+    W, H = imgB.size
+    Wc, Hc = imgC.size
+    sx, sy = Wc / W, Hc / H
+    pad = int(0.01 * H)
+    details, worst, ok = [], 0, True
+    for box in regions:
+        x0, y0, x1, y1 = [int(v) for v in box]
+        bx = (max(0, x0 - pad), max(0, y0 - pad), min(W, x1 + pad), min(H, y1 + pad))
+        if bx[2] - bx[0] < 6 or bx[3] - bx[1] < 6:
+            continue
+        cropB = imgB.crop(bx)
+        cropC = imgC.crop((int(bx[0] * sx), int(bx[1] * sy), int(bx[2] * sx), int(bx[3] * sy)))
+        d = hamming(phash(cropB), phash(cropC))
+        rms = _rms(cropB, cropC)
+        fail = d > phash_max
+        details.append({"box": bx, "phash": d, "rms": round(rms, 1), "fail": fail})
+        worst = max(worst, d)
+        if fail:
+            ok = False
+    return ok, details, worst
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ETAP C — FINISHER PASS („ręka grafika") + bramka liter D.
+# ══════════════════════════════════════════════════════════════════════════════
+def run_finisher(out_dir, creatives, regions_by_angle, state, slug):
+    """Złożony baner B → nbpro finisher → C. Bramka liter (pHash) decyduje C vs B.
+    Zapisuje ad_<angle>_45.png (wybrana) + ad_<angle>_45_pre_finisher.png. Zwraca (added_usd, verdicts)."""
+    Image, _, _, _, _ = _pil()
+    fal = _fal()
+    jobs, pre_by_angle = [], {}
+    for cr in creatives:
+        a, b_path = cr["angle"], cr["path"]
+        pre_path = os.path.join(out_dir, "ad_%s_45_pre_finisher.png" % a)
+        shutil.copyfile(b_path, pre_path)
+        pre_by_angle[a] = pre_path
+        url = fal.store(pre_path, "adforge/%s/finisher_in_%s.png" % (slug, a))
+        jobs.append({"tag": a, "model": NBPRO_EDIT, "image_urls": [url], "prompt": FINISHER_PROMPT})
+    log("FINISHER: %d banerów → nbpro (2K, 4:5)…" % len(jobs))
+    got = gen_nbpro_batch(jobs, os.path.join(out_dir, "finisher"))
+    added = NBPRO_USD * len(jobs)
+    verdicts = []
+    for cr in creatives:
+        a, b_path = cr["angle"], cr["path"]
+        regions = regions_by_angle.get(a) or []
+        c_path = got.get(a)
+        if not c_path or not os.path.isfile(c_path):
+            verdicts.append({"angle": a, "verdict": "BRAK_FINISHERA", "worst": None, "regions": len(regions)})
+            log("finisher %s: BRAK wyniku — zostaje B" % a)
+            continue
+        imgB = Image.open(pre_by_angle[a]).convert("RGB")
+        imgC = to_45(Image.open(c_path).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS)
+        ok, details, worst = letter_gate(imgB, imgC, regions)
+        if ok:
+            imgC.save(b_path, "PNG")
+            verdicts.append({"angle": a, "verdict": "APPLIED", "worst": worst, "regions": len(regions)})
+            log("finisher %s: APPLIED (worst pHash=%s ≤ %d, %d regionów)" %
+                (a, worst, LETTER_GATE_PHASH_MAX, len(regions)))
+        else:
+            rej = os.path.join(out_dir, "ad_%s_45_rejected_finisher.png" % a)
+            imgC.save(rej, "PNG")
+            verdicts.append({"angle": a, "verdict": "REJECTED", "worst": worst, "regions": len(regions)})
+            log("finisher %s: REJECTED (worst pHash=%s > %d) — zostaje B; C→%s" %
+                (a, worst, LETTER_GATE_PHASH_MAX, os.path.basename(rej)))
+        for dd in details:
+            if dd["fail"]:
+                log("   region FAIL box=%s pHash=%d rms=%s" % (dd["box"], dd["phash"], dd["rms"]))
+    state.setdefault("finisher", {})["verdicts"] = verdicts
+    return added, verdicts
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1274,7 +1748,8 @@ def publish(bundle, engine, out_dir, creatives, total_usd):
         ps.artifact_add(project, product_id, "agr_generacja", "ad_creative", cr["image_url"],
                         label="AD %s 45" % cr["angle"], meta={"angle": cr["angle"], "format": "45"})
     if total_usd > 0:                                              # recompose ($0) nie dokłada wierszy kosztu
-        ps.cost_add(project, product_id, round(total_usd, 4), kind="gpt-image", step="agr_generacja",
+        cost_kind = "fal" if engine == "nbpro" else "gpt-image"     # nbpro → fal (nie gpt-image)
+        ps.cost_add(project, product_id, round(total_usd, 4), kind=cost_kind, step="agr_generacja",
                     stage=5, note="ad-forge %d kreacji (%s)" % (len(creatives), engine))
     ps.step_update(project, product_id, "agr_generacja", status="done",
                    note="ad-forge: %d kreacji (%s) · koszt ~$%.2f" % (len(creatives), engine, total_usd))
@@ -1294,24 +1769,43 @@ def _pick_demo_scene(scene_imgs):
 
 def compose_all(angles, copy, scene_imgs, out_dir, brand_name, logo_img, palette, cena_pl):
     creatives = []
+    regions_by_angle = {}
     for a in angles:
         ca = copy.get(a) or {}
         out_path = os.path.join(out_dir, "ad_%s_45.png" % a)
+        regs = []
         if a == "demo":
-            compose_demo(_pick_demo_scene(scene_imgs), ca, logo_img, palette, cena_pl, out_path)
+            regs = compose_demo(_pick_demo_scene(scene_imgs), ca, logo_img, palette, cena_pl, out_path)
         elif a == "problem":
-            compose_problem(scene_imgs[(a, "pain")], scene_imgs[(a, "fakt")], ca, brand_name,
-                            logo_img, palette, cena_pl, out_path)
+            regs = compose_problem(scene_imgs[(a, "pain")], scene_imgs[(a, "fakt")], ca, brand_name,
+                                   logo_img, palette, cena_pl, out_path)
         elif a == "lifestyle":
-            compose_lifestyle(scene_imgs[(a, "ugc")], ca, logo_img, palette, out_path)
+            regs = compose_lifestyle(scene_imgs[(a, "ugc")], ca, logo_img, palette, out_path)
+        regions_by_angle[a] = [tuple(int(v) for v in bx) for bx in (regs or []) if bx]
         creatives.append({"angle": a, "path": out_path,
                           "headline": (ca.get("hook_baner") or ca.get("headline") or ""),
                           "primary_text": ca.get("primary_text") or ""})
-        log("Kompozycja gotowa: %s" % out_path)
-    return creatives
+        log("Kompozycja gotowa: %s (%d regionów-liter)" % (out_path, len(regions_by_angle[a])))
+    return creatives, regions_by_angle
 
 
-def finish(args, bundle, engine, out_dir, creatives, total_usd, mode="gen"):
+def finish(args, bundle, engine, out_dir, creatives, total_usd, mode="gen",
+           regions_by_angle=None, state=None, run_finisher_pass=False):
+    slug = str(bundle["product"].get("slug") or bundle["product"]["id"])
+    finisher_verdicts = []
+    if run_finisher_pass and not getattr(args, "no_finisher", False):
+        print("-" * 88)
+        added, finisher_verdicts = run_finisher(out_dir, creatives, regions_by_angle or {}, state or {}, slug)
+        total_usd += added
+        # zapisz werdykty do state na dysku
+        try:
+            sp = os.path.join(out_dir, "adforge-state.json")
+            st = json.loads(io.open(sp, encoding="utf-8").read()) if os.path.isfile(sp) else {}
+            st.setdefault("finisher", {})["verdicts"] = finisher_verdicts
+            st["regions"] = {a: [list(b) for b in (regions_by_angle or {}).get(a, [])] for a in (regions_by_angle or {})}
+            io.open(sp, "w", encoding="utf-8").write(json.dumps(st, ensure_ascii=False, indent=1))
+        except Exception as e:
+            log("state zapis werdyktów nieudany: %s" % e)
     print("-" * 88)
     gate_rc = run_ad_gate(out_dir)
     if args.no_register:
@@ -1322,9 +1816,15 @@ def finish(args, bundle, engine, out_dir, creatives, total_usd, mode="gen"):
         log("Publikacja do panelu (panel-sync)…")
         publish(bundle, engine, out_dir, creatives, total_usd)
     print("=" * 88)
-    print("GOTOWE (%s) — %d kreacji (%s), koszt płatny ~$%.2f" % (mode, len(creatives), engine, total_usd))
+    print("GOTOWE (%s) — %d kreacji (%s), koszt płatny ~$%.2f (~%.2f zł)" %
+          (mode, len(creatives), engine, total_usd, total_usd * 4.0))
     for cr in creatives:
         print("  • %-10s %s  | headline: %s" % (cr["angle"], cr["path"], cr["headline"]))
+    if finisher_verdicts:
+        print("BRAMKA LITER (finisher B vs C):")
+        for v in finisher_verdicts:
+            print("  • %-10s %-14s worst_pHash=%s (próg %d, %d regionów)" %
+                  (v["angle"], v["verdict"], v["worst"], LETTER_GATE_PHASH_MAX, v["regions"]))
     print("Werdykt ad-gate: %s (agent ogląda finały SAM — skrypt tylko raportuje)" %
           ("PASS" if gate_rc == 0 else ("FLAG" if gate_rc == 1 else "n/d")))
     print("out=%s" % out_dir)
@@ -1401,8 +1901,11 @@ def do_recompose(args, bundle, out_dir, palette, logo_img, angles):
             for kind, _ang in scenes_for_angle(a):
                 if (a, kind) not in scene_imgs:
                     raise SystemExit("--recompose: brak sceny scene_%s_%s.* w %s (wygeneruj kąt '%s' raz)." % (a, kind, sceny, a))
-    creatives = compose_all(angles, copy, scene_imgs, out_dir, b["brand_name"], logo_img, palette, bundle.get("cena_pl"))
-    return finish(args, bundle, engine, out_dir, creatives, 0.0, mode="recompose")
+    creatives, regions_by_angle = compose_all(angles, copy, scene_imgs, out_dir, b["brand_name"],
+                                              logo_img, palette, bundle.get("cena_pl"))
+    # RECOMPOSE = $0 (bez płatnej generacji); finisher pominięty (naliczałby fal). Użyj pełnego runu.
+    return finish(args, bundle, engine, out_dir, creatives, 0.0, mode="recompose",
+                  regions_by_angle=regions_by_angle, state=state, run_finisher_pass=False)
 
 
 def run(args):
@@ -1475,10 +1978,14 @@ def run(args):
     # ── plan scen + prompty + prompt-lint ──
     print("-" * 88)
     print("PLAN SCEN + PROMPTY (kierunkowe, produkt = referencja):")
+    demo_borrows = ("demo" in angles) and any(x in angles for x in ("problem", "lifestyle"))
     plan = []
     for a in angles:
         ca = copy.get(a) or {}
         for kind, ang in scenes_for_angle(a):
+            if a == "demo" and kind == "hero" and demo_borrows:
+                print("  • [demo/hero] POMINIĘTE — demo pożyczy scenę problem_fakt/lifestyle_ugc (oszczędność)")
+                continue
             sp, with_product = build_scene_prompt(kind, ca)
             fp = full_prompt(sp, with_product, bool(styl_url) and with_product)
             probs = lint_scene(fp, with_product)
@@ -1489,26 +1996,44 @@ def run(args):
             for pr in probs:
                 print("      ⚠ %s" % pr)
 
+    is_nbpro = args.engine == "nbpro"
+    per_scene = (BEST_OF * NBPRO_USD) if is_nbpro else ADFORGE_IMG_USD
     if args.dry:
         print("-" * 88)
         print("[DRY] Zatrzymano PRZED generacją obrazów i rejestracją.")
-        print("[DRY] Wygenerowano by: %s (× 1 obraz każda) → koszt szac. ~$%.2f" %
-              ([pl["kind"] for pl in plan], ADFORGE_IMG_USD * len(plan)))
+        n_fin = len(angles) if (is_nbpro and not getattr(args, "no_finisher", False)) else 0
+        est = per_scene * len(plan) + n_fin * NBPRO_USD
+        print("[DRY] Sceny: %s (best-of-%d) + finisher×%d → koszt szac. ~$%.2f (~%.2f zł)" %
+              ([pl["kind"] for pl in plan], BEST_OF if is_nbpro else 1, n_fin, est, est * 4.0))
         print("[DRY] out=%s" % out_dir)
         return 0
 
+    # ── stan (fal_refs cache + copy) ──
+    state_path = os.path.join(out_dir, "adforge-state.json")
+    state = {}
+    if os.path.isfile(state_path):
+        try:
+            state = json.loads(io.open(state_path, encoding="utf-8").read())
+        except Exception:
+            state = {}
+
     # ── generacja + format + kompozycja ──
     print("-" * 88)
+    styl_local = None
     if styl_url:
         try:
             blob, ct = _download(styl_url)
-            io.open(os.path.join(refs_dir, "styl-master." + _ct_ext(ct)), "wb").write(blob)
+            styl_local = os.path.join(refs_dir, "styl-master." + _ct_ext(ct))
+            io.open(styl_local, "wb").write(blob)
         except Exception as e:
             log("styl-master pobranie nieudane: %s" % e)
+    packshot_local = []
     for i, u in enumerate(packshots):
         try:
             pblob, pct = _download(u)
-            io.open(os.path.join(refs_dir, "packshot-%d.%s" % (i, _ct_ext(pct))), "wb").write(pblob)
+            pth = os.path.join(refs_dir, "packshot-%d.%s" % (i, _ct_ext(pct)))
+            io.open(pth, "wb").write(pblob)
+            packshot_local.append(pth)
         except Exception as e:
             log("packshot %d pobranie nieudane: %s" % (i, e))
 
@@ -1516,44 +2041,90 @@ def run(args):
     os.makedirs(sceny_dir, exist_ok=True)
     scene_imgs = {}                                                # (angle,kind) → RGB final
     total_usd = 0.0
-    for pl in plan:
-        a, kind, fp, wp = pl["angle"], pl["kind"], pl["prompt"], pl["with_product"]
-        log("Generacja [%s/%s] engine=%s…" % (a, kind, args.engine))
-        if args.engine == "gptimage":
-            ref_urls = [("product", packshots[0])] if wp and packshots else []
-            if wp and styl_url:
-                ref_urls.append(("style", styl_url))
-            blob = gen_gptimage(fp, ref_urls, args.quality)
-            ext = "png"
-        else:
-            ref_objs = []
-            if wp and packshots:
-                ref_objs.append({"url": packshots[0], "type": "product"})
-            if wp and styl_url:
-                ref_objs.append({"url": styl_url, "type": "ref"})
-            blob = gen_gemini(fp, ref_objs, slug, "%s-%s" % (a, kind))
-            ext = "png"
-        total_usd += ADFORGE_IMG_USD
-        io.open(os.path.join(sceny_dir, "scene_%s_%s.%s" % (a, kind, ext)), "wb").write(blob)  # PRZED overlay
-        scene_imgs[(a, kind)] = scene_to_final(blob, args.engine)
 
-    # stan do --recompose (engine + copy + kąty) — zawsze świeży dla przetworzonych kątów;
-    # MERGE copy po angle, żeby recompose innego kąta później miał komplet.
-    state_path = os.path.join(out_dir, "adforge-state.json")
-    prev = {}
-    if os.path.isfile(state_path):
+    if is_nbpro:
+        # ── ETAP A: rehost refów PRZEZ fal.store RAZ (public URL, cache w state) ──
+        log("Rehost refów przez fal.store (public URL dla nbpro)…")
+        packshot_fal = None
+        if packshot_local and packshots:
+            packshot_fal = rehost_ref(packshot_local[0], "adforge/%s/packshot0.%s" %
+                                      (slug, packshot_local[0].rsplit(".", 1)[-1]), packshots[0], state)
+        styl_fal = None
+        if styl_local and styl_url:
+            styl_fal = rehost_ref(styl_local, "adforge/%s/styl.%s" %
+                                  (slug, styl_local.rsplit(".", 1)[-1]), styl_url, state)
+        # zapisz cache refów zanim ruszy generacja (odporność na pad)
         try:
-            prev = json.loads(io.open(state_path, encoding="utf-8").read())
+            io.open(state_path, "w", encoding="utf-8").write(json.dumps(state, ensure_ascii=False, indent=1))
         except Exception:
-            prev = {}
-    merged_copy = dict((prev.get("copy") or {}))
+            pass
+
+        # ── ETAP A: best-of-2 równolegle (fal.gen_batch) ──
+        jobs = []
+        for pl in plan:
+            a, kind, fp, wp = pl["angle"], pl["kind"], pl["prompt"], pl["with_product"]
+            image_urls = []
+            if wp and packshot_fal:
+                image_urls.append(packshot_fal)
+                if styl_fal:
+                    image_urls.append(styl_fal)
+            model = NBPRO_EDIT if image_urls else NBPRO_T2I
+            for c in range(BEST_OF):
+                jobs.append({"tag": "%s_%s_c%d" % (a, kind, c), "model": model,
+                             "image_urls": image_urls, "prompt": fp})
+        cand_dir = os.path.join(sceny_dir, "cand")
+        got = gen_nbpro_batch(jobs, cand_dir)
+        total_usd += per_scene * len(plan)
+
+        for pl in plan:
+            a, kind = pl["angle"], pl["kind"]
+            cand_paths = [got.get("%s_%s_c%d" % (a, kind, c)) for c in range(BEST_OF)]
+            cand_paths = [pp for pp in cand_paths if pp and os.path.isfile(pp)]
+            if not cand_paths:
+                raise SystemExit("nbpro: brak kandydatów dla %s/%s — przerwano (dociągnij: fal.py reclaim %s)" % (a, kind, cand_dir))
+            finals = [scene_to_final(io.open(pp, "rb").read(), "nbpro") for pp in cand_paths]
+            zone = NEG_ZONES.get((a, kind), NEG_ZONE_DEFAULT)
+            best_i, scores = pick_best_candidate(finals, zone)
+            log("  best-of-%d [%s/%s] → kandydat #%d %s (ostrość/jasność/score)" %
+                (len(finals), a, kind, best_i, scores))
+            # zapisz OBU kandydatów do sceny/ + wybraną jako kanoniczną scene_<a>_<kind>.png
+            for c, pp in enumerate(cand_paths):
+                shutil.copyfile(pp, os.path.join(sceny_dir, "scene_%s_%s_cand%d.png" % (a, kind, c)))
+            shutil.copyfile(cand_paths[best_i], os.path.join(sceny_dir, "scene_%s_%s.png" % (a, kind)))
+            scene_imgs[(a, kind)] = finals[best_i]
+    else:
+        for pl in plan:
+            a, kind, fp, wp = pl["angle"], pl["kind"], pl["prompt"], pl["with_product"]
+            log("Generacja [%s/%s] engine=%s…" % (a, kind, args.engine))
+            if args.engine == "gptimage":
+                ref_urls = [("product", packshots[0])] if wp and packshots else []
+                if wp and styl_url:
+                    ref_urls.append(("style", styl_url))
+                blob = gen_gptimage(fp, ref_urls, args.quality)
+            else:
+                ref_objs = []
+                if wp and packshots:
+                    ref_objs.append({"url": packshots[0], "type": "product"})
+                if wp and styl_url:
+                    ref_objs.append({"url": styl_url, "type": "ref"})
+                blob = gen_gemini(fp, ref_objs, slug, "%s-%s" % (a, kind))
+            total_usd += ADFORGE_IMG_USD
+            io.open(os.path.join(sceny_dir, "scene_%s_%s.png" % (a, kind)), "wb").write(blob)  # PRZED overlay
+            scene_imgs[(a, kind)] = scene_to_final(blob, args.engine)
+
+    # stan do --recompose (engine + copy + kąty) — MERGE copy po angle; zachowaj fal_refs.
+    merged_copy = dict((state.get("copy") or {}))
     for a in angles:
         merged_copy[a] = copy.get(a) or {}
-    io.open(state_path, "w", encoding="utf-8").write(json.dumps(
-        {"engine": args.engine, "quality": args.quality, "copy": merged_copy}, ensure_ascii=False, indent=1))
+    state["engine"] = args.engine
+    state["quality"] = args.quality
+    state["copy"] = merged_copy
+    io.open(state_path, "w", encoding="utf-8").write(json.dumps(state, ensure_ascii=False, indent=1))
 
-    creatives = compose_all(angles, copy, scene_imgs, out_dir, b["brand_name"], logo_img, palette, bundle.get("cena_pl"))
-    finish(args, bundle, args.engine, out_dir, creatives, total_usd, mode="gen")
+    creatives, regions_by_angle = compose_all(angles, copy, scene_imgs, out_dir, b["brand_name"],
+                                              logo_img, palette, bundle.get("cena_pl"))
+    finish(args, bundle, args.engine, out_dir, creatives, total_usd, mode="gen",
+           regions_by_angle=regions_by_angle, state=state, run_finisher_pass=is_nbpro)
     return 0
 
 
@@ -1564,8 +2135,10 @@ def build_argparser():
     ap.add_argument("product_id", help="UUID produktu wf2_products")
     ap.add_argument("--angles", default="demo,problem,lifestyle",
                     help="kąty po przecinku (demo,problem,lifestyle)")
-    ap.add_argument("--engine", default="gptimage", choices=["gptimage", "gemini"],
-                    help="silnik generacji (domyślnie gptimage = bezpośredni OpenAI)")
+    ap.add_argument("--engine", default="nbpro", choices=["nbpro", "gptimage", "gemini"],
+                    help="silnik scen (domyślnie nbpro = fal-ai/nano-banana-pro, best-of-2 + finisher)")
+    ap.add_argument("--no-finisher", action="store_true",
+                    help="pomiń ETAP C finisher (nbpro) — tylko sceny best-of-2 + kompozycja B")
     ap.add_argument("--out", help="katalog wyjściowy (domyślnie C:\\tmp\\ad-forge\\<slug>)")
     ap.add_argument("--dry", action="store_true",
                     help="pobierz dane+refy, zbuduj prompty i copy, wypisz plan — bez generacji/rejestracji")

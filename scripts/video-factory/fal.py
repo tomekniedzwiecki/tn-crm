@@ -20,6 +20,10 @@ LEDGER = r"C:\tmp\video-factory\ledger.json"
 # szacunki kosztow USD (z researchu 2026-07-17)
 COST = {
     "fal-ai/nano-banana/edit": lambda p: 0.039 * int(p.get("num_images", 1)),
+    # nano-banana-pro (Gemini 3 Pro Image) 2K ~ $0.225/obraz (ad-forge nbpro, 2026-07-19)
+    "fal-ai/nano-banana-pro/edit": lambda p: 0.225 * int(p.get("num_images", 1)),
+    "fal-ai/nano-banana-pro/text-to-image": lambda p: 0.225 * int(p.get("num_images", 1)),
+    "fal-ai/nano-banana-pro": lambda p: 0.225 * int(p.get("num_images", 1)),
     "fal-ai/flux-pro/kontext": lambda p: 0.04 * int(p.get("num_images", 1)),
     "fal-ai/kling-video/v2.5-turbo/pro/image-to-video":
         lambda p: 0.35 + max(0, int(p.get("duration", "5")) - 5) * 0.07,
