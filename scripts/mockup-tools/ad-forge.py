@@ -30,9 +30,28 @@ TRYB FULL-DESIGN (default dla nbpro, 2026-07-19 — feedback Tomka „stare krea
   BRAMKA TEKSTU = agent (vision) porównuje litera-po-literze; literówka → drugi kandydat / chirurgiczny
   `nano-banana-pro/edit` fix / fallback overlay. `--mode overlay` = stary tor nakładek (fallback).
 
+OPTYMALIZACJA v8 (2026-07-19, „czas/koszt/wartość" — Tomek):
+  1. RÓWNOLEGŁOŚĆ PEŁNA: cały etap generacji przebiegu (wszystkie kąty × best-of-2 + bazy hooków +
+     A/B) submitowany do kolejki fal NARAZ (jeden submit-all→poll-all, wzorzec gen_batch). Skrypt
+     mierzy i wypisuje CZAS ŚCIANY etapu generacji (state.timings).
+  2. TRYB PORTFELOWY: --batch <id1,id2,…> / --batch-project <project_id> — produkty generowane
+     WSPÓŁBIEŻNIE (jeden batch fal na cały portfel; tagi namespace'owane slugiem), bramki oceniane
+     ZBIORCZO (jeden arkusz), publikacja per produkt (tylko --finalize).
+  3. BRAMKI ZBIORCZE: JEDEN arkusz kompozytów (siatka: kandydaci + packshot referencyjny) per
+     przebieg → dowody/ARKUSZ-BRAMEK.png (ocena całości w 1-2 podejściach vision).
+  4. RECLAIM: start przebiegu POLLUJE opłacone joby z ledgera (response_url) do katalogu staging
+     (dociąga zamiast re-submitować — po padzie sesji).
+  5. WARIANTY HOOKÓW ~$0: --hook-variants N — dodatkowa BAZA sceny „bez nagłówka" (górna strefa =
+     czysty negative space) + N nagłówków nakładanych KODEM (font marki) = ad_<angle>_45_h1..hN.png,
+     publikowane jako DODATKOWE artefakty ('AD <angle> hook N'); blob ads_creatives BEZ zmian.
+  6. A/B SILNIKÓW (--ab-engine nano-banana-2): scena demo dodatkowo przez nano-banana-2/edit (ten sam
+     brief/refy) → kompozyt AB-SILNIKI-nbpro-vs-nb2.png (podpisy model+cena; NIE publikowany do panelu).
+
 CLI:
   python ad-forge.py <product_id> [--angles demo,problem,lifestyle] [--engine nbpro|gptimage|gemini]
     [--mode auto|fulldesign|overlay] [--out DIR] [--dry] [--no-register] [--no-finisher] [--quality high|medium]
+    [--hook-variants N] [--ab-engine nano-banana-2] [--finalne-dir DIR]
+  python ad-forge.py --batch <id1,id2,…> [--finalize] | --batch-project <project_id> [--dry] [--finalize]
   --dry: pobierz dane+refy, zbuduj prompty i copy, wypisz plan — BEZ generacji i BEZ rejestracji.
 
 Uruchamiać venv: scripts/mockup-tools/.venv/Scripts/python.exe
@@ -90,6 +109,9 @@ NBPRO_T2I = "fal-ai/nano-banana-pro"                 # scena bez produktu (PAIN)
 # UWAGA: subpath '/text-to-image' ma zepsutą ścieżkę kolejki fal (response_url 404 przy pobraniu);
 # base 'fal-ai/nano-banana-pro' dzieli działającą ścieżkę z '/edit'. (incydent drapek 19.07)
 NBPRO_USD = float(os.environ.get("ADFORGE_NBPRO_USD", "0.225"))  # 1 obraz 2K
+# A/B SILNIKÓW (v8): nano-banana-2/edit — tańszy „challenger" nbpro do decyzji Tomka (NIE publikowany).
+NB2_EDIT = "fal-ai/nano-banana-2/edit"
+NB2_USD = float(os.environ.get("ADFORGE_NB2_USD", "0.10"))       # 1 obraz (est $0.08-0.12)
 FAL_DIR = os.path.abspath(os.path.join(HERE, "..", "video-factory"))
 BEST_OF = 2                                          # kandydatów sceny (auto-wybór ostrość+neg-space)
 
@@ -401,7 +423,7 @@ def parse_palette(paleta_str):
 # ══════════════════════════════════════════════════════════════════════════════
 # COPY + WIZJE SCEN — jeden call wf2-gpt (json_object wymuszony promptem + tolerant-parse).
 # ══════════════════════════════════════════════════════════════════════════════
-def build_copy_prompt(bundle, angles):
+def build_copy_prompt(bundle, angles, with_hook_alts=False):
     p = bundle["product"]
     b = bundle["branding"]
     name = str(p.get("name") or (bundle["tt"] or {}).get("pl_name") or "produkt")
@@ -419,29 +441,33 @@ def build_copy_prompt(bundle, angles):
     if alt_texts:
         fakty += "\n- Opisy kadrów produktu (FAKTY): %s" % " • ".join(alt_texts)
 
-    # Schemat JSON per kąt (tylko wybrane kąty).
+    # Schemat JSON per kąt (tylko wybrane kąty). hook_alts (v8) = alternatywne nagłówki do
+    # wariantów hooków (--hook-variants), nakładanych KODEM na bazę „bez nagłówka".
+    alts = ('"hook_alts":["ALTERNATYWNY nagłówek PL ≤4 słowa, INNY kąt niż hook_baner",'
+            '"ALTERNATYWNY nagłówek PL ≤4 słowa","ALTERNATYWNY nagłówek PL ≤4 słowa"],'
+            if with_hook_alts else "")
     schema_lines = []
     for a in angles:
         if a == "problem":
             schema_lines.append(
-                '  "problem": {"hook_baner":"TRANSFORMACJA PL, 2-4 słowa (np. \\"Koniec walki o pazury\\")",'
+                '  "problem": {' + alts + '"hook_baner":"TRANSFORMACJA PL, 2-4 słowa (np. \\"Koniec walki o pazury\\")",'
                 '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"1 zdanie EN — scena FAKTU z produktem",'
                 '"pain_vision":"1 zdanie EN — scena bólu BEZ produktu","fakt_checkmarki":["≤3 słowa PL","≤3 słowa PL","≤3 słowa PL"]}')
         elif a == "demo":
             schema_lines.append(
-                '  "demo": {"hook_baner":"PYTANIE-LUSTRO lub BENEFIT PL (np. \\"Twój pies nie znosi obcinania pazurów?\\")",'
+                '  "demo": {' + alts + '"hook_baner":"PYTANIE-LUSTRO lub BENEFIT PL (np. \\"Twój pies nie znosi obcinania pazurów?\\")",'
                 '"callouts_demo":["≤3 słowa PL z FAKTÓW (np. schowek na smakołyki)","≤3 słowa PL (np. ściera pazury naturalnie)","≤3 słowa PL (np. antypoślizgowy spód)"],'
                 '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"STUDYJNA wskazówka EN, max kilka słów — '
                 'tylko rekwizyt/kolor/faktura tła obok produktu, BEZ ludzi i BEZ scen wnętrz (np. \\"a few dog treats scattered beside the board\\")"}')
         else:  # lifestyle
             schema_lines.append(
-                '  "%s": {"hook_baner":"ODRĘCZNY MARKER PL sprzedający MECHANIZM — że pies robi to SAM, ≤3 słowa, z wykrzyknikiem (np. \\"SAM ŚCIERA PAZURY!\\")",'
+                ('  "%s": {' % a) + alts + '"hook_baner":"ODRĘCZNY MARKER PL sprzedający MECHANIZM — że pies robi to SAM, ≤3 słowa, z wykrzyknikiem (np. \\"SAM ŚCIERA PAZURY!\\")",'
                 '"mini_adnotacja":"KRÓTKA druga odręczna adnotacja PL przy szufladzie, ≤3 słowa (np. \\"smakołyki w środku\\")",'
                 '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta",'
-                '"scene_vision":"1 zdanie EN — MECHANIZM W AKCJI: pies SAM energicznie drapie deskę (pazury na czarnej powierzchni), szuflada uchylona ze smakołykami, wzrok na schowku, BEZ ludzkiej ręki podającej smakołyk"}' % a)
+                '"scene_vision":"1 zdanie EN — MECHANIZM W AKCJI: pies SAM energicznie drapie deskę (pazury na czarnej powierzchni), szuflada uchylona ze smakołykami, wzrok na schowku, BEZ ludzkiej ręki podającej smakołyk"}')
     schema = "{\n" + ",\n".join(schema_lines) + "\n}"
 
     return (
@@ -495,26 +521,37 @@ def tolerant_json(text):
     return None
 
 
-def call_copy(bundle, angles):
+def call_copy(bundle, angles, with_hook_alts=False):
     secret = ENV.get("WF2_GEN_SECRET")
     if not secret:
         raise SystemExit("brak WF2_GEN_SECRET w .env (potrzebny do wf2-gpt)")
-    prompt = build_copy_prompt(bundle, angles)
-    payload = {
-        "model": "gpt-5.6-sol",
-        "input": [{"role": "user", "content": [{"type": "input_text", "text": prompt}]}],
-        "max_output_tokens": 4000,
-        "reasoning": {"effort": "high"},          # kreatywne = high (mapa fabryki)
-    }
-    r = requests.post(WF2GPT, data=json.dumps(payload).encode("utf-8"),
-                      headers={"Content-Type": "application/json", "x-wf2-secret": secret}, timeout=600)
-    if r.status_code >= 300:
-        raise SystemExit("wf2-gpt %s: %s" % (r.status_code, r.text[:300]))
-    text = (r.json() or {}).get("text", "")
-    data = tolerant_json(text)
-    if not isinstance(data, dict):
-        raise SystemExit("wf2-gpt nie zwrócił poprawnego JSON copy: " + (text or "")[:300])
-    return data, prompt
+    prompt = build_copy_prompt(bundle, angles, with_hook_alts=with_hook_alts)
+    # RESILIENCJA: gpt-5.6-sol (reasoning high) BYWA zwraca pusty text (blip) — retry z lekkim
+    # podbiciem budżetu tokenów, zamiast przerywać (potem) DROGI przebieg generacji.
+    last_err = ""
+    for attempt in range(1, 3 + 1):
+        payload = {
+            "model": "gpt-5.6-sol",
+            "input": [{"role": "user", "content": [{"type": "input_text", "text": prompt}]}],
+            "max_output_tokens": 4000 + (attempt - 1) * 1500,
+            "reasoning": {"effort": "high"},          # kreatywne = high (mapa fabryki)
+        }
+        try:
+            r = requests.post(WF2GPT, data=json.dumps(payload).encode("utf-8"),
+                              headers={"Content-Type": "application/json", "x-wf2-secret": secret}, timeout=600)
+        except requests.RequestException as e:
+            last_err = "sieć: %s" % e
+            log("copy-call próba %d — %s; retry" % (attempt, last_err)); time.sleep(attempt * 2); continue
+        if r.status_code >= 300:
+            last_err = "wf2-gpt %s: %s" % (r.status_code, r.text[:200])
+            log("copy-call próba %d — %s; retry" % (attempt, last_err)); time.sleep(attempt * 2); continue
+        text = (r.json() or {}).get("text", "")
+        data = tolerant_json(text)
+        if isinstance(data, dict):
+            return data, prompt
+        last_err = "pusty/niepoprawny JSON (len=%d)" % len(text or "")
+        log("copy-call próba %d — %s; retry" % (attempt, last_err)); time.sleep(attempt * 2)
+    raise SystemExit("wf2-gpt nie zwrócił poprawnego JSON copy po 3 próbach: " + last_err)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1985,14 +2022,23 @@ def _fd_txt(s):
     return re.sub(r"\[\[|\]\]", "", str(s or "")).strip()
 
 
-def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=1):
+def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=1, no_hook=False):
     """Zwraca (prompt, intended_texts). intended_texts = DOKŁADNE napisy PL do weryfikacji przez agenta.
-    n_product = liczba kadrów produktu w image_urls (multi-ref: wygląd niesie N refów, nie słowo)."""
+    n_product = liczba kadrów produktu w image_urls (multi-ref: wygląd niesie N refów, nie słowo).
+    no_hook=True (v8, --hook-variants): baner BEZ nagłówka — górna strefa hooka zostaje czystym
+    negative-space (nagłówek dokładany później KODEM); reszta elementów bez zmian."""
     brand = b.get("brand_name") or ""
     paleta = b.get("paleta") or ""
     fonty = b.get("fonty") or ""
     hook = _fd_txt(ca.get("hook_baner") or ca.get("headline") or "").upper()
     parts = [FD_HEADER, _fd_product_para(n_product)]
+    if no_hook:
+        parts.append(
+            "\n\nHEADLINE ZONE EMPTY (variant base): leave the top ~22% headline band as CLEAN, EMPTY "
+            "negative space with ABSOLUTELY NO headline text or sticker note there — a headline will be "
+            "composited on top later. Put the brand LOGO in a BOTTOM corner (never at the top — the top "
+            "band must stay empty). Keep ALL OTHER elements exactly as described (callouts, trust pill, "
+            "CTA button, price, PRZED/PO tags, connector lines, product and photography).")
 
     logo_ref = ("The reference image right after the %d product photos" % n_product) if n_product > 1 else "The SECOND reference image"
     brand_line = "\n\nBRAND: %s." % (brand or "(no name — neutral, consistent branding; do NOT invent a name)")
@@ -2018,7 +2064,8 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
             lines.append('- %s: "%s"' % (label, s))
 
     if angle == "demo":
-        add("Big headline (top)", hook)
+        if not no_hook:
+            add("Big headline (top)", hook)
         callouts = [c for c in (ca.get("callouts_demo") or []) if _fd_txt(c)][:3]
         hints = ["→ points to the treat drawer/compartment", "→ points to the black sandpaper scratch surface",
                  "→ points to the pull loop / drawer"]
@@ -2027,7 +2074,8 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
         add("Trust pill (bottom)", "PŁATNOŚĆ PRZY ODBIORZE")
         add("CTA button (bottom)", "ZAMÓW ZA POBRANIEM")
     elif angle == "problem":
-        add("Big transformation headline (top)", hook)
+        if not no_hook:
+            add("Big transformation headline (top)", hook)
         add("Left tag (muted)", "PRZED")
         add("Right tag (accent)", "PO")
         if cena:
@@ -2035,7 +2083,8 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
             add("Under price (small)", "za pobraniem")
         add("CTA button (bottom-right)", "ZAMÓW")
     else:  # lifestyle
-        add("Hand-written sticker note (arrow to the scratching PAW / black surface)", hook)
+        if not no_hook:
+            add("Hand-written sticker note (arrow to the scratching PAW / black surface)", hook)
         mini = _fd_txt(ca.get("mini_adnotacja") or "")
         if mini:
             add("Tiny second annotation (short arrow to the open treat DRAWER)", mini)
@@ -2466,6 +2515,525 @@ def do_recompose(args, bundle, out_dir, palette, logo_img, angles):
                   regions_by_angle=regions_by_angle, state=state, run_finisher_pass=False)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# v8 — RÓWNOLEGŁOŚĆ / RECLAIM / BRAMKI ZBIORCZE / HOOK-WARIANTY / A/B SILNIKÓW / PORTFEL.
+# ══════════════════════════════════════════════════════════════════════════════
+def _reclaim_paid(staging_dir, expected_tags, project="adforge"):
+    """RECLAIM (pkt 4): przed generacją POLLUJ opłacone joby z ledgera (response_url) i dociągnij do
+    staging_dir pod nazwą zgodną z RESUME (<job_tag>.png) — zamiast re-submitować po padzie sesji.
+    SCOPE = expected_tags (tylko joby tego przebiegu; unikamy footguna „ściąga wszystkie projekty")."""
+    fal = _fal()
+    try:
+        led = json.loads(io.open(fal.LEDGER, encoding="utf-8").read())
+    except Exception as e:
+        log("reclaim: brak/uszkodzony ledger (%s) — pomijam" % e)
+        return []
+    os.makedirs(staging_dir, exist_ok=True)
+    want = {project + "_" + t: t for t in expected_tags}       # ledger_tag → job_tag
+    got = []
+    for c in reversed(led.get("calls", [])):                    # najnowszy submit danego tagu wygrywa
+        tag = str(c.get("tag") or "")
+        if tag not in want:
+            continue
+        job_tag, ru = want[tag], c.get("response_url")
+        base = os.path.join(staging_dir, job_tag)
+        if any(os.path.exists(base + e) for e in (".png", ".failed", ".timeout")):
+            want.pop(tag, None); continue                       # już mamy — RESUME to podniesie
+        if not ru:
+            continue
+        try:
+            res = fal._post({"op": "poll", "url": ru})
+        except Exception:
+            continue                                            # niegotowy / błąd — pominie, batch dogeneruje
+        url, _ext = fal._extract_url_ext(res)
+        if url:
+            try:
+                fal.download(url, base + ".png"); got.append(job_tag); want.pop(tag, None)
+                log("reclaim: dociągnięto OPŁACONY %s.png (bez re-submitu)" % job_tag)
+            except Exception:
+                pass
+    log("RECLAIM: %s" % ("dociągnięto %d opłaconych jobów" % len(got) if got
+                         else "brak opłaconych-niepobranych jobów (nic do dociągnięcia)"))
+    return got
+
+
+def _grid_montage(rows, out_path, cell_w=380, gap=14, label_h=34):
+    """Siatka kompozytów (BRAMKI ZBIORCZE, pkt 3). rows = lista wierszy; wiersz = lista (pil_img, label).
+    Kremowe tło, kolumny wyrównane do cell_w, podpis pod komórką."""
+    Image, ImageDraw, ImageFont, _, _ = _pil()
+    try:
+        f = ImageFont.truetype(FALLBACK_FONT, 20)
+    except Exception:
+        f = ImageFont.load_default()
+    prep = []
+    for row in rows:
+        prow = []
+        for img, lab in row:
+            im = img.convert("RGB"); w, h = im.size
+            nh = max(1, int(round(h * cell_w / max(1, w))))
+            prow.append((im.resize((cell_w, nh), Image.LANCZOS), lab))
+        if prow:
+            prep.append(prow)
+    if not prep:
+        return None
+    ncol = max(len(r) for r in prep)
+    row_h = [max(im.size[1] for im, _ in r) for r in prep]
+    W = ncol * cell_w + (ncol + 1) * gap
+    H = sum(row_h) + len(prep) * (label_h + gap) + gap
+    canvas = Image.new("RGB", (W, H), (245, 241, 232))
+    d = ImageDraw.Draw(canvas)
+    y = gap
+    for ri, row in enumerate(prep):
+        x = gap
+        for im, lab in row:
+            canvas.paste(im, (x, y + (row_h[ri] - im.size[1]) // 2))
+            d.text((x + cell_w // 2, y + row_h[ri] + 4), str(lab)[:46], font=f, fill=(23, 19, 16), anchor="ma")
+            x += cell_w + gap
+        y += row_h[ri] + label_h + gap
+    canvas.save(out_path, "PNG")
+    return out_path
+
+
+def build_gate_sheet(out_dir, product_locals, angles, sheet_name="ARKUSZ-BRAMEK.png", extra_rows=None):
+    """JEDEN arkusz bramek (pkt 3): wiersz/kąt = [packshot | c0 | c1 | FINAŁ] + opcjonalne wiersze
+    wariantów hooków. Ocena całości w 1-2 podejściach vision. Zwraca ścieżkę albo None."""
+    Image = _pil()[0]
+    dowody = os.path.join(out_dir, "dowody"); os.makedirs(dowody, exist_ok=True)
+    packshot = product_locals[0] if product_locals else None
+    rows = []
+    for a in angles:
+        row = []
+        if packshot and os.path.isfile(packshot):
+            row.append((Image.open(packshot), "REF %s" % a))
+        for c in range(BEST_OF):
+            cf = os.path.join(out_dir, "ad_%s_45_c%d.png" % (a, c))
+            if os.path.isfile(cf):
+                row.append((Image.open(cf), "%s c%d" % (a, c)))
+        fin = os.path.join(out_dir, "ad_%s_45.png" % a)
+        if os.path.isfile(fin):
+            row.append((Image.open(fin), "%s FINAŁ" % a))
+        if row:
+            rows.append(row)
+    for r in (extra_rows or []):
+        if r:
+            rows.append(r)
+    if not rows:
+        return None
+    return _grid_montage(rows, os.path.join(dowody, sheet_name))
+
+
+def overlay_hook_variant(base_path, text, font_path, palette, out_path):
+    """WARIANT HOOKA ~$0 (pkt 5): nakłada nagłówek KODEM na bazę „bez nagłówka" (górny scrim + render_hook
+    z fontem marki, tracking/interlinia/cień jak w kompozycjach). Zwraca out_path."""
+    Image = _pil()[0]
+    canvas = Image.open(base_path).convert("RGBA")
+    W, H = canvas.size
+    S = W / 1080.0
+    px = lambda v: max(1, int(round(v * S)))
+    m = int(W * 0.06)
+    scrim_h = int(H * 0.20)
+    draw_scrim(canvas, (0, 0, W, scrim_h), 205, 120)
+    hy = int(H * 0.03)
+    render_hook(canvas, (m, hy), _fd_txt(text).upper(), font_path, int(W * 0.88),
+                scrim_h - hy - px(6), CREAM, _hook_accent(palette),
+                hi=px(86), lo=px(44), max_lines=2, leading=1.04, canvas_h=H)
+    apply_grain(canvas)
+    canvas.convert("RGB").save(out_path, "PNG")
+    return out_path
+
+
+def build_ab_composite(product_locals, nbpro_final, nb2_final, out_path):
+    """A/B SILNIKÓW (pkt 6): realny produkt | nbpro | nb2 obok siebie z podpisami model+cena."""
+    Image = _pil()[0]
+    cells = []
+    if product_locals and os.path.isfile(product_locals[0]):
+        cells.append((Image.open(product_locals[0]), "REALNY produkt (ref)"))
+    if nbpro_final and os.path.isfile(nbpro_final):
+        cells.append((Image.open(nbpro_final), "nano-banana-pro  ~$0.225/obraz"))
+    if nb2_final and os.path.isfile(nb2_final):
+        cells.append((Image.open(nb2_final), "nano-banana-2  ~$0.10/obraz"))
+    if len(cells) < 2:
+        return None
+    return _montage(cells, out_path, cell_w=640)
+
+
+def publish_hook_variants(bundle, out_dir, hook_files, added_usd):
+    """Publikuje warianty hooków jako DODATKOWE artefakty (label 'AD <angle> hook N'); blob
+    ads_creatives BEZ zmian (nie przez creative_upsert). Koszt fal → wf2_costs. Idempotentne."""
+    ps = _load_module("panel_sync", "panel-sync.py")
+    p = bundle["product"]; project = p["project_id"]; product_id = p["id"]
+    slug = str(p.get("slug") or product_id)
+    total = 0
+    for a, hf in hook_files.items():
+        for v in hf["variants"]:
+            dest = "bud-assets/%s/ads/ad_%s_45_h%d.png" % (slug, a, v["idx"])
+            pub = ps.storage_upload(v["file"], dest, bucket="attachments", upsert=True)
+            ps.artifact_add(project, product_id, "agr_generacja", "ad_creative", pub,
+                            label="AD %s hook %d" % (a, v["idx"]),
+                            meta={"angle": a, "format": "45", "hook_variant": v["idx"], "hook_text": v["text"]})
+            log("opublikowano wariant %s h%d → %s" % (a, v["idx"], pub))
+            total += 1
+    if added_usd > 0:
+        # note STABILNY (bez licznika) → cost_add idempotentny między gen a osobnym --finalize
+        ps.cost_add(project, product_id, round(added_usd, 4), kind="fal", step="agr_generacja",
+                    stage=5, note="ad-forge hook-variants+A/B")
+    log("hook-variants: opublikowano %d artefaktów (blob ads_creatives BEZ zmian; koszt ~$%.2f)" % (total, added_usd))
+
+
+def sync_finalne(out_dir, finalne_dir, angles, hook_files, ab_path):
+    """Aktualizuje czysty folder: finały + dowód wierności + warianty hooków + A/B + arkusz bramek."""
+    os.makedirs(finalne_dir, exist_ok=True)
+    names = {"demo": "1-demo-callouty", "problem": "2-problem-przed-po", "lifestyle": "3-lifestyle-candid"}
+    for a in angles:
+        fin = os.path.join(out_dir, "ad_%s_45.png" % a)
+        if os.path.isfile(fin):
+            shutil.copyfile(fin, os.path.join(finalne_dir, "%s.png" % names.get(a, a)))
+    cont = os.path.join(out_dir, "dowody", "WIERNOSC-CIAGLOSC.png")
+    if os.path.isfile(cont):
+        shutil.copyfile(cont, os.path.join(finalne_dir, "0-DOWOD-WIERNOSCI.png"))
+    if hook_files:
+        hv = os.path.join(finalne_dir, "warianty-hookow"); os.makedirs(hv, exist_ok=True)
+        for a, hf in hook_files.items():
+            for v in hf["variants"]:
+                if os.path.isfile(v["file"]):
+                    shutil.copyfile(v["file"], os.path.join(hv, "%s-h%d.png" % (a, v["idx"])))
+    if ab_path and os.path.isfile(ab_path):
+        shutil.copyfile(ab_path, os.path.join(finalne_dir, "AB-SILNIKI-nbpro-vs-nb2.png"))
+    sheet = os.path.join(out_dir, "dowody", "ARKUSZ-BRAMEK.png")
+    if os.path.isfile(sheet):
+        shutil.copyfile(sheet, os.path.join(finalne_dir, "ARKUSZ-BRAMEK.png"))
+    log("czysty folder zaktualizowany: %s" % finalne_dir)
+
+
+def do_hookvariants(args, bundle, out_dir, slug, b, palette, logo_img, angles, logo_url, styl_url, refs_dir, font_path):
+    """HOOK-WARIANTY (~$0) + A/B SILNIKÓW. Generuje bazy scen BEZ nagłówka (best-of-1) i A/B demo (nb2)
+    w JEDNYM równoległym batchu, nakłada N nagłówków kodem, buduje arkusz bramek i kompozyt A/B.
+    RESPEKTUJE istniejące finały (NIE regeneruje ich). --finalize → publikacja wariantów (finały nietknięte)."""
+    Image = _pil()[0]
+    nvar = max(1, int(args.hook_variants))
+    state_path = os.path.join(out_dir, "adforge-state.json")
+    state = _load_json_file(state_path) or {}
+
+    # 1) COPY z hook_alts (świeży call jeśli brak alts) — zachowaj PROWEN hook_baner jako h1 (kontrola A/B)
+    copy = dict(state.get("copy") or {})
+    if any(not (copy.get(a) or {}).get("hook_alts") for a in angles):
+        log("Copy-call z hook_alts (alternatywne nagłówki do wariantów)…")
+        fresh, _ = call_copy(bundle, angles, with_hook_alts=True)
+        for a in angles:
+            ca = dict(copy.get(a) or {}); fa = fresh.get(a) or {}
+            if fa.get("hook_alts"):
+                ca["hook_alts"] = fa["hook_alts"]
+            if not ca.get("hook_baner") and fa.get("hook_baner"):
+                ca["hook_baner"] = fa["hook_baner"]
+            copy[a] = ca
+        state["copy"] = copy
+
+    # 2) refy (fal.store cache → ~$0)
+    cena = clean_price(bundle.get("cena_pl"))
+    refsd = prep_fd_refs(bundle, out_dir, slug, refs_dir, logo_url, styl_url, state)
+    if not refsd["product_fal"]:
+        raise SystemExit("hook-variants: brak rehostowanych kadrów produktu.")
+    image_urls = _fd_image_urls(refsd); n_prod = len(refsd["product_fal"])
+
+    # 3) JEDEN batch: bazy „bez nagłówka" (best-of-1/kąt) + A/B demo nb2 (best-of-2)
+    hv_dir = os.path.join(out_dir, "hookvariants")
+    jobs = []
+    for a in angles:
+        ca = copy.get(a) or {}
+        prompt, _ = build_fulldesign(a, ca, b, palette, cena, bool(refsd["logo_fal"]),
+                                     bool(refsd["styl_fal"]), n_prod, no_hook=True)
+        jobs.append({"tag": "hbase_%s" % a, "model": NBPRO_EDIT, "image_urls": image_urls, "prompt": prompt})
+    ab_on = bool(args.ab_engine)
+    if ab_on:
+        ca = copy.get("demo") or (copy.get(angles[0]) or {})
+        ab_angle = "demo" if "demo" in angles else angles[0]
+        ab_prompt, _ = build_fulldesign(ab_angle, ca, b, palette, cena, bool(refsd["logo_fal"]),
+                                        bool(refsd["styl_fal"]), n_prod, no_hook=False)
+        for c in range(BEST_OF):
+            jobs.append({"tag": "ab_demo_c%d" % c, "model": NB2_EDIT, "image_urls": image_urls, "prompt": ab_prompt})
+
+    est = NBPRO_USD * len(angles) + (NB2_USD * BEST_OF if ab_on else 0.0)
+    if args.dry:
+        print("-" * 88)
+        print("[DRY] hook-variants: %d baz bez naglowka + %s; szac. koszt ~$%.2f (~%.2f zl). Bez generacji." %
+              (len(angles), ("A/B nb2 best-of-%d" % BEST_OF) if ab_on else "bez A/B", est, est * 4.0))
+        for a in angles:
+            ca = copy.get(a) or {}
+            vs = [(ca.get("hook_baner") or "")] + [x for x in (ca.get("hook_alts") or []) if str(x).strip()]
+            print("   %-10s warianty (%d): %s" % (a, nvar, [_fd_txt(v) for v in vs if str(v).strip()][:nvar]))
+        print("[DRY] out=%s" % out_dir)
+        return 0
+    if args.budget and est > args.budget + 1e-6:
+        raise SystemExit("BUDŻET: szac. koszt ~$%.2f > limit $%.2f — przerwano przed generacją." % (est, args.budget))
+
+    # 4) RECLAIM opłaconych (scope = tagi tego przebiegu) → RESUME
+    _reclaim_paid(hv_dir, [j["tag"] for j in jobs])
+
+    # 5) PEŁNA RÓWNOLEGŁOŚĆ: jeden submit-all → poll-all + CZAS ŚCIANY
+    # new_tags = joby faktycznie do wygenerowania (po reclaim/resume) → naliczamy koszt TYLKO za nie
+    # (bez tego --finalize na już-wygenerowanych podwajałby raportowany koszt).
+    new_tags = {j["tag"] for j in jobs if not os.path.isfile(os.path.join(hv_dir, j["tag"] + ".png"))}
+    pre_exist = len(jobs) - len(new_tags)
+    print("-" * 88)
+    log("ETAP GENERACJI (v8 równoległy): %d jobów w JEDNYM batchu (bazy hooków%s); %d już na dysku (resume)" %
+        (len(jobs), " + A/B nb2" if ab_on else "", pre_exist))
+    t0 = time.time()
+    got = gen_nbpro_batch(jobs, hv_dir)
+    wall = round(time.time() - t0, 1)
+    log("CZAS ŚCIANY etapu generacji: %.1fs (%d jobów, %d nowych)" % (wall, len(jobs), len(jobs) - pre_exist))
+    tim = state.setdefault("timings", {})
+    tim["hookvariants_ab_wall_s"] = wall
+    tim["hookvariants_ab_jobs"] = len(jobs)
+    tim["hookvariants_ab_new"] = len(jobs) - pre_exist
+    added = 0.0
+
+    # 6) BAZY + NAKŁADKI wariantów (font marki)
+    hook_files = {}
+    for a in angles:
+        bp = got.get("hbase_%s" % a)
+        if not bp or not os.path.isfile(bp):
+            log("  UWAGA: baza bez naglowka [%s] BRAK - pomijam warianty tego kata" % a); continue
+        if ("hbase_%s" % a) in new_tags:
+            added += NBPRO_USD                                     # naliczaj tylko za świeżą generację
+        base_final = to_45(Image.open(bp).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS)
+        base_path = os.path.join(out_dir, "ad_%s_45_hbase.png" % a)
+        base_final.save(base_path, "PNG")
+        ca = copy.get(a) or {}
+        variants = [(ca.get("hook_baner") or ca.get("headline") or "")]
+        variants += [x for x in (ca.get("hook_alts") or []) if str(x).strip()]
+        variants = [v for v in variants if str(v).strip()][:nvar]
+        files = []
+        for i, txt in enumerate(variants, 1):
+            op = os.path.join(out_dir, "ad_%s_45_h%d.png" % (a, i))
+            overlay_hook_variant(base_path, txt, font_path, palette, op)
+            files.append({"file": op, "text": _fd_txt(txt), "idx": i})
+            log("  hook wariant [%s] h%d <- %s" % (a, i, _fd_txt(txt)))
+        hook_files[a] = {"base": base_path, "variants": files}
+
+    # 7) A/B kompozyt (nb2 vs nbpro; NIE publikujemy nb2)
+    ab_path = None
+    if ab_on:
+        cand = [got.get("ab_demo_c%d" % c) for c in range(BEST_OF)]
+        cand = [pp for pp in cand if pp and os.path.isfile(pp)]
+        if cand:
+            added += NB2_USD * sum(1 for c in range(BEST_OF)
+                                   if ("ab_demo_c%d" % c) in new_tags and got.get("ab_demo_c%d" % c))
+            nb2_finals = [to_45(Image.open(pp).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS) for pp in cand]
+            bi, _ = pick_best_candidate(nb2_finals, (0.0, 0.0, 1.0, 1.0))
+            nb2_best = os.path.join(out_dir, "ad_demo_45_nb2.png")
+            nb2_finals[bi].save(nb2_best, "PNG")
+            for c, f in enumerate(nb2_finals):
+                f.save(os.path.join(out_dir, "ad_demo_45_nb2_c%d.png" % c), "PNG")
+            ab_angle_final = os.path.join(out_dir, "ad_%s_45.png" % ("demo" if "demo" in angles else angles[0]))
+            ab_path = os.path.join(out_dir, "AB-SILNIKI-nbpro-vs-nb2.png")
+            if not build_ab_composite(refsd["product_local"], ab_angle_final, nb2_best, ab_path):
+                ab_path = None
+        else:
+            log("A/B nb2: brak kandydatów (sprawdź model %s; reclaim: fal.py reclaim %s)" % (NB2_EDIT, hv_dir))
+
+    # 8) ARKUSZ BRAMEK ZBIORCZY (finały + warianty)
+    extra_rows = []
+    for a in angles:
+        hf = hook_files.get(a)
+        if not hf:
+            continue
+        row = [(Image.open(hf["base"]), "%s baza(0hook)" % a)]
+        for v in hf["variants"]:
+            row.append((Image.open(v["file"]), "%s h%d" % (a, v["idx"])))
+        extra_rows.append(row)
+    sheet = build_gate_sheet(out_dir, refsd["product_local"], angles, extra_rows=extra_rows)
+
+    # 9) state + koszt — spent = SKUMULOWANY realny wydatek fal (przetrwa gen→osobny --finalize)
+    state["hook_variants"] = {a: [v["text"] for v in hf["variants"]] for a, hf in hook_files.items()}
+    state["ab_engine"] = args.ab_engine or None
+    state["ab_composite"] = ab_path
+    prior_spent = max(tim.get("hookvariants_spent_usd", 0.0), tim.get("hookvariants_added_usd", 0.0))
+    spent = round(max(prior_spent, added), 4)                  # realny wydatek (odporny na gen→osobny --finalize)
+    tim["hookvariants_added_usd"] = round(added, 4)
+    tim["hookvariants_spent_usd"] = spent
+    _save_state(out_dir, state)
+
+    print("=" * 88)
+    print("HOOK-WARIANTY + A/B — koszt płatny tej rundy ~$%.2f (~%.2f zł)" % (added, added * 4.0))
+    print("CZAS ŚCIANY etapu generacji (v8 równoległy): %.1fs · %d jobów · %d nowych" %
+          (wall, len(jobs), len(jobs) - pre_exist))
+    print("WARIANTY HOOKÓW (baza bez nagłówka + nagłówek nałożony kodem, font marki):")
+    for a, hf in hook_files.items():
+        for v in hf["variants"]:
+            print("  • %-10s h%d  %s  -> %s" % (a, v["idx"], os.path.basename(v["file"]), v["text"]))
+    if sheet:
+        print("ARKUSZ BRAMEK ZBIORCZY (oceniaj JEDEN obraz): %s" % sheet)
+    if ab_path:
+        print("A/B SILNIKÓW (NIE publikowany do panelu): %s" % ab_path)
+    print("BRAMKA WIERNOŚCI wariantów/A-B: obejrzyj arkusz + kompozyt A/B (agent, vision).")
+
+    # 10) publikacja wariantów (tylko --finalize; finały NIE ruszane) — koszt = SKUMULOWANY wydatek
+    if args.finalize and not args.no_register:
+        print("-" * 88)
+        publish_hook_variants(bundle, out_dir, hook_files, spent)
+    else:
+        print("[--finalize pominięte] Warianty nieopublikowane — po ocenie arkusza uruchom z --finalize.")
+
+    # 11) czysty folder
+    if args.finalne_dir:
+        sync_finalne(out_dir, args.finalne_dir, angles, hook_files, ab_path)
+    print("out=%s" % out_dir)
+    return 0
+
+
+def _resolve_pids(args):
+    """Lista product_id dla trybu portfelowego: --batch (jawne id) lub --batch-project (ze slugiem)."""
+    if args.batch:
+        return [x.strip() for x in args.batch.split(",") if x.strip()]
+    rows = rest_get("wf2_products", {"project_id": "eq." + args.batch_project,
+                                     "select": "id,slug,name,sort", "order": "sort.asc"})
+    return [r["id"] for r in rows if str(r.get("slug") or "").strip()]
+
+
+def do_portfolio(args):
+    """TRYB PORTFELOWY (pkt 2): produkty przetwarzane WSPÓŁBIEŻNIE na etapie generacji (jeden batch fal
+    na cały portfel, tagi namespace'owane slugiem), bramki oceniane ZBIORCZO (jeden arkusz), publikacja
+    per produkt (tylko --finalize)."""
+    if args.engine != "nbpro":
+        raise SystemExit("--batch/--batch-project wspiera tylko --engine nbpro (full-design).")
+    angles = [a.strip().lower() for a in args.angles.split(",") if a.strip()]
+    angles = [a for a in angles if a in ALLOWED_ANGLES] or DEFAULT_ANGLES
+    pids = _resolve_pids(args)
+    if not pids:
+        raise SystemExit("--batch/--batch-project: brak produktów (slug wymagany).")
+    Image = _pil()[0]
+
+    # ── DRY = plan bez efektów ubocznych (żadnego copy-calla / rehostu / zapisu stanu) ──
+    if args.dry:
+        est = NBPRO_USD * len(pids) * len(angles) * BEST_OF
+        print("=" * 88)
+        print("[DRY] TRYB PORTFELOWY — %d produktów × %d kątów × best-of-%d = %d jobów (est ~$%.2f / ~%.2f zł)" %
+              (len(pids), len(angles), BEST_OF, len(pids) * len(angles) * BEST_OF, est, est * 4.0))
+        for pid in pids:
+            print("  • %s" % pid)
+        print("[DRY] jeden batch fal na cały portfel; bramki zbiorcze; publikacja per produkt (--finalize).")
+        return 0
+
+    # ── prep każdego produktu (bez submitu): bundle, copy, refy ──
+    ctxs = []
+    for pid in pids:
+        pid = pid.strip()
+        if not UUID_RE.match(pid):
+            log("portfolio: pomijam nie-UUID %s" % pid); continue
+        bundle = fetch_product_bundle(pid)
+        p = bundle["product"]; bb = bundle["branding"]
+        slug = str(p.get("slug") or pid)
+        out_dir = args.out or os.path.join(r"C:\tmp\ad-forge", slug)
+        refs_dir = os.path.join(out_dir, "refs"); os.makedirs(refs_dir, exist_ok=True)
+        palette = parse_palette(bb["paleta"])
+        state = _load_json_file(os.path.join(out_dir, "adforge-state.json")) or {}
+        copy, _ = call_copy(bundle, angles)
+        merged = dict(state.get("copy") or {})
+        for a in angles:
+            merged[a] = copy.get(a) or {}
+        state["copy"] = merged
+        refsd = prep_fd_refs(bundle, out_dir, slug, refs_dir, bb["logo_url"], bb["styl_master_url"], state)
+        if not refsd["product_fal"]:
+            log("portfolio: %s — brak rehostowanych refów, pomijam" % slug); continue
+        ctxs.append({"pid": pid, "bundle": bundle, "b": bb, "slug": slug, "out_dir": out_dir,
+                     "refs_dir": refs_dir, "palette": palette, "copy": merged, "refsd": refsd,
+                     "state": state, "font_path": resolve_font_path(bb["fonty"])})
+        log("portfolio prep OK: %s (%s)" % (slug, pid))
+
+    if not ctxs:
+        raise SystemExit("portfolio: żaden produkt nie nadaje się do generacji.")
+
+    # ── wspólny batch (namespace tag = slug__angle_cN) ──
+    staging = os.path.join(r"C:\tmp\ad-forge", "_batch")
+    os.makedirs(staging, exist_ok=True)
+    all_jobs = []
+    for ctx in ctxs:
+        refsd = ctx["refsd"]; image_urls = _fd_image_urls(refsd); n_prod = len(refsd["product_fal"])
+        cena = clean_price(ctx["bundle"].get("cena_pl"))
+        for a in angles:
+            ca = ctx["copy"].get(a) or {}
+            prompt, _ = build_fulldesign(a, ca, ctx["b"], ctx["palette"], cena,
+                                         bool(refsd["logo_fal"]), bool(refsd["styl_fal"]), n_prod)
+            for c in range(BEST_OF):
+                all_jobs.append({"tag": "%s__%s_c%d" % (ctx["slug"], a, c), "model": NBPRO_EDIT,
+                                 "image_urls": image_urls, "prompt": prompt})
+    est = NBPRO_USD * len(all_jobs)
+    print("=" * 88)
+    print("TRYB PORTFELOWY — %d produktów × %d kątów × best-of-%d = %d jobów (est ~$%.2f / ~%.2f zł)" %
+          (len(ctxs), len(angles), BEST_OF, len(all_jobs), est, est * 4.0))
+    for ctx in ctxs:
+        print("  • %s (%s)" % (ctx["slug"], ctx["pid"]))
+    if args.budget and est > args.budget + 1e-6:
+        raise SystemExit("BUDŻET: szac. koszt ~$%.2f > limit $%.2f — przerwano." % (est, args.budget))
+
+    # ── RECLAIM + jeden submit-all→poll-all na CAŁY portfel ──
+    _reclaim_paid(staging, [j["tag"] for j in all_jobs])
+    pre_exist = sum(1 for j in all_jobs if os.path.isfile(os.path.join(staging, j["tag"] + ".png")))
+    print("-" * 88)
+    log("ETAP GENERACJI PORTFELA (jeden batch): %d jobów, %d na dysku (resume)" % (len(all_jobs), pre_exist))
+    t0 = time.time()
+    got = gen_nbpro_batch(all_jobs, staging)
+    wall = round(time.time() - t0, 1)
+    log("CZAS ŚCIANY etapu generacji (portfel): %.1fs (%d jobów, %d nowych)" % (wall, len(all_jobs), len(all_jobs) - pre_exist))
+
+    # ── consume per produkt + wiersze do arkusza zbiorczego ──
+    all_rows = []
+    for ctx in ctxs:
+        slug = ctx["slug"]; out_dir = ctx["out_dir"]; creatives = []
+        packshot = ctx["refsd"]["product_local"][0] if ctx["refsd"]["product_local"] else None
+        for a in angles:
+            cand = [got.get("%s__%s_c%d" % (slug, a, c)) for c in range(BEST_OF)]
+            cand = [pp for pp in cand if pp and os.path.isfile(pp)]
+            if not cand:
+                log("portfolio %s/%s: brak kandydatów — pomijam" % (slug, a)); continue
+            finals = [to_45(Image.open(pp).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS) for pp in cand]
+            bi, _ = pick_best_candidate(finals, (0.0, 0.0, 1.0, 1.0))
+            for c, f in enumerate(finals):
+                f.save(os.path.join(out_dir, "ad_%s_45_c%d.png" % (a, c)), "PNG")
+            finals[bi].save(os.path.join(out_dir, "ad_%s_45.png" % a), "PNG")
+            ca = ctx["copy"].get(a) or {}
+            creatives.append({"angle": a, "path": os.path.join(out_dir, "ad_%s_45.png" % a),
+                              "headline": (ca.get("hook_baner") or ca.get("headline") or ""),
+                              "primary_text": ca.get("primary_text") or ""})
+            row = []
+            if packshot and os.path.isfile(packshot):
+                row.append((Image.open(packshot), "%s REF" % slug))
+            for c in range(BEST_OF):
+                cf = os.path.join(out_dir, "ad_%s_45_c%d.png" % (a, c))
+                if os.path.isfile(cf):
+                    row.append((Image.open(cf), "%s %s c%d" % (slug, a, c)))
+            row.append((finals[bi], "%s %s FINAŁ" % (slug, a)))
+            all_rows.append(row)
+        ctx["creatives"] = creatives
+        st = ctx["state"]; st["engine"] = "nbpro"; st["mode"] = "fulldesign"
+        st["total_usd"] = round(NBPRO_USD * BEST_OF * len(angles), 4)
+        st.setdefault("timings", {})["portfolio_wall_s"] = wall
+        _save_state(out_dir, st)
+        try:
+            build_all_composites(out_dir, ctx["refsd"], angles)
+        except Exception as e:
+            log("portfolio %s: dowody nieudane: %s" % (slug, e))
+
+    sheet_dir = os.path.join(staging, "dowody"); os.makedirs(sheet_dir, exist_ok=True)
+    sheet = _grid_montage(all_rows, os.path.join(sheet_dir, "ARKUSZ-BRAMEK-PORTFEL.png")) if all_rows else None
+    print("-" * 88)
+    print("BRAMKI ZBIORCZE (oceniaj JEDEN arkusz portfela): %s" % (sheet or "brak"))
+    for ctx in ctxs:
+        print("  • %-16s %d finałów" % (ctx["slug"], len(ctx.get("creatives") or [])))
+
+    if args.finalize and not args.no_register:
+        print("-" * 88); log("Publikacja per produkt…")
+        for ctx in ctxs:
+            if ctx.get("creatives"):
+                publish(ctx["bundle"], "nbpro", ctx["out_dir"], ctx["creatives"], ctx["state"]["total_usd"])
+    else:
+        print("[--finalize pominięte] Portfel nieopublikowany — po ocenie arkusza uruchom z --finalize.")
+    print("=" * 88)
+    print("PORTFEL GOTOWY — %d produktów, czas ściany generacji %.1fs (~$%.2f)" %
+          (len(ctxs), wall, est))
+    return 0
+
+
 def run(args):
     global resolve_font_path_glob
     pid = args.product_id.strip()
@@ -2514,6 +3082,13 @@ def run(args):
     print("Cena PL (lp_dane, na blok ceny): %s → %s" % (bundle.get("cena_pl") or "BRAK", clean_price(bundle.get("cena_pl")) or "—"))
 
     logo_img = load_logo(logo_url, refs_dir)
+
+    # ── HOOK-WARIANTY (~$0) + A/B SILNIKÓW (v8) — respektuje istniejące finały, NIE regeneruje ──
+    if getattr(args, "hook_variants", 0):
+        if args.engine != "nbpro":
+            raise SystemExit("--hook-variants wymaga --engine nbpro (full-design).")
+        return do_hookvariants(args, bundle, out_dir, slug, b, palette, logo_img, angles,
+                               logo_url, styl_url, refs_dir, resolve_font_path_glob)
 
     # ── BRAMKA WIERNOŚCI (post-generacja): --finalize / --fix / --regen / --pick ──
     # Wznawia ze stanu; publikacja PO przejściu checklisty wierności + ciągłości (agent na kompozytach).
@@ -2739,7 +3314,7 @@ def build_argparser():
     ap = argparse.ArgumentParser(
         prog="ad-forge.py",
         description="Tor statycznych grafik reklamowych 4:5 (gpt-image-2 / gemini) bez Manusa.")
-    ap.add_argument("product_id", help="UUID produktu wf2_products")
+    ap.add_argument("product_id", nargs="?", help="UUID produktu wf2_products (opcjonalny przy --batch/--batch-project)")
     ap.add_argument("--angles", default="demo,problem,lifestyle",
                     help="kąty po przecinku (demo,problem,lifestyle)")
     ap.add_argument("--engine", default="nbpro", choices=["nbpro", "gptimage", "gemini"],
@@ -2767,11 +3342,25 @@ def build_argparser():
     ap.add_argument("--karta", default="", help="ścieżka KARTA.json (domyślnie out/KARTA.json)")
     ap.add_argument("--verdicts", default="", help="ścieżka VERDICTS.json (domyślnie out/VERDICTS.json)")
     ap.add_argument("--klik", default="", help="ścieżka KLIK.json — werdykty bramki powodu kliknięcia (domyślnie out/KLIK.json)")
+    # ── v8: hook-warianty / A/B silników / portfel / budżet / czysty folder ──
+    ap.add_argument("--hook-variants", type=int, default=0, metavar="N",
+                    help="N wariantow naglowka na bazie sceny bez naglowka (nakladka kodem, font marki); publikacja jako dodatkowe artefakty")
+    ap.add_argument("--ab-engine", default="", metavar="MODEL",
+                    help="A/B silników: dodatkowa scena demo przez nano-banana-2 (podaj np. nano-banana-2) — kompozyt porównawczy, NIE publikowany")
+    ap.add_argument("--batch", default="", help="TRYB PORTFELOWY: lista product_id po przecinku")
+    ap.add_argument("--batch-project", default="", help="TRYB PORTFELOWY: wszystkie produkty projektu (ze slugiem)")
+    ap.add_argument("--budget", type=float, default=0.0, metavar="USD",
+                    help="twardy limit szacowanego kosztu przebiegu (0 = bez limitu) — STOP przed submitem gdy przekroczony")
+    ap.add_argument("--finalne-dir", default="", help="czysty folder do aktualizacji (finały + warianty + A/B), np. C:\\tmp\\DRAPEK-BANERY-FINALNE")
     return ap
 
 
 def main(argv=None):
     args = build_argparser().parse_args(argv)
+    if args.batch or args.batch_project:
+        return do_portfolio(args)
+    if not args.product_id:
+        raise SystemExit("podaj product_id albo --batch/--batch-project")
     return run(args)
 
 

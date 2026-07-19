@@ -24,6 +24,9 @@ COST = {
     "fal-ai/nano-banana-pro/edit": lambda p: 0.225 * int(p.get("num_images", 1)),
     "fal-ai/nano-banana-pro/text-to-image": lambda p: 0.225 * int(p.get("num_images", 1)),
     "fal-ai/nano-banana-pro": lambda p: 0.225 * int(p.get("num_images", 1)),
+    # nano-banana-2 (Gemini nano-banana 2 gen) ~ $0.10/obraz (A/B silnikow ad-forge, 2026-07-19)
+    "fal-ai/nano-banana-2/edit": lambda p: 0.10 * int(p.get("num_images", 1)),
+    "fal-ai/nano-banana-2": lambda p: 0.10 * int(p.get("num_images", 1)),
     "fal-ai/flux-pro/kontext": lambda p: 0.04 * int(p.get("num_images", 1)),
     "fal-ai/kling-video/v2.5-turbo/pro/image-to-video":
         lambda p: 0.35 + max(0, int(p.get("duration", "5")) - 5) * 0.07,
