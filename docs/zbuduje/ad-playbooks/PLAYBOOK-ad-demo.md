@@ -1,7 +1,7 @@
 # PLAYBOOK — kąt `demo` (clean product hero + WIELKI hook)
 
 > Jeden z 3 kątów zestawu startowego (`STANDARD-GRAFIKI-SKLEPY.md`). Plik: `ad_1_demo.png` (4:5).
-> Czytaj po SSOT. DNA layoutu = art-direction kąta `demo` z `buildAdsInstruction()` w `wf2-ads`
+> Czytaj po SSOT. DNA layoutu = art-direction kąta `demo` z `buildAdsInstruction()` w `ad-forge.py`
 > (rev3 PREMIUM, wzorzec ze starego flow `manus-full-campaign` — np. „3 MINUTY." Uchutek).
 
 ## KIEDY UŻYWAĆ

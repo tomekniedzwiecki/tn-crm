@@ -1,7 +1,7 @@
 # STANDARD-GRAFIKI-SKLEPY — fabryka statycznych grafik reklamowych FB/IG (workflow v2 „Sklepy")
 
-**Status: OBOWIĄZUJE — wersja 1.0 (2026-07-19, decyzja Tomka „albo Manus, albo ma się nie
-wykonać" + zestaw startowy = ŁĄCZNIE 3 kreacje 4:5).** SSOT kroku `ads_grafiki` (Etap 5
+**Status: OBOWIĄZUJE — wersja 1.1 (2026-07-19, decyzja Tomka „fabryka banerów = ad-forge/fal,
+Manus USUNIĘTY z modułu" + zestaw startowy = ŁĄCZNIE 3 kreacje 4:5).** SSOT kroku `ads_grafiki` (Etap 5
 „Materiały i kampania"). Struktura wzorowana 1:1 na `STANDARD-LANDING-SKLEPY.md` (Z1–Z8, fazy
 F0–F8) i `GENERATOR-VIDEO-STRATEGIA.md` (0–0j). Research FB/IG 2026 + wzorce fabryk landingów
 i wideo — źródła na końcu. **Wykonawca zaczyna od: „przeczytaj CAŁY ten standard".**
@@ -13,10 +13,11 @@ COD dostępny. Statyk to wciąż 60–70% konwersji Meta dla tanich gadżetów i
 najtańsze A/B (swap w minuty). Dla płatnego ruchu grafika jest AMUNICJĄ — musi być tania
 w produkcji, ale nigdy tania w jakości.
 
-**Dwutorowość (D1):** silnik generacji = edge `wf2-ads` (Manus; mechanika odporności/timeoutów/
-sweep/locków NIETYKALNA). Jakość = proces operatora Claude Code — fazy **G0–G8**, bramki
-z dowodami, emisje do panelu przez `scripts/mockup-tools/panel-sync.py` (kontrakt
-`docs/zbuduje/MOST-PANEL.md`). Bramka QA (deterministyczne pomiary) = `scripts/mockup-tools/ad-gate.py`.
+**Silnik (D1):** generacja = **`scripts/mockup-tools/ad-forge.py` (fal: nano-banana-pro/nb2)**,
+odpalany w sesji Claude Code. **Manus USUNIĘTY z modułu** (decyzja Tomka 19.07 — edge `wf2-ads`
+skasowany, kolumny `ads_manus_*` zdjęte migracją `20260719l`). Jakość = proces operatora Claude
+Code — fazy **G0–G8**, bramki z dowodami, emisje do panelu przez `scripts/mockup-tools/panel-sync.py`
+(kontrakt `docs/zbuduje/MOST-PANEL.md`). Bramka QA (deterministyczne pomiary) = `scripts/mockup-tools/ad-gate.py`.
 
 ---
 
@@ -32,7 +33,7 @@ przy skali (3 dryfy z Motion) łapie KARTA PRAWDY + bramki — nie budujemy osob
 
 **ZG2 — 🖼️ WIERNOŚĆ PRODUKTU ŚWIĘTA (doktryna „edytuj prawdę").** Produkt na grafice = pikselowa
 prawda z referencji, nie reimaginacja z opisu. **Referencje = OBIEKTY `{url,type}`, NIGDY stringi**
-(string-ref jest gubiony po cichu — cała fabryka generowała bez referencji do 17.07). Manus
+(string-ref jest gubiony po cichu — cała fabryka generowała bez referencji do 17.07). Model
 dorysowuje TŁO / scenę / tekst WOKÓŁ realnych pikseli produktu; kształt, kolor, materiał,
 proporcje, etykieta = 1:1 z landingiem („the product from the reference images, kept EXACTLY
 as-is"). **Anatomia produktu żyje w BRAMCE (checklista `PASZPORT.md` § „Cechy dyskryminujące"),
@@ -90,29 +91,29 @@ NASZEJ desce). Przejście „przed→po" rozgrywa się przez rolę produktu w ko
 before/after w kadrze. Obecny prompt „produkt jako naprawa problemu" TO ŁAMIE — kąt problem
 poprawiony wg D4 (patrz `PLAYBOOK-ad-problem.md`).
 
-**ZG9 — MANUS ALBO NIC (D2b — zero silników zastępczych).** Silnik generacji = **WYŁĄCZNIE
-Manus** (decyzja Tomka 19.07). NIE ma fallbacku Gemini ani gpt-5.1-copy — cały ten tor wycięty
-z `wf2-ads`. **Tryby awarii = kontrolowany STOP, nigdy cicha degradacja jakości:**
-- kill-switch `WF2_ADS_MANUS_ENABLED`≠1 lub brak `MANUS_API_KEY` → edge zwraca **503**
-  („generator wyłączony") BEZ generacji;
-- brak kredytów / timeout >32 min / sweep >40 min / 0 obrazów → `ads_manus_status='failed'`
-  + `ads_manus_step` z powodem + alert Slack + **ŻADNEJ generacji zastępczej**;
-- breaker: `failed` → STOP (kolejne wywołania zwracają failed z komunikatem o resecie).
-- **Wznowienie WYŁĄCZNIE ręczne:** operator/Tomek doładowuje kredyty Manus i resetuje breaker
-  w panelu (przycisk „Reset (po doładowaniu kredytów)" → zeruje `ads_manus_status/step/task_id/
-  started_at`); dopiero potem `force:true` generuje od nowa. Awaria generatora = brak grafik,
-  nie gorsze grafiki.
+**ZG9 — SILNIK = fal (nano-banana-pro/nb2) przez ad-forge; Manus USUNIĘTY z modułu (decyzja
+Tomka 19.07).** Generacja banerów wf2 idzie WYŁĄCZNIE przez `scripts/mockup-tools/ad-forge.py`
+(fal — full-design nano-banana-pro, best-of-2; challenger nano-banana-2). Edge `wf2-ads` i cały
+tor Manusa (kolumny `ads_manus_*`, kill-switch `WF2_ADS_MANUS_ENABLED`, breaker/reset w panelu)
+zostały USUNIĘTE z modułu. Odporność/koszt/pętla poprawek żyją teraz w ad-forge:
+- brak danych/refów/branding gate G0 → STOP fazy (uzupełnij F0 landingu, nie zmyślaj);
+- literówka/scramble w tekście → drugi kandydat / chirurgiczny `nano-banana-pro/edit` fix /
+  fallback overlay (bramka tekstu G4, litera-po-literze);
+- morf/niewierność produktu → drugi kandydat → surgical fix → regeneracja (bramka wierności G3);
+- awaria fal (brak kredytów/timeout joba) → przebieg zatrzymany, RECLAIM opłaconych jobów po
+  restarcie sesji; awaria generatora = brak grafik, nie gorsze grafiki.
+NB: workflow v1 i lejek /sklep (`bud-ads`) nadal używają Manusa — to ich osobny tor, nietknięty.
 
 ---
 
-## 1. FAZY FABRYKI (G0→G8; wykonawca = agent-operator; silnik = edge wf2-ads/Manus)
+## 1. FAZY FABRYKI (G0→G8; wykonawca = agent-operator; silnik = ad-forge/fal)
 
 **§1-sync — 🔌 EMISJA DO PANELU (część DEFINICJI DONE każdej fazy).** Fabryka pracuje w plikach/
 edge; panel `/tn-sklepy → projekt.html` = jedyne okno Tomka na postęp. Reguła nadrzędna z fabryki
 wideo obowiązuje tu 1:1: **brak emisji = etap niezaliczony.** Po wskazanych fazach operator emituje
 przez `panel-sync.py` (import `panel_sync as ps` — payloady PL bez pułapki cp1250, albo CLI):
-awans sub-kroku `step_update(...)`, artefakty oglądalne `artifact_add(...)`, koszt `cost_add(...)` (⚠ NIE dla Manusa — koszt generacji
-loguje EDGE sam przy pullu; patrz §6), wpis osi czasu `activity_add(...)`. Mapa faza→sub-krok `agr_*` = sekcja „EMISJE DO PANELU" niżej.
+awans sub-kroku `step_update(...)`, artefakty oglądalne `artifact_add(...)`, koszt `cost_add(...)` (koszt fal
+loguje `ad-forge --finalize` sam, `kind='fal'`; patrz §6), wpis osi czasu `activity_add(...)`. Mapa faza→sub-krok `agr_*` = sekcja „EMISJE DO PANELU" niżej.
 Checklisty = tekst **VERBATIM** z obiektu `WS.ads_grafiki` w `projekt.html` (panel merguje po
 dokładnym `t` — literówka/„ulepszenie" = sierota).
 
@@ -146,28 +147,27 @@ REFERENCJE-OBRAZY + ZAKAZY, bez recytacji anatomii (ZG2).
 **Emisja:** `agr_brief` → `done`; note „3 kąty · hooki: …"; `artifact_add(kind='doc', BRIEF-ADS.md,
 storage='repo')`.
 
-### G2 — GENERACJA (edge wf2-ads / Manus)
-**Cel:** wygenerować ŁĄCZNIE 3 kreacje w JEDNYM tasku Manusa.
-**Kroki:** invoke `wf2-ads {product_id, force?}` (default `angles=['demo','problem','lifestyle']`,
-`formats=['45']`). Manus: 1 task = 3 pliki `ad_1_demo.png` / `ad_2_problem.png` / `ad_3_lifestyle.png`
-(4:5, 1080×1350) + `campaign.json`. Poll status; przy `running` link `https://manus.im/app/{task_id}`.
-Edge waliduje `angles` białą listą `demo`/`problem`/`lifestyle`/`proof`; `proof` (opinie/liczby) =
-OPCJONALNY, wchodzi TYLKO na jawne `body.angles:['proof']` (decyzja Tomka 19.07: zero grafik z opinii
-w defaultach — zamiast `proof` idzie `lifestyle`).
-**⚠️ ZG9:** jeśli edge zwraca 503 („generator wyłączony") lub `failed` → NIE ma ścieżki
-zastępczej. Zgłoś stan, poczekaj na ręczny reset (kredyty). Nie generuj niczym innym.
-**Bramka G2 (T/N):** [T] `ads_manus_status='completed'` · [T] 3 pliki obecne · [T] `campaign.json`
+### G2 — GENERACJA (ad-forge / fal)
+**Cel:** wygenerować ŁĄCZNIE 3 kreacje w JEDNYM przebiegu ad-forge.
+**Kroki:** `python ad-forge.py <product_id> [--angles demo,problem,lifestyle]` (default kąty
+`demo`/`problem`/`lifestyle`, format 4:5). Full-design nano-banana-pro (fal), best-of-2/kąt →
+pliki `ad_1_demo.png` / `ad_2_problem.png` / `ad_3_lifestyle.png` (4:5, render min. 1350×1688,
+cel 1536×1920) + `campaign.json`. `--dry` = plan+koszt bez generacji. Kąty walidowane białą listą
+`demo`/`problem`/`lifestyle`/`proof`; `proof` (opinie/liczby) = OPCJONALNY, wchodzi TYLKO na jawne
+`--angles …,proof` (decyzja Tomka 19.07: zero grafik z opinii w defaultach — zamiast `proof` idzie
+`lifestyle`).
+**⚠️ ZG9:** silnik = WYŁĄCZNIE ad-forge/fal, Manus usunięty. Awaria fal (kredyty/timeout joba) →
+przebieg zatrzymany, RECLAIM opłaconych jobów po restarcie sesji; nie generuj niczym poza ad-forge.
+**Bramka G2 (T/N):** [T] 3 pliki obecne · [T] `campaign.json`
 z 3 wpisami `{angle,headline,badge,primary_text}`. [N] → faza `agr_generacja` = `blocked` + powód.
-**Emisja:** `agr_generacja` → `done` (lub `blocked` przy failed); note z task_id; `artifact_add
-(kind='link', url=manus.im/app/{task_id})`; **koszt Manusa loguje EDGE automatycznie przy pullu**
-(`wf2_costs` kind='manus', step_key='ads_grafiki') — operator NIE emituje `cost_add(kind='manus')`
-(dublet: dedup po `note` nie złapie, bo noty się różnią → zawyżony koszt w nagłówku bloku); najwyżej
-WERYFIKUJE, że wiersz kosztu istnieje.
+**Emisja:** `agr_generacja` → `done` (lub `blocked` przy awarii); note z przebiegu (silnik, joby, koszt);
+**koszt fal loguje `ad-forge --finalize`** (`wf2_costs` kind='fal', step_key='agr_generacja') — operator
+NIE emituje własnego `cost_add` (ad-forge robi to idempotentnie); najwyżej WERYFIKUJE, że wiersz kosztu istnieje.
 
 ### G3 — BRAMKA WIERNOŚCI (dwie pary oczu)
 **Cel:** żadna kreacja nie sprzedaje nieistniejącego produktu.
 **Narzędzie:** `ad-gate.py <katalog_png> --out dowody/` (miniatury + pomiary) + werdykt agentowy.
-Wejście: surowe pliki Manusa `ad_<n>_<angle>.png` LUB kanoniczne rehosty `ad_<angle>_<fmt>.png`
+Wejście: surowe pliki ad-forge `ad_<n>_<angle>.png` LUB kanoniczne rehosty `ad_<angle>_<fmt>.png`
 (parser rozpoznaje OBIE konwencje — inaczej kąt='?' i bramka różnorodności ZG3 nic nie mierzy).
 Dla KAŻDEJ kreacji: kompozyt side-by-side `packshot | kreacja` vs tabela „Cechy dyskryminujące"
 paszportu, **cecha-po-cesze**. **DWIE PARY OCZU:** pass-1 = agent generujący, pass-2 = ŚWIEŻY
@@ -217,12 +217,12 @@ zaakceptowano 2/3"); **PUBLIC** dowody → `bud-assets/<slug>/ads/dowody/` (`art
 
 ### G7 — REJESTR + EMISJE
 **Cel:** rodowód każdej kreacji trafia do bazy (inaczej fabryka jest ślepa na skuteczność).
-**Kroki (robi edge po sukcesie Manusa, operator weryfikuje):**
+**Kroki (robi `ad-forge --finalize`, operator weryfikuje):**
 - **Blob (panel/back-compat):** `wf2_products.ads_creatives` elementy `{angle,format:'45',
   headline,primary_text,badge,image_url,approved}`.
 - **Rejestr:** UPSERT `wf2_creatives` per kreacja (slug `${productSlug||productId}-ad-${angle}-45`):
   `media_type='image'`, `angle`, `format='45'`, `ai_labeled=true`, `status='ready'`, `public_url`,
-  `project_id`, `product_id`, `cost_usd = koszt_taska / liczba_grafik`, `meta={engine:'manus',
+  `project_id`, `product_id`, `cost_usd = koszt_fal / liczba_grafik`, `meta={engine:'fal',
   headline,badge}`. Po publikacji Meta dopisz `meta_ad_ids` + `status='published'` (bez tego
   `wf2-ads-sync` nie dopasuje statystyk — kreacja niemierzalna).
 - **Artefakty:** INSERT/refresh `wf2_artifacts` kind='ad_creative' (label `AD <angle> 45`, url,
@@ -232,15 +232,15 @@ zaakceptowano 2/3"); **PUBLIC** dowody → `bud-assets/<slug>/ads/dowody/` (`art
 **Bramka G7 (T/N):** [T] każda zaakceptowana kreacja ma wiersz `wf2_creatives` (media_type=image)
 · [T] `ai_labeled=true` · [T] pliki w `bud-assets/<slug>/ads/`.
 **Emisja:** `agr_final` → `done`; 3 kreacje w `bud-assets/<slug>/ads/` — wiersze `wf2_artifacts`
-kind='ad_creative' (label `AD <angle> <fmt>`, dedup po `product_id+step_key+label`) zapisał już EDGE
-przy pullu; **operator NIE robi `artifact_add(kind='ad_creative')`** (panel-sync dedupuje po URL, a edge
-zapisuje URL z sufiksem `?v=<stamp>` → ręczny „czysty" URL = DRUGI kafel tej samej kreacji) — tylko
-WERYFIKUJE, że wiersze istnieją; koszt Manusa też już zalogowany przez edge (weryfikacja, bez
+kind='ad_creative' (label `AD <angle> <fmt>`, dedup po `product_id+step_key+label`) zapisał już
+`ad-forge --finalize`; **operator NIE robi `artifact_add(kind='ad_creative')`** (panel-sync dedupuje po URL,
+a ad-forge zapisuje URL z sufiksem `?v=<stamp>` → ręczny „czysty" URL = DRUGI kafel tej samej kreacji) — tylko
+WERYFIKUJE, że wiersze istnieją; koszt fal też już zalogowany przez ad-forge (weryfikacja, bez
 ponownego `cost_add`); `activity_add('ads_done', '🏁 …')`.
 
 ### G8 — RETRO
 **Cel:** lekcje wracają do standardu. Po zamknięciu produktu wpisz nowe wnioski (który KĄT/layout
-wygrał w wynikach, gdzie padła bramka, jaki fail Manusa) do CHANGELOG tego SSOT i/lub do
+wygrał w wynikach, gdzie padła bramka, jaki fail generatora) do CHANGELOG tego SSOT i/lub do
 właściwego playbooka. To jest cała racja bytu pętli wyników.
 
 ---
@@ -248,7 +248,7 @@ właściwego playbooka. To jest cała racja bytu pętli wyników.
 ## 2. FORMATY
 
 **Standard (decyzja Tomka 19.07): ŁĄCZNIE 3 KREACJE = 3 kąty × 1 format 4:5 (1080×1350) w JEDNYM
-tasku Manusa.** Pliki `ad_<n>_<angle>.png` (back-compat 1:1 parsera). 4:5 = domyślny feed Meta
+przebiegu ad-forge.** Pliki `ad_<n>_<angle>.png` (back-compat 1:1 parsera). 4:5 = domyślny feed Meta
 2026 (FB+IG Feed, Threads, Explore) — więcej pionu = wyższy dwell/CTR na mobile niż 1:1.
 
 **9:16 (1080×1920) = ROZSZERZENIE NA PRZYSZŁOŚĆ, nie generowane domyślnie.** Parametr `formats`
@@ -261,7 +261,7 @@ Tekst i logo POZA strefami (edge-to-edge = przycięty). `ad-gate.py` nakłada ov
 
 **Rozdzielczość renderu (rev3):** 1080×1350 to KANONICZNA specyfikacja 4:5 Meta (minimum), ale
 renderujemy w wysokiej jakości — **min. 1350×1688 px, cel 1536×1920** — bo pliki idą do płatnych
-kampanii i detale/typografia muszą być ostre. Prompt `wf2-ads` żąda tego wprost.
+kampanii i detale/typografia muszą być ostre. Brief ad-forge (`buildAdsInstruction`) żąda tego wprost.
 
 **Twarde limity:** max **30 MB**/obraz; tekst ≤~**20%** powierzchni (algorytm down-weightuje
 tekst-heavy); WIELKI hook/headline **2–4 słowa** (do 6), ≤~27 znaków; JEDNA obietnica/grafikę;
@@ -330,10 +330,10 @@ Kontrakt emisji = `panel-sync.py`; checklisty VERBATIM z `WS.ads_grafiki`.
 |---|---|---|
 | G0 (start) | `agr_brief` → in_progress | `activity_add('ads_start', …)` |
 | G1 (briefy) | `agr_brief` → done | note „3 kąty · hooki: …"; `artifact_add(kind='doc', BRIEF-ADS.md — storage='repo')` |
-| G2 (Manus) | `agr_generacja` → done / blocked | note z task_id; `artifact_add(kind='link', url=manus.im/app/{task_id})`; **koszt Manusa: auto-log EDGE** (`wf2_costs` kind='manus') — operator NIE robi `cost_add(kind='manus')` (dublowałby nagłówek bloku) |
+| G2 (ad-forge/fal) | `agr_generacja` → done / blocked | note z przebiegu (silnik, joby, koszt); **koszt fal: auto-log `ad-forge --finalize`** (`wf2_costs` kind='fal') — operator NIE robi własnego `cost_add` (dublowałby nagłówek bloku) |
 | G3–G5 (bramki) + G6 (akcept) | `agr_qa` → done | note-tabela werdyktów; **PUBLIC** dowody (side-by-side + thumb-320 + report.json) → `bud-assets/<slug>/ads/dowody/` (`kind='proof'`) |
-| G7 (rejestr) | `agr_final` → done | 3 kreacje w `bud-assets/<slug>/ads/` — wiersze `wf2_artifacts` (`kind='ad_creative'`, meta={angle,format}, dedup product_id+step_key+label) i `wf2_creatives` (`creative_upsert`, media_type=image, ai_labeled=true) zapisał EDGE; **operator NIE robi `artifact_add(kind='ad_creative')`** (panel-sync dedupuje po URL vs edge `?v=<stamp>` → dublowałby kafel) — tylko WERYFIKUJE; koszt Manusa też z edge (bez ponownego `cost_add`); `activity_add('ads_done', '🏁 …')` |
-| FAILED / 503 / breaker | bieżący | sub-krok `blocked` + note z powodem + info „generator = WYŁĄCZNIE Manus, reset po doładowaniu kredytów" (panel MA pokazać, że utknęło — nie ciszę) |
+| G7 (rejestr) | `agr_final` → done | 3 kreacje w `bud-assets/<slug>/ads/` — wiersze `wf2_artifacts` (`kind='ad_creative'`, meta={angle,format}, dedup product_id+step_key+label) i `wf2_creatives` (`creative_upsert`, media_type=image, ai_labeled=true) zapisał `ad-forge --finalize`; **operator NIE robi `artifact_add(kind='ad_creative')`** (panel-sync dedupuje po URL vs ad-forge `?v=<stamp>` → dublowałby kafel) — tylko WERYFIKUJE; koszt fal też z ad-forge (bez ponownego `cost_add`); `activity_add('ads_done', '🏁 …')` |
+| AWARIA fal (kredyty/timeout) | bieżący | sub-krok `blocked` + note z powodem (panel MA pokazać, że utknęło — nie ciszę); wznowienie = RECLAIM opłaconych jobów po restarcie sesji ad-forge |
 
 GOTCHA (jak w wideo): `panel-sync.py` czyta service-role sam (UTF-8) — payloady PL bez `curl|python`
 (cp1250). Miniatury/dowody = `storage_upload(...)` → `artifact_add(kind='proof')`.
@@ -350,13 +350,14 @@ GOTCHA (jak w wideo): `panel-sync.py` czyta service-role sam (UTF-8) — payload
   fabryki (standard, playbooki, bramki). Bramki są siatką bezpieczeństwa model-agnostyczną →
   tańszy agent jest bezpieczny, bo gate łapie spadek jakości przed publikacją.
 
-**Koszty:** silnik = **Manus ~$0.30/task** (1 task = 3 kreacje → ~$0.10/kreacja). **Koszt loguje
-EDGE `wf2-ads` automatycznie po udanym pullu** (`wf2_costs` `step_key='ads_grafiki'`, stage=5,
-kind='manus', note='N grafik (task …)') — to JEDYNE źródło kosztu Manusa; operator NIE emituje
-własnego `cost_add(kind='manus')` (nagłówek bloku sumuje wszystkie wiersze `ads_grafiki` → dublet
-= zawyżony koszt). Suma w nagłówku bloku panelu.
-*(Kontekst historyczny: usunięty fallback Gemini kosztował ~$0.04/obraz — tańszy, ale niższa
-jakość tekstu/layoutu; ZG9 rozstrzyga na rzecz jakości Manusa. Toru Gemini w kodzie NIE MA.)*
+**Koszty:** silnik = **fal (nano-banana-pro, best-of-2) ~$0.45/baner** przez ad-forge. **Koszt loguje
+`ad-forge --finalize` automatycznie** (`wf2_costs` `step_key='agr_generacja'`, stage=5, kind='fal',
+note z liczbą jobów) — to JEDYNE źródło kosztu generacji; operator NIE emituje własnego `cost_add`
+(nagłówek bloku sumuje wszystkie wiersze `ads_grafiki` → dublet = zawyżony koszt). Suma w nagłówku
+bloku panelu. Warianty hooków = ~$0 (nakładka kodem); challenger nano-banana-2 (A/B) ~$0.10/obraz,
+NIE publikowany.
+*(Kontekst historyczny: silnik Manus (~$0.30/task) i fallback Gemini (~$0.04/obraz) USUNIĘTE
+z modułu 19.07 — cały tor generacji przeszedł na ad-forge/fal.)*
 
 ---
 
@@ -390,6 +391,19 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
 ---
 
 ## CHANGELOG DECYZJI (G8)
+
+- **2026-07-19 (v1.1) — MANUS USUNIĘTY Z MODUŁU (decyzja Tomka: „fabryka banerów = ad-forge/fal"):**
+  edge `wf2-ads` SKASOWANY, gałąź routingu `ads_manus_task_id→wf2_products→wf2-ads` wycięta z
+  `manus-webhook`, kolumny `wf2_products.ads_manus_*` (task_id/status/step/started_at/completed_at)
+  zdjęte migracją `20260719l_wf2_manus_removal.sql` (`ads_creatives` ZOSTAJE — pisze tam ad-forge).
+  Panel `/tn-sklepy`: usunięty pill running/failed, link manus.im, przyciski „Reset (po doładowaniu
+  kredytów)" i „Alternatywa: Manus", funkcje `wf2AdsGenerate/Sweep/Reset` — zostaje galeria +
+  akcept + timeline `agr_*` + koszty + CTA „Generuj przez ad-forge". `package.json`: usunięty
+  `deploy:wf2-ads` (i z agregatu `deploy:wf2`). Silnik = WYŁĄCZNIE fal (nano-banana-pro/nb2) przez
+  `ad-forge.py`. **ZAKRES = tylko wf2**: workflow v1 (`manus-full-campaign` / `manus_task_id`) i lejek
+  /sklep (`bud-ads` / `bud_sessions.ads_manus_*`) NIETKNIĘTE — tam Manus zostaje. ZG9 przepisany,
+  sekcje D1/§1/G2/G3/G7/§2/§5/§6 zsynchronizowane. `wf2-ads-sync` (sync Meta) i `wf2-gpt`/`wf2-gen`
+  (copy/sceny ad-forge) to OSOBNE funkcje — nietknięte.
 
 - **2026-07-19 — ZESTAW KĄTÓW: `proof` (opinie/liczby) WYPADA z defaultów** (decyzja Tomka: «nie
   rób grafiki z opiniami»); zamiast niego `lifestyle` (UGC z życia persony — wzorzec Kreacji 2 ze
@@ -492,6 +506,6 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
   z faktów (silnik, joby, koszt, werdykty bramek per kąt), checklist głównego kroku (7 pozycji,
   kontrakt VERBATIM: stała ADS_GRAFIKI_CHECKLIST w ad-forge == WS w panelu; poz. 7 „zaakceptowane"
   = bramka Tomka, zawsze OFF po publikacji + reset approved), fields.grafiki_url, dowody kind='proof'
-  do bud-assets/<slug>/ads/dowody/, activity. Panel: CTA „Generuj przez ad-forge (sesja)", Manus =
-  oznaczona alternatywa. GOTCHA: PATCH labeli z polskimi znakami przez czysty UTF-8 Python, NIE curl
+  do bud-assets/<slug>/ads/dowody/, activity. Panel: CTA „Generuj przez ad-forge (sesja)" — jedyny silnik
+  (Manus usunięty 19.07, patrz wpis niżej). GOTCHA: PATCH labeli z polskimi znakami przez czysty UTF-8 Python, NIE curl
   (cp1250 psuje diakrytyki w bazie).

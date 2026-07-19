@@ -1589,7 +1589,7 @@ function formatWf2OrderMessage(data: {
   return { blocks }
 }
 
-// TN Sklepy: kreacje reklamowe produktu gotowe (wf2-ads: Manus/Gemini) — do akceptu.
+// TN Sklepy: banery reklamowe produktu gotowe (fabryka ad-forge/fal) — do akceptu.
 function formatWf2AdsReadyMessage(data: {
   project_id?: string
   customer?: string
@@ -1598,7 +1598,7 @@ function formatWf2AdsReadyMessage(data: {
 }) {
   const blocks: any[] = [
     { type: 'header', text: { type: 'plain_text', text: '🎨 3 grafiki reklamowe gotowe', emoji: true } },
-    { type: 'section', text: { type: 'mrkdwn', text: `*${data.product || '(produkt)'}*${data.customer ? ` · ${data.customer}` : ''}${data.source ? ` · ${data.source}` : ''}\nSprawdź wierność produktu i zaakceptuj w kroku „3 grafiki (Manus)".` } },
+    { type: 'section', text: { type: 'mrkdwn', text: `*${data.product || '(produkt)'}*${data.customer ? ` · ${data.customer}` : ''}${data.source ? ` · ${data.source}` : ''}\nSprawdź wierność produktu i zaakceptuj w kroku „Banery reklamowe".` } },
   ]
   if (data.project_id) {
     blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Otwórz projekt', emoji: true }, url: `https://crm.tomekniedzwiecki.pl/tn-sklepy/projekt?id=${data.project_id}` }] })

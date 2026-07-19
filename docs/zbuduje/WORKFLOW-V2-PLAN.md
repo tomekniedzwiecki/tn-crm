@@ -28,7 +28,7 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   bramka 0 braków — płatność schodzi, Account Quality, naming/UTM z ID, blocklista komentarzy,
   plan struktury])
   · **5 Materiały i kampania** (product-scope, fabryka kreacji → kampania → start:
-  ads_grafiki [3 statyki Manus] → ads_wideo [+sub avi_*; finał + pack hooków ≤3 wersje] →
+  ads_grafiki [3 statyki, fabryka ad-forge/fal] → ads_wideo [+sub avi_*; finał + pack hooków ≤3 wersje] →
   **ads_zestaw** [NOWY: kompletacja 6 adów + copy COD + audyt polityki copy+LP + flagi AI +
   rejestr wf2_creatives] → ads_kampanie 🏁 [PAUSED] → **ads_start 🏁** [NOWY: bramka Tomka,
   review adów, meta_ad_ids do pętli wyników, pierwsza doba bez decyzji])
@@ -69,34 +69,34 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
 - **Edge:** `wf2-platform` = TYPED ACTIONS (stores/publish_landing/ensure_product/
   set_checkout_slug/integracje/domeny/logo/orders/dostawy+COD; retry 429; raw zostaje) ·
   **`wf2-landing-api`** (PUBLICZNY GET ?product= → cena/checkout_url z DB, cache 5 min —
-  hydratacja ceny na landingu bez re-publikacji przy test→scale) · **`wf2-ads`** (rev2 19.07:
-  ŁĄCZNIE 3 kreacje Manus per produkt — kąty demo/problem/lifestyle × format 4:5 w JEDNYM tasku
-  (`proof` = opcjonalny przez `body.angles`, decyzja Tomka 19.07 „zero grafik z opiniami");
-  **silnik = WYŁĄCZNIE Manus, ZERO fallbacku Gemini (ZG9 „Manus albo nic")** — awaria = failed +
-  reset ręczny; wynik → `wf2_products.ads_creatives` + rejestr `wf2_creatives` media_type='image';
-  manus-webhook ma 3. gałąź routingu) · `wf2-orders-sync` (cron).
+  hydratacja ceny na landingu bez re-publikacji przy test→scale) · `wf2-orders-sync` (cron).
+  **Banery (`ads_grafiki`) NIE mają edge** — silnik = `scripts/mockup-tools/ad-forge.py` (fal:
+  nano-banana-pro/nb2) w sesji Claude Code; edge `wf2-ads` (Manus) SKASOWANY 19.07, kolumny
+  `ads_manus_*` zdjęte migracją `20260719l`, gałąź routingu w `manus-webhook` wycięta (patrz §0a-quater).
+  Sync statystyk Meta = `wf2-ads-sync` (OSOBNA funkcja, nietknięta).
 - **Landing runtime:** `docs/zbuduje/assets/landing-runtime-snippet.html` — kontrakt
   data-checkout/data-price + {{WF2_PRODUCT_ID}}; window.trevio (viewItem/addToCart/
   beginCheckout) + Meta VC/ATC/IC z **INIT-GUARD** (platforma wstrzykuje pixel na stronach
   isHtml — landing NIGDY nie robi 2. init/PageView) + doklejanie fbclid/_fbp/_fbc do kasy.
 - Świeży katalog API (26 endpointów + guide `window.trevio`): `platforma-api/docs-raw.json`.
 
-## 0a-quater. FABRYKA STATYCZNYCH GRAFIK ADS (2026-07-19 — rev2 „Manus albo nic")
+## 0a-quater. FABRYKA STATYCZNYCH GRAFIK ADS (2026-07-19 — silnik ad-forge/fal, Manus usunięty)
 
-Krok `ads_grafiki` (Etap 5) podniesiony z „3 grafiki Manus" do PEŁNEJ FABRYKI na wzór
-landingów i wideo — SSOT + playbooki + bramki QA z dowodami + rejestr z rodowodem + pętla
-wyników + odzwierciedlenie w panelu. **Silnik generacji = WYŁĄCZNIE Manus** (decyzja Tomka
-19.07: „albo Manus, albo ma się nie wykonać" — tor fallback Gemini CAŁKOWICIE wycięty z edge).
+Krok `ads_grafiki` (Etap 5) = PEŁNA FABRYKA na wzór landingów i wideo — SSOT + playbooki +
+bramki QA z dowodami + rejestr z rodowodem + pętla wyników + odzwierciedlenie w panelu.
+**Silnik generacji = WYŁĄCZNIE fal (nano-banana-pro/nb2) przez `scripts/mockup-tools/ad-forge.py`**
+(decyzja Tomka 19.07: „fabryka banerów = ad-forge/fal" — edge `wf2-ads` i cały tor Manusa USUNIĘTE
+z modułu; kolumny `ads_manus_*` zdjęte migracją `20260719l`). Workflow v1 i lejek /sklep (`bud-ads`)
+zostają na Manusie — to ich osobny tor, nietknięty.
 
 - **Zestaw startowy (D2):** ŁĄCZNIE **3 kreacje** — 3 kąty (`demo`/`problem`/`lifestyle`) × 1 format
-  **4:5** (1080×1350) w JEDNYM tasku Manusa; pliki `ad_<n>_<angle>.png` (back-compat parsera).
-  `proof` (opinie/liczby zamówień) = OPCJONALNY, tylko na jawne `body.angles:['proof']` (decyzja
-  Tomka 19.07 „nie rób grafiki z opiniami"); edge waliduje białą listą `demo`/`problem`/`lifestyle`/`proof`.
+  **4:5** (1080×1350) w JEDNYM przebiegu ad-forge; pliki `ad_<n>_<angle>.png` (back-compat parsera).
+  `proof` (opinie/liczby zamówień) = OPCJONALNY, tylko na jawne `--angles …,proof` (decyzja
+  Tomka 19.07 „nie rób grafiki z opiniami"); walidacja białą listą `demo`/`problem`/`lifestyle`/`proof`.
   Format 9:16 (safe-zones 14/35/6%) = opisane ROZSZERZENIE na przyszłość, nie generowane domyślnie.
-- **Awaria (D2b):** kill-switch off / brak `MANUS_API_KEY` → edge zwraca 503 („generator wyłączony")
-  bez generacji; brak kredytów / timeout >32 min / 0 obrazów → `ads_manus_status='failed'` +
-  `ads_manus_step` z powodem + alert Slack; ŻADNEJ generacji zastępczej. Wznowienie = ręczny reset
-  breakera w panelu po doładowaniu kredytów.
+- **Awaria:** brak danych/refów (gate G0) → STOP fazy; literówka → drugi kandydat / surgical fix
+  (bramka tekstu G4); morf/niewierność → drugi kandydat → surgical fix → regeneracja (bramka G3);
+  awaria fal (kredyty/timeout joba) → przebieg zatrzymany, RECLAIM opłaconych jobów po restarcie sesji.
 - **SSOT + playbooki:** `docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md` (zasady ZG1–ZG9, fazy G0–G8,
   formaty/polityka Meta/rejestr/modele D10) + `docs/zbuduje/ad-playbooks/PLAYBOOK-ad-{demo,problem,lifestyle,proof}.md`
   (`lifestyle` = domyślny 3. kąt; `proof` = opcjonalny).
@@ -107,10 +107,10 @@ wyników + odzwierciedlenie w panelu. **Silnik generacji = WYŁĄCZNIE Manus** (
   rozszerzone o `media_type/angle/format/pattern_ref`; widok `wf2_creative_perf` +CTR/CPC/CPA;
   nowy `wf2_angle_perf` (image, group by angle+format); sub-kroki `agr_brief/generacja/qa/final`
   (sub_of='ads_grafiki', stage=5). `wf2-ads-sync` mapuje po `meta_ad_ids` — bez zmian.
-- **Panel (`tn-sklepy/projekt.html`):** `adsGrafikiBlock(p)` v2 — timeline `agr_*`, galeria 3 kreacji
+- **Panel (`tn-sklepy/projekt.html`):** `adsGrafikiBlock(p)` — timeline `agr_*`, galeria 3 kreacji
   4:5 z lightboxem + badge kąta/„AI", akcept per kreacja (toggle ✓/✗ → `ads_creatives.approved`),
-  pill running/failed/completed + link `manus.im/app/{task_id}`, przycisk „Reset" przy failed,
-  suma kosztów z `wf2_costs`. `map.ads_grafiki` = pełny rytuał G0–G8 z odesłaniem do SSOT.
+  suma kosztów z `wf2_costs`, CTA „Generuj przez ad-forge (sesja Claude Code)" (kopiuje paczkę
+  promptu). Pill/link manus.im/„Reset" USUNIĘTE 19.07. `map.ads_grafiki` = pełny rytuał G0–G8 z odesłaniem do SSOT.
 - **Flaga AI (D9):** `ai_labeled=true` w rejestrze — Meta 2026 egzekwuje disclosure.
 
 ## 0a-bis. FABRYKA LANDINGÓW — STAN (2026-07-16 wieczór, po 2 dniach dopracowywania flow)
@@ -329,8 +329,9 @@ Konsekwencje architektoniczne:
 
 - Budżet projektu: **1000 zł = 500 zł testy 3 produktów → 1-2 winnery → ~500 zł skalowanie**
   (19.07: portfel zmniejszony z 5 → 3 — decyzja Tomka; ~165 zł testu/produkt zamiast ~100 zł).
-- Content reklamowy: **Manus** (rodzina manus-* z v1 do spięcia z wf2 per produkt —
-  research FB Ad Library → copy PL → kreacje; referencje = zdjęcia produktu + landing).
+- Content reklamowy (banery): **fabryka ad-forge/fal** (`scripts/mockup-tools/ad-forge.py` —
+  copy PL przez `wf2-gpt` → sceny fal nano-banana-pro → typografia/logo; referencje = zdjęcia
+  produktu + landing). Manus USUNIĘTY z modułu wf2 (19.07); zostaje w v1 i lejku /sklep.
 - Kampanie przez **Meta MCP na koncie reklamowym KLIENTA** (przygotowanie konta+budżetu =
   zadanie klienta, krok `ads_konto`/`ads_budzet` + instrukcja udostępnienia do BM Tomka).
   1 kampania = 1 produkt, wszystko PAUSED, publikacja ręcznie (bramka).
@@ -426,7 +427,7 @@ Ból v1, którego v2 NIE dziedziczy:
 ### ETAP 5 — Materiały i kampania (scope: product)
 | Krok | Label | Owner | Uwagi |
 |---|---|---|---|
-| `ads_grafiki` | 3 grafiki (Manus) | admin | demo/problem/lifestyle 4:5 — 3 koncepcyjnie różne „byty" (Andromeda skleja podobne); `proof` opcjonalny przez `body.angles` |
+| `ads_grafiki` | 3 grafiki (ad-forge/fal) | admin | demo/problem/lifestyle 4:5 — 3 koncepcyjnie różne „byty" (Andromeda skleja podobne); `proof` opcjonalny przez `--angles …,proof` |
 | `ads_wideo` | Wideo 15 s | admin | fabryka wideo (sub-kroki `avi_*`); finał + pack hooków ≤3 wersje |
 | `ads_zestaw` | Zestaw reklam + copy | admin | 6 adów (3 hooki wideo + 3 statyki), copy COD (125 znaków hook/headline ≤27/5 różnych tekstów), audyt polityki copy+LP RAZEM, flagi AI, mapa ?h=N, rejestr `wf2_creatives` |
 | `ads_kampanie` | Kampania Meta 🏁 | admin | 1 kampania/produkt, ABO, broad, Advantage+, PAUSED; `campaign_id` (§7) |

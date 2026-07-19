@@ -4,14 +4,14 @@
 > │ ⚠️ **KĄT OPCJONALNY — NIE w defaultach.** Decyzja Tomka 19.07: „nie rób grafiki z opiniami" │
 > │ — zero grafik z opinii/liczb zamówień w standardowym zestawie. `proof` NIE wchodzi do        │
 > │ domyślnego zestawu startowego (default = `demo`/`problem`/`lifestyle`). Używać WYŁĄCZNIE na  │
-> │ jawne życzenie, przez `wf2-ads` `body.angles:['proof']` (edge waliduje białą listą           │
+> │ jawne życzenie, przez ad-forge `--angles …,proof` (walidacja białą listą                     │
 > │ `demo`/`problem`/`lifestyle`/`proof`). W standardowym torze zamiast `proof` idzie             │
 > │ `lifestyle` (patrz `PLAYBOOK-ad-lifestyle.md`).                                              │
 > └──────────────────────────────────────────────────────────────────────────────────────────┘
 
 > Kąt OPCJONALNY (poza zestawem startowym — patrz box wyżej). Plik przy jawnym wywołaniu:
 > `ad_<n>_proof.png` (4:5). Czytaj po SSOT. DNA = art-direction kąta `proof` z `buildAdsInstruction()`
-> w `wf2-ads` (rev3 PREMIUM, wzorzec ze starego flow `manus-full-campaign`). Kąt najbardziej wrażliwy
+> w `ad-forge.py` (rev3 PREMIUM, wzorzec ze starego flow `manus-full-campaign`). Kąt najbardziej wrażliwy
 > na politykę.
 
 ## KIEDY UŻYWAĆ

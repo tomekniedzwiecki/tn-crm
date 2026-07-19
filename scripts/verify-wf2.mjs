@@ -5,7 +5,7 @@
 // edge, dziura RLS) — bez dotykania produkcyjnych danych (wyłącznie odczyty i 4xx).
 // Sekrety: tn-crm/.env (SUPABASE_SERVICE_KEY). Klucz publiczny = ten sam co w panelu.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -62,7 +62,7 @@ console.log('=== Smoke test TN Sklepy (wf2) ===\n');
 }
 
 // ── 2. Gate'y edge functions (bez auth = 4xx, nigdy 200) ───────────────────
-for (const [fn, body] of [['wf2-platform', { action: 'stores' }], ['wf2-ads', { product_id: '00000000-0000-4000-8000-000000000000' }], ['wf2-orders-sync', {}]]) {
+for (const [fn, body] of [['wf2-platform', { action: 'stores' }], ['wf2-orders-sync', {}]]) {
   const st = await edge(fn, body);
   (st === 401 || st === 403) ? ok(`${fn} bez auth → ${st}`) : bad(`${fn} bez auth`, `status ${st} (oczekiwane 401/403)`);
 }
@@ -90,8 +90,6 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
 
 // ── 5. Kontrakty w kodzie edge (rozjazdy psujące się CICHO — R5) ───────────
 {
-  const adsSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads', 'index.ts'), 'utf8');
-  adsSrc.includes("'lp_styl_marka'") ? ok('wf2-ads czyta branding z lp_styl_marka (krok fabryki)') : bad('wf2-ads branding-lookup', 'brak lp_styl_marka — kreacje pójdą bez mini-marki');
   const lapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-landing-api', 'index.ts'), 'utf8');
   (!lapSrc.includes(".select('*')") && !lapSrc.includes('.select("*")')) ? ok('landing-api: jawna lista kolumn (bez .select(*))') : bad('landing-api', '.select(*) na publicznym endpoincie = ryzyko wycieku');
 }
@@ -102,28 +100,35 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   r.status < 300 ? ok('wf2_costs dostępne (kolumny amount/currency/stage/kind)') : bad('wf2_costs', `status ${r.status}`);
 }
 
-// ── 7. Fabryka statycznych grafik ads (ads_grafiki, rev2 „Manus albo nic") ──
-// Asserty statyczne (b/c/d/f) — grep źródeł, bez sieci. Asserty (a/e) sondują DB i
+// ── 7. Fabryka statycznych banerów ads (ads_grafiki) — silnik ad-forge/fal, Manus USUNIĘTY ──
+// Asserty statyczne (b/c/f/d) — grep źródeł, bez sieci. Asserty (a/e) sondują DB i
 // przechodzą DOPIERO po zaaplikowaniu migracji W2 (20260719d) — przed nią FAIL oczekiwany.
 {
-  const adsSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads', 'index.ts'), 'utf8');
+  const ADFORGE = join(ROOT, 'scripts', 'mockup-tools', 'ad-forge.py');
   const html = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
   const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
+  let adforge = '';
+  try { adforge = readFileSync(ADFORGE, 'utf8'); } catch (_) { /* brak pliku = bad niżej */ }
 
-  // (b) edge pisze rejestr obrazów (D5) + rehost na ścieżkę kanoniczną D6
-  adsSrc.includes('wf2_creatives') ? ok('wf2-ads pisze do rejestru wf2_creatives (D5)') : bad('wf2-ads rejestr', 'brak zapisu wf2_creatives — grafiki bez rodowodu');
-  (adsSrc.includes('bud-assets/') && /\/ads\/ad_/.test(adsSrc)) ? ok('wf2-ads rehostuje do bud-assets/<slug>/ads/ (D6)') : bad('wf2-ads storage', 'brak ścieżki kanonicznej bud-assets/…/ads/');
+  // (b) ad-forge.py = silnik fabryki: plik istnieje + kontrakt checklisty + silnik fal (nano-banana)
+  adforge ? ok('ad-forge.py istnieje (silnik fabryki banerów)') : bad('ad-forge.py', 'brak scripts/mockup-tools/ad-forge.py');
+  adforge.includes('ADS_GRAFIKI_CHECKLIST') ? ok('ad-forge.py ma ADS_GRAFIKI_CHECKLIST (kontrakt checklisty)') : bad('ad-forge.py checklist', 'brak ADS_GRAFIKI_CHECKLIST');
+  adforge.includes('nano-banana') ? ok('ad-forge.py używa silnika fal (nano-banana)') : bad('ad-forge.py silnik', 'brak nano-banana — silnik fal?');
 
-  // (f) ZG9 „Manus albo nic": zero toru fallback Gemini (generate-image / provider gemini)
-  /generate-image|gemini/i.test(adsSrc)
-    ? bad('wf2-ads tor Gemini (ZG9!)', 'źródło wciąż wywołuje generate-image/gemini — „Manus albo nic" złamane')
-    : ok('wf2-ads: zero toru fallback Gemini (ZG9 „Manus albo nic")');
+  // (f) Manus USUNIĘTY z modułu: zero wzmianek 'manus' w ad-forge.py + skasowany katalog wf2-ads
+  /manus/i.test(adforge)
+    ? bad('ad-forge.py wciąż wspomina Manus', "źródło zawiera 'manus' (case-insensitive) — miał zniknąć z modułu")
+    : ok('ad-forge.py: zero wzmianek o Manusie');
+  existsSync(join(ROOT, 'supabase', 'functions', 'wf2-ads'))
+    ? bad('katalog wf2-ads istnieje', 'funkcja Manus miała być skasowana')
+    : ok('brak katalogu supabase/functions/wf2-ads (funkcja Manus usunięta)');
 
   // (c) prompt-mapa kroku odsyła do SSOT grafik
   html.includes('STANDARD-GRAFIKI-SKLEPY') ? ok('map.ads_grafiki odsyła do STANDARD-GRAFIKI-SKLEPY') : bad('map.ads_grafiki SSOT', 'brak odwołania do STANDARD-GRAFIKI-SKLEPY.md');
 
-  // (d) deploy skryptu pętli wyników (wf2-ads-sync mapuje kreacje po meta_ad_ids)
+  // (d) pętla wyników nadal deployowana (wf2-ads-sync = sync Meta, NIE Manus) + brak martwego deploy:wf2-ads
   pkg.includes('deploy:wf2-ads-sync') ? ok('package.json ma deploy:wf2-ads-sync') : bad('package.json', 'brak deploy:wf2-ads-sync');
+  /"deploy:wf2-ads"\s*:/.test(pkg) ? bad('package.json', 'wciąż jest deploy:wf2-ads (funkcja skasowana)') : ok('package.json: brak martwego deploy:wf2-ads');
 
   // (a) DB: sub-kroki agr_* z sub_of='ads_grafiki' (timeline fabryki grafik) — po migracji W2
   const agrR = await rest("wf2_step_defs?select=key,sub_of&sub_of=eq.ads_grafiki&active=eq.true", SK);

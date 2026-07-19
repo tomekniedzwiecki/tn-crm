@@ -102,7 +102,7 @@ function mapOrder(o: Record<string, unknown>): MappedOrder {
 }
 
 // wywołanie adaptera platformy (jedyna droga do API Trevio)
-// Ping #sparing przez slack-notify (wzorzec 1:1 z wf2-ads; nigdy nie wywraca synca).
+// Ping #sparing przez slack-notify (wzorzec 1:1 z bud-ads; nigdy nie wywraca synca).
 async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
   try {
     const url = Deno.env.get('SUPABASE_URL')
@@ -570,18 +570,8 @@ Deno.serve(async (req) => {
       if (syncTimedOut || Date.now() - startedAt > DEADLINE_MS) { partial = true; break; }
     }
 
-    // BEZPIECZNIK KREACJI: dociągnij zawieszone taski Manusa (manus-webhook mógł nie dojść) —
-    // fire-and-forget, nie liczy się do budżetu tego przebiegu
-    try {
-      const sweep = fetch(`${SUPABASE_URL}/functions/v1/wf2-ads`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wf2-secret': WF2 },
-        body: JSON.stringify({ sweep: true }),
-      }).then((r) => { if (!r.ok) console.error('[wf2-orders-sync] wf2-ads sweep HTTP', r.status) }).catch((e) => console.error('[wf2-orders-sync] wf2-ads sweep:', e))
-      // deno-lint-ignore no-explicit-any
-      const er = (globalThis as any).EdgeRuntime
-      if (er?.waitUntil) er.waitUntil(sweep)
-    } catch (_) { /* bezpiecznik nie może wywrócić odpowiedzi */ }
+    // NB: dawny „BEZPIECZNIK KREACJI" (sweep wf2-ads dla zawieszonych tasków Manusa) USUNIĘTY 19.07 —
+    // fabryka banerów wf2 = ad-forge/fal, edge wf2-ads skasowany (Manus poza modułem wf2).
 
     return J({ ok: true, projects: processed, orders_upserted: ordersUpserted, unmapped, partial, guard });
   } catch (e) {

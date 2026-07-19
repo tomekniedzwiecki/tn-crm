@@ -1,7 +1,7 @@
 # PLAYBOOK — kąt `lifestyle` (UGC / Z ŻYCIA; autentyczność persony)
 
 > Jeden z 3 kątów zestawu startowego (`STANDARD-GRAFIKI-SKLEPY.md`). Plik: `ad_3_lifestyle.png` (4:5).
-> Czytaj po SSOT. DNA layoutu = art-direction kąta `lifestyle` z `buildAdsInstruction()` w `wf2-ads`
+> Czytaj po SSOT. DNA layoutu = art-direction kąta `lifestyle` z `buildAdsInstruction()` w `ad-forge.py`
 > (wzorzec „Kreacji 2" ze starego flow `manus-full-campaign` — organiczny post z życia, nie baner).
 > Zastąpił `proof` w defaultach (decyzja Tomka 19.07: „nie rób grafiki z opiniami — zrób coś innego").
 

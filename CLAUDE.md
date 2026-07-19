@@ -63,18 +63,19 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   z approved /trendy (bez scoringu — decyzja Tomka 17.07).
 - **Etap 5 → `ads_grafiki` = FABRYKA statycznych grafik (rev2, 19.07; SSOT
   `docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md` + playbooki `ad-playbooks/PLAYBOOK-ad-{demo,problem,lifestyle,proof}.md`):**
-  ŁĄCZNIE **3 kreacje** = kąty demo/problem/lifestyle × format 4:5 (1080×1350) w JEDNYM tasku Manusa
-  (`proof` = opinie/liczby = OPCJONALNY, tylko na jawne `body.angles:['proof']` — decyzja Tomka 19.07
+  ŁĄCZNIE **3 kreacje** = kąty demo/problem/lifestyle × format 4:5 (1080×1350) w JEDNYM przebiegu ad-forge
+  (`proof` = opinie/liczby = OPCJONALNY, tylko na jawne `--angles …,proof` — decyzja Tomka 19.07
   „nie rób grafiki z opiniami")
-  (9:16 = rozszerzenie na przyszłość, nie default). Silnik = **WYŁĄCZNIE Manus, ZERO fallbacku
-  Gemini** (ZG9 „Manus albo nic" — awaria = `ads_manus_status='failed'` + reset RĘCZNY w panelu po
-  doładowaniu kredytów; edge 503 gdy kill-switch off / brak `MANUS_API_KEY`). Fazy G0–G8 z bramkami
+  (9:16 = rozszerzenie na przyszłość, nie default). Silnik = **WYŁĄCZNIE fal (nano-banana-pro/nb2)
+  przez `scripts/mockup-tools/ad-forge.py`** (ZG9 „silnik = ad-forge/fal" — **Manus USUNIĘTY z modułu
+  19.07**: edge `wf2-ads` skasowany, gałąź routingu w `manus-webhook` wycięta, kolumny `ads_manus_*`
+  zdjęte migracją `20260719l`; v1 i lejek /sklep `bud-ads` NIETKNIĘTE — tam Manus zostaje). Fazy G0–G8 z bramkami
   QA (dowody, nie deklaracje): wierność produktu (2 pary oczu), tekst PL, polityka Meta, czytelność
   @320px/safe-zone, różnorodność kątów (pHash) — narzędzie `scripts/mockup-tools/ad-gate.py`
   (pomiary) + werdykt agenta. Rejestr: `wf2_creatives` media_type='image' (angle/format/ai_labeled)
   + `wf2_artifacts` kind='ad_creative'; pętla wyników przez `wf2_creative_perf`/`wf2_angle_perf`
   (migracja `20260719d_wf2_grafiki_fabryka`). Storage kanonicznie `bud-assets/<slug>/ads/`.
-  Panel: `adsGrafikiBlock` (timeline agr_*, galeria 3 kreacji, akcept per kreacja, pill status).
+  Panel: `adsGrafikiBlock` (timeline agr_*, galeria 3 kreacji, akcept per kreacja, koszty, CTA „Generuj przez ad-forge").
 - Auto-create projektu: tpay-webhook przy opłaconej rezerwacji 500 zł (blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).
 - **Styl modułu = Geist/Vercel (twardo)**: tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,

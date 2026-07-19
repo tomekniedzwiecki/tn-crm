@@ -150,7 +150,7 @@ setup problemu; (4) najmocniejszą klatkę na sam początek jako hook; (5) 40-80
 Warianty i koszty: re-cut cold-open (HOOK-STANDARD, remontaż $0) · świeże ujęcie hookowe
 (1-2 klatki nano $0,039/szt + 1 Kling FLF 5 s $0,35 + remontaż $0 ≈ **$0,45**). Cały pack
 ≈ koszt bazy + $0-0,9. To godzi standard „jednej kreacji" z Andromedą (CENNIK §2b: 1 kampania
-= 1 ad set z kilkoma plikami — pliki ≠ produkcje; resztę slotów wypełniają grafiki wf2-ads).
+= 1 ad set z kilkoma plikami — pliki ≠ produkcje; resztę slotów wypełniają grafiki ad-forge).
 Kadencja po zwycięzcy: refresh hooka triggerowany CPM/frequency, zmieniaj JEDEN element.
 
 **Warsztat:** plan kreacji = JSON zgodny z `montaz.py` (sceny {id,plik,ss,dur,vo,vf_extra} +

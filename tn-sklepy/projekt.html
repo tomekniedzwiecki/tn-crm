@@ -568,7 +568,7 @@
         // miniatura z render API Storage (?width) — pełny obraz w lightboxie
         function thumbUrl(url, w) {
             if (!url) return '';
-            // path bez query; ewentualny query źródła (?v=… — cache-buster z wf2-ads po regeneracji) przenosimy
+            // path bez query; ewentualny query źródła (?v=… — cache-buster z ad-forge po regeneracji) przenosimy
             // do render-URL przez & (unikat na wersję dla transform-CDN). Bez tego „?v=…?width=" psuł parametry.
             const m = url.match(/^(https:\/\/[^/]+)\/storage\/v1\/object\/public\/([^?]+)(?:\?(.*))?$/);
             if (!m) return url;
@@ -579,7 +579,7 @@
         // w onclick('${…}') — apostrof w URL wybiłby string JS; recenzja 18.07, P1).
         let lbItems = [];   // [{url, cap}]
         let lbIdx = 0;
-        // BC: pojedynczy obraz (karta produktu cover+galeria, kreacje Manus) — bez nawigacji
+        // BC: pojedynczy obraz (karta produktu cover+galeria, pojedyncze banery) — bez nawigacji
         function openLightbox(url) { if (!url) return; lbItems = [{ url: url, cap: '' }]; lbIdx = 0; lbShow(); }
         // grupa: klik na kaflu z data-lb-group — zbiera rodzeństwo z tej samej grupy (gid unikalny → CSS-safe)
         function openLightboxG(el) {
@@ -1277,7 +1277,7 @@
                 check:['Płatność realnie zeszła (mikro-wydatek 5–15 zł/d przez 2–3 dni, bez skoków)','Account Quality czyste (brak restrykcji na koncie/BM/stronie)','Naming ustalony: [WF2:klient] produkt · lowercase/underscore','UTM z ID: utm_id={{ad.id}} · source=facebook/instagram · medium=paid_social','Blocklista komentarzy PL wgrana na stronę (scam/oszust*/chińsk*/nie doszło…)','Plan struktury: 1 kampania = 1 produkt = 1 ad set (ABO), broad, Advantage+'], prompt:'ads_preflight' },
 
             // ── ETAP 5: MATERIAŁY I KAMPANIA (product-scope; fabryka kreacji → kampania → start) ──
-            ads_grafiki: { desc:'BANERY REKLAMOWE — fabryka ad-forge v8 (scripts/mockup-tools/ad-forge.py). Silnik fal-ai/nano-banana-pro w trybie FULL-DESIGN: model komponuje CAŁY baner (foto + typografia + pigułki + linie + logo zintegrowane, nie „naklejki"), best-of-2 na kąt, kąty demo/problem/lifestyle 4:5 1536×1920. 4 BRAMKI z DOWODAMI: litery PL (verbatim, diakrytyki w wersalikach) · wierność produktu (multi-ref side-by-side vs packshot) · ciągłość (ten sam obiekt między scenami) · powód kliknięcia (vision: co widz rozumie w 0,5 s). WARIANTY HOOKÓW (~$0): baza „bez nagłówka" + N nagłówków nakładanych kodem (font marki) = A/B hooka bez re-generacji; opcjonalne A/B silników (nano-banana-2). Koszt ~$0.45/baner (best-of-2). Publikacja: ad-forge --finalize → panel-sync (storage/creatives/dowody/koszty + sub-kroki agr_* wypełniane z FAKTÓW przebiegu). Silnik alternatywny: Manus przez edge wf2-ads. SSOT: docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md. ⚡ RÓWNOLEGLE: po kroku Styl-master + mini-marka (potrzebuje logo, nie landinga).',
+            ads_grafiki: { desc:'BANERY REKLAMOWE — fabryka ad-forge v8 (scripts/mockup-tools/ad-forge.py). Silnik fal-ai/nano-banana-pro w trybie FULL-DESIGN: model komponuje CAŁY baner (foto + typografia + pigułki + linie + logo zintegrowane, nie „naklejki"), best-of-2 na kąt, kąty demo/problem/lifestyle 4:5 1536×1920. 4 BRAMKI z DOWODAMI: litery PL (verbatim, diakrytyki w wersalikach) · wierność produktu (multi-ref side-by-side vs packshot) · ciągłość (ten sam obiekt między scenami) · powód kliknięcia (vision: co widz rozumie w 0,5 s). WARIANTY HOOKÓW (~$0): baza „bez nagłówka" + N nagłówków nakładanych kodem (font marki) = A/B hooka bez re-generacji; opcjonalne A/B silników (nano-banana-2). Koszt ~$0.45/baner (best-of-2). Publikacja: ad-forge --finalize → panel-sync (storage/creatives/dowody/koszty + sub-kroki agr_* wypełniane z FAKTÓW przebiegu). SSOT: docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md. ⚡ RÓWNOLEGLE: po kroku Styl-master + mini-marka (potrzebuje logo, nie landinga).',
                 fields:[{k:'grafiki_url',l:'Folder banerów (auto: ad-forge --finalize; lub ręcznie)'}],
                 check:['Karta produktu + copy gotowe','Sceny wygenerowane (best-of-2, silnik fal)','Bramki QA: litery PL · wierność produktu · ciągłość · powód kliknięcia — z dowodami','Dowody w bud-assets/<slug>/ads/dowody/','Warianty hooków opublikowane','Rejestr wf2_creatives + koszty zalogowane','Banery zaakceptowane w panelu (toggle ✓)'], prompt:'ads_grafiki' },
             ads_wideo: { desc:'1 kreacja ~15 s (9:16) z fabryki wideo na wzór trendującego TikToka. Archetyp wzorca decyduje o stacku (hands-POV → Kling FLF; talking-head → OmniHuman; gadżet+gadająca głowa → handsPOV). Postęp = timeline etapów niżej (artefakty per etap). JEDYNA twarda bramka = qa_gate (.pass na KAŻDYM klipie); bramki Tomka #1/#2 w trybie autonomicznym = samoakcept operatora z logiem. Koszt realny: ~$2.5-5.5 hands-POV bez refinera (refiner +$3-4 TYLKO hero/retargeting — na cold DR OFF). PACK HOOKÓW (decyzja Tomka): baza + ≤2 warianty hooka (cold-open re-cut $0 / świeże ujęcie FLF) — wideo wygrywa cold, a hook to największa dźwignia; 3 wersje wideo + 3 statyki = 6 adów zestawu. Flaga AI na kreacji; faktyczne disclosure = przy publikacji (krok Start). ⚡ RÓWNOLEGLE: wystarczy wzorzec z /trendy + kurowana galeria Ali (krok Dane).',
@@ -1461,7 +1461,7 @@
                     ${mdLite(d.instructions_md)}</div>`;
             }
 
-            // special-case: 3 grafiki Manus — podgląd kreacji + trigger wf2-ads
+            // special-case: fabryka banerów ad-forge — galeria kreacji + timeline agr_* + akcept
             if (d.key === 'ads_grafiki' && p) h += adsGrafikiBlock(p);
             // special-case: wideo — status + player link
             if (d.key === 'ads_wideo' && p) h += adsWideoBlock(p);
@@ -1523,39 +1523,19 @@
                 `<button onclick="sdSetStatus('${s}')" class="st-btn ${st.status === s ? 'st-' + s : 'st-pending opacity-50 hover:opacity-100'}">${STEP_LABELS[s]}</button>`).join('');
         }
 
-        // ── special-case: 3 statyczne kreacje (fabryka grafik; silnik = WYŁĄCZNIE Manus) ──
-        // Rev2 (decyzja Tomka 19.07): 3 kąty × 1 format 4:5, zero fallbacku — awaria = failed + reset ręczny.
-        const ADS_MANUS_META = { running:['#f5a623','Manus pracuje nad kreacjami'], failed:['#e5484d','Generacja padła'], completed:['#45a557','Kreacje gotowe'] };
+        // ── special-case: fabryka statycznych banerów (silnik = ad-forge/fal, nano-banana-pro/nb2) ──
+        // Decyzja Tomka 19.07: Manus usunięty z modułu wf2 — generacja przez sesję Claude Code (ad-forge.py),
+        // wyniki (ads_creatives + koszty + sub-kroki agr_*) piszą się przez panel-sync out-of-band.
         function adsGrafikiBlock(p) {
-            const st = p.ads_manus_status;
             const subs = subDefsFor('ads_grafiki');
             const creatives = Array.isArray(p.ads_creatives) ? p.ads_creatives : [];
-            const taskUrl = p.ads_manus_task_id ? `https://manus.im/app/${encodeURIComponent(p.ads_manus_task_id)}` : '';
             let h = '<div class="space-y-3">';
             h += `<div class="flex items-center gap-2 text-[12.5px] text-zinc-200 font-medium"><i class="ph ph-images-square text-[#52a8ff]"></i> Banery reklamowe <span class="text-[10.5px] text-zinc-500 font-normal">— fabryka ad-forge v8 (full-design · 4 bramki · warianty hooków)</span></div>`;
-
-            // (d) status pill running/failed/completed + link do zadania Manusa (running/failed)
-            const m = ADS_MANUS_META[st];
-            if (m) {
-                const running = st === 'running', failed = st === 'failed', col = m[0];
-                h += `<div class="border rounded-md px-4 py-3 text-[12px] flex items-center gap-2 flex-wrap" style="border-color:${col}66;background:${col}14;color:${col}">
-                    <i class="ph ${running ? 'ph-circle-notch animate-spin' : failed ? 'ph-warning-circle' : 'ph-check-circle'}"></i>
-                    <b>${escapeHtml(m[1])}</b>${running ? ` <span class="text-zinc-400">(start: ${relTime(p.ads_manus_started_at)})</span>` : ''}${failed && p.ads_manus_step ? ` <span class="text-zinc-400">· ${escapeHtml(p.ads_manus_step)}</span>` : ''}
-                    ${taskUrl && (running || failed) ? `<a href="${taskUrl}" target="_blank" class="underline text-[11px]">zadanie Manus ↗</a>` : ''}
-                    ${running ? `<button onclick="wf2AdsSweep()" class="ml-auto text-[10.5px] underline">sprawdź teraz</button>` : ''}</div>`;
-            }
-
-            // (e) failed → reset ręczny (po doładowaniu kredytów); komunikat: generator = wyłącznie Manus
-            if (st === 'failed') {
-                h += `<div class="border border-[#e5484d]/40 bg-[#e5484d]/[.06] rounded-md px-3.5 py-2.5 text-[11px] text-[#f26d78] space-y-2">
-                    <div>Generator statyczny = <b>wyłącznie Manus</b>, bez silnika zastępczego. Wznowienie ręczne — najpierw doładuj kredyty w konsoli Manusa, potem zresetuj breaker.</div>
-                    <button onclick="wf2AdsReset()" class="inline-flex items-center gap-1.5 bg-[#e5484d]/15 hover:bg-[#e5484d]/25 border border-[#e5484d]/40 rounded px-3 py-1.5 text-[11px] font-medium transition-colors"><i class="ph ph-arrow-counter-clockwise"></i> Reset (po doładowaniu kredytów)</button></div>`;
-            }
 
             // (f) suma kosztów z wf2_costs (step_key='ads_grafiki') w nagłówku bloku
             const gc = (costs || []).filter(c => c.product_id === p.id && c.step_key === 'ads_grafiki');
             const gcSum = gc.reduce((s, c) => s + costPln(c), 0);
-            if (gcSum > 0) h += `<div class="text-[10.5px] text-zinc-500 font-mono">koszt fabryki grafik (Manus): ${moneyPL(gcSum)} · ${gc.length} poz. (szczegóły: zakładka Koszty)</div>`;
+            if (gcSum > 0) h += `<div class="text-[10.5px] text-zinc-500 font-mono">koszt fabryki banerów (fal / ad-forge): ${moneyPL(gcSum)} · ${gc.length} poz. (szczegóły: zakładka Koszty)</div>`;
 
             // (b)+(c) galeria kreacji: badge kąta + „AI", lightbox z nawigacją, akcept ✓/✗ per kreacja
             if (creatives.length) {
@@ -1597,56 +1577,11 @@
                 }).join('') + '</div>';
             }
 
-            // (g) generacja: PRIMARY = ad-forge v8 (sesja Claude Code — kopiuje prompt sesji, operator odpala
-            //     scripts/mockup-tools/ad-forge.py). ALTERNATYWA = Manus przez edge wf2-ads (ukryta przy
-            //     running/failed — failed wymaga wpierw resetu breakera).
+            // (g) generacja: ad-forge (sesja Claude Code — kopiuje paczkę promptu; operator odpala
+            //     scripts/mockup-tools/ad-forge.py, wyniki wracają przez panel-sync).
             h += `<button onclick="sdCopyPrompt('ads_grafiki')" class="w-full inline-flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-200 rounded-md px-4 py-2.5 text-xs font-semibold transition-colors"><i class="ph ph-magic-wand"></i> Generuj przez ad-forge (sesja Claude Code)</button>`;
-            if (st !== 'running' && st !== 'failed') {
-                h += `<button onclick="wf2AdsGenerate(${creatives.length ? 'true' : 'false'})" class="w-full inline-flex items-center justify-center gap-2 bg-[#111] border border-[#2e2e2e] text-zinc-400 hover:text-zinc-200 hover:border-[#3f3f46] rounded-md px-4 py-2 text-[11px] font-medium transition-colors"><i class="ph ph-magic-wand"></i> Alternatywa: Manus (edge wf2-ads, ~$0.30)</button>`;
-            }
             h += '</div>';
             return h;
-        }
-        async function wf2AdsGenerate(force) {
-            const p = drawerProduct(); if (!p) return;
-            showToast('Zlecam generację kreacji…');
-            try {
-                const { data, error } = await supabaseClient.functions.invoke('wf2-ads', { body: { product_id: p.id, force: !!force } });
-                if (error) throw error;
-                if (data && data.error) throw new Error(data.error);
-                // D2b soft-fail: brak kredytów / timeout / breaker → edge oddaje HTTP 200 {failed:true, detail}.
-                // To NIE sukces — pokaż akcjonowalny detail (np. „doładuj kredyty") i odśwież stan (czerwony pill + reset).
-                if (data && data.failed) { showToast(data.detail || 'Generacja nie ruszyła', 'error'); await wf2AdsRefreshFactory(p.id); renderDrawer(); return; }
-                showToast('Generacja ruszyła — Manus pracuje (~10-20 min)', 'success');
-                await wf2AdsRefreshFactory(p.id); renderDrawer();
-            } catch (e) {
-                // supabase-js@2.91: odpowiedź NIE-2xx (np. 503 generator_wylaczony) rzuca FunctionsHttpError —
-                // body NIE trafia do `data` (null), jest tylko w e.context (surowy Response). Pokaż przyjazny detail.
-                if (e && e.context && typeof e.context.json === 'function') {
-                    const b = await e.context.json().catch(() => null);
-                    if (b && (b.detail || b.error)) { showToast(b.detail || b.error, 'error'); return; }
-                }
-                showToast('Błąd: ' + (e.message || e), 'error');
-            }
-        }
-        async function wf2AdsSweep() {
-            const p = drawerProduct(); if (!p) return;
-            try { await supabaseClient.functions.invoke('wf2-ads', { body: { product_id: p.id } }); } catch (_) {}
-            await wf2AdsRefreshFactory(p.id); renderDrawer();
-        }
-        // pełny re-fetch fabryki grafik: edge/Manus piszą steps/artifacts/costs out-of-band, więc sam wiersz produktu
-        // (refreshProduct) NIE odświeżyłby sumy kosztów ani timeline'u agr_*. Wzorzec 1:1 z wf2VideoRefresh.
-        async function wf2AdsRefreshFactory(pid) {
-            const [pr, st, ar, co] = await Promise.all([
-                supabaseClient.from('wf2_products').select('*').eq('id', pid).single(),
-                supabaseClient.from('wf2_steps').select('*').eq('product_id', pid),
-                supabaseClient.from('wf2_artifacts').select('*').eq('product_id', pid),
-                supabaseClient.from('wf2_costs').select('*').eq('product_id', pid),
-            ]);
-            if (pr.data) { const i = products.findIndex(x => x.id === pid); if (i >= 0) products[i] = pr.data; }
-            const mergeIn = (arr, rows) => (rows || []).forEach(row => { const i = arr.findIndex(x => x.id === row.id); if (i >= 0) arr[i] = row; else arr.push(row); });
-            mergeIn(steps, st.data); mergeIn(artifacts, ar.data); mergeIn(costs, co.data);
-            renderCosts();
         }
         // (c) toggle akceptu pojedynczej kreacji → approved w wf2_products.ads_creatives (team RLS).
         // read-modify-write CAŁEJ kolumny → szybkie klikanie ✓ pod rząd gubiłoby akcept (lost update). Dlatego:
@@ -1665,23 +1600,6 @@
                 } catch (e) { showToast('Nie zapisano akceptu: ' + (e.message || e), 'error'); }
             });
             return adsApproveChain;
-        }
-        // (e) reset breakera po awarii — WYŁĄCZNIE po doładowaniu kredytów (generator bez fallbacku)
-        async function wf2AdsReset() {
-            const p = drawerProduct(); if (!p) return;
-            if (!confirm('Zresetować breaker generatora grafik?\n\nRób to WYŁĄCZNIE po doładowaniu kredytów Manusa — generator statyczny nie ma silnika zastępczego.')) return;
-            try {
-                const { error } = await supabaseClient.from('wf2_products')
-                    .update({ ads_manus_status: null, ads_manus_step: null, ads_manus_task_id: null, ads_manus_started_at: null })
-                    .eq('id', p.id);
-                if (error) throw error;
-                showToast('Breaker zresetowany — możesz zlecić generację ponownie', 'success');
-                await refreshProduct(p.id); renderDrawer();
-            } catch (e) { showToast('Nie udało się zresetować: ' + (e.message || e), 'error'); }
-        }
-        async function refreshProduct(pid) {
-            const { data } = await supabaseClient.from('wf2_products').select('*').eq('id', pid).single();
-            if (data) { const i = products.findIndex(x => x.id === pid); if (i >= 0) products[i] = data; }
         }
 
         // ── special-case: wideo 15 s — timeline etapów fabryki + artefakty per etap ──
@@ -1988,7 +1906,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 pl_glowna: `KROK STRONA GŁÓWNA. Zbuduj galerię marki parasolowej — tokeny marki z wf2_projects: name/tagline/brand_opis/palette/fonts/logo_url (krok „Marka sklepu"); kafle WSZYSTKICH produktów ze statusem gotowy/live — zdjęcie, nazwa mini-marki, cena, link do landinga platform_page_url. Lekki statyczny HTML (self-contained; window.trevio.viewItemList z listą produktów). Przez wf2-platform: 'publish_landing' {shop_id, path:'', html}. Aktualizuj przy każdym nowym gotowym produkcie. Zapisz URL w polu kroku.`,
                 pl_test: `KROK TEST ZAKUPOWY (BRAMKA). Złóż realne zamówienie testowe COD end-to-end: landing → CTA → checkout → zamówienie. Zweryfikuj: zamówienie widoczne przez wf2-platform 'orders' (zapisz id), zdarzenia trevio/pixel złapane, ceny landing↔kasa zgodne. Dowody (id zamówienia + zrzut) do notatki kroku. To bramka „sklep sprzedaje".`,
                 ads_pixel: `KROK PIXEL + POMIAR (Etap 4 Środowisko reklamowe). Zweryfikuj/utwórz pixel w BM z kontem reklamowym klienta (${project.meta_ad_account_id || 'act_?'}): pixel w TYM SAMYM BM (inny BM = WCA nie działają), OBIE domeny zweryfikowane w BM (domena parasolowa + domena checkoutu platformy), pixel ustawiony na platformie przez wf2-platform 'set_integration' (FacebookPixel: pixelId + apiKey=token CAPI). Dual tracking wg WORKFLOW-V2-TESTY §7.2: pixel przeglądarkowy + CAPI serwerowe Z DEDUPLIKACJĄ po wspólnym event_id (Test Events: JEDNO zdarzenie, nie dwa), hashowane email/telefon/fbp/fbc w CAPI (COD je ma z formularza — cel EMQ 8+, min. 6), link decoration fbclid/_fbp/_fbc na przejściu landing→kasa (runtime-snippet). Purchase testowy w Events Managerze jako GATE. Zapisz pixel_id na projekcie.`,
-                ads_grafiki: `KROK BANERY REKLAMOWE dla ${S} (id ${PID}). SILNIK GŁÓWNY = fabryka ad-forge v8 (scripts/mockup-tools/ad-forge.py; venv scripts/mockup-tools/.venv/Scripts/python.exe) — NIE Manus. NAJPIERW przeczytaj CAŁY docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md (SSOT: zasady ZG1–ZG9) + playbooki docs/zbuduje/ad-playbooks/PLAYBOOK-ad-{demo,problem,lifestyle,proof}.md; ad-forge czyta SAM z bazy dane produktu, refy (multi-ref z gallery_curated), logo/styl-master/paletę/fonty i cenę. TRYB FULL-DESIGN (default nano-banana-pro przez fal): model komponuje CAŁY baner (foto+typografia+pigułki+linie+logo zintegrowane, nie „naklejki” Pillow), best-of-2 na kąt, kąty demo/problem/lifestyle 4:5 1536×1920; tekst PL renderuje model VERBATIM z copy (diakrytyki w wersalikach) — bramka tekstu pilnuje litera-po-literze. PRZEBIEG: (1) GENERACJA: python ad-forge.py ${PID} [--angles demo,problem,lifestyle] ([--dry] pokazuje plan+koszt bez generacji) — best-of-2/kąt, buduje out/dowody/ (kompozyty wierności + ciągłości) i ustawia krok „Banery reklamowe” na in_progress (agr_brief/generacja/qa wypełnione z faktów). (2) 4 BRAMKI (obejrzyj kompozyty w out/dowody/ — werdykt robisz TY, vision, nie skrypt): litery PL (verbatim/diakrytyki) · wierność produktu (multi-ref side-by-side vs realny packshot, DWIE PARY OCZU) · ciągłość (WIERNOSC-CIAGLOSC.png: ten sam obiekt między scenami) · powód kliknięcia (co widz rozumie w 0,5 s / jaki hak / czy USP-mechanizm widoczny). Werdykty zapisz do out/KARTA.json / VERDICTS.json / KLIK.json (ad-forge wciąga je do not bramek). (3) POPRAWKI do wyczerpania: --fix ANGLE='opis cechy' (chirurgiczna korekta geometrii produktu, litery nietknięte) · --regen ANGLE (regeneracja best-of-2) · --pick ANGLE=cN (wybór kandydata). (4) WARIANTY HOOKÓW (~$0): python ad-forge.py ${PID} --hook-variants 3 [--ab-engine nano-banana-2] — baza „bez nagłówka” + N nagłówków nakładanych KODEM (font marki) = A/B hooka bez re-generacji; A/B silników = kompozyt do decyzji (NIE publikowany). (5) PUBLIKACJA: python ad-forge.py ${PID} --finalize — JEDYNY krok piszący do panelu na twardo: MERGE ads_creatives (blob), rejestr wf2_creatives (media_type='image', angle, format, ai_labeled=true), dowody kind='proof' → bud-assets/${S}/ads/dowody/, koszt fal → wf2_costs (kind='fal', step='agr_generacja') ORAZ PEŁNA emisja przez panel-sync (kontrakt docs/zbuduje/MOST-PANEL.md): sub-kroki agr_brief/agr_generacja/agr_qa/agr_final → done z notami z FAKTÓW przebiegu + krok główny ads_grafiki → done + checklista VERBATIM + activity. NIE dubluj tych zapisów ręcznie — ad-forge robi je idempotentnie. BRAMKA TOMKA: każdy baner akceptujesz w panelu toggle ✓ (pozycja „Banery zaakceptowane” zostaje OFF do jego decyzji). ŚWIĘTOŚCI: wierność produktu (refy=OBIEKTY {url,type:'product'}, nigdy stringi), zero zmyślonych liczb/pilności/obietnic dostawy (risk-reversal COD), flaga AI obowiązkowa (Meta 2026). SILNIK ALTERNATYWNY (gdy ad-forge niedostępny): Manus przez edge wf2-ads — POST {product_id:'${PID}'} (gate: team JWT / x-wf2-secret); edge SAM pisze ads_creatives + wf2_creatives + koszt (kind='manus') przy pullu — wtedy dodaj TYLKO dowody kind='proof', NIE rób cost_add(kind='manus'). Koszt ad-forge ~$0.45/baner (best-of-2), Manus ~$0.30/task. Wynik: 3 zaakceptowane banery + rejestr = done.`,
+                ads_grafiki: `KROK BANERY REKLAMOWE dla ${S} (id ${PID}). SILNIK GŁÓWNY = fabryka ad-forge v8 (scripts/mockup-tools/ad-forge.py; venv scripts/mockup-tools/.venv/Scripts/python.exe) — NIE Manus. NAJPIERW przeczytaj CAŁY docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md (SSOT: zasady ZG1–ZG9) + playbooki docs/zbuduje/ad-playbooks/PLAYBOOK-ad-{demo,problem,lifestyle,proof}.md; ad-forge czyta SAM z bazy dane produktu, refy (multi-ref z gallery_curated), logo/styl-master/paletę/fonty i cenę. TRYB FULL-DESIGN (default nano-banana-pro przez fal): model komponuje CAŁY baner (foto+typografia+pigułki+linie+logo zintegrowane, nie „naklejki” Pillow), best-of-2 na kąt, kąty demo/problem/lifestyle 4:5 1536×1920; tekst PL renderuje model VERBATIM z copy (diakrytyki w wersalikach) — bramka tekstu pilnuje litera-po-literze. PRZEBIEG: (1) GENERACJA: python ad-forge.py ${PID} [--angles demo,problem,lifestyle] ([--dry] pokazuje plan+koszt bez generacji) — best-of-2/kąt, buduje out/dowody/ (kompozyty wierności + ciągłości) i ustawia krok „Banery reklamowe” na in_progress (agr_brief/generacja/qa wypełnione z faktów). (2) 4 BRAMKI (obejrzyj kompozyty w out/dowody/ — werdykt robisz TY, vision, nie skrypt): litery PL (verbatim/diakrytyki) · wierność produktu (multi-ref side-by-side vs realny packshot, DWIE PARY OCZU) · ciągłość (WIERNOSC-CIAGLOSC.png: ten sam obiekt między scenami) · powód kliknięcia (co widz rozumie w 0,5 s / jaki hak / czy USP-mechanizm widoczny). Werdykty zapisz do out/KARTA.json / VERDICTS.json / KLIK.json (ad-forge wciąga je do not bramek). (3) POPRAWKI do wyczerpania: --fix ANGLE='opis cechy' (chirurgiczna korekta geometrii produktu, litery nietknięte) · --regen ANGLE (regeneracja best-of-2) · --pick ANGLE=cN (wybór kandydata). (4) WARIANTY HOOKÓW (~$0): python ad-forge.py ${PID} --hook-variants 3 [--ab-engine nano-banana-2] — baza „bez nagłówka” + N nagłówków nakładanych KODEM (font marki) = A/B hooka bez re-generacji; A/B silników = kompozyt do decyzji (NIE publikowany). (5) PUBLIKACJA: python ad-forge.py ${PID} --finalize — JEDYNY krok piszący do panelu na twardo: MERGE ads_creatives (blob), rejestr wf2_creatives (media_type='image', angle, format, ai_labeled=true), dowody kind='proof' → bud-assets/${S}/ads/dowody/, koszt fal → wf2_costs (kind='fal', step='agr_generacja') ORAZ PEŁNA emisja przez panel-sync (kontrakt docs/zbuduje/MOST-PANEL.md): sub-kroki agr_brief/agr_generacja/agr_qa/agr_final → done z notami z FAKTÓW przebiegu + krok główny ads_grafiki → done + checklista VERBATIM + activity. NIE dubluj tych zapisów ręcznie — ad-forge robi je idempotentnie. BRAMKA TOMKA: każdy baner akceptujesz w panelu toggle ✓ (pozycja „Banery zaakceptowane” zostaje OFF do jego decyzji). ŚWIĘTOŚCI: wierność produktu (refy=OBIEKTY {url,type:'product'}, nigdy stringi), zero zmyślonych liczb/pilności/obietnic dostawy (risk-reversal COD), flaga AI obowiązkowa (Meta 2026). Koszt ad-forge ~$0.45/baner (best-of-2). Wynik: 3 zaakceptowane banery + rejestr = done.`,
                 ads_wideo: `KROK WIDEO 15 s dla ${S} (id ${PID}). Wg scripts/video-factory/README.md + GENERATOR-VIDEO-STRATEGIA.md (sekcje 0-0e): wzorzec = ${p && p.video_pattern_tiktok_url ? p.video_pattern_tiktok_url : 'top wideo z bud_tt_products (tt_shop.videos / tiktok_url — wybierz wg plays i dopasowania)'}; NAJPIERW odczytaj ARCHETYP wzorca i dobierz stack (hands-POV → cała kreacja Kling FLF ~$2.5; talking-head → OmniHuman + face-ref + bramka tożsamości; sceny z gestem = Motion Control z drivingiem oryginału). Spisz KARTA.json z galerii Ali (NIE z brandowanych packshotów TikTok Shop). Prowadź: ingest → blueprint (BRAMKA TOMKA #1) → audio+klatki (BRAMKA #2: arkusz klatek) → render przez bud-fal-proxy → qa_gate.py (.pass na KAŻDYM klipie — montaz.py odmawia bez .pass) → montaż 15 s (hook≤2s, bez napisów) → pętla QA do czystej rundy. Po finale PACK HOOKÓW (PROCEDURA KROK 10b): baza + ≤2 warianty (cold-open re-cut $0 / świeże ujęcie FLF ~$0.45) → pliki *_hook.mp4 obok finału. OZNACZENIE AI w Meta OBOWIĄZKOWE. Materiał badawczy (mp4 wzorca) → prywatny bucket wf2-video; FINALNĄ kreację + warianty wgraj do PUBLICZNEGO Storage attachments/bud-assets/<slug>/ads/kreacja_15s.mp4 (panel i Meta ją czytają), zapisz video_url + video_cost_usd + video_ai_labeled na produkcie + INSERT wf2_artifacts (kind='video').`,
                 ads_preflight: `KROK PRE-FLIGHT ŚRODOWISKA (bramka zamykająca Etap 4 — kampanie nie powstają przy brakach). Zweryfikuj środowisko end-to-end na koncie ${project.meta_ad_account_id || 'act_?'}: (1) Account Quality — brak restrykcji konta/BM/strony; (2) płatność realnie schodzi: mikro-wydatek 5–15 zł/d przez 2–3 dni (spokojny start bez skoków = anty fraud-flag; kampanię rozruchową utwórz PAUSED — odpala Tomek) albo potwierdzony wydatek historyczny; (3) strona FB przypisana do konta + BLOCKLISTA komentarzy PL wgrana na stronę — lista standardowa i instrukcja wgrania 1:1: docs/zbuduje/ADS-BLOCKLISTA-PL.md (Moderation Assist NIE działa na reklamach — tylko keyword blocklist + profanity filter); (4) konwencje RAZ NA ZAWSZE: nazwy „[WF2:${project.customer_name || 'klient'}] produkt", UTM: utm_source=facebook/instagram (NIE „meta"), utm_medium=paid_social, utm_id={{ad.id}} + {{campaign.id}}/{{adset.id}} (ID, nie nazwy — rename psuje raporty); (5) plan struktury zapisany: 1 kampania = 1 produkt = 1 ad set (ABO), broad (PL, wiek, płeć wg produktu), Advantage+ placements, jedno bidowanie (highest volume). Wynik = tabela braków w notatce kroku; 0 braków = done (kamień „Środowisko reklamowe gotowe").`,
                 ads_zestaw: `KROK ZESTAW REKLAM dla ${S} (id ${PID}). Skompletuj zestaw 6 adów do kampanii: 3 wersje wideo (finał + warianty *_hook.mp4 z kroku Wideo) + 3 statyki (ads_creatives z kroku Grafiki) — każdy ad to koncepcyjnie INNY byt (Andromeda skleja podobne kreacje w jeden slot). Copy PL per ad wg zasad COD: primary text z hookiem w pierwszych 125 znakach, headline ≤27 znaków (wartość, nie powtórka), 5 RÓŻNYCH tekstów w polach tekstowych (nie parafrazy), risk-reversal („płacisz przy odbiorze" + zwrot 14 dni) + social proof z KONKRETNĄ liczbą z KARTY PRAWDY (zero zmyślonych liczb, zakaz fałszywej pilności/obietnic dostawy). Mapa message-match: kreacja N → landing ?h=N (mapa HOOKS z brandingu). AUDYT POLITYKI: Meta ocenia copy+landing RAZEM (semantic intent) — sprawdź parę pod misleading claims / personal attributes („masz problem z…" = flaga) / implied transformations; awatar AI = wyłącznie prezenter demonstrujący produkt, NIGDY „zadowolony klient" z testimonialem. Flaga AI per kreacja (self-certification — brak = odrzucenie). Zapisz pola kroku (ads_count, hooks_map), uzupełnij rejestr wf2_creatives (slug/archetyp/warianty/koszt) + artefakty wf2_artifacts (kind='ad_creative').`,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ad-forge.py — tor STATYCZNYCH GRAFIK REKLAMOWYCH (FB/IG 4:5) bez Manusa.
+ad-forge.py — tor STATYCZNYCH GRAFIK REKLAMOWYCH (FB/IG 4:5). Silnik = fal (nano-banana-pro/nb2).
 SSOT: SPEC-ADFORGE + docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md.
 
 Zasada nadrzędna (Tomek): PROMPT KIERUNKOWY (cel/wizja/nastrój, EN) — wygląd produktu
@@ -9,7 +9,7 @@ niosą WYŁĄCZNIE referencje (image[0] + prefix „reproduce unchanged"). ZERO 
 słowami. DRUGA zasada: tekst PL i logo NIGDY z modelu — zawsze deterministycznie kodem
 (diakrytyki w WERSALIKACH przetrwają w TTF — to cała pointa).
 
-FLOW: dane produktu (REST) → refy+branding (port buildProductRefs/readBranding z wf2-ads) →
+FLOW: dane produktu (REST) → refy+branding (buildProductRefs/readBranding — logika wbudowana) →
 copy+wizje scen (1 call wf2-gpt, json) → sceny (gpt-image-2 /images/edits albo gemini przez
 wf2-gen) → format 4:5 1536×1920 → kompozycja tekst/logo (Pillow) → QA (ad-gate.py) →
 publikacja (panel-sync: storage/creatives/artefakty/koszty/krok).
@@ -23,9 +23,9 @@ PIPELINE ETAPOWY v5 (2026-07-19, feedback Tomka „efekt ręki grafika; podziel 
   D. BRAMKA LITER — pHash cropów nakładek B vs C; przekroczenie progu = finisher odrzucony (zostaje B).
   Koszt ~$0.68/grafika (best-of-2 + finisher) ≈ 2,7 zł. Fal → wf2_costs kind='fal'.
 
-TRYB FULL-DESIGN (default dla nbpro, 2026-07-19 — feedback Tomka „stare kreacje Manusa dużo lepsze"):
+TRYB FULL-DESIGN (default dla nbpro, 2026-07-19 — feedback Tomka „chcę pełną kompozycję banera w jednym akcie"):
   model nano-banana-pro komponuje CAŁY baner w jednym akcie (foto+typografia+pigułki+linie+logo
-  zintegrowane, nie „naklejki" Pillow). Brief = adaptacja wf2-ads buildAdsInstruction (wierność 1:1,
+  zintegrowane, nie „naklejki" Pillow). Brief = buildAdsInstruction (wierność 1:1,
   DNA marki, art-direction per kąt, zakazy uczciwości) + DOKŁADNE polskie napisy verbatim. Best-of-2/kąt.
   BRAMKA TEKSTU = agent (vision) porównuje litera-po-literze; literówka → drugi kandydat / chirurgiczny
   `nano-banana-pro/edit` fix / fallback overlay. `--mode overlay` = stary tor nakładek (fallback).
@@ -257,7 +257,7 @@ def rest_get(table, params):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PORT 1:1 z supabase/functions/wf2-ads/index.ts — kolejność wierności refów.
+# Kolejność wierności refów (logika kreacji wbudowana w ad-forge).
 # curated_image → gallery_curated items[keep] → ali_snapshot main+images → cover_url.
 # ══════════════════════════════════════════════════════════════════════════════
 def build_product_refs(tt, cover_url):
@@ -411,7 +411,7 @@ def fetch_product_bundle(product_id):
                 break
 
     # DEZAMBIGUACJA PRODUKTU (fakty, nie zgadywanie z nazwy marki):
-    # tytuł aukcji TYLKO gdy source=='detail' (zasada z wf2-ads) + alt_pl kadrów galerii (keep, max 3).
+    # tytuł aukcji TYLKO gdy source=='detail' (zasada wierności źródła) + alt_pl kadrów galerii (keep, max 3).
     snap = (tt or {}).get("ali_snapshot") or {}
     snap_title = str(snap.get("title") or "").strip() if str(snap.get("source") or "") == "detail" else ""
     alt_texts = []
@@ -2111,7 +2111,7 @@ def load_logo(logo_url, refs_dir):
 # ══════════════════════════════════════════════════════════════════════════════
 # TRYB FULL-DESIGN (nowy default dla nbpro) — model komponuje CAŁY baner w JEDNYM akcie
 # (foto + typografia + pigułki + linie + logo zintegrowane), a nie nakładki Pillow („naklejki").
-# Brief zaadaptowany z supabase/functions/wf2-ads/index.ts buildAdsInstruction (rev3):
+# Brief buildAdsInstruction (rev3) — kompozycja pełnego banera:
 # wierność 1:1 przez załącznik, DNA marki, art-direction per kąt, zakazy uczciwości COD/Meta,
 # diakrytyki w wersalikach. RÓŻNICA: copy już mamy (call_copy) → podajemy DOKŁADNE napisy verbatim.
 # Bramka tekstu = AGENT (vision) porównuje litera-po-literze; skrypt daje kandydatów + fix chirurgiczny.
@@ -3511,7 +3511,7 @@ def run(args):
 def build_argparser():
     ap = argparse.ArgumentParser(
         prog="ad-forge.py",
-        description="Tor statycznych grafik reklamowych 4:5 (gpt-image-2 / gemini) bez Manusa.")
+        description="Tor statycznych grafik reklamowych 4:5 (silnik fal nano-banana-pro/nb2).")
     ap.add_argument("product_id", nargs="?", help="UUID produktu wf2_products (opcjonalny przy --batch/--batch-project)")
     ap.add_argument("--angles", default="demo,problem,lifestyle",
                     help="kąty po przecinku (demo,problem,lifestyle)")

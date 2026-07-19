@@ -2,7 +2,7 @@
 
 > Jeden z 3 kątów zestawu startowego (`STANDARD-GRAFIKI-SKLEPY.md`). Plik: `ad_2_problem.png` (4:5).
 > Czytaj po SSOT + `PRZEWODNIK-GRAFICZNY.md` (EMOCJA↔PRODUKT). DNA = art-direction kąta `problem`
-> w `buildAdsInstruction()` w `wf2-ads` (rev3 PREMIUM, wzorzec ze starego flow `manus-full-campaign`).
+> w `buildAdsInstruction()` w `ad-forge.py` (rev3 PREMIUM, wzorzec ze starego flow `manus-full-campaign`).
 
 ## KIEDY UŻYWAĆ
 Zimny ruch, gdy ból jest OSTRY i rozpoznawalny (plączące się kable, tępy nóż, rozlana kawa,
