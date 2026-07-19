@@ -35,8 +35,11 @@ const ALLOWED_ANGLES = ['demo', 'problem', 'lifestyle', 'proof']
 // = rozszerzenie na przyszłość (safe-zones w prompcie), nie generowane domyślnie.
 const DEFAULT_FORMATS = ['45']
 const ALLOWED_FORMATS = ['45', '916']
-// Koszt 1 taska Manus (kredyty→USD) — SZACUNEK, konfigurowalny sekretem BUD_MANUS_TASK_USD.
+// Koszt 1 taska Manus — FALLBACK-szacunek, konfigurowalny sekretem BUD_MANUS_TASK_USD.
+// Realny koszt liczymy z task.detail.credit_usage × MANUS_CREDIT_USD (odkrycie 19.07:
+// udany task 3 grafik = 215–340 kredytów ≈ $2.15–3.40, NIE $0.30).
 const MANUS_TASK_USD = parseFloat(Deno.env.get('BUD_MANUS_TASK_USD') || '') || 0.30
+const MANUS_CREDIT_USD = parseFloat(Deno.env.get('MANUS_CREDIT_USD') || '') || 0.01
 // Wall-clock edge ~400 s (pamięć: „edge-wallclock-niewidzialne-pady") — sweep ma twardy deadline.
 const SWEEP_DEADLINE_MS = 300 * 1000
 // Karencja na eventual-consistency Manusa: task.detail bywa 'completed'/'done' ZANIM task.listMessages
@@ -337,10 +340,10 @@ function tolerantParse(t: string): any {
 // Rejestr kreacji (D5/W3.6b-c): UPSERT wf2_creatives (media_type='image') + refresh wf2_artifacts
 // (kind='ad_creative', bez duplikatów po product_id+step_key+label). Blob ads_creatives = źródło panelu.
 // deno-lint-ignore no-explicit-any
-async function registerCreatives(supabase: any, projectId: string | null, productId: string, slugBase: string, ads: Array<{ angle: string; format: string; headline: string; badge: string; image_url: string }>): Promise<void> {
+async function registerCreatives(supabase: any, projectId: string | null, productId: string, slugBase: string, ads: Array<{ angle: string; format: string; headline: string; badge: string; image_url: string }>, taskUsd: number = MANUS_TASK_USD): Promise<void> {
   if (!projectId) return   // wf2_artifacts.project_id NOT NULL — bez projektu nie rejestrujemy
   const nImg = ads.filter((a) => a.image_url).length
-  const perCost = nImg > 0 ? Number((MANUS_TASK_USD / nImg).toFixed(4)) : null
+  const perCost = nImg > 0 ? Number((taskUsd / nImg).toFixed(4)) : null
   const base = slugBase || productId
   for (const a of ads) {
     if (!a.image_url) continue
@@ -376,7 +379,26 @@ async function manusPollAndPull(supabase: any, productId: string, taskId: string
   const det = await detRes.json().catch(() => null)
   if (!detRes.ok || !det) return { done: false }
   const task = det.task || det
+  // Odkrycie 19.07: Manus MA status 'error' (task pada, kredyty bywają naliczone) i pole
+  // credit_usage w task.detail — 'error' = twardy fail NATYCHMIAST (nie czekamy 32 min na timeout).
+  if (['error', 'failed'].includes(String(task.status || ''))) {
+    const burned = Number(task.credit_usage) || 0
+    await supabase.from('wf2_products')
+      .update({ ads_manus_status: 'failed', ads_manus_step: 'manus_error' })
+      .eq('id', productId).eq('ads_manus_status', 'running')
+    if (burned > 0) {
+      const { data: prow0 } = await supabase.from('wf2_products').select('project_id').eq('id', productId).maybeSingle()
+      const pid0 = (prow0 as { project_id?: string })?.project_id || null
+      if (pid0) await logCost(supabase, pid0, productId, Number((burned * MANUS_CREDIT_USD).toFixed(2)), 'manus', `task ${taskId} ERROR — ${burned} kredytów spalonych bez wyniku`)
+    }
+    await postSlackSparing('bud_gen_error', { product_id: productId, stage: 'wf2 reklamy (Manus)', error: `task ${taskId} status=error (${Number(task.credit_usage) || 0} kredytów) — sprawdź manus.im i zresetuj w panelu` })
+    return { done: false }
+  }
   if (!['completed', 'done', 'stopped'].includes(task.status)) return { done: false }
+  // Realny koszt taska z credit_usage (kredyty × MANUS_CREDIT_USD); fallback = stary szacunek.
+  const taskUsd = Number(task.credit_usage) > 0
+    ? Number((Number(task.credit_usage) * MANUS_CREDIT_USD).toFixed(2))
+    : MANUS_TASK_USD
 
   // Slug do ścieżki kanonicznej D6 (bud-assets/<slug>/ads/); fallback bez slug → ai-generated/wf2/<pid>/.
   // started_at — do karencji no_output (patrz niżej): mierzymy okno eventual-consistency od startu tasku.
@@ -477,9 +499,9 @@ async function manusPollAndPull(supabase: any, productId: string, taskId: string
   const wonName = (won[0] as { name?: string }).name || ''
   const wonSlug = String((won[0] as { slug?: string }).slug || slug || '').trim()
   const nImg = ads.filter((x) => x.image_url).length
-  await logActivity(supabase, projectId, 'ads_generated', `${nImg} grafik reklamowych (Manus) gotowe — koszt ~$${MANUS_TASK_USD.toFixed(2)} · task ${taskId}`)
-  await logCost(supabase, projectId, productId, MANUS_TASK_USD, 'manus', `${nImg} grafik (task ${taskId})`)
-  await registerCreatives(supabase, projectId, productId, wonSlug, ads)
+  await logActivity(supabase, projectId, 'ads_generated', `${nImg} grafik reklamowych (Manus) gotowe — koszt $${taskUsd.toFixed(2)} (${Number(task.credit_usage) || '?'} kredytów) · task ${taskId}`)
+  await logCost(supabase, projectId, productId, taskUsd, 'manus', `${nImg} grafik, ${Number(task.credit_usage) || '?'} kredytów (task ${taskId})`)
+  await registerCreatives(supabase, projectId, productId, wonSlug, ads, taskUsd)
   await postSlackSparing('wf2_ads_ready', { project_id: projectId || '', product: wonName, source: 'Manus' })
   return { done: true, ads }
 }
