@@ -69,6 +69,16 @@ Cztery klasy uszczelnień, wszystkie w `detail-lint.py`:
   `assets/pay-badges.html`; tekstowe imitacje marek (poza `.pay-badges`) = P1 pojedynczy /
   P0 klaster (≥2 chipy w kontenerze) / P2 brak kanonu przy CTA; `--fix` = auto-swap klastra
   na blok SSOT (innerHTML kontenera → kanon; wrapper layoutu zachowany; re-run detektora).
+- **SCRIM = PLATEAU (`check_scrim_plateau`, kalibracja masażer 19.07 — most makieta→kod,
+  `STANDARD-LANDING-SKLEPY.md §F3.1b`):** sekcje scenowe desktop (@1280) z full-bleed sceną +
+  blokiem treści nad nią. Pomiar EFEKTU pikselowo (nie implementacji scrimu): eager-load scen →
+  ukryj dzieci bloku (tło bloku + scrim + scena zostają) → screenshot bboxu bloku (captureBeyondViewport,
+  DPR1) → **RAMP = dE między średnim kolorem lewego a prawego pasa bloku (15% szer.)**. Plateau
+  (solidny `--paper` LUB dowolny jednolity panel do krawędzi bloku) = pole płaskie, ramp≈0; miękki
+  fade = scena prześwituje pod prawą krawędzią tekstu, ramp>1.5 = **P1**. Ramp jest odporny na
+  panel w innym jednolitym kolorze niż `--paper` (lewy=prawy → ramp≈0, brak false-positive) — łapie
+  tylko realny poziomy fade. Zmierzone: masażer HEAD ramp {0.1/0/0/0} vs defekt 90712e46 {6.8/2.4/18.4/7.7};
+  Drapek problem ramp 39.6 = realny prześwit POC (framuga+podłoga pod tekstem).
 
 **PASS 5 — SEMANTYKA (vision krzyżowy; OBOWIĄZKOWY po incydencie Odpalaka 17.07: audyt
 live znalazł błędy WYŁĄCZNIE znaczeniowe, których SSIM/linty fizycznie nie widzą — podpisy
@@ -142,8 +152,9 @@ optyczne wyrównanie). P0/P1 blokują oddanie; P2 naprawiać dopóki tanie.
 4. OBRAZY (11: role P/U/S/R, dedup cross-sekcja, kolizje warstw, kadry, światło, ikony)
 5. STANY/INTERAKCJE (6: hover/focus/disabled, empty/error, touch, sticky, reduced-motion)
 6. TREŚĆ (6: placeholdery, zakazane frazy, ceny/format, ton, duplikaty)
-7. OSADZENIE (4: odstępy bloków „przyklejone", crop/upscaling w kaflach, martwa interakcja
-   per viewport, pay-badges kanon vs imitacje) — PASS 4, pokrywa `detail-lint.py`
+7. OSADZENIE (5: odstępy bloków „przyklejone", crop/upscaling w kaflach, martwa interakcja
+   per viewport, pay-badges kanon vs imitacje, scrim=plateau pod blokiem treści §F3.1b) — PASS 4,
+   pokrywa `detail-lint.py`
 
 ## NARZĘDZIA (zbudowane — reużywalne)
 - **`scripts/mockup-tools/detail-lint.py <html> [--out f.json] [--fix]`** — PASS 0 + PASS 4
@@ -153,7 +164,8 @@ optyczne wyrównanie). P0/P1 blokują oddanie; P2 naprawiać dopóki tanie.
   bbox-overlap fotografii, zakazane frazy/placeholdery/podwójne spacje/proste cudzysłowy, sticky
   geometry. **PASS 4:** odstępy bloków (gap<12px różny kind), crop cover >25% + upscaling DPR2,
   interakcja per viewport (hit-test 1280/390 + martwa-property PROBE), pay-badges kanon vs
-  imitacje (`--fix` auto-swap klastra na SSOT).
+  imitacje (`--fix` auto-swap klastra na SSOT), **scrim=plateau** (ramp lewy→prawy pas bloku sceny
+  >1.5 = scena prześwituje pod tekstem, §F3.1b).
   **[TODO domknięcia — właściciel detail-lint, SPEC F7]:** (1) detail-lint NIE emituje jeszcze
   **h-scroll** (`scrollWidth-clientWidth==0`) — dziura do dodania (blok `finalny_pass`
   w `gate-manifest.json` już to odnotowuje). (2) Lista zakazanych fraz `bad` trzymana W KODZIE

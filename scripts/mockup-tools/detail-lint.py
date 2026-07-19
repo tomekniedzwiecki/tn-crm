@@ -16,6 +16,10 @@ getBoundingClientRect), pobiera obrazy (PIL) i liczy:
   - bbox-overlap dwoch fotografii (image-on-image kandydat)
   - placeholdery/TODO/{{}}/lorem, zakazane frazy, podwojne spacje, polskie cudzyslowy
   - sticky geometry (czy zaslania; padding-bottom stopki)
+  - scrim_plateau: sekcje scenowe desktop — czy scrim tworzy SOLIDNY plateau --paper pod
+    CALYM blokiem tresci (STANDARD F3.1b), czy tylko miekki fade (scena przeswituje pod tekstem).
+    Pomiar pikselowy EFEKTU: ukryj dzieci bloku -> screenshot bboxa -> frakcja pikseli
+    odbiegajacych od --paper + edge-density. Komplementarny do "najgorszego piksela pod tekstem".
 Wynik: lista findingow JSON {warstwa, lokalizacja, problem, severity, fix, wykryte_przez}.
 Wymaga: Chrome + numpy + Pillow.
 """
@@ -225,7 +229,165 @@ PROBE_JS = r"""
 })()
 """
 
-def load_and_analyze(target, width, height, mobile):
+# scrim_plateau (PASS 4, kalibracja masazer 19.07) — most makieta->kod: gdy makieta ma SPLIT
+# (solidny kremowy panel pod trescia ~40-50% szer.), scrim W KODZIE MUSI odtworzyc PLATEAU:
+# solidny var(--paper) OD KRAWEDZI DO KRAWEDZI BLOKU TRESCI, dopiero za nia fade. Miekki gradient
+# od ~34% (opacity ~0.4 przy krawedzi tekstu) = scena przeswituje pod tekstem (STANDARD F3.1b).
+# Detekcja sekcji scenowej: full-bleed media (picture/img/video, >=90% szer. i >=55% wys. sekcji)
+# + blok tresci (kolumna copy z naglowkiem) NACHODZACY bboxem na scene. Mierzy EFEKT, nie
+# implementacje: nie wymaga elementu .scrim. Tag bloku data-scrimcheck do pozniejszego ukrycia.
+SCENE_JS = r"""
+(function(){
+  function clsOf(el){var c=el.className;return (c&&c.baseVal!==undefined)?c.baseVal:(typeof c==='string'?c:'');}
+  function vis(el){var cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden')return false;var r=el.getBoundingClientRect();return r.width>0&&r.height>0;}
+  var VWW=window.innerWidth;
+  var out={cands:[],paper:getComputedStyle(document.documentElement).getPropertyValue('--paper').trim()};
+  var idx=0;
+  var secs=document.querySelectorAll('section,header');
+  Array.prototype.forEach.call(secs,function(sec){
+    var sr=sec.getBoundingClientRect();
+    if(sr.width<=0||sr.height<=0)return;
+    // 1) full-bleed scene layer: picture/img/video pokrywajace sekcje
+    var media=sec.querySelectorAll('picture,video,img');
+    var sceneEl=null, sceneR=null;
+    Array.prototype.forEach.call(media,function(el){
+      if(sceneEl)return; if(!vis(el))return;
+      var r=el.getBoundingClientRect();
+      if(r.width>=sr.width*0.90 && r.height>=sr.height*0.55){
+        // podnies do NAJWYZSZEGO przodka w sekcji o tym samym (full-bleed) bboxie = kontener sceny
+        var host=el;
+        while(host.parentElement && host.parentElement!==sec){
+          var pr=host.parentElement.getBoundingClientRect();
+          if(pr.width>=sr.width*0.90 && pr.height>=sr.height*0.55 && Math.abs(pr.width-r.width)<8 && Math.abs(pr.height-r.height)<8){host=host.parentElement;} else break;
+        }
+        sceneEl=host; sceneR=host.getBoundingClientRect();
+      }
+    });
+    if(!sceneEl)return;
+    // 2) blok tresci = kolumna copy zawierajaca naglowek, wezsza niz sekcja
+    var head=sec.querySelector('h1,h2,.hero-title,.h2');
+    if(!head||!vis(head))return;
+    var node=head, best=null;
+    while(node&&node!==sec){
+      var nr=node.getBoundingClientRect();
+      if(nr.width>0 && nr.width<=sr.width*0.85 && vis(node)) best=node;
+      var par=node.parentElement; if(!par)break;
+      var pr=par.getBoundingClientRect(); if(pr.width>sr.width*0.85) break;
+      node=par;
+    }
+    if(!best) return;
+    var br=best.getBoundingClientRect();
+    // 3) nachodzenie bboxu bloku na scene (obie osie)
+    var ox=Math.min(br.right,sceneR.right)-Math.max(br.left,sceneR.left);
+    var oy=Math.min(br.bottom,sceneR.bottom)-Math.max(br.top,sceneR.top);
+    if(ox<=4||oy<=4)return;
+    idx++;
+    best.setAttribute('data-scrimcheck',String(idx));
+    sceneEl.setAttribute('data-sceneflag',String(idx));
+    var scrim=sec.querySelector('[class*="scrim"]'); if(scrim) scrim.setAttribute('data-scrimflag',String(idx));
+    out.cands.push({sec:(sec.id||clsOf(sec).split(' ')[0]||'?'), idx:idx,
+      bx:br.left+window.scrollX, by:br.top+window.scrollY, bw:br.width, bh:br.height,
+      sx:sceneR.left+window.scrollX, sy:sceneR.top+window.scrollY, sw:sceneR.width, sh:sceneR.height,
+      vw:VWW, hasScrim: !!scrim});
+  });
+  return JSON.stringify(out);
+})()
+"""
+
+# Ukryj tekst/dzieci bloku (tlo bloku, scrim i scena ZOSTAJA widoczne) -> mierzymy backdrop pod tekstem.
+SCRIM_HIDE_JS = r"""
+(function(){
+  var blocks=document.querySelectorAll('[data-scrimcheck]');
+  Array.prototype.forEach.call(blocks,function(b){
+    var id=b.getAttribute('data-scrimcheck');
+    var sec=b.closest('section,header')||document.body;
+    Array.prototype.forEach.call(sec.querySelectorAll('*'),function(e){
+      if(e===b) return;                                  // sam blok: zostaje (jego tlo zostaje)
+      if(e.contains(b)) return;                           // przodek bloku (wrapper): zostaje
+      if(e.closest('[data-sceneflag="'+id+'"]')) return;  // scena i jej dzieci: zostaja
+      if(e.closest('[data-scrimflag="'+id+'"]')) return;  // scrim i jego dzieci: zostaja
+      e.style.visibility='hidden';                        // reszta (tekst, badge, dekory) -> ukryj
+    });
+  });
+  return '1';
+})()
+"""
+
+def _parse_rgb(s):
+    s=(s or "").strip()
+    m=re.match(r'#([0-9a-fA-F]{6})$', s)
+    if m:
+        h=m.group(1); return (int(h[0:2],16),int(h[2:4],16),int(h[4:6],16))
+    m=re.match(r'#([0-9a-fA-F]{3})$', s)
+    if m:
+        h=m.group(1); return (int(h[0]*2,16),int(h[1]*2,16),int(h[2]*2,16))
+    m=re.match(r'rgba?\(([^)]+)\)', s)
+    if m:
+        p=[float(x) for x in m.group(1).split(',')[:3]]; return (p[0],p[1],p[2])
+    return (246,241,231)  # fallback --paper masazer
+
+# progi scrim_plateau (kalibracja TDD masazer 19.07: negatyw 90712e46 vs HEAD naprawiony).
+# GLOWNY dyskryminator = RAMP: dE miedzy srednim kolorem lewego a prawego pasa bloku (15% szer.).
+# Plateau (solidny --paper LUB dowolny jednolity panel do krawedzi bloku) = pole PLASKIE -> ramp~0.
+# Miekki fade = poziomy RAMP paper->scena pod tekstem -> ramp>0. Ramp jest odporny na panel w innym
+# jednolitym kolorze niz --paper (wtedy lewy=prawy=ten kolor -> ramp~0, brak false-positive).
+# Zmierzone: HEAD ramp {hero .1, prob 0, bezk 0, final 0} vs DEFEKT {6.8, 2.4, 18.4, 7.7}.
+SCRIM_RAMP_MIN = 1.5     # dE lewy->prawy pas > 1.5 = scrim bez plateau (przeswit pod prawa krawedzia)
+SCRIM_DEV_PIXEL = 18     # euclidean RGB dist od --paper -> piksel "odbiega" (do bad_frac raportowego)
+
+def _strip_mean(arr, a, b):
+    W=arr.shape[1]; lo=int(W*a); hi=max(int(W*b), lo+1)
+    return arr[:, lo:hi, :].reshape(-1,3).mean(axis=0)
+
+def scrim_metrics(im, paper):
+    arr=np.asarray(im).astype(np.float32)  # H,W,3
+    p=np.array(paper,dtype=np.float32)
+    dev=np.sqrt(((arr-p)**2).sum(axis=2))
+    lmc=_strip_mean(arr,0.0,0.15); rmc=_strip_mean(arr,0.85,1.0)
+    l_dev=float(np.sqrt(((lmc-p)**2).sum())); r_dev=float(np.sqrt(((rmc-p)**2).sum()))
+    ramp=float(np.sqrt(((rmc-lmc)**2).sum()))
+    return {"median_dev":round(float(np.median(dev)),1),
+            "p90_dev":round(float(np.percentile(dev,90)),1),
+            "bad_frac":round(float((dev>SCRIM_DEV_PIXEL).mean()),3),
+            "l_dev":round(l_dev,1),"r_dev":round(r_dev,1),"ramp":round(ramp,1)}
+
+def measure_scrim(ws):
+    """Pomiar plateau scrimu na desktopie: eager-load scen, kolektor, ukrycie tekstu,
+    screenshot bboxu bloku (captureBeyondViewport, DPR1), metryki pikselowe."""
+    try:
+        # eager-load lazy scen + rozgrzej lazyload (scroll)
+        ws.call("Runtime.evaluate",{"expression":"document.querySelectorAll('img').forEach(function(i){try{i.loading='eager';}catch(e){}});window.scrollTo(0,document.body.scrollHeight);"})
+        time.sleep(1.4)
+        ws.call("Runtime.evaluate",{"expression":"window.scrollTo(0,0);"}); time.sleep(0.5)
+        res=ws.call("Runtime.evaluate",{"expression":SCENE_JS,"returnByValue":True},timeout=30)
+        info=json.loads(res.get("result",{}).get("value") or '{"cands":[],"paper":""}')
+    except Exception:
+        return []
+    cands=info.get("cands",[]);
+    if not cands: return []
+    paper=_parse_rgb(info.get("paper",""))
+    try:
+        ws.call("Runtime.evaluate",{"expression":SCRIM_HIDE_JS,"returnByValue":True},timeout=20)
+        time.sleep(0.25)
+    except Exception:
+        return []
+    out=[]; MARGIN=16
+    for c in cands:
+        x=c["bx"]+MARGIN; y=c["by"]+MARGIN; w=c["bw"]-2*MARGIN; h=c["bh"]-2*MARGIN
+        if w<40 or h<40: continue
+        try:
+            shot=ws.call("Page.captureScreenshot",{"format":"png","captureBeyondViewport":True,
+                "clip":{"x":x,"y":y,"width":w,"height":h,"scale":1}},timeout=30)
+            im=Image.open(io.BytesIO(base64.b64decode(shot["data"]))).convert("RGB")
+        except Exception:
+            continue
+        m=scrim_metrics(im, paper)
+        m.update({"sec":c["sec"],"bw":round(c["bw"]),"bh":round(c["bh"]),"hasScrim":c.get("hasScrim",False),
+                  "paper":[int(round(v)) for v in paper]})
+        out.append(m)
+    return out
+
+def load_and_analyze(target, width, height, mobile, do_scrim=False):
     chrome=chrome_path(); port=free_port(); profile=tempfile.mkdtemp(prefix="lint-")
     url=target if target.startswith(("http://","https://")) else "file:///"+os.path.abspath(target).replace("\\","/")
     args=[chrome,"--headless=new","--disable-gpu","--hide-scrollbars","--no-first-run",
@@ -252,6 +414,14 @@ def load_and_analyze(target, width, height, mobile):
             val["probe"]=json.loads(pr.get("result",{}).get("value") or '{"sliders":[]}')
         except Exception:
             val["probe"]={"sliders":[]}
+        # scrim_plateau (PASS 4) — OSTATNI krok: mutuje visibility dzieci blokow tresci
+        if do_scrim:
+            try:
+                val["scrim"]=measure_scrim(ws)
+            except Exception:
+                val["scrim"]=[]
+        else:
+            val["scrim"]=[]
         return val
     finally:
         proc.terminate()
@@ -364,6 +534,15 @@ def check_crop(D, add, fetch):
             add("obrazy",im["sec"]+" / "+base,
                 "Upscaling przy DPR2: render*2 (%dpx) / natural (%dpx) = %.2fx"%(rw*2,nw,ups2),
                 sev,"Podmien na wieksza rozdzielczosc (>=2x szerokosci renderu)","skrypt")
+
+def check_scrim_plateau(D, add):
+    """Sekcje scenowe desktop: scena przeswituje pod blokiem tresci = scrim bez plateau (F3.1b)."""
+    for m in D.get("scrim",[]):
+        if m["ramp"]<=SCRIM_RAMP_MIN: continue
+        add("obrazy", m["sec"]+" / scrim (blok %dx%dpx)"%(m["bw"],m["bh"]),
+            "Scena przeswituje pod blokiem tresci — scrim bez plateau (STANDARD F3.1b): prawa krawedz bloku odbiega od --paper rgb%s o dE=%.1f, ramp lewy->prawy pas=%.1f (plateau=~0), bad_frac(dev>%d)=%.0f%%, p90_dev=%.1f"
+              %(tuple(m.get("paper",[])), m["r_dev"], m["ramp"], SCRIM_DEV_PIXEL, m["bad_frac"]*100, m["p90_dev"]),
+            "P1","Zamien miekki gradient na PLATEAU: solidny var(--paper) od 0%% do KRAWEDZI bloku tresci (~46-50%%), fade dopiero za nia. Self-check: krawedz bloku lezy na scrimie o opacity >=~0.9 (F3.1b)","skrypt")
 
 def check_interactive(D, add, vw):
     """Hit-test + martwa interakcja per viewport."""
@@ -488,7 +667,7 @@ def main():
         nsw,notes=autoswap_paybadges(target)
         print("PAYBADGES --fix: podmieniono %d klastrow. %s"%(nsw,"; ".join(notes[:4])))
 
-    D_desk=load_and_analyze(target,1280,900,False)
+    D_desk=load_and_analyze(target,1280,900,False,do_scrim=True)
     D_mob=load_and_analyze(target,390,844,True)
 
     # ---- fonts ----
@@ -653,11 +832,13 @@ def main():
     check_interactive(D_desk, add, 1280)
     check_interactive(D_mob, add, 390)
     paybadges_guard(D_desk, add)
+    check_scrim_plateau(D_desk, add)
 
     result={"findings":findings,"raw":{"fonts":D_desk["fonts"],"sizes":D_desk["sizes"],
             "n_imgs":len(D_desk["imgs"]),"sticky":D_desk.get("sticky"),
             "n_blocks":len(D_desk.get("blocks",[])),"n_paychips":len(D_desk.get("paychips",[])),
-            "sliders":D_desk.get("probe",{}).get("sliders",[])}}
+            "sliders":D_desk.get("probe",{}).get("sliders",[]),
+            "scrim":D_desk.get("scrim",[])}}
     txt=json.dumps(result,ensure_ascii=False,indent=1)
     if out:
         io.open(out,"w",encoding="utf-8").write(txt)
