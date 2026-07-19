@@ -330,8 +330,19 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
 3. **MAKIETY WSZYSTKICH SEKCJI planu** (pokrycie CAŁEGO planu — tylko czysta stopka bez
    makiety), przyrostowo: hero+1 → po 2. Każda: ref = styl-master + realne zdjęcie produktu
    gdy w kadrze; 3:2 DUŻE; polskie teksty przykładowe; pełny układ UI.
-4. **PARY desktop+mobile (F2.4)**: z każdej makiety desktop wariant MOBILE 2:3. ⚠️ NIE „adaptuj
-   referencję" generycznie — gpt-image nie odwzorowuje tekstu z obrazu, regeneruje z priora
+4. **PARY desktop+mobile (F2.4)**: z każdej makiety desktop wariant MOBILE 2:3.
+   **🔴 MOBILE = PROJEKT OD ZERA POD TELEFON, NIE ŚCIŚNIĘTY DESKTOP (Tomek 19.07 na masażerze,
+   po obejrzeniu makiety hero-m: „wzorzec jest źle, bo to wygląda jak ściśnięty desktop —
+   poprawić wszystkie makiety mobile, aby na pewno były pod mobile").** Desktop-ref służy TYLKO
+   do stylu/bohatera/sceny — ⛔ ZAKAZ dziedziczenia PROPORCJI UKŁADU (rozmiar sceny vs treści,
+   kolejność, gęstość). Kadr 2:3 makiety mobile = FOLD telefonu: WSZYSTKO decydujące MUSI być
+   w kadrze — dla hero: kompaktowa scena (produkt duży, ale scena NIE zjada >45% wysokości) +
+   hook big-type + karta mikro-oferty (cena → CTA → pay-row) WIDOCZNA W KADRZE; max 1 linia
+   korzyści (sub 3-liniowy = desktopowa gęstość = FAIL). Sekcje: treść ZREDUKOWANA vs desktop
+   (mobile = mniej), tap-targety duże, pion. KRYTYK F2 dostaje nowe pytanie (7): „czy ta makieta
+   wygląda jak zaprojektowana OD ZERA pod telefon (fold z ceną/CTA dla hero), czy jak zmniejszony
+   desktop?" — zmniejszony desktop = REGENERACJA.
+   ⚠️ NIE „adaptuj referencję" generycznie — gpt-image nie odwzorowuje tekstu z obrazu, regeneruje z priora
    i WSTRZYKUJE dropship-claims (przekreślenia, „NR 1 W POLSCE", darmowa dostawa)! Mobile
    generować per-sekcja z DOKŁADNĄ treścią wypisaną w prompcie (jak desktop); referencja
    desktop tylko dla stylu/układu. Mobile-makieta WIĄŻE dla 390px, desktopowa dla ≥768px.
