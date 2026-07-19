@@ -23,9 +23,16 @@ PIPELINE ETAPOWY v5 (2026-07-19, feedback Tomka „efekt ręki grafika; podziel 
   D. BRAMKA LITER — pHash cropów nakładek B vs C; przekroczenie progu = finisher odrzucony (zostaje B).
   Koszt ~$0.68/grafika (best-of-2 + finisher) ≈ 2,7 zł. Fal → wf2_costs kind='fal'.
 
+TRYB FULL-DESIGN (default dla nbpro, 2026-07-19 — feedback Tomka „stare kreacje Manusa dużo lepsze"):
+  model nano-banana-pro komponuje CAŁY baner w jednym akcie (foto+typografia+pigułki+linie+logo
+  zintegrowane, nie „naklejki" Pillow). Brief = adaptacja wf2-ads buildAdsInstruction (wierność 1:1,
+  DNA marki, art-direction per kąt, zakazy uczciwości) + DOKŁADNE polskie napisy verbatim. Best-of-2/kąt.
+  BRAMKA TEKSTU = agent (vision) porównuje litera-po-literze; literówka → drugi kandydat / chirurgiczny
+  `nano-banana-pro/edit` fix / fallback overlay. `--mode overlay` = stary tor nakładek (fallback).
+
 CLI:
   python ad-forge.py <product_id> [--angles demo,problem,lifestyle] [--engine nbpro|gptimage|gemini]
-    [--out DIR] [--dry] [--no-register] [--no-finisher] [--quality high|medium]
+    [--mode auto|fulldesign|overlay] [--out DIR] [--dry] [--no-register] [--no-finisher] [--quality high|medium]
   --dry: pobierz dane+refy, zbuduj prompty i copy, wypisz plan — BEZ generacji i BEZ rejestracji.
 
 Uruchamiać venv: scripts/mockup-tools/.venv/Scripts/python.exe
@@ -1846,6 +1853,220 @@ def load_logo(logo_url, refs_dir):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# TRYB FULL-DESIGN (nowy default dla nbpro) — model komponuje CAŁY baner w JEDNYM akcie
+# (foto + typografia + pigułki + linie + logo zintegrowane), a nie nakładki Pillow („naklejki").
+# Brief zaadaptowany z supabase/functions/wf2-ads/index.ts buildAdsInstruction (rev3):
+# wierność 1:1 przez załącznik, DNA marki, art-direction per kąt, zakazy uczciwości COD/Meta,
+# diakrytyki w wersalikach. RÓŻNICA: copy już mamy (call_copy) → podajemy DOKŁADNE napisy verbatim.
+# Bramka tekstu = AGENT (vision) porównuje litera-po-literze; skrypt daje kandydatów + fix chirurgiczny.
+# ══════════════════════════════════════════════════════════════════════════════
+FD_HEADER = (
+    "You are a senior creative director at a top D2C advertising agency. Design ONE finished, "
+    "polished 4:5 vertical ad banner (IG/FB feed) for a Polish single-product store with CASH ON "
+    "DELIVERY (płatność przy odbiorze). Output a complete, ready-to-run ad — YOU compose EVERYTHING "
+    "as one cohesive design: photography, layout, typography, pills/labels, connector lines and logo "
+    "placement fully INTEGRATED into the image (this is graphic design, NOT stickers pasted on a "
+    "photo). Agency-grade: cinematic light, deliberate composition, generous negative space, crisp "
+    "kerning; the FEWER elements, the more expensive it looks."
+)
+FD_PRODUCT = (
+    "\n\nPRODUCT — 1:1 FIDELITY (sacred): the FIRST reference image is the EXACT product. Reproduce it "
+    "1:1 wherever it appears — same shape, colors, materials, details and on-product branding. Reproduce "
+    "ONLY the physical product; IGNORE and DROP any arrows, chevrons, watermarks or text baked into the "
+    "reference. Do not reinterpret, restyle or invent a variant."
+)
+FD_HONESTY = (
+    "\n\nHONESTY (Meta 2026 / COD): NO invented urgency or countdowns; NO shipping-time or 'in-stock in "
+    "Poland' claims; NO invented numbers, stars or reviews; NO foreign brand logos; NO medical/wellness "
+    "claims; NO before/after of a human body; NO personal attributes accusing the viewer. Render NO price "
+    "or number except where explicitly listed below."
+)
+FD_TEXT_RULE = (
+    "\n\nEXACT TEXT — render these Polish strings VERBATIM, character-for-character, WITH Polish diacritics "
+    "PRESERVED EVEN IN UPPERCASE (keep Ó Ń Ś Ż Ź Ą Ę Ł Ć — never flatten to O N S Z A E L C). Do NOT "
+    "translate, paraphrase, reorder, add or drop any word or letter. Use a clean bold modern sans. "
+    "Every glyph must be sharp and spelled correctly. Put NO other text anywhere on the image.\n"
+)
+
+FD_ART = {
+    "demo": (
+        "ART DIRECTION — DEMO / ANATOMY (mechanism 'wow'): the product is the hero in a BRIGHT, warm, real "
+        "home interior with soft natural daylight (NEVER a white studio, NEVER a dark night scene) — a dog "
+        "interacting naturally with it. A big question headline sits across a clean calm area at the top. "
+        "2-3 short callout labels, each connected by ONE thin elegant line/dot to the exact product part it "
+        "names. A small cash-on-delivery trust pill and a clear CTA button anchored at the bottom. Everything "
+        "integrated, premium, un-cluttered."
+    ),
+    "problem": (
+        "ART DIRECTION — PROBLEM / PRZED→PO (transformation, split-screen): a vertical 50/50 split. LEFT "
+        "(PRZED): a desaturated, cool, tense documentary photo of a frustrated owner struggling to clip an "
+        "anxious dog's nails — WITHOUT the product. RIGHT (PO): a bright, warm photo of the same kind of dog "
+        "happily using the product. A crisp thin divider between halves. A big transformation headline across "
+        "the top. A muted 'PRZED' tag on the left, an accent 'PO' tag on the right. At the bottom: the real "
+        "price block and a short CTA. Strong visual contrast between the two sides."
+    ),
+    "lifestyle": (
+        "ART DIRECTION — LIFESTYLE / UGC (organic post): an authentic phone-style photo in warm golden-hour "
+        "light in a real living room — a dog pawing at the product while an owner's hand offers a treat. It "
+        "must look like a real customer's social post, NOT a studio ad: candid framing, slight imperfection, "
+        "no stocky perfection. Minimal graphics: ONE small slightly-rotated hand-written sticker note with a "
+        "curved arrow pointing at the treat drawer, plus a small rounded 'za pobraniem' capsule in a corner "
+        "and the small brand logo. No banner bars, no big pills."
+    ),
+}
+
+
+def _fd_txt(s):
+    return re.sub(r"\[\[|\]\]", "", str(s or "")).strip()
+
+
+def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl):
+    """Zwraca (prompt, intended_texts). intended_texts = DOKŁADNE napisy PL do weryfikacji przez agenta."""
+    brand = b.get("brand_name") or ""
+    paleta = b.get("paleta") or ""
+    fonty = b.get("fonty") or ""
+    hook = _fd_txt(ca.get("hook_baner") or ca.get("headline") or "").upper()
+    parts = [FD_HEADER, FD_PRODUCT]
+
+    brand_line = "\n\nBRAND: %s." % (brand or "(no name — neutral, consistent branding; do NOT invent a name)")
+    if has_logo:
+        brand_line += (" The SECOND reference image is the brand LOGO — place it 1:1 (do NOT redraw its shape, "
+                       "letters or colors) in ONE corner at 8-12% of frame height, never centered.")
+    if has_styl:
+        brand_line += " The LAST reference image is the brand's visual STYLE-MASTER — keep mood and palette consistent with it."
+    if paleta:
+        brand_line += "\nBrand palette (use these colors): %s." % paleta
+    if fonty:
+        brand_line += "\nTypography vibe: %s (clean bold modern sans, Polish text)." % fonty
+    parts.append(brand_line)
+    parts.append("\n\n" + FD_ART.get(angle, FD_ART["lifestyle"]))
+
+    intended, lines = [], []
+
+    def add(label, s):
+        s = _fd_txt(s)
+        if s:
+            intended.append(s)
+            lines.append('- %s: "%s"' % (label, s))
+
+    if angle == "demo":
+        add("Big headline (top)", hook)
+        callouts = [c for c in (ca.get("callouts_demo") or []) if _fd_txt(c)][:3]
+        hints = ["→ points to the treat drawer/compartment", "→ points to the black sandpaper scratch surface",
+                 "→ points to the pull loop / drawer"]
+        for i, c in enumerate(callouts):
+            add("Callout label %d %s" % (i + 1, hints[i] if i < len(hints) else ""), _fd_txt(c).upper())
+        add("Trust pill (bottom)", "PŁATNOŚĆ PRZY ODBIORZE")
+        add("CTA button (bottom)", "ZAMÓW ZA POBRANIEM")
+    elif angle == "problem":
+        add("Big transformation headline (top)", hook)
+        add("Left tag (muted)", "PRZED")
+        add("Right tag (accent)", "PO")
+        if cena:
+            add("Price (bottom-left, large)", cena)
+            add("Under price (small)", "za pobraniem")
+        add("CTA button (bottom-right)", "ZAMÓW")
+    else:  # lifestyle
+        add("Hand-written sticker note (with arrow to product)", hook)
+        add("Small capsule (corner)", "za pobraniem")
+
+    parts.append(FD_TEXT_RULE + "\n".join(lines))
+    parts.append(FD_HONESTY)
+    parts.append("\n\nRender at maximum sharpness, aspect 4:5, feed-ready. Output a single finished banner image.")
+    return "".join(parts), intended
+
+
+def fulldesign_surgical_fix(out_dir, slug, angle, bad, good, state):
+    """Chirurgiczny fix JEDNEGO napisu na gotowym banerze (nano-banana-pro/edit): zmień tylko '<bad>'
+    → '<good>', nie ruszaj reszty. Rehost aktualnego finału + edit + zapis. Zwraca (path, added_usd)."""
+    b_path = os.path.join(out_dir, "ad_%s_45.png" % angle)
+    url = _fal().store(b_path, "adforge/%s/fdfix_in_%s.png" % (slug, angle))
+    prompt = ("Fix ONLY the text \"%s\" so it reads exactly \"%s\" (Polish, keep diacritics Ó Ń Ś Ż Ź Ą Ę Ł Ć). "
+              "Match the existing font, size, color, weight and position pixel-for-pixel. Do NOT change, move, "
+              "restyle or re-render ANYTHING else in the image — no other text, product, colors or layout." % (bad, good))
+    blob = gen_nbpro_one(prompt, [url], "fdfix_%s" % angle)
+    final = to_45(_pil()[0].open(io.BytesIO(blob)).convert("RGB")).resize((FINAL_W, FINAL_H), _pil()[0].LANCZOS)
+    final.save(b_path, "PNG")
+    state.setdefault("fd_fixes", []).append({"angle": angle, "bad": bad, "good": good})
+    log("fulldesign fix [%s]: '%s' → '%s' zapisany do %s" % (angle, bad, good, b_path))
+    return b_path, NBPRO_USD
+
+
+def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, styl_url, packshots,
+                  packshot_local, styl_local, logo_url, refs_dir, state):
+    """ETAP FULL-DESIGN: rehost refów (packshot+logo+styl) → best-of-2 per kąt → auto-pick (ostrość) →
+    zapis kandydatów + provisional finału + intended_texts do state. Zwraca (creatives, total_usd)."""
+    Image = _pil()[0]
+    # rehost refów (packshot = image[0], logo = image[1], styl = image[2])
+    log("FULL-DESIGN: rehost refów przez fal.store…")
+    packshot_fal = rehost_ref(packshot_local[0], "adforge/%s/fd_packshot.%s" %
+                              (slug, packshot_local[0].rsplit(".", 1)[-1]), packshots[0], state) if packshot_local else None
+    logo_local = os.path.join(refs_dir, "logo-combo.png")
+    logo_fal = rehost_ref(logo_local, "adforge/%s/fd_logo.png" % slug, logo_url, state) \
+        if (logo_url and os.path.isfile(logo_local)) else None
+    styl_fal = rehost_ref(styl_local, "adforge/%s/fd_styl.%s" % (slug, styl_local.rsplit(".", 1)[-1]), styl_url, state) \
+        if styl_local else None
+    try:
+        io.open(os.path.join(out_dir, "adforge-state.json"), "w", encoding="utf-8").write(json.dumps(state, ensure_ascii=False, indent=1))
+    except Exception:
+        pass
+
+    cena = clean_price(bundle.get("cena_pl"))
+    image_urls = [u for u in (packshot_fal, logo_fal, styl_fal) if u]
+    fd_dir = os.path.join(out_dir, "fulldesign")
+    intended_by_angle, jobs = {}, []
+    print("-" * 88)
+    print("FULL-DESIGN PROMPTY + DOKŁADNE NAPISY (bramka tekstu):")
+    for a in angles:
+        ca = copy.get(a) or {}
+        prompt, intended = build_fulldesign(a, ca, b, palette, cena, bool(logo_fal), bool(styl_fal))
+        intended_by_angle[a] = intended
+        print("  ── KĄT %s ── napisy do wyrenderowania: %s" % (a.upper(), intended))
+        for c in range(BEST_OF):
+            jobs.append({"tag": "%s_c%d" % (a, c), "model": NBPRO_EDIT, "image_urls": image_urls, "prompt": prompt})
+    got = gen_nbpro_batch(jobs, fd_dir)
+    total_usd = NBPRO_USD * len(jobs)
+
+    creatives = []
+    cand_by_angle = {}
+    for a in angles:
+        ca = copy.get(a) or {}
+        cand_paths = [got.get("%s_c%d" % (a, c)) for c in range(BEST_OF)]
+        cand_paths = [pp for pp in cand_paths if pp and os.path.isfile(pp)]
+        if not cand_paths:
+            raise SystemExit("full-design: brak kandydatów dla %s (reclaim: fal.py reclaim %s)" % (a, fd_dir))
+        finals = [to_45(Image.open(pp).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS) for pp in cand_paths]
+        best_i, scores = pick_best_candidate(finals, (0.0, 0.0, 1.0, 1.0))
+        cand_files = []
+        for c, f in enumerate(finals):
+            cf = os.path.join(out_dir, "ad_%s_45_c%d.png" % (a, c))
+            f.save(cf, "PNG")
+            cand_files.append(cf)
+        out_path = os.path.join(out_dir, "ad_%s_45.png" % a)
+        finals[best_i].save(out_path, "PNG")                       # provisional (agent zweryfikuje tekst)
+        cand_by_angle[a] = cand_files
+        log("  [%s] best-of-%d → prowizorycznie #%d (ostrość); kandydaci: %s" %
+            (a, len(finals), best_i, [os.path.basename(x) for x in cand_files]))
+        creatives.append({"angle": a, "path": out_path,
+                          "headline": (ca.get("hook_baner") or ca.get("headline") or ""),
+                          "primary_text": ca.get("primary_text") or ""})
+
+    state["mode"] = "fulldesign"
+    state["fd_intended"] = intended_by_angle
+    state["fd_candidates"] = {a: [os.path.basename(x) for x in v] for a, v in cand_by_angle.items()}
+    state["engine"] = "nbpro"
+    merged_copy = dict((state.get("copy") or {}))
+    for a in angles:
+        merged_copy[a] = copy.get(a) or {}
+    state["copy"] = merged_copy
+    try:
+        io.open(os.path.join(out_dir, "adforge-state.json"), "w", encoding="utf-8").write(json.dumps(state, ensure_ascii=False, indent=1))
+    except Exception:
+        pass
+    return creatives, total_usd
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ORKIESTRACJA.
 # ══════════════════════════════════════════════════════════════════════════════
 def do_recompose(args, bundle, out_dir, palette, logo_img, angles):
@@ -1916,8 +2137,12 @@ def run(args):
     angles = [a.strip().lower() for a in args.angles.split(",") if a.strip()]
     angles = [a for a in angles if a in ALLOWED_ANGLES] or DEFAULT_ANGLES
 
-    log("Produkt %s · kąty=%s · engine=%s · quality=%s%s" %
-        (pid, angles, args.engine, args.quality, "  [DRY]" if args.dry else ""))
+    mode = getattr(args, "mode", "auto")
+    if mode == "auto":                                             # nbpro → full-design; reszta → overlay
+        mode = "fulldesign" if args.engine == "nbpro" else "overlay"
+
+    log("Produkt %s · kąty=%s · engine=%s · mode=%s · quality=%s%s" %
+        (pid, angles, args.engine, mode, args.quality, "  [DRY]" if args.dry else ""))
     bundle = fetch_product_bundle(pid)
     p = bundle["product"]
     b = bundle["branding"]
@@ -1975,7 +2200,49 @@ def run(args):
             print("     pain_vis : %s" % ca.get("pain_vision"))
             print("     checkmark: %s" % ca.get("fakt_checkmarki"))
 
-    # ── plan scen + prompty + prompt-lint ──
+    # ── stan (fal_refs cache + copy + intended texts) ──
+    state_path = os.path.join(out_dir, "adforge-state.json")
+    state = {}
+    if os.path.isfile(state_path):
+        try:
+            state = json.loads(io.open(state_path, encoding="utf-8").read())
+        except Exception:
+            state = {}
+
+    # ── FULL-DESIGN (default nbpro): model komponuje CAŁY baner; AGENT = bramka tekstu ──
+    if mode == "fulldesign":
+        if args.engine != "nbpro":
+            raise SystemExit("--mode fulldesign wymaga --engine nbpro")
+        if args.dry:
+            print("-" * 88)
+            est = NBPRO_USD * BEST_OF * len(angles)
+            print("[DRY] full-design — %d kątów × best-of-%d = ~$%.2f (~%.2f zł)" %
+                  (len(angles), BEST_OF, est, est * 4.0))
+            return 0
+        print("-" * 88)
+        styl_local = None
+        if styl_url:
+            try:
+                blob, ct = _download(styl_url)
+                styl_local = os.path.join(refs_dir, "styl-master." + _ct_ext(ct))
+                io.open(styl_local, "wb").write(blob)
+            except Exception as e:
+                log("styl-master pobranie nieudane: %s" % e)
+        packshot_local = []
+        for i, u in enumerate(packshots):
+            try:
+                pblob, pct = _download(u)
+                pth = os.path.join(refs_dir, "packshot-%d.%s" % (i, _ct_ext(pct)))
+                io.open(pth, "wb").write(pblob)
+                packshot_local.append(pth)
+            except Exception as e:
+                log("packshot %d pobranie nieudane: %s" % (i, e))
+        creatives, total_usd = do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles,
+                                             styl_url, packshots, packshot_local, styl_local, logo_url, refs_dir, state)
+        return finish(args, bundle, "nbpro", out_dir, creatives, total_usd, mode="fulldesign",
+                      regions_by_angle={}, state=state, run_finisher_pass=False)
+
+    # ── plan scen + prompty + prompt-lint (tryb OVERLAY) ──
     print("-" * 88)
     print("PLAN SCEN + PROMPTY (kierunkowe, produkt = referencja):")
     demo_borrows = ("demo" in angles) and any(x in angles for x in ("problem", "lifestyle"))
@@ -2137,8 +2404,10 @@ def build_argparser():
                     help="kąty po przecinku (demo,problem,lifestyle)")
     ap.add_argument("--engine", default="nbpro", choices=["nbpro", "gptimage", "gemini"],
                     help="silnik scen (domyślnie nbpro = fal-ai/nano-banana-pro, best-of-2 + finisher)")
+    ap.add_argument("--mode", default="auto", choices=["auto", "fulldesign", "overlay"],
+                    help="fulldesign = model komponuje CAŁY baner (default dla nbpro); overlay = nakładki Pillow (fallback)")
     ap.add_argument("--no-finisher", action="store_true",
-                    help="pomiń ETAP C finisher (nbpro) — tylko sceny best-of-2 + kompozycja B")
+                    help="pomiń ETAP C finisher (tryb overlay/nbpro) — tylko sceny best-of-2 + kompozycja B")
     ap.add_argument("--out", help="katalog wyjściowy (domyślnie C:\\tmp\\ad-forge\\<slug>)")
     ap.add_argument("--dry", action="store_true",
                     help="pobierz dane+refy, zbuduj prompty i copy, wypisz plan — bez generacji/rejestracji")
