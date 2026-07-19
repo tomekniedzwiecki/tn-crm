@@ -30,7 +30,21 @@ nie 13 lokalnych decyzji o pozie.
 3. KARTA SEKCJI (szablon per sekcja):
    sekcja → rola w narracji → ujęcie {kadr / kontekst / światło / człowiek /
    perspektywa} → emocja → co ma poczuć klient → seed promptu (2-3 zd. EN) →
-   powiązanie z sąsiadami (kontrast / kontynuacja).
+   powiązanie z sąsiadami (kontrast / kontynuacja) →
+   **DETAL UI {ikony: charcoal (funkcjonalne) / amber TYLKO akcent · trust-pill: jeden styl
+   (kremowy z charcoal) · mikro-interakcja: intencja (press/reveal/slide-in) · wariant layoutu:
+   scena-full / split 55/45 / bento / grid-twarze}** — atrybuty formalizowane w F2.5
+   (`TOKENS-MAKIETY.md`), tu deklarowane per sekcja, żeby świat i UI szły spójnie.
+
+   **Notatki UI per typ sekcji (19.07 — dociążenie chudych sekcji + spójność):**
+   - **hero:** OSTRA fotografia (produkt bohaterem, mniej blur); rozważ split editorial
+     (copy lewo / ostra scena prawo). Amber = tylko CTA+swash+rating; ikony charcoal.
+   - **FAQ:** UŻYJ slotu media modułu `faq-accordion@1` (sticky packshot obok akordeonu) —
+     ⛔ „goły akordeon"; ikona „+/−" = charcoal (nie amber/blush).
+   - **zaufanie / COD-strip:** wypełnij PEŁNĄ wysokość sekcji (⛔ martwa dolna 1/3) — ikony
+     kroków charcoal, trust-pill jeden styl.
+   - **desktop↔mobile:** ta sama sekcja = ten sam bohater + jeden styl ikon w obu (patrz
+     STANDARD §F2.4); rozjazd = regeneracja mobile.
 4. SPÓJNOŚĆ mimo różnorodności = wspólne DNA:
    paleta akcentów + produkt wierny PASZPORTOWI + JEDEN motyw przewodni
    (np. Loczek: „pasmo po spirali"). Różne światy — jeden bohater, jeden motyw.

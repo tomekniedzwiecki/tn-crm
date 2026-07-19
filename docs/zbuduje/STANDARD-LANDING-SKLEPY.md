@@ -118,7 +118,7 @@ preview ma projekt — np. loczek/odpalak). Pełna tabela artefakt→krok+kind+f
   + `product_meta(pid, {price, cost_purchase, cost_shipping, fees_pct, margin_mode:'test', status:'w_budowie', slug, repo_path})`. `unit_profit` = kolumna GENERATED — NIE pisać.
 - **F0 dane/karta/paszport** → `lp_dane` · fields {source_ok, cena_pl, koszt_landed, marza, ocena, zdjecia_keep, wideo_keep, karta_url, paszport_url} · artefakty: `gallery` (kadry keep), `doc` KARTA-PRAWDY.md + PASZPORT.md (`storage='desktop'` → chip).
 - **F1 plan + F1.7 przewodnik** → `lp_plan` · fields {motyw, sekcje, tor_i_demo, plan_url, przewodnik_url} · artefakty: `doc` PLAN.md + PRZEWODNIK-GRAFICZNY.md (desktop).
-- **F2.5 branding + styl-master** → `lp_styl_marka` · fields {marka_nazwa, slug, font, paleta, styl_master_url, brand_dir} · artefakty: `styl_master` + `branding` (favicon / wordmark / logo-combo z Storage).
+- **F2.5 branding + styl-master + tokeny** → `lp_styl_marka` · fields {marka_nazwa, slug, font, paleta, styl_master_url, tokens_url, brand_dir} · artefakty: `styl_master` + `branding` (favicon / wordmark / logo-combo z Storage) + `doc` TOKENS-MAKIETY.md (SSOT tokenów makiety, `storage='desktop'` → chip).
 - **F2 makiety 🏁** → `lp_makiety` · fields {sekcje_count, makiety, tor_i, akcept} · REHOST każdej makiety do `bud-assets/<slug>/makiety/` (`storage_upload(..., max_width=1440, to_webp=True, quality=82)`) → `artifact_add` kind `makieta` (mobile → `makieta_mobile`), `meta={section:'03-problem', viewport:'desktop'|'mobile'}`.
 - **F3 grafiki** → `lp_grafiki` · fields {assets_dir, distinct_views, mapa_url, waga_first} · artefakty: `scena`/`image` (grafiki produkcyjne), `doc` MAPA-ASSETOW.md.
 - **F4 kod** → `lp_kod` · `product_meta(pid, {repo_path})` + fields {preview_url, video_count} · artefakt `link`/`screenshot_final` (podgląd).
@@ -260,7 +260,9 @@ wypisane WPROST w cudzysłowach (cena, „★ x,x/5 · N ocen", specs/komunikaty
 żeby gpt-image nie miał czego zmyślać. **Gate fake-danych działa NA MAKIECIE:** zmyślona
 wartość = REGENERACJA makiety z poprawionym promptem (podmiana w tym samym slocie), NIGDY
 wycinanie/edycja na etapie kodu. **KRYTYK (bezlitosny art director + CRO: „czy czuć produkt?
-czy wygląda na DROGI projekt?") ocenia MAKIETY — przed akceptem.** AKCEPT MAKIET = kontrakt;
+czy wygląda na DROGI projekt?") ocenia MAKIETY — przed akceptem** (m.in. wg CHECKLISTY STYLE-DNA
+— para fontów / amber-scope / desktop↔mobile / H1 mobile / głębia — patrz bullet „🎯 STYLE-DNA
+MAKIET" w RZEMIOŚLE PROMPTÓW niżej). **AKCEPT MAKIET = kontrakt;**
 po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do tego punktu.
 
 **⚙️ KWALIFIKACJA TOR-I (T0, tu — na makietach, nie w kodzie).** Każdą sekcję oznacz tagiem
@@ -269,8 +271,14 @@ po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do te
 TOR-I). Makieta sekcji TOR-I MUSI pokazać STANY demonstracji (osobny kadr per krok/stan),
 nie statyczną kartę z jednym zdjęciem — brak stanów = regeneracja makiety przed akceptem.
 Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
-1. **STYL-MASTER ×1** (pełna scena z motywem; gate: motyw↔korzyść, jasno, hierarchia,
-   produkt wierny, minimalny fake-tekst; FAIL→regeneracja promptu).
+1. **STYL-MASTER ×1 = NIEZALEŻNA PLANSZA DNA (nie kopia hero; Tomek 19.07).** Specimen stylu:
+   paleta z rolami · **2 fonty z rolami** (display vs label/liczby/body) · swash · plusiki/hairlines ·
+   **JEDEN radius serii** · **styl ikon filled|outline** · **styl trust-pill** · próbka warstwowej
+   głębi + grain — plus motyw przewodni jako klimat (żeby dalej służył jako referencja stylu KAŻDEJ
+   generacji). ⛔ styl-master ≠ druga hero-scena. Gate: motyw↔korzyść, jasno, hierarchia, minimalny
+   fake-tekst, **czy plansza pokazuje KOMPLET DNA (paleta+2 fonty+radius+ikony+trust-pill+głębia)**;
+   FAIL→regeneracja promptu. **Z tej planszy agent SPISUJE `TOKENS-MAKIETY.md` (F2.5) — SSOT tokenów
+   makiety wstrzykiwany do KAŻDEGO promptu makiety (pełny format: `docs/zbuduje/TOKENS-MAKIETY.md`).**
 1.5. **BRANDING (F2.5) — favicon + wordmark; PO styl-masterze, PRZED hero** (`scripts/
    mockup-tools/brand-forge.py`; SSOT rezerwacji: `bud_brand_names`, F0). **FAVICON/znak:**
    gpt-image-2 (przez wf2-gen, `type:'logo'`, quality high, 1:1, BIAŁE tło → biel→alpha PIL),
@@ -297,6 +305,10 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    i WSTRZYKUJE dropship-claims (przekreślenia, „NR 1 W POLSCE", darmowa dostawa)! Mobile
    generować per-sekcja z DOKŁADNĄ treścią wypisaną w prompcie (jak desktop); referencja
    desktop tylko dla stylu/układu. Mobile-makieta WIĄŻE dla 390px, desktopowa dla ≥768px.
+   **SPÓJNOŚĆ DESKTOP↔MOBILE (Tomek 19.07 — realny defekt `13-final`: inny pies desktop vs mobile,
+   ikony outline↔filled): para desktop+mobile TEJ SAMEJ sekcji dzieli BOHATERA/scenę (ten sam
+   produkt, kadr, świat) i JEDEN styl ikon (`--icon-style` z TOKENS-MAKIETY, filled ALBO outline —
+   w OBU). Rozjazd (inny bohater / dryf ikon) = REGENERACJA mobile, nigdy „osobny prior gpt-image".**
    **ZAKRES (Tomek 18.07 — mobile wg PEŁNYCH makiet, nie „na oko"; ZASTĘPUJE urealnienie 17.07):**
    mobile-makieta **OBOWIĄZKOWA dla WSZYSTKICH sekcji planu** — komplet mobile == liczba sekcji,
    nie tylko hero/TOR-I/wideo. Powód: bez pełnych makiet mobile montaż dociąga 390px „na oko" i
@@ -324,6 +336,37 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
   inline SVG (1/sekcja), overlap MIĘDZY sekcjami (ujemny margin + z-index), hand-drawn
   stroke. Gate KRYTYKA rozszerzony: „gdzie tu ślad ręki projektanta?" — brak 3/4 warstw =
   regeneracja makiety. Anty-AI-card: banuj shadow-lg + rounded-2xl/3xl.
+- **🎯 STYLE-DNA MAKIET (F2.5, twarde — pełny format `docs/zbuduje/TOKENS-MAKIETY.md`; „pełny
+  zestaw" 19.07).** Ponad warstwy detalu (a-d) KAŻDY prompt makiety niesie akapit STYLE-DNA
+  z `TOKENS-MAKIETY.md` (SSOT domykający dryf A/B/C/radius/ikon):
+  - **PARA FONTÓW Z KONTRASTEM (koniec mono-Baloo):** display zaokrąglony-ciepły = twarz marki
+    (domyślnie Baloo 2) niesie H1/H2/markę; **osobny WYRAZISTY krój** (humanist typu Nunito Sans
+    „rymuje" z Baloo, LUB ciepły grotesk kondensowany) niesie **eyebrow · LICZBY · CENY · wymiary ·
+    długie akapity · label**. ⛔ ZIMNY tech (Inter/Helvetica) i ⛔ jeden krój na wszystko = FAIL
+    kalibracji premium. Skala modularna 1.333 (1.5 dla wielkiego H1), body 16-18/lh 1.5-1.6,
+    H1 desktop 56-80px, **H1 mobile floor 36-40px** (31px = za skromnie).
+  - **DYSCYPLINA AMBER (scope twardy):** amber = **TYLKO** {CTA · swash pod 1 słowem · gwiazdki
+    ratingu}. **WSZYSTKIE ikony funkcjonalne (korzyści/materiał/kroki/lupa/FAQ +−) = charcoal
+    (`--ink`).** Trust-pill = JEDEN styl globalnie (kremowy z charcoal). Body = ciepła prawie-czerń
+    (`#33281F/#2A211B`), nie `#000`, nie mglisty jasny.
+  - **RYTM 8pt + hojny whitespace:** siatka 8/16/24/32/48/64/96; padding sekcji desktop 96-128px,
+    mobile 64-80px; szerokość treści ~1160-1200px; kolumna tekstu 50-75 znaków. Whitespace = luksus.
+  - **WARIANCJA EDYTORIALNA SEKCJI** (koniec „stosu identycznych kart"): mieszać edge-to-edge scena
+    pełnoekranowa (emocja) / split 55/45 (jak-działa) / bento radius 16-24px (cechy) / grid opinii
+    z TWARZAMI (dowód). ⛔ bento do porównań; asymetria psująca czytelność ceny/CTA.
+  - **GŁĘBIA WARSTWOWA:** warstwowe CIEPŁE cienie (key+ambient, tint sepiowy `rgba(80,50,20,.06-.12)`,
+    NIE czarny) + grain 2-4% (SVG feTurbulence ≤.05). ⛔ jeden twardy `0 10px 30px rgba(0,0,0,.3)`.
+  - **JEDEN RADIUS + JEDEN STYL IKON serii** (filled ALBO outline, trzymany w OBU viewportach i we
+    WSZYSTKICH sekcjach; galeria xl + demo kwadrat = rozjazd do ujednolicenia w tokenach).
+  - **HERO: OSTRA fotografia** (produkt bohaterem, nie plamą — mniej blur); rozważ wariant split
+    editorial (copy lewo / ostra scena prawo). Mikro-interakcje = §3 CTA + F5.2 (press ~0.97,
+    sticky slide-in, reveal 200-400ms, ciepły easing, `prefers-reduced-motion`).
+  - **✅ KRYTYK — CHECKLISTA STYLE-DNA (F2, przed akceptem; brak = regeneracja makiety):**
+    (1) para fontów z REALNYM kontrastem (nie mono)? (2) amber tylko CTA+swash+rating, WSZYSTKIE
+    ikony funkcjonalne charcoal? (3) desktop↔mobile TEJ sekcji = ten sam bohater + jeden styl ikon?
+    (4) H1 mobile ≥36px / big-type? (5) głębia = warstwowe CIEPŁE cienie (nie jeden czarny)?
+    (+ 6) **EMOCJA↔PRODUKT (F1.7a) egzekwowane NA MAKIECIE, nie na finale:** scena `03-problem`
+    ma ZERO naszego produktu (nie odkładać do PASS 5 pyt. 6 — łapać przy akceptcie makiety).
 - **🥇 BRIEF CELU > DYKTAT ELEMENTÓW (Tomek 16.07, potwierdzone testem A/B na hero Uśmieszka):**
   najlepsze makiety wychodzą, gdy prompt opowiada CO sprzedajemy, KOMU i CO klient ma poczuć,
   a PRAWDZIWE fakty (cena, oceny, cechy, płatności) podaje jako MATERIAŁ do wyboru — kompozycję
@@ -337,9 +380,10 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
   Figma-style, pixel-perfect, clean design system"), ZERO języka concept-art
   („beautiful/render/artwork" → daje ilustrację zamiast makiety). Opisuj interfejs
   „jakby już istniał".
-- **STYLE-DNA tekstowe w KAŻDYM prompcie** (niezmienny akapit serii): dokładne hexy,
-  font+wagi+skala, spacing/gęstość, radius, cienie, ton fotografii — obraz-master
-  + tekst-DNA razem są stabilniejsze niż sam obraz.
+- **STYLE-DNA tekstowe w KAŻDYM prompcie** (niezmienny akapit serii; **źródło = `TOKENS-MAKIETY.md`**,
+  nie „z głowy" per makieta): dokładne hexy, font+wagi+skala (**2 role: display vs label/liczby/body**),
+  spacing/gęstość (8pt), radius (jeden serii), cienie (ciepłe warstwowe), styl ikon, ton fotografii —
+  obraz-master + tekst-DNA razem są stabilniejsze niż sam obraz.
 - **Obrazy wejściowe: indeksuj i przypisuj ROLĘ**: „Image 1: style reference (match
   palette/typography/spacing). Image 2: previous section (match visual system, do NOT
   copy its text)." Bez tego model kopiuje treść sąsiedniej makiety. Kolejność:
@@ -632,6 +676,20 @@ jako akcenty tekstu/ikon. Footer JASNY. (Badania: jasne = wierność zdjęć, cz
 masowego B2C; „ciemne+neon" = AI-slop; dark wygrywa tylko w niszach premium/B2B.)
 **CTA: kontrast + izolacja** — jeden ciepły kolor, WYŁĄCZNIE na przycisku zakupu.
 
+**🍊 DYSCYPLINA AMBER — SCOPE JEDYNEGO AKCENTU (Tomek 19.07; amber rozlał się poza CTA — ikony
+korzyści/materiału niespójne, trust-pill raz biały raz amber, gwiazdki, lupka).** Twarda reguła
+(SSOT tokenów: `TOKENS-MAKIETY.md`; egzekwuje KRYTYK na makiecie):
+- **W CIEPLE (amber `--cta`) WOLNO TYLKO:** przycisk CTA · swash `.hi`/`.ac` pod JEDNYM słowem
+  nagłówka · gwiazdki ratingu ★. **Nic więcej.**
+- **CHARCOAL (`--ink`) = WSZYSTKIE ikony funkcjonalne:** korzyści · materiał · kroki demo · lupa
+  galerii · FAQ „+/−" · dividery · znaczniki. Ikona funkcjonalna w amber = FAIL kalibracji.
+- **Trust-pill = JEDEN styl globalnie:** kremowy fill (`--paper`) + tekst/border charcoal — nie raz
+  biały, raz amber.
+- **Body = ciepła prawie-czerń / głęboki brąz** (`#33281F`/`#2A211B`) — ⛔ `#000`, ⛔ mglisty jasny
+  (`#6E6053` za jasny na długiej stronie).
+- Reguła KODU (l. „NIE zmieniać samego tokena `--cta`") zostaje: nie remapuj żywego `--cta`; nowa
+  makieta po prostu rysuje ikony funkcjonalne w charcoal od początku (nie odwołują się do amber).
+
 **WIERNOŚĆ PRODUKTU — 4 WARUNKI (każda generacja z produktem w kadrze; przepisane po
 incydencie Latarek 17.07 — „grinder-pen zamiast gilotyny", klient dostałby inny produkt):**
 (0) **PASZPORT PRODUKTU** — spisany RAZ per produkt z galerii (agent vision): geometria
@@ -700,7 +758,11 @@ i cieniem + „ZA POBRANIEM"). Wklejać 1:1; ZAKAZ odtwarzania logotypów z pami
 makiety mają zwykle KURSYWNY SERIF-AKCENT na słowie-kluczu nagłówka — koder MUSI wczytać
 font szeryfowy (np. Fraunces italic) + klasę `.ac` i owinąć akcenty; każda sekcja treściowa
 MUSI mieć eyebrow+`<h2>` zgodny z makietą (gate: sekcja bez nagłówka = błąd); wyrównanie
-nagłówków wg makiety (edytorialne=lewa, nie domyślne centrowanie). Grafika-first: scena
+nagłówków wg makiety (edytorialne=lewa, nie domyślne centrowanie). **PARA FONTÓW Z KONTRASTEM
+(19.07 — koniec mono-Baloo): display zaokrąglony (Baloo 2) = H1/H2/marka; osobny WYRAZISTY krój
+(humanist typu Nunito Sans / ciepły grotesk — ⛔ NIE zimny Inter) = eyebrow, LICZBY, CENY, wymiary,
+akapity, label. H1 mobile FLOOR 36-40px (dziś 31px = za skromnie). Role + skala = `TOKENS-MAKIETY.md`.**
+Grafika-first: scena
 w interaktywnym stage'u NIE może być wyprana ani mała (tło stage=transparent, spoczynkowy
 glow ≤0.42, kadr ≥520px desktop) — biały wash marnuje bogatą generację.
 
@@ -803,6 +865,9 @@ chip „Płacisz przy odbiorze" przykrywał hero-wideo na 390px.
   przed checkoutem nieznanego sklepu.
 - **Desktop re-CTA:** sticky-buy jest mobile-only → na desktopie po klastrze dowodu (opinie/korzyści)
   wstaw inline-CTA/pas — inaczej ~6 sekcji jedzie bez przycisku (martwa strefa; sticky nie łata desktopu).
+- **Kolejność cena→CTA — WSZĘDZIE ta sama (Tomek 19.07):** cena/oferta ZAWSZE nad przyciskiem
+  (hero, oferta `#zamow`, final, sticky). ⛔ final z CTA nad ceną = rozjazd rytmu — makieta finalu
+  też trzyma cena→CTA. Reguła wchodzi do makiety (Z2), nie „przestawiana kodem".
 - **PIXEL-GUARD (runtime):** listener `[data-checkout]` pali `AddToCart`/`InitiateCheckout` **TYLKO gdy
   href realnie wychodzi na checkout** (URL platformy zhydratowany), NIE przy kliknięciu-scrollu do
   `#zamow` (inaczej fałszywe eventy pomiaru na każdym CTA). Reguła w `landing-runtime-snippet`.
@@ -834,8 +899,11 @@ spójne końcówki w portfelu.
 
 ## 5. TECH · POMIAR · GEO
 
-**Tech budżet:** LCP<2,5s · CLS<0,1 · INP<200ms (mobile 4G) · MAX 1 font custom (preload
-woff2, swap, latin-ext; body = system stack) · hero przez Storage render API (eager+preload,
+**Tech budżet:** LCP<2,5s · CLS<0,1 · INP<200ms (mobile 4G) · **MAX 2 fonty custom = para display
++ text/label (19.07 — para z kontrastem z TOKENS-MAKIETY zastępuje regułę „MAX 1 font"): subset
+latin-ext, woff2 swap; preload TYLKO fontu display (LCP); rola text może zostać na humanist
+system-stacku gdy budżet wagi napięty — swash/accent to opcjonalny 3. krój na 1 słowo, ładowany
+leniwie** · hero przez Storage render API (eager+preload,
 width wg viewportu), reszta lazy, wszystkie width/height · self-contained: 1 plik, CSS
 inline, JEDEN exec-`<script>`, zero bibliotek · overflow-x zablokowany.
 **RUNTIME LANDINGA (od 18.07, OBOWIĄZKOWY):** snippet `docs/zbuduje/assets/
@@ -1036,6 +1104,29 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-19 (PEŁNY ZESTAW ULEPSZEŃ DESIGNU MAKIET — decyzja Tomka „pełny zestaw"; synteza
+  3 analiz: audyt procesu + research desktop + research mobile)**: NOWY SSOT
+  **`docs/zbuduje/TOKENS-MAKIETY.md`** — mikro-tokeny makiety generowane w F2.5 (ze styl-mastera
+  = teraz PLANSZA DNA, nie kopia hero) i wstrzykiwane do KAŻDEGO promptu makiety; domyka dryf
+  A/B/C/radius/ikon systemowo (źródło akapitu STYLE-DNA §F2). **TIER 1:** para fontów z kontrastem
+  (display Baloo vs text/liczby/ceny humanist — koniec mono-Baloo; H1 mobile floor 36-40px) ·
+  dyscyplina amber (amber = TYLKO CTA+swash+rating; WSZYSTKIE ikony funkcjonalne = charcoal;
+  trust-pill jeden styl; body ciepła prawie-czerń) · rytm 8pt + hojny whitespace · spójność
+  desktop↔mobile (para dzieli bohatera + jeden styl ikon). **TIER 2:** głębia warstwowa (ciepłe
+  sepiowe cienie + grain, nie jeden czarny) · wariancja edytorialna sekcji · mikro-interakcje
+  (ref §3/F5) · ostra fotografia hero. **TIER 3:** jeden radius serii · kolejność cena→CTA wszędzie ·
+  `03-problem` bez produktu egzekwowane NA MAKIECIE (KRYTYK, nie PASS 5 na finale) · dociążenie
+  chudych sekcji (FAQ = slot media modułu `faq-accordion@1`; `02-zaufanie` pełna wysokość) ·
+  `00-styl-master` = plansza DNA. Wpięcia: §F2 (STYL-MASTER pkt 1 + bullet „🎯 STYLE-DNA MAKIET"
+  z checklistą KRYTYKA + F2.4 spójność) · §2 (allow-lista amber + DNA typo para fontów) · §3
+  (cena→CTA) · §5 (budżet 2 fonty custom, zastępuje „MAX 1 font") · §1 mapa faz (`lp_styl_marka`
+  pole `tokens_url` + doc). `PRZEWODNIK-GRAFICZNY.md`: karta sekcji nosi detale UI (ikony
+  charcoal/amber, trust-pill, mikro-interakcja, hero-ostra, FAQ-media, zaufanie-pełna-wysokość).
+  Fundament NIETKNIĘTY (sygnatura wydawnicza, motyw, osie różnorodności, asymetria scena+karta,
+  hierarchia oferty, uczciwość 4/5, ★ NIE nad foldem). Zero zmian w landing HTML. **DO DOMKNIĘCIA
+  w osobnym przebiegu (kod/config):** wiersz `TOKENS-MAKIETY.md` w `gate-manifest.json`
+  (`files.wymagane` + `panel_sync doc_wymagane`) — patrz §1 „nowy artefakt bez wiersza = niekompletny".
 
 - **2026-07-18 (KONSOLIDACJA SSOT — sweep spójności po sesji 17-18.07)**: ujednolicony próg
   SSIM (kanon R13 = `gate-manifest.json layout_diff`: KODOWA <0.85 desktop / **<0.80 mobile**,
