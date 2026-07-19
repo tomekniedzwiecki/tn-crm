@@ -322,6 +322,13 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    i WSTRZYKUJE dropship-claims (przekreślenia, „NR 1 W POLSCE", darmowa dostawa)! Mobile
    generować per-sekcja z DOKŁADNĄ treścią wypisaną w prompcie (jak desktop); referencja
    desktop tylko dla stylu/układu. Mobile-makieta WIĄŻE dla 390px, desktopowa dla ≥768px.
+   **⚠️ DWIE TWARDE KLAUZULE promptu mobile (krytyk masażera 19.07 — gpt-image regeneruje
+   mobile z priora desktopu):** (a) sekcja z RZĘDEM 3 elementów (timeline/kroki/stany TOR-I)
+   MUSI dostać „stack into a single vertical column (connecting line); NEVER 3 side-by-side
+   at 390px" — inaczej zostają poziome trójki (regeneracje 02/04 masażera); (b) hero-m MUSI
+   dostać „no floating trust-chip/badge overlay on the scene (desktop-only element)" —
+   inaczej chip wjeżdża na scenę (regeneracja 01 masażera; ⛔ pokusa „display:none w kodzie"
+   = złamanie Z2 — chip znika Z MAKIETY).
    **SPÓJNOŚĆ DESKTOP↔MOBILE (Tomek 19.07 — realny defekt `13-final`: inny pies desktop vs mobile,
    ikony outline↔filled): para desktop+mobile TEJ SAMEJ sekcji dzieli BOHATERA/scenę (ten sam
    produkt, kadr, świat) i JEDEN styl ikon (`--icon-style` z TOKENS-MAKIETY, filled ALBO outline —

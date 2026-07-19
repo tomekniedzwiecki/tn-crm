@@ -66,7 +66,7 @@ FAIL** (research premium 17.07). Display i text MUSZĄ być rozróżnialne na pi
 | `--ink` | nagłówki + **WSZYSTKIE ikony funkcjonalne** (korzyści/materiał/kroki/lupa/FAQ +−) | charcoal = ciepły grafit; **ikona funkcjonalna NIGDY amber** | np. `#2A211B` |
 | `--body` | tekst akapitowy | ciepła prawie-czerń/głęboki brąz; **⛔ `#000`, ⛔ mglisty jasny `#6E6053`** (za jasny na długiej stronie) | np. `#33281F` |
 | `--line` | hairline 1px, plusiki „+", crop-marks | ciepły szarobeż, nie szary neutralny | np. `#DFD3BF` |
-| **`--cta`** | **AMBER = JEDYNY akcent** | **scope TWARDY: TYLKO {przycisk `.btn.cta` · swash `.hi`/`.ac` pod 1 słowem · gwiazdki ratingu ★}. NIC WIĘCEJ.** ⛔ ikony, lupa, kroki demo, materiał, trust-pill, dividery | np. `#E08A2B` |
+| **`--cta`** | **AMBER = JEDYNY akcent** | **scope TWARDY: TYLKO {przycisk `.btn.cta` · swash `.hi`/`.ac` pod 1 słowem · gwiazdki ratingu ★}. NIC WIĘCEJ.** ⛔ ikony, lupa, kroki demo, materiał, trust-pill, dividery. **⛔ amber NIE rozciąga się na LICZBĘ ratingu obok gwiazdek** („4,7/5" = `--font-text` charcoal; dryf złapany na 08/11 masażera 19.07) | np. `#E08A2B` |
 | `--trust-pill` | pigułka zaufania (chip „14 dni", „za pobraniem") | **JEDEN styl globalnie** = fill kremowy (`--paper`) + tekst/border `--ink` (charcoal). ⛔ raz biały raz amber | fill `--paper`, border `--line`, tekst `--ink` |
 
 > **Nota spójności z kodem:** STANDARD §3 (l. „NIE zmieniać samego tokena `--cta`") zabrania
