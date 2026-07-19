@@ -140,6 +140,15 @@ klatkami kluczowymi — incydent v2). Szczegóły: SSOT 0i.
    granatu przy krawędzi kadru przeżył 2 fixy niezauważony na miniaturze 420px i kosztował
    rundę renderu (nano słabo usuwa obiekty przy krawędzi; ratunek: crop w montażu, $0).
 
+### SPRZĘŻONE KLATKI PĘTLI — poprawki bazy planuj PRZED renderami (lampka 19.07)
+Gdy pętla używa wspólnych plików klatek (np. `cta_last = hook_first` — echo 1:1), każda
+późniejsza poprawka hooka KASKADUJE na wszystkie sceny sprzężone (re-render 2× FLF + ryzyko
+zepsucia PASS-ów). Dlatego: (a) krytykę klatki hooka rób NAJSUROWIEJ przed renderami;
+(b) po renderach poprawiaj tylko elementy NIE-sprzężone (VO, SFX, okna montażowe, grading);
+(c) zmiany sprzężonych ujęć realizuj jako WARIANT w packu hooków, nie przeróbkę bazy.
+Gotcha nano przy okazji: „przesuń dłoń NA obiekt" potrafi wygenerować DRUGI obiekt w dłoni
+(duplikat głowicy = exactly_one) — gesty dotyku planuj w BRIEFIE pierwotnej generacji.
+
 ## KROK 7 — BRAMKA WIZYJNA KLIPU (`qa_gate.py`) — egzekwowalna
 Dla KAŻDEGO klipu przed montażem:
 1. `python qa_gate.py precheck <klip> <KARTA.json>` (lub `cv_precheck()` z modułu) — TYLKO gdy `cv_reliable:true`: maska HSV (sumuje zakresy z `hsv_ranges` przy hue-wrap) + connectedComponents = twardy licznik egzemplarzy, $0. **Interpretacja flag: >1 obiekt = duplikat egzemplarza LUB piana/blob z rozpadu fizyki — OBIE złe, oba to ODRZUT.** Gdy `cv_reliable:false` (kolory skórne/metal) → NIE ufaj CV, licznik robi VLM.
