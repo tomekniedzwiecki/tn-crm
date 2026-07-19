@@ -589,6 +589,7 @@ function formatOfferViewedMessage(data: {
   offer_price?: number
   first_view?: boolean
   view_history?: string[]
+  source?: string
 }) {
   const displayName = data.lead_company || data.lead_name || data.lead_email
   const viewCount = data.view_history?.length || 1
@@ -598,6 +599,10 @@ function formatOfferViewedMessage(data: {
     { type: 'mrkdwn', text: `*Klient:*\n${leadLink(data.lead_email, displayName, data.lead_id)}` },
     { type: 'mrkdwn', text: `*Oferta:*\n${data.offer_name}` }
   ]
+
+  if (data.source === 'rozmowa') {
+    fields.push({ type: 'mrkdwn', text: `*Źródło:*\n🤖 wygenerowana przez AI (rozmowa)` })
+  }
 
   if (data.offer_price) {
     fields.push({ type: 'mrkdwn', text: `*Wartość:*\n${data.offer_price.toLocaleString('pl-PL')} PLN` })

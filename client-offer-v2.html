@@ -2310,6 +2310,9 @@
                     back.href = `https://tomekniedzwiecki.pl/rozmowa/?lid=${lead.id}&from=oferta`;
                     back.classList.remove('hidden');
                 }
+                // lead przyszedł prosto z czatu — bez bramki emaila, od razu otwarta oferta
+                await enterOffer();
+                return;
             }
 
             showScreen('login-screen');
@@ -2332,6 +2335,12 @@
                 return;
             }
 
+            await enterOffer();
+        }
+
+        // Wejście do oferty (po weryfikacji emaila LUB od razu dla ofert z rozmowy AI —
+        // lead przyszedł prosto z czatu, nie każemy mu podawać maila drugi raz).
+        async function enterOffer() {
             const { data: freshData } = await supabaseClient
                 .from('client_offers')
                 .select('view_count, view_history')
@@ -2373,6 +2382,7 @@
                 offer_price: getEffectivePrice(),
                 first_view: isFirstView,
                 view_history: viewHistory,
+                source: clientOffer.source || null,
                 page_version: 'v2'
             });
 
