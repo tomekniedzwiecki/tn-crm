@@ -4,10 +4,14 @@
 //
 // Detekcja ciszy: talk_sessions.last_seen_at (front pinguje co 30 s tylko przy widocznej karcie).
 // Wątek: leads.slack_ts + slack_channel (zapisywane przez slack-notify w trybie bota).
-// Tryby wysyłki: (1) SLACK_BOT_TOKEN + leads.slack_ts → chat.postMessage w wątku;
-// (2) SLACK_BOT_TOKEN bez ts (stary lead) → nowa wiadomość w SLACK_LEADS_CHANNEL,
-//     jej ts zapisujemy do leads → dosyłki trafią już w wątek;
-// (3) bez bota → fallback: incoming webhook slack_webhook_new_lead (bez wątku).
+// WYŁĄCZNIE WĄTEK (decyzja Tomka: nigdy osobna wiadomość na kanał):
+// (1) leads.slack_ts (zapisany przez slack-notify w trybie bota) → od razu wątek;
+// (2) brak ts → bot SZUKA powiadomienia o leadzie w historii kanału
+//     (conversations.history, match po lead_id w treści — działa też dla wiadomości
+//     wysłanych webhookiem!) i wątkuje pod znalezionym; ts zapamiętywany w leads;
+// (3) nie znaleziono / brak bota → skip z retry w kolejnych przebiegach (do MAX_AGE).
+// Wymagane scopes bota: chat:write + channels:history (kanał prywatny: groups:history),
+// bot musi być członkiem kanału (/invite).
 //
 // ⚠️ DEPLOY: npx supabase functions deploy talk-transcript-cron --no-verify-jwt --project-ref yxmavwkwnfuphjqbelws
 // Cron: pg_cron co 2 min, nagłówek x-cron-secret == SPAR_CRON_SECRET,
@@ -28,7 +32,6 @@ const TEXT_CAP = 36000         // limit tekstu wiadomości Slack (~40k twardy)
 
 const BOT = Deno.env.get('SLACK_BOT_TOKEN') || ''
 const LEADS_CHANNEL = Deno.env.get('SLACK_LEADS_CHANNEL') || ''
-const WEBHOOK_FALLBACK = Deno.env.get('slack_webhook_new_lead') || ''
 const CRM = 'https://crm.tomekniedzwiecki.pl'
 
 function stripMarkers(s: string): string {
@@ -61,32 +64,40 @@ function buildTranscript(lead: any, msgs: any[], fromIdx: number): string {
   return out
 }
 
-async function postToSlack(text: string, channel: string | null, threadTs: string | null):
-  Promise<{ ok: boolean; ts?: string; channel?: string; via: string }> {
-  if (BOT && (threadTs ? channel : LEADS_CHANNEL)) {
-    const body: Record<string, unknown> = {
-      channel: threadTs ? channel : LEADS_CHANNEL,
-      text,
-      unfurl_links: false,
-    }
-    if (threadTs) body.thread_ts = threadTs
-    const res = await fetch('https://slack.com/api/chat.postMessage', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${BOT}`, 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(body),
+// Szukanie kotwicy: powiadomienie o leadzie zawiera link CRM z lead_id — przeszukujemy
+// historię kanału (do 3 stron × 200 wiadomości, max ~7 dni wstecz) po lead_id, potem po emailu.
+async function findAnchorTs(leadId: string, email: string | null): Promise<string | null> {
+  if (!BOT || !LEADS_CHANNEL) return null
+  let cursor: string | undefined
+  const oldest = String(Math.floor((Date.now() - 7 * 24 * 3600_000) / 1000))
+  for (let page = 0; page < 3; page++) {
+    const params = new URLSearchParams({ channel: LEADS_CHANNEL, limit: '200', oldest })
+    if (cursor) params.set('cursor', cursor)
+    const res = await fetch('https://slack.com/api/conversations.history?' + params, {
+      headers: { 'Authorization': `Bearer ${BOT}` },
     })
     const j = await res.json().catch(() => null)
-    if (j?.ok) return { ok: true, ts: j.ts, channel: j.channel, via: threadTs ? 'thread' : 'bot' }
-    console.error('[talk-transcript] slack bot fail', j?.error)
+    if (!j?.ok) { console.error('[talk-transcript] history fail', j?.error); return null }
+    for (const m of j.messages || []) {
+      const blob = JSON.stringify(m)
+      if (blob.includes(leadId) || (email && blob.includes(email))) return m.ts
+    }
+    cursor = j.response_metadata?.next_cursor
+    if (!cursor) break
   }
-  if (WEBHOOK_FALLBACK) {
-    const res = await fetch(WEBHOOK_FALLBACK, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    })
-    if (res.ok) return { ok: true, via: 'webhook' }
-  }
-  return { ok: false, via: 'none' }
+  return null
+}
+
+async function postToThread(text: string, threadTs: string): Promise<boolean> {
+  const res = await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${BOT}`, 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ channel: LEADS_CHANNEL, thread_ts: threadTs, text, unfurl_links: false }),
+  })
+  const j = await res.json().catch(() => null)
+  if (j?.ok) return true
+  console.error('[talk-transcript] slack thread fail', j?.error)
+  return false
 }
 
 // deno-lint-ignore no-explicit-any
@@ -101,20 +112,26 @@ async function processSession(s: any): Promise<string> {
   const { data: lead } = await supabase.from('leads')
     .select('id,name,email,slack_ts,slack_channel').eq('id', s.lead_id).maybeSingle()
   if (!lead) return 'skip:brak-leada'
+  if (!BOT || !LEADS_CHANNEL) return 'skip:brak-bota' // wątek albo nic — bez bota czekamy
+
+  // kotwica wątku: zapisany ts albo znaleziona w historii kanału (po lead_id/emailu)
+  let anchorTs: string | null = lead.slack_ts
+  if (!anchorTs) {
+    anchorTs = await findAnchorTs(lead.id, lead.email)
+    if (anchorTs) {
+      await supabase.from('leads').update({ slack_ts: anchorTs, slack_channel: LEADS_CHANNEL }).eq('id', lead.id)
+    }
+  }
+  if (!anchorTs) return 'skip:brak-kotwicy' // retry w kolejnych przebiegach (do MAX_AGE)
 
   const text = buildTranscript(lead, all, s.slack_transcript_count || 0)
-  const sent = await postToSlack(text, lead.slack_channel, lead.slack_ts)
-  if (!sent.ok) return 'fail:slack'
+  if (!(await postToThread(text, anchorTs))) return 'fail:slack'
 
-  // start wątku dla starych leadów bez kotwicy — kolejne dosyłki trafią w wątek
-  if (sent.via === 'bot' && sent.ts) {
-    await supabase.from('leads').update({ slack_ts: sent.ts, slack_channel: sent.channel }).eq('id', lead.id)
-  }
   await supabase.from('talk_sessions').update({
     slack_transcript_at: new Date().toISOString(),
     slack_transcript_count: all.length,
   }).eq('id', s.id)
-  return `sent:${sent.via}`
+  return 'sent:thread'
 }
 
 Deno.serve(async (req) => {
