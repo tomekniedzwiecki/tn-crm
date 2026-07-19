@@ -92,6 +92,14 @@ delivery_options · add_delivery{body} · set_cod_account{broker_id,nrb} · set_
 Retry na 429 (Retry-After) wbudowany. Cena na landingu: publiczny edge **`wf2-landing-api`**
 (GET ?product=<wf2_products.id> → {price, checkout_url}; cache 5 min; DB = źródło prawdy).
 
+**⚠️ REGUŁA ZMIANY CENY (test→scale, audyt 19.07):** hydratacja runtime nadpisuje TYLKO
+widoczny DOM (`data-price`). Zapieczone w HTML zostają: `<title>`, meta/OG description
+i **JSON-LD `"price"`** — a to czytają boty bez JS (wymóg GEO: cena feed↔strona 1:1).
+Zmiana ceny produktu = (1) update `wf2_products.price` → landing-api od razu serwuje nową,
+(2) **RE-PUBLISH landinga** z podmienioną ceną zapieczoną (title/meta/JSON-LD/fallback),
+(3) zmiana ceny na platformie (do czasu endpointu ceny: klient w panelu; strażnik
+wf2-orders-sync audytuje rozjazd `platform_price` ↔ `price`).
+
 ## Luki vs wymagania SSOT (do zgłoszenia developerowi)
 
 1. ~~PUT html not implemented~~ **WDROŻONE i przetestowane 16.07 wieczór** (kontrakt `{isHtml, html}`; pilot: Uśmieszek na sklepie „test").
