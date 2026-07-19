@@ -1041,6 +1041,11 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   stopka — zapas 7k); plan-call MAX 2 obrazy i cap ~4-5k; `max_output_tokens` ≠ bezpiecznik.
 - Limit inputu 400k znaków (`input_za_dlugi`): screenshoty jako data-URI JPEG q~47 szer.400
   w body (nie argv); wysoki mobile na 2 wywołania.
+- **OpenAI safety `[sexual]` = fałszywe alarmy na makro skóry (masażer 19.07):** sceny makro
+  karku/ramion/dłoni (kategorie masaż/beauty) potrafią dostać odrzut safety mimo niewinnej
+  treści. Obejście: (a) jawnie opisz ODZIEŻ osoby w prompcie; (b) kolejne stany TOR-I
+  wyprowadzaj z JUŻ-zaakceptowanej klatki jako ref sceny (bonus: idealna spójność stanów
+  dla crossfade). Nie eskaluj do zmiany sceny, zanim nie spróbujesz obu.
 - **PLAN F1 = 2 calle z góry (masażer 19.07):** cap 4200 + 2 obrazy NIE mieści pełnego planu
   (gpt-5.6-sol pisze bogate sekcje i ucina paletę/grafiki/HOOKS). Wzorzec: call #1 rdzeń
   (motyw+sekcje, z obrazami) → call #2 krótki TEKSTOWY ogon (paleta/grafiki/CTA/HOOKS, bez
@@ -1055,6 +1060,10 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 ### 7b. Screenshoty / krytycy
 - Przed zrzutem: eager-load wszystkich img aż `naturalWidth>0` (inaczej fałszywe P0),
   wymusić klasy reveal, DPR1 (DPR3 kafelkuje = fałszywe „powtórzenia").
+- **Podejrzany artefakt na generacji = POMIAR piksela, nie oko (masażer 19.07):** „ghost"
+  panelu w strefie cream okazał się aliasingiem podglądu przy skalowaniu 1536px — skan
+  warmth/luminancji cropu = 0 różnicy. Przed regeneracją „bo coś majaczy": crop+zoom 1:1
+  + pomiar wartości pikseli; regeneruj tylko realny piksel, nie złudzenie miniatury.
 - Full-page ze `svh`: chrome-devtools MCP (captureBeyondViewport), nie goły CLI
   (fallback z override `.hero{min-height:0}`).
 - Uwagi o foldzie/sticky/nachodzeniu weryfikować NA ŻYWO (getBoundingClientRect), nie z obrazu.
