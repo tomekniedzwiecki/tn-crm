@@ -1851,6 +1851,13 @@
                         <span id="full-price-inline" class="text-zinc-200 font-semibold whitespace-nowrap flex-shrink-0">-</span>
                     </button>
 
+                    <!-- Powrót do rozmowy AI (tylko oferty z source='rozmowa') — user niegotowy
+                         wraca do czatu, a bot rozbraja wątpliwości (?from=oferta) -->
+                    <a id="back-to-talk" href="#" class="hidden w-full mt-3 inline-flex items-center justify-center gap-2 text-zinc-400 hover:text-white px-4 py-3 rounded-xl font-medium transition-colors text-sm border border-dashed border-white/10 hover:border-white/25">
+                        <i class="ph ph-chat-circle-text"></i>
+                        <span>Nie jesteś gotowy? Wróć do rozmowy</span>
+                    </a>
+
                     <!-- Trust line -->
                     <div class="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-zinc-500 text-xs">
                         <span class="inline-flex items-center gap-1.5">
@@ -2294,6 +2301,17 @@
             }
 
             document.getElementById('valid-until-preview').textContent = formatDate(clientOffer.valid_until);
+
+            // Oferta wygenerowana z rozmowy AI → pokaż „Wróć do rozmowy"
+            // (bot po powrocie rozbraja wątpliwości — parametr from=oferta)
+            if (clientOffer.source === 'rozmowa' && lead?.id) {
+                const back = document.getElementById('back-to-talk');
+                if (back) {
+                    back.href = `https://tomekniedzwiecki.pl/rozmowa/?lid=${lead.id}&from=oferta`;
+                    back.classList.remove('hidden');
+                }
+            }
+
             showScreen('login-screen');
         }
 

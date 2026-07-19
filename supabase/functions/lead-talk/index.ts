@@ -129,6 +129,38 @@ function leadContext(lead: any): string {
   return parts.join('\n')
 }
 
+// ── Oferta z rozmowy (marker <rezerwacja> = wystaw ofertę i pokaż jej kartę) ─
+// Wzorzec: client_offers jak oferty ręczne Tomka; offer_id z settings
+// 'rozmowa_offer_id' (fallback: „Budowa sklepu pełen pakiet" 9400 zł).
+const DEFAULT_OFFER_ID = '30bf199b-8bc1-4810-8716-43dbffeb9113'
+const OFFER_VALID_DAYS = 7
+function genOfferToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  const buf = new Uint8Array(32)
+  crypto.getRandomValues(buf)
+  return Array.from(buf, (b) => chars[b % chars.length]).join('')
+}
+// deno-lint-ignore no-explicit-any
+async function ensureOffer(session: any): Promise<string | null> {
+  if (session.offer_token) return session.offer_token
+  const offerId = (await getSetting('rozmowa_offer_id')) || DEFAULT_OFFER_ID
+  const token = genOfferToken()
+  const validUntil = new Date(Date.now() + OFFER_VALID_DAYS * 24 * 3600_000)
+    .toISOString().slice(0, 10)
+  const { error } = await supabase.from('client_offers').insert({
+    lead_id: session.lead_id,
+    offer_id: offerId,
+    unique_token: token,
+    valid_until: validUntil,
+    offer_type: 'full',
+    source: 'rozmowa',
+  })
+  if (error) { console.error('[lead-talk] oferta fail', error); return null }
+  await supabase.from('talk_sessions').update({ offer_token: token }).eq('id', session.id)
+  session.offer_token = token
+  return token
+}
+
 // ── Stemple <faza> ───────────────────────────────────────────────────────────
 function extractFazy(text: string): string[] {
   const out: string[] = []
@@ -276,7 +308,42 @@ Deno.serve(async (req) => {
       messages,
       turns: session.turns || 0,
       maxTurns: MAX_TURNS,
+      offerToken: session.offer_token || null,
     }, 200, cors)
+  }
+
+  // ════════════════ RESUME_FROM_OFFER (wrócił z oferty bez rezerwacji) ════════════════
+  if (action === 'resume_from_offer') {
+    const sid = String(body.sessionId || '')
+    if (!/^[0-9a-f-]{36}$/i.test(sid)) return jsonResponse({ error: 'bad_session' }, 400, cors)
+    const { data: session } = await supabase.from('talk_sessions').select('*').eq('id', sid).maybeSingle()
+    if (!session) return jsonResponse({ error: 'sesja_nie_istnieje' }, 404, cors)
+    const { data: lastMsg } = await supabase.from('talk_messages')
+      .select('role,content').eq('session_id', sid).order('id', { ascending: false }).limit(1).maybeSingle()
+    // idempotencja na reload: ostatnia wiadomość to już powrót-z-oferty → oddaj ją
+    if (lastMsg?.role === 'assistant' && /powrot_z_oferty/.test(lastMsg.content)) {
+      return jsonResponse({ message: lastMsg.content, offerToken: session.offer_token || null }, 200, cors)
+    }
+    const { data: lead } = await supabase.from('leads')
+      .select('id,name,email,phone,direction,current_income,budget,weekly_hours,experience,open_question')
+      .eq('id', session.lead_id).maybeSingle()
+    if (!lead) return jsonResponse({ error: 'lead_nie_istnieje' }, 404, cors)
+    try {
+      const { data: hist } = await supabase.from('talk_messages')
+        .select('role,content').eq('session_id', sid).order('id', { ascending: true })
+      const openaiMessages = await buildMessages(lead, session, [
+        ...(hist || []),
+        { role: 'user', content: '[SYSTEM: Lead właśnie WRÓCIŁ ze strony oferty BEZ dokonania rezerwacji — coś go wstrzymało. Napisz JEDNĄ krótką wiadomość (max 3 zdania + pytanie): ciepło zauważ powrót, zapytaj wprost, co go wstrzymuje przy ofercie (cena? niepewność? termin?), przypomnij w pół zdania, że rezerwacja to zwrotne 500 zł i że oferta jest ważna tylko 7 dni. Chipy <opcje> z typowymi wahaniami + stempel <faza>powrot_z_oferty</faza>.]' },
+      ])
+      const res = await openaiFetch({ model: MODEL, messages: openaiMessages, max_completion_tokens: 350 })
+      const j = await res.json()
+      const msg = (j?.choices?.[0]?.message?.content || '').trim()
+      if (msg) await persistAssistant(session, msg)
+      return jsonResponse({ message: msg || null, offerToken: session.offer_token || null }, 200, cors)
+    } catch (e) {
+      console.error('[lead-talk] resume_from_offer fail', e)
+      return jsonResponse({ error: 'blad_ai' }, 502, cors)
+    }
   }
 
   // ════════════════════ MESSAGE (SSE) ════════════════════
@@ -379,10 +446,14 @@ Deno.serve(async (req) => {
           }
         }
         await persistOnce()
+        // <rezerwacja> = wystaw ofertę (7 dni) i podaj frontowi token → karta linkuje /p/<token>
+        let offerToken: string | null = session.offer_token || null
+        if (/<rezerwacja>/i.test(full)) offerToken = await ensureOffer(session)
         send('talk_meta', {
           sessionId,
           phase: extractFazy(full).pop() || session.last_phase || null,
           reservation: /<rezerwacja>/i.test(full),
+          offerToken,
           cut: finishReason === 'length' || undefined,
         })
       } catch (e) {
