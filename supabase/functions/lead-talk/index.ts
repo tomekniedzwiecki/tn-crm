@@ -217,14 +217,20 @@ Deno.serve(async (req) => {
       .eq('id', leadId).maybeSingle()
     if (!lead) return jsonResponse({ error: 'lead_nie_istnieje' }, 404, cors)
 
-    // jedna sesja per lead — wznawiamy ostatnią
+    // jedna sesja per lead — unikalność egzekwuje uq_talk_sessions_lead;
+    // przy racie podwójnego init (23505) re-selectujemy istniejącą
     let { data: session } = await supabase.from('talk_sessions')
       .select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (!session) {
       const { data: created, error } = await supabase.from('talk_sessions')
         .insert({ lead_id: leadId, is_test: body.isTest === true }).select('*').single()
-      if (error || !created) return jsonResponse({ error: 'sesja_fail' }, 500, cors)
-      session = created
+      if (created) session = created
+      else if (error && String(error.code) === '23505') {
+        const { data: existing } = await supabase.from('talk_sessions')
+          .select('*').eq('lead_id', leadId).maybeSingle()
+        session = existing
+      }
+      if (!session) return jsonResponse({ error: 'sesja_fail' }, 500, cors)
     }
 
     const { data: msgs } = await supabase.from('talk_messages')
@@ -244,7 +250,14 @@ Deno.serve(async (req) => {
         const res = await openaiFetch({ model: MODEL, messages: openaiMessages, max_completion_tokens: 700 })
         const j = await res.json()
         const opening = (j?.choices?.[0]?.message?.content || '').trim()
-        if (opening) {
+        // guard na race dwóch initów tej samej sesji: zapisz otwarcie tylko, jeśli nadal 0 wiadomości
+        const { count: nowCount } = await supabase.from('talk_messages')
+          .select('id', { count: 'exact', head: true }).eq('session_id', session.id)
+        if ((nowCount || 0) > 0) {
+          const { data: fresh } = await supabase.from('talk_messages')
+            .select('role,content').eq('session_id', session.id).order('id', { ascending: true })
+          messages = fresh || []
+        } else if (opening) {
           await persistAssistant(session, opening)
           messages = [{ role: 'assistant', content: opening }]
         }
@@ -261,6 +274,8 @@ Deno.serve(async (req) => {
       sessionId: session.id,
       prefill: { name: lead.name || '', email: lead.email || '', phone: lead.phone || '' },
       messages,
+      turns: session.turns || 0,
+      maxTurns: MAX_TURNS,
     }, 200, cors)
   }
 
