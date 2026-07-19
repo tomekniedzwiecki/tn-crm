@@ -43,9 +43,14 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const TALK_URL_BASE = 'https://tomekniedzwiecki.pl/rozmowa/?lid='
 const KINDS = ['talk_followup_1', 'talk_followup_2', 'talk_followup_3', 'talk_followup_4', 'talk_followup_5']
 const THRESH_H = [3, 24, 72, 168, 336]
+// Minimalny odstęp od POPRZEDNIEGO maila serii (delta progów). Bez tego leady z
+// zaległą kotwicą (np. rejestracja sprzed 3 tyg.) mają „spełnione" wszystkie progi
+// naraz i seria skompresowałaby się do rytmu bramki 10 h.
+const MIN_SPACING_H = [0, 21, 48, 96, 168]
 const MAX_START_AGE_H = 30 * 24      // nie zaczynaj serii, gdy kotwica starsza niż 30 dni
 const CHANNEL_GAP_MS = 10 * 3600 * 1000
 const MAX_PER_RUN = 6
+const DAILY_CAP = 60                 // twardy sufit wysyłek/dobę (higiena reputacji domeny)
 const DEADLINE_MS = 300_000          // soft-deadline (edge wall-clock 400 s)
 const HISTORY_CAP = 30               // wypowiedzi rozmowy podawanych modelowi
 const OPENAI_MODEL = Deno.env.get('TALK_FOLLOWUP_MODEL') || 'gpt-5.6'
@@ -411,7 +416,15 @@ Deno.serve(async (req: Request) => {
     }
     anchored.sort((a, b) => a.anchorMs - b.anchorMs)
 
+    // dzienny sufit: ile followupów już wyszło dziś (od północy Warszawy w przybliżeniu UTC-dnia)
     let mailBudget = MAX_PER_RUN
+    {
+      const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0)
+      const { count: sentToday } = await supabase.from('talk_followups')
+        .select('id', { count: 'exact', head: true }).eq('status', 'sent').gte('sent_at', dayStart.toISOString())
+      if ((sentToday || 0) >= DAILY_CAP) mailBudget = 0
+      else mailBudget = Math.min(MAX_PER_RUN, DAILY_CAP - (sentToday || 0))
+    }
     for (const { lead, sess, anchorMs } of anchored) {
       if (mailBudget <= 0 || Date.now() - t0 > DEADLINE_MS) break
       const id = String(lead.id)
@@ -426,6 +439,7 @@ Deno.serve(async (req: Request) => {
       if (sentCnt >= KINDS.length) continue
       if (sentCnt === 0 && hoursSince > MAX_START_AGE_H) continue // za stare, nie zaczynaj
       if (hoursSince < THRESH_H[sentCnt]) continue                // za wcześnie na kolejny
+      if (sentCnt > 0 && t?.lastSent && now - t.lastSent < MIN_SPACING_H[sentCnt] * 3_600_000) continue // rytm serii
       if (t?.lastSent && now - t.lastSent < CHANNEL_GAP_MS) continue
       const lastMail = lastMailByLead.get(id) || 0
       if (lastMail && now - lastMail < CHANNEL_GAP_MS) continue   // świeży inny mail (np. zapisy_confirmation)
