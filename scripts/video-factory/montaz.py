@@ -133,8 +133,12 @@ def build(plan, audio, gen_dir, out_path, require_pass=True, require_sfx=True,
         a, b = starts[audio["peak"]], ends[audio["peak"]]
         mchain += f",volume=enable='between(t,{a:.2f},{b:.2f})':volume={audio.get('peak_gain', 1.5)}"
     filters.append(mchain + "[mus]")
+    # apad+atrim do PELNEJ dlugosci: sidechaincompress konczy MUZYKE razem z KLUCZEM — bez tego
+    # muzyka urywa sie w momencie konca ostatniego VO (stolik 19.07: ogon 14.2-15.0 s bez muzyki;
+    # w masazerze niewidoczne, bo VO siegalo konca kreacji).
     filters.append("".join(mixin) + f"amix=inputs={len(mixin)}:duration=longest:normalize=0,"
-                   "acompressor=threshold=-16dB:ratio=3:attack=5:release=150:makeup=2[voall]")
+                   "acompressor=threshold=-16dB:ratio=3:attack=5:release=150:makeup=2,"
+                   f"apad,atrim=0:{total:.3f}[voall]")
     filters.append("[voall]asplit=2[vok][vom]")
     filters.append(f"[mus][vok]sidechaincompress=threshold={audio.get('duck_thr', 0.09)}:"
                    f"ratio={audio.get('duck_ratio', 3)}:attack=20:release={audio.get('duck_release', 250)}[md]")
