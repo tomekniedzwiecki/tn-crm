@@ -140,13 +140,41 @@ function genOfferToken(): string {
   crypto.getRandomValues(buf)
   return Array.from(buf, (b) => chars[b % chars.length]).join('')
 }
+// Personalne intro oferty z kontekstu rozmowy (strona /p/ renderuje personalized_intro).
 // deno-lint-ignore no-explicit-any
-async function ensureOffer(session: any): Promise<string | null> {
-  if (session.offer_token) return session.offer_token
+async function genOfferIntro(lead: any, history: { role: string; content: string }[]): Promise<string | null> {
+  try {
+    const recent = history.slice(-14).map((m) =>
+      (m.role === 'user' ? 'LEAD: ' : 'AI: ') + cleanStr(m.content, 300)).join('\n')
+    const res = await openaiFetch({
+      model: MODEL,
+      max_completion_tokens: 160,
+      messages: [
+        { role: 'system', content: 'Piszesz 2 krótkie zdania personalnego wstępu do oferty współpracy z Tomkiem Niedźwieckim (budowa sklepu internetowego pod klucz). W 2. osobie, ciepło i konkretnie, nawiąż do sytuacji/motywacji leada z rozmowy. BEZ cen, BEZ obietnic zarobków, BEZ powitania typu „Cześć". Zwróć SAM tekst wstępu.' },
+        { role: 'user', content: `Lead: ${cleanStr(lead?.name, 60) || 'brak imienia'}\nRozmowa:\n${recent}` },
+      ],
+    })
+    const j = await res.json()
+    const intro = (j?.choices?.[0]?.message?.content || '').trim()
+    return intro && intro.length > 20 ? intro.slice(0, 500) : null
+  } catch (e) { console.error('[lead-talk] intro fail', e); return null }
+}
+
+// deno-lint-ignore no-explicit-any
+async function ensureOffer(session: any, ctx?: { lead?: any; history?: { role: string; content: string }[] }): Promise<string | null> {
+  // istniejąca oferta: użyj, o ile NIE wygasła (lead wraca po >7 dniach → świeża oferta)
+  if (session.offer_token) {
+    const { data: existing } = await supabase.from('client_offers')
+      .select('valid_until').eq('unique_token', session.offer_token).maybeSingle()
+    const today = new Date().toISOString().slice(0, 10)
+    if (existing && String(existing.valid_until) >= today) return session.offer_token
+  }
   const offerId = (await getSetting('rozmowa_offer_id')) || DEFAULT_OFFER_ID
   const token = genOfferToken()
   const validUntil = new Date(Date.now() + OFFER_VALID_DAYS * 24 * 3600_000)
     .toISOString().slice(0, 10)
+  const intro = (ctx?.lead && ctx?.history?.length)
+    ? await genOfferIntro(ctx.lead, ctx.history) : null
   const { error } = await supabase.from('client_offers').insert({
     lead_id: session.lead_id,
     offer_id: offerId,
@@ -154,6 +182,7 @@ async function ensureOffer(session: any): Promise<string | null> {
     valid_until: validUntil,
     offer_type: 'full',
     source: 'rozmowa',
+    personalized_intro: intro,
   })
   if (error) { console.error('[lead-talk] oferta fail', error); return null }
   await supabase.from('talk_sessions').update({ offer_token: token }).eq('id', session.id)
@@ -458,7 +487,7 @@ Deno.serve(async (req) => {
         // Samonaprawa: marker w HISTORII bez tokena (sesje sprzed fixa self-closing) → dogeneruj.
         const histHasRsv = history.some((m) => m.role === 'assistant' && /<rezerwacja\s*\/?>/i.test(m.content))
         let offerToken: string | null = session.offer_token || null
-        if (/<rezerwacja\s*\/?>/i.test(full) || histHasRsv) offerToken = await ensureOffer(session)
+        if (/<rezerwacja\s*\/?>/i.test(full) || histHasRsv) offerToken = await ensureOffer(session, { lead, history })
         send('talk_meta', {
           sessionId,
           phase: extractFazy(full).pop() || session.last_phase || null,

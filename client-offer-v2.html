@@ -1746,6 +1746,11 @@
                 <i class="ph ph-whatsapp-logo"></i>
                 Napisz do nas
             </a>
+            <!-- oferta z rozmowy AI: powrót do czatu = bot wystawi świeżą ofertę -->
+            <a id="back-to-talk-expired" href="#" class="hidden mt-3 inline-flex items-center gap-2 border border-dashed border-white/15 hover:border-white/30 text-zinc-300 hover:text-white px-6 py-3 rounded-xl font-medium transition-colors w-full justify-center">
+                <i class="ph ph-chat-circle-text"></i>
+                Wróć do rozmowy po nową ofertę
+            </a>
         </div>
     </div>
 
@@ -1816,7 +1821,7 @@
                         Wpłać <span class="text-amber-400">500 zł</span> zadatku
                     </h2>
                     <p id="hero-sub" class="text-zinc-400 text-sm sm:text-base mb-6 leading-relaxed">
-                        Zadatek blokuje Twój termin w grafiku. Resztę rozliczamy zgodnie z harmonogramem płatności.
+                        Rezerwacja (w pełni zwrotna) blokuje Twój termin w grafiku. Resztę rozliczamy zgodnie z harmonogramem płatności.
                     </p>
 
                     <!-- Big deposit number -->
@@ -1870,7 +1875,7 @@
                         </span>
                         <span id="hero-trust-third" class="inline-flex items-center gap-1.5">
                             <i id="hero-trust-third-icon" class="ph ph-arrow-counter-clockwise text-emerald-400"></i>
-                            <span id="hero-trust-third-text">Zadatek odliczany od ceny</span>
+                            <span id="hero-trust-third-text">Rezerwacja odliczana od ceny</span>
                         </span>
                     </div>
                 </div>
@@ -1983,7 +1988,7 @@
                                     <div class="text-white font-semibold"><span id="invoice-total">-</span> PLN</div>
                                 </div>
                                 <div id="invoice-box-2" class="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3">
-                                    <div class="text-amber-400 text-[10px] font-mono uppercase tracking-wider mb-1">Zadatek dziś</div>
+                                    <div class="text-amber-400 text-[10px] font-mono uppercase tracking-wider mb-1">Rezerwacja dziś</div>
                                     <div class="text-amber-300 font-semibold">500 PLN</div>
                                 </div>
                             </div>
@@ -2280,6 +2285,13 @@
             today.setHours(0, 0, 0, 0);
 
             if (validUntil < today) {
+                if (clientOffer.source === 'rozmowa' && lead?.id) {
+                    const bx = document.getElementById('back-to-talk-expired');
+                    if (bx) {
+                        bx.href = `https://tomekniedzwiecki.pl/rozmowa/?lid=${lead.id}&from=oferta`;
+                        bx.classList.remove('hidden');
+                    }
+                }
                 showScreen('expired-screen');
 
                 const dedupKey = `expired-notified-${clientOffer.id}`;
@@ -2964,7 +2976,7 @@
         // Returns a promise — callers should await before redirecting so events don't get lost.
         async function logCheckoutStart(checkoutType, amount) {
             const labelMap = {
-                deposit:   'Rezerwuję miejsce (zadatek)',
+                deposit:   'Rezerwuję miejsce (zwrotna rezerwacja)',
                 remaining: 'Opłacam pozostałość (po zadatku)',
                 full:      'Płacę całość od razu',
             };
@@ -3011,12 +3023,13 @@
             trackInitiateCheckout('deposit');
             await logCheckoutStart('deposit', DEPOSIT_AMOUNT);
 
-            const description = `Zadatek: ${offer.name}`;
+            const description = `Rezerwacja: ${offer.name}`;
             const params = new URLSearchParams({
                 amount: String(DEPOSIT_AMOUNT),
                 description: description,
                 lead_id: lead.id
             });
+            if (clientOffer?.id) params.set('client_offer', clientOffer.id);
             window.location.href = `/checkout?${params.toString()}`;
         }
 
@@ -3043,6 +3056,7 @@
                 description: description,
                 lead_id: lead.id,
             });
+            if (clientOffer?.id) params.set('client_offer', clientOffer.id);
             window.location.href = `/checkout?${params.toString()}`;
         }
 
@@ -3062,7 +3076,7 @@
                     .eq('lead_id', lead.id)
                     .eq('status', 'paid')
                     .eq('amount', DEPOSIT_AMOUNT)
-                    .ilike('description', 'Zadatek%')
+                    .or('description.ilike.Zadatek%,description.ilike.Rezerwacja%')
                     .order('paid_at', { ascending: false })
                     .limit(1);
 
@@ -3086,7 +3100,7 @@
             const badge = document.getElementById('hero-badge');
             badge.classList.remove('bg-amber-500/15', 'border-amber-500/30', 'text-amber-400');
             badge.classList.add('bg-emerald-500/15', 'border-emerald-500/30', 'text-emerald-400');
-            badge.innerHTML = '<i class="ph-fill ph-check-circle text-[12px]"></i><span>Zadatek wpłacony</span>';
+            badge.innerHTML = '<i class="ph-fill ph-check-circle text-[12px]"></i><span>Rezerwacja wpłacona</span>';
 
             // 2. Hero title
             document.getElementById('hero-title').innerHTML =
