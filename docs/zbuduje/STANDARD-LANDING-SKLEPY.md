@@ -622,7 +622,15 @@ F5.2. **ZESTAW OBOWIĄZKOWY:** scroll-reveal ze staggerem · JEDNA animacja-moty
    ruch subtelny premium — zero morfingu produktu; werdykt klatek początek/środek/koniec),
    transkody webm ~300-400 KB + mp4 ~450-550 KB, `bud-assets/<slug>/video/hero-loop[-m].*`,
    wstrzykiwane JS PO load (poster `<picture>` = fallback LCP; bez reduced-motion/save-data);
-   ~$0.75/klip z budżetu · **ELEMENT ANGAŻUJĄCY (wymóg!):**
+   **dobór klipu d/m przez `matchMedia('(min-width:768px)')` Z LISTENEREM `change`** (podmiana
+   source+klasa+poster+load/play przy zmianie viewportu — jednorazowy wybór przy load to pułapka:
+   rewizja na desktopie przez zwężenie okna/device-mode dostaje landscape-klip rozciągnięty na
+   pełny hero; incydent masażer v1); **re-upload klipów na te same ścieżki = cache-bust `?v=N`
+   w kodzie** (CDN trzyma stare bajty); **ruch = 3 warstwy naraz, każda subtelna** (produkt
+   PRACUJE rytmicznie ~1 cykl/2 s + osoba REAGUJE [barki opadają/oddech] + świat ODDYCHA
+   [światło faluje, dolly-in ≤2-3%]) — sam „ambient" bez widocznej pracy produktu = niedosyt
+   (feedback Tomka do v1 masażera); warianty per-viewport wybierać na JAKOŚCI (mocniejszy ruch
+   nie zawsze wygrywa — desktop masażera wziął łagodniejszy wariant); ~$0.35-0.75/klip · **ELEMENT ANGAŻUJĄCY (wymóg!):**
    co najmniej jedna interakcja, która WCIĄGA użytkownika w produkt (interaktywne demo:
    suwak symulacji efektu, wybór kolorów/wariantów na packshocie, porównanie przed/po —
    z auto-zajawką przy pierwszym pokazaniu, żeby było widać że to interaktywne).

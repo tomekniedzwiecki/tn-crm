@@ -1344,27 +1344,41 @@
 
 <script>
 /* HERO-VIDEO (F5.2 standard 19.07; wzorzec Drapek, tu OBA viewporty). Wstrzykiwane PO load
-   (LCP-safe: poster <picture> renderuje od razu). Kling 2.5, petla first=last, 5 s, bez audio. */
+   (LCP-safe: poster <picture> renderuje od razu). Kling 2.5, petla first=last, 5 s, bez audio.
+   DOBOR REAGUJE na zmiane viewportu (matchMedia 'change'): resize okna / obrot / DevTools device
+   mode -> podmiana zrodla + klasy --m + poster + v.load()/play() + fade od nowa. ?v=2 = cache-bust
+   (CDN trzyma stare bajty pod tym samym URL po re-uploadzie klipow). */
 (function(){try{
   var mq=window.matchMedia; if(!mq)return;
-  if(mq('(prefers-reduced-motion: reduce)').matches)return;
-  var c=navigator.connection||{}; if(c.saveData)return;
+  if(mq('(prefers-reduced-motion: reduce)').matches)return;   // reduced-motion = statyczny hero
+  var c=navigator.connection||{}; if(c.saveData)return;        // save-data = statyczny hero
+  var SB="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/";
+  var VER="?v=2";                                              // cache-bust re-uploadu klipow
+  var mqDesk=mq('(min-width:768px)');
   window.addEventListener('load',function(){try{
     var media=document.querySelector('.hero .hero-media'); if(!media)return;
-    var desktop=mq('(min-width:768px)').matches;
-    var SB="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/";
-    var VID=SB+"video/"+(desktop?"hero-loop":"hero-loop-m");
-    var POS=SB+"scenes/"+(desktop?"hero-d.webp":"hero-m.webp");
     var v=document.createElement('video');
     v.muted=true;v.defaultMuted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.preload='metadata';
     v.setAttribute('muted','');v.setAttribute('loop','');v.setAttribute('playsinline','');v.setAttribute('preload','metadata');
     v.setAttribute('aria-hidden','true');
-    v.className='hero-video'+(desktop?'':' hero-video--m');
-    v.setAttribute('poster',POS);
-    v.innerHTML='<source src="'+VID+'.webm" type="video/webm"><source src="'+VID+'.mp4" type="video/mp4">';
     v.addEventListener('playing',function(){v.classList.add('on');});
     media.insertAdjacentElement('afterend',v);
-    var p=v.play(); if(p&&p.catch)p.catch(function(){});
+    var cur=null;
+    function apply(){
+      var desktop=mqDesk.matches;
+      if(cur===desktop)return;                                 // ta sama strona breakpointu -> nic
+      cur=desktop;
+      var VID=SB+"video/"+(desktop?"hero-loop":"hero-loop-m");
+      var POS=SB+"scenes/"+(desktop?"hero-d.webp":"hero-m.webp"); // poster = niezmieniona scena LCP (bez VER)
+      v.className='hero-video'+(desktop?'':' hero-video--m');   // reassignment kasuje 'on' -> fade od nowa
+      v.setAttribute('poster',POS);
+      v.innerHTML='<source src="'+VID+'.webm'+VER+'" type="video/webm"><source src="'+VID+'.mp4'+VER+'" type="video/mp4">';
+      v.load();
+      var p=v.play(); if(p&&p.catch)p.catch(function(){});
+    }
+    apply();                                                   // pierwszy wybor z AKTUALNEGO stanu mq
+    if(mqDesk.addEventListener)mqDesk.addEventListener('change',apply);
+    else if(mqDesk.addListener)mqDesk.addListener(apply);      // starsze Safari/WebKit
   }catch(e){}});
 }catch(e){}})();
 </script>
