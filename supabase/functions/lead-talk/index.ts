@@ -103,14 +103,25 @@ async function openaiFetch(body: unknown): Promise<Response> {
 function cleanStr(s: unknown, max = 900): string {
   return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').slice(0, max).trim()
 }
+// Tłumaczenie chipów ankiety „Co już próbowałeś w biznesie online?" na ludzki opis
+const DIRECTION_LABELS: Record<string, string> = {
+  sklep_online: 'własny sklep online', allegro: 'sprzedaż na Allegro', vinted_olx: 'Vinted/OLX',
+  dropshipping: 'dropshipping', takedrop: 'TakeDrop (platforma Tomka!)', amazon: 'Amazon',
+  kursy: 'kursy online', freelance: 'freelance', afiliacja: 'afiliacja', trading: 'trading/krypto',
+  nigdy: 'NIC — zaczyna zupełnie od zera',
+}
 // deno-lint-ignore no-explicit-any
 function leadContext(lead: any): string {
   const parts: string[] = []
   if (lead.name) parts.push(`Imię: ${cleanStr(lead.name, 80)}`)
-  if (lead.direction) parts.push(`Co próbował (chipy z ankiety): ${cleanStr(lead.direction, 200)}`)
+  if (lead.direction) {
+    const tried = cleanStr(lead.direction, 200).split(',')
+      .map((d) => DIRECTION_LABELS[d.trim()] || d.trim()).filter(Boolean).join(', ')
+    if (tried) parts.push(`Co już próbował w biznesie online (ankieta): ${tried}`)
+  }
   if (lead.current_income) parts.push(`Obecny dochód mies.: ${cleanStr(lead.current_income, 20)}`)
-  if (lead.budget) parts.push(`Deklarowany budżet: ${cleanStr(lead.budget, 30)} zł`)
-  if (lead.weekly_hours) parts.push(`Czas tygodniowo: ${cleanStr(lead.weekly_hours, 20)}`)
+  if (lead.budget) parts.push(`Deklarowany budżet na start: ${cleanStr(lead.budget, 30)} zł`)
+  if (lead.weekly_hours) parts.push(`Czas tygodniowo na biznes: ${cleanStr(lead.weekly_hours, 20)}`)
   const about = cleanStr(lead.experience || lead.open_question, 900)
   parts.push(about
     ? `„O sobie" (własne słowa leada — OD TEGO ZACZNIJ):\n"""${about}"""`
@@ -200,9 +211,9 @@ Deno.serve(async (req) => {
       try {
         const openaiMessages = await buildMessages(lead, session, [{
           role: 'user',
-          content: '[SYSTEM: To sam początek rozmowy — lead właśnie wszedł po wypełnieniu ankiety. Napisz PIERWSZĄ wiadomość otwierającą wg sekcji OTWARCIE promptu: nawiąż WPROST do jego słów z ankiety (albo wariant neutralny, jeśli pole puste). Zakończ jednym pytaniem. Dodaj stempel <faza> profilu.]',
+          content: '[SYSTEM: To sam początek rozmowy — lead właśnie złożył aplikację (ankietę). Napisz PIERWSZĄ wiadomość wg sekcji OTWARCIE promptu, struktura obowiązkowa: (1) potwierdź przyjęcie aplikacji, (2) rama selekcji w jednym zdaniu (zanim aplikacja trafi na biurko Tomka, dopytasz o parę rzeczy — on bierze kilka osób naraz), (3) jedno pytanie zbudowane na konkrecie z jego ankiety (albo neutralne, jeśli pola puste). MAX 3 krótkie zdania + pytanie, do ~320 znaków. Dodaj chipy <opcje> z 2-3 odpowiedziami głosem leada i stempel <faza> profilu.]',
         }])
-        const res = await openaiFetch({ model: MODEL, messages: openaiMessages, max_completion_tokens: 900 })
+        const res = await openaiFetch({ model: MODEL, messages: openaiMessages, max_completion_tokens: 700 })
         const j = await res.json()
         const opening = (j?.choices?.[0]?.message?.content || '').trim()
         if (opening) {
