@@ -1,4 +1,9 @@
-# SEKCJE-INTERAKTYWNE — TOR-I: osobny proces dla sekcji interaktywnych
+# SEKCJE-INTERAKTYWNE
+
+> **⚠️ Stany „z jednej klatki" = pułapka SSIM (masażer 19.07):** gdy stany A/B/C wyprowadzasz
+> z tej samej sceny (spójność!), baza obrazów potrafi mieć SSIM ~0.98 — realną różnicę MUSI
+> dowieźć warstwa UI/nakładek. Test stanów mierz na WYRENDEROWANYM stanie (obraz+UI razem),
+> a SSIM samych obrazów bazowych policz PRZED budową jako wczesny sygnał ryzyka. — TOR-I: osobny proces dla sekcji interaktywnych
 
 **Status: OBOWIĄZUJE (2026-07-17; feedback Tomka po demo Loczka „Trzy ruchy do loka":
 sekcja interaktywna wymaga OSOBNEGO procesu — projektowania, testowania i dopracowania

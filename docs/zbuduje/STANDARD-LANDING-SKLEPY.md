@@ -1136,6 +1136,11 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   2 warstwy + crossfade `opacity` — standard dla wszystkich „zmieniających kolor" scen.
 - **Auto-zajawka każdego interaktywnego demo** (teaser 1 cykl → natychmiastowe oddanie
   kontroli przy 1. interakcji → hint; reduced-motion → bez teasera) — wzorzec F5.
+- **Scroll-driven (F5, masażer 19.07):** elementy rysowane scrollem na KOŃCU strony — próg
+  ukończenia przy top≈65% vh (dolny element nigdy nie dojedzie do góry viewportu = niedorysowany);
+  testy headless scroll-driven z wymuszonym `scroll-behavior:auto` (smooth = undershoot
+  programowego scrollTo = fałszywe „reveal nie wszedł"); count-up parsuj `^(\D*)(\d+)(.*)$`
+  (inaczej spacja sufiksu wpada do liczby — „1264mAh").
 - **Sekcja wideo (F5):** kafle JEDEN `aspect-ratio:9/16` `object-fit:cover` radius+cień, ZERO
   chrome TikToka; lightbox 9:16 w JEDNYM chunku kodera (inaczej zduplikowane ID); JS =
   ROZSZERZENIE istniejącego IO wideo (autoplay-on-visible) o „unmute jednego wycisza resztę";
