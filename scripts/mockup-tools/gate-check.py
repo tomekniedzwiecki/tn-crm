@@ -535,16 +535,19 @@ def check_baza(res, M, ctx):
                     else ("nota wideo w LEDGER" if vok else "puste/NULL i brak noty"))
     else:
         res.add("baza", "bud_tt_products", "SKIP", "brak product-key")
-    # bud_brand_names
+    # bud_brand_names — rezerwacja keyed po SLUG (mini-marka USP-first != slug: 'Odprężek' vs 'masazer';
+    # stary check 'name ilike slug' dzialal tylko gdy marka~slug [Loczek/loczek], FAIL gdy sie roznia — masazer 19.07)
+    kol_slug = m.get("kolumna_slug", "slug")
     brand_rows = pg_get(env, M, m["tabela_nazw"],
-                        {m["kolumna_nazwy"]: "ilike." + ctx["slug"], "select": m["kolumna_nazwy"]},
+                        {kol_slug: "eq." + ctx["slug"], "select": "%s,%s" % (m["kolumna_nazwy"], kol_slug)},
                         ctx["timeout"])
     if brand_rows is None:
         res.add("baza", "bud_brand_names", "SKIP", "brak dostepu")
     else:
         ok = len(brand_rows) > 0
-        res.add("baza", "bud_brand_names ma wpis '%s'" % ctx["slug"], status_for(ok, sev),
-                "" if ok else "brak rezerwacji nazwy")
+        nm = (brand_rows[0].get(m["kolumna_nazwy"]) if ok else None)
+        res.add("baza", "bud_brand_names ma wpis slug='%s'" % ctx["slug"], status_for(ok, sev),
+                ("marka '%s'" % nm) if ok else "brak rezerwacji nazwy dla slug")
 
 def check_wideo_kafle(res, M, ctx):
     m = M["wideo_kafle"]; sev = m["severity"]; html = ctx["html"]

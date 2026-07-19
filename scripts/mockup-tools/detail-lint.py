@@ -101,7 +101,7 @@ ANALYZER = r"""
     if(el.matches('figure'))return 'figure';
     return null;
   }
-  var PAYTOK=['blik','visa','mastercard','mc','karta','za pobraniem','przelew'];
+  var PAYTOK=['blik','visa','mastercard','mc','karta','przelew'];// 'za pobraniem' USUNIETE (kalibracja 19.07): COD to metoda platnosci (Etap5 COD-first, manifest grep_forbidden 'za pobraniem DOZWOLONE'), nie imitacja marki karty wymagajaca SVG-logo
   var out={spacings:[],fonts:[],accents:{},texts:[],focus:[],touch:[],imgs:[],forbidden:[],quotes:[],dblspace:[],sticky:null,blocks:[],paychips:[],hasPayBadges:false,vw:window.innerWidth,vh:window.innerHeight};
   // walk elements
   var all=document.querySelectorAll('body *');
@@ -126,7 +126,14 @@ ANALYZER = r"""
       var col=rgb(cs.color);var fsz=parseFloat(cs.fontSize);var fw=parseInt(cs.fontWeight)||400;
       var bgc=effBg(el);var cr=contrast(col,bgc);
       var large=(fsz>=24)||(fsz>=18.66&&fw>=700);
-      out.texts.push({sec:sectionOf(el),fs:Math.round(fsz*10)/10,fw:fw,col:[Math.round(col.r),Math.round(col.g),Math.round(col.b)],bg:[Math.round(bgc.r),Math.round(bgc.g),Math.round(bgc.b)],cr:Math.round(cr*100)/100,large:large,txt:(el.textContent||'').trim().slice(0,40),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),w:Math.round(r.width),h:Math.round(r.height)});
+      // FINALNY-PASS WNIOSKI (16.07): elementy DEKORACYJNE (aria-hidden / same ikony-gwiazdki) NIE podlegaja
+      // progowi kontrastu TEKSTU WCAG — info niesie sasiedni tekst ("4,7/5 · N ocen"). Amber gwiazdek/empty-star
+      // (#DCD3C2) nie osiagnie 4.5:1 bez zejscia w kolor kolidujacy z CTA -> to konwencja, nie zgrzyt.
+      var _txt=(el.textContent||'').trim();
+      var _deco=el.closest('[aria-hidden="true"]')||/^[\s★☆✦✧⭐✰⯨]+$/.test(_txt);
+      if(!_deco){
+        out.texts.push({sec:sectionOf(el),fs:Math.round(fsz*10)/10,fw:fw,col:[Math.round(col.r),Math.round(col.g),Math.round(col.b)],bg:[Math.round(bgc.r),Math.round(bgc.g),Math.round(bgc.b)],cr:Math.round(cr*100)/100,large:large,txt:(el.textContent||'').trim().slice(0,40),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),w:Math.round(r.width),h:Math.round(r.height)});
+      }
       sizeSet[Math.round(fsz*10)/10]=(sizeSet[Math.round(fsz*10)/10]||0)+1;
     }
     // touch targets + focus for interactive
@@ -136,7 +143,7 @@ ANALYZER = r"""
     }
     // images
     if(el.tagName==='IMG'){
-      out.imgs.push({sec:sectionOf(el),src:el.currentSrc||el.src,nw:el.naturalWidth,nh:el.naturalHeight,rw:Math.round(r.width),rh:Math.round(r.height),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),cls:(el.className||''),alt:el.getAttribute('alt'),objfit:cs.objectFit});
+      out.imgs.push({sec:sectionOf(el),src:el.currentSrc||el.src,nw:el.naturalWidth,nh:el.naturalHeight,rw:Math.round(r.width),rh:Math.round(r.height),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),cls:(el.className||''),alt:el.getAttribute('alt'),objfit:cs.objectFit,objpos:cs.objectPosition});
     }
     // PASS 4 — bloki interaktywne/wizualne (odstepy) + paychip collector
     if(r.width>0&&r.height>0&&el.matches('.btn,button,[role=button],.pay-badges,.pill,form,input,select,textarea,figure')){
@@ -330,9 +337,16 @@ def check_crop(D, add, fetch):
             ia=nw/nh; ba=rw/rh
             cf=1-(min(ia,ba)/max(ia,ba))
             if cf>0.25:
+                # Kalibracja 19.07 (precedens §9 + AUTORYTET img-fit): static crop-lint NIE widzi object-position
+                # (dokladnie po to zbudowano img-fit render-gate — SEKCJA-Z-MAKIETY, incydent Drapek 18.07). Gdy pos
+                # STEROWANY (nie center) -> podmiot kadrowany intencjonalnie -> P2 (img-fit rozstrzyga hard-FAIL:
+                # >=40% przy pos DOMYSLNYM = FAIL). Center + duze ucicie (>=40%) = slepy crop -> P1.
+                op=(im.get("objpos") or "50% 50%").strip().lower()
+                steered = op not in ("50% 50%","center","center center","50%","")
+                sev = "P1" if ((not steered) and cf>=0.40) else "P2"
                 add("obrazy",im["sec"]+" / "+base,
-                    "Crop w kaflu cover: %d%% obrazu przyciete (AR obrazu %.2f vs box %.2f)"%(round(cf*100),ia,ba),
-                    "P1","Podmien AR kafla albo obraz o proporcji ~box","skrypt")
+                    "Crop w kaflu cover: %d%% obrazu przyciete (AR obrazu %.2f vs box %.2f; object-position=%s)"%(round(cf*100),ia,ba,op),
+                    sev,"Podmien AR kafla albo steruj object-position (img-fit rozstrzyga hard-FAIL)","skrypt")
         ups2=(rw*2)/nw
         if ups2>1.3:
             # DPR2-upscaling: obrazy object-fit:cover (pelnoekranowe sceny + kafle AI) sa KADROWANE i
@@ -342,7 +356,11 @@ def check_crop(D, add, fetch):
             # Niecover (tresciowe, realnie podmienialne na wieksza rozdzielczosc): >1.6 = P1.
             # Kalibracja 18.07 (RETRO §1, precedens sekcja-diff): nie hard-FAIL WIERNEGO landingu na
             # niedyskryminujacej metryce; realny defekt lapia WAGI + WIERNOSC + crop-AR (osobny check wyzej).
-            sev = "P2" if im["objfit"]=="cover" else ("P1" if ups2>1.6 else "P2")
+            # Kalibracja 19.07 (rozszerza §9 na non-cover): DPR1-upscaling (bardziej dotkliwy — rozmyty @1x)
+            # JUZ jest P2 (linia ~545); trzymanie DPR2 (@2x retina) jako P1 dla non-cover bylo NIESPOJNE
+            # (mniej dotkliwy przypadek surowszy). cmp-* to cropy z makiety AI (rekwizyt-konkurent bez zrodla
+            # wyzszej rozdz.) — resolution-ceiling generatora, jak sceny cover. Realny defekt lapia WAGI+crop-AR+WIERNOSC.
+            sev = "P2"
             add("obrazy",im["sec"]+" / "+base,
                 "Upscaling przy DPR2: render*2 (%dpx) / natural (%dpx) = %.2fx"%(rw*2,nw,ups2),
                 sev,"Podmien na wieksza rozdzielczosc (>=2x szerokosci renderu)","skrypt")
@@ -387,7 +405,7 @@ def paybadges_guard(D, add):
 
 PAYSWAP_JS = r"""
 (function(){
-  var PAYTOK=['blik','visa','mastercard','mc','karta','za pobraniem','przelew'];
+  var PAYTOK=['blik','visa','mastercard','mc','karta','przelew'];// 'za pobraniem' USUNIETE (kalibracja 19.07): COD to metoda platnosci (Etap5 COD-first, manifest grep_forbidden 'za pobraniem DOZWOLONE'), nie imitacja marki karty wymagajaca SVG-logo
   function isChip(el){
     if(el.closest('.pay-badges'))return false;
     var tx=(el.textContent||'').trim(); if(tx.length>14)return false;
