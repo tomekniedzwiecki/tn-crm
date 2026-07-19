@@ -584,7 +584,13 @@ F5.1. **CREATIVE TECHNOLOGIST** (gpt-5.6-sol; wybór wzorców z **`docs/zbuduje/
    NAJWYŻSZYM wykonalnym efforcie.
 F5.2. **ZESTAW OBOWIĄZKOWY:** scroll-reveal ze staggerem · JEDNA animacja-motyw korzyści
    (np. łuk świtu rysowany scrollem) · count-up (statyczna liczba w źródle!) · sticky
-   slide-in · mikrointerakcje CTA/kart (hover/press states) · **ELEMENT ANGAŻUJĄCY (wymóg!):**
+   slide-in · mikrointerakcje CTA/kart (hover/press states) · **HERO-VIDEO 5 s (STANDARD od
+   19.07 — decyzja Tomka przy masażerze; koniec statusu „POC" z Drapka):** pętla Kling 2.5
+   image-to-video z SCENY hero (desktop 3:2 + mobile 2:3 = 2 klipy, first frame = last frame,
+   ruch subtelny premium — zero morfingu produktu; werdykt klatek początek/środek/koniec),
+   transkody webm ~300-400 KB + mp4 ~450-550 KB, `bud-assets/<slug>/video/hero-loop[-m].*`,
+   wstrzykiwane JS PO load (poster `<picture>` = fallback LCP; bez reduced-motion/save-data);
+   ~$0.75/klip z budżetu · **ELEMENT ANGAŻUJĄCY (wymóg!):**
    co najmniej jedna interakcja, która WCIĄGA użytkownika w produkt (interaktywne demo:
    suwak symulacji efektu, wybór kolorów/wariantów na packshocie, porównanie przed/po —
    z auto-zajawką przy pierwszym pokazaniu, żeby było widać że to interaktywne).
