@@ -196,9 +196,17 @@ async function buildMessages(lead: any, session: any, history: { role: string; c
   const base = await getBasePrompt()
   if (!base) throw new Error('brak promptu rozmowy w settings')
   const tags = Array.isArray(session.tags) ? session.tags.map((t: { t: string }) => t.t).slice(-12).join(', ') : ''
-  const system = base
+  let system = base
     + `\n\n## KONTEKST LEADA (z ankiety /zapisy — używaj naturalnie, nie recytuj)\n${leadContext(lead)}`
     + (tags ? `\n\n## DOTYCHCZASOWE STEMPLE ROZMOWY (nie powtarzaj przerobionych beatów)\n${tags}` : '')
+  // DETERMINISTYCZNA zapadka domknięcia: prompt sam z siebie przegrywa z „momentum
+  // tłumaczenia" w długich rozmowach (test 19.07: persony szczegółowe kręciły się po
+  // cenie bez oferty). Gdy cena już padła (stempel faza_warunki_cena), a oferta NIE
+  // została wystawiona — wstrzykujemy pilną dyrektywę w każdej turze aż do wystawienia.
+  const tagList: string[] = Array.isArray(session.tags) ? session.tags.map((t: { t: string }) => t.t) : []
+  if (!session.offer_token && tagList.includes('faza_warunki_cena')) {
+    system += `\n\n## ⚠️ PILNE — DOMKNIĘCIE ZALEGA\nCena już padła, a OFERTA NIE ZOSTAŁA WYSTAWIONA. W TEJ turze: jeśli wiadomość leada to świeża obiekcja — rozbrój ją JEDNYM zdaniem; każdą inną wiadomość (pytanie o szczegóły, akceptacja, small talk) zamknij zdaniem „całość szczegółów zebrałem Ci w ofercie" i ZAKOŃCZ markerem <rezerwacja>. Zero dalszego tłumaczenia procesu w czacie.`
+  }
   return [{ role: 'system', content: system }, ...history.slice(-HISTORY_CAP)]
 }
 
@@ -210,7 +218,7 @@ async function persistAssistant(session: any, text: string) {
   const now = new Date().toISOString()
   const tags = Array.isArray(session.tags) ? session.tags : []
   for (const f of fazy) tags.push({ t: f, at: now })
-  if (/<rezerwacja>/i.test(text) && !fazy.includes('faza_okno_rezerwacji')) tags.push({ t: 'faza_okno_rezerwacji', at: now })
+  if (/<rezerwacja\s*\/?>/i.test(text) && !fazy.includes('faza_okno_rezerwacji')) tags.push({ t: 'faza_okno_rezerwacji', at: now })
   await supabase.from('talk_sessions').update({
     turns: (session.turns || 0) + 1,
     tags,
@@ -448,11 +456,11 @@ Deno.serve(async (req) => {
         await persistOnce()
         // <rezerwacja> = wystaw ofertę (7 dni) i podaj frontowi token → karta linkuje /p/<token>
         let offerToken: string | null = session.offer_token || null
-        if (/<rezerwacja>/i.test(full)) offerToken = await ensureOffer(session)
+        if (/<rezerwacja\s*\/?>/i.test(full)) offerToken = await ensureOffer(session)
         send('talk_meta', {
           sessionId,
           phase: extractFazy(full).pop() || session.last_phase || null,
-          reservation: /<rezerwacja>/i.test(full),
+          reservation: /<rezerwacja\s*\/?>/i.test(full),
           offerToken,
           cut: finishReason === 'length' || undefined,
         })
