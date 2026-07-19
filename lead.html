@@ -640,6 +640,7 @@
                                 <span class="text-sm text-white flex items-center gap-2">
                                     <i class="ph ph-chat-circle-text text-violet-400"></i>
                                     Transkrypcja rozmowy <span class="text-zinc-500">(<span id="transcript-count">0</span>)</span>
+                                    <span id="transcript-presence" class="hidden items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full border"></span>
                                 </span>
                                 <i class="ph ph-caret-down text-violet-500 group-open:rotate-180 transition-transform"></i>
                             </summary>
@@ -2641,6 +2642,39 @@
                 .replace(/\n{3,}/g, '\n\n').trim();
         }
         function escTr(s) { const d = document.createElement('div'); d.textContent = String(s || ''); return d.innerHTML; }
+        // Presence leada w /rozmowa: front pinguje last_seen_at co 30 s TYLKO gdy karta
+        // rozmowy jest widoczna → „online" = ping w ostatnich 90 s (wiemy, że realnie tam jest).
+        let talkPresenceTimer = null;
+        function renderTalkPresence(lastSeen) {
+            const el = document.getElementById('transcript-presence');
+            if (!el) return;
+            el.classList.remove('hidden');
+            el.classList.add('inline-flex');
+            const ts = lastSeen ? new Date(lastSeen).getTime() : 0;
+            const ageSec = ts ? (Date.now() - ts) / 1000 : Infinity;
+            if (ageSec <= 90) {
+                el.className = el.className.replace(/border-\S+|text-\S+|bg-\S+/g, '').trim() + ' inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
+                el.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>ONLINE TERAZ';
+            } else if (ts) {
+                const m = Math.round(ageSec / 60);
+                const label = m < 60 ? `był(a) ${m} min temu` : (m < 1440 ? `był(a) ${Math.round(m/60)} godz. temu` : `był(a) ${Math.round(m/1440)} dn. temu`);
+                el.className = el.className.replace(/border-\S+|text-\S+|bg-\S+/g, '').trim() + ' inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-zinc-500';
+                el.textContent = label;
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+        function startTalkPresence(sid, initialLastSeen) {
+            renderTalkPresence(initialLastSeen);
+            if (talkPresenceTimer) clearInterval(talkPresenceTimer);
+            talkPresenceTimer = setInterval(async () => {
+                try {
+                    const { data } = await supabaseClient.from('talk_sessions')
+                        .select('last_seen_at').eq('id', sid).single();
+                    renderTalkPresence(data && data.last_seen_at);
+                } catch (e) { /* cichy refresh */ }
+            }, 30000);
+        }
         function transcriptBubbles(msgs) {
             let shown = 0;
             const html = (msgs || []).map(function (m) {
@@ -2667,9 +2701,10 @@
 
                 // 1) Nowa rozmowa /rozmowa (talk_*) — stemple faz jako chipy nad transkrypcją
                 const { data: tSess } = await supabaseClient
-                    .from('talk_sessions').select('id, created_at, last_phase, tags')
+                    .from('talk_sessions').select('id, created_at, last_phase, tags, last_seen_at')
                     .eq('lead_id', lead.id).order('created_at', { ascending: false }).limit(1);
                 const tSid = tSess && tSess[0] && tSess[0].id;
+                if (tSid) startTalkPresence(tSid, tSess[0].last_seen_at);
                 if (tSid) {
                     const { data: tMsgs } = await supabaseClient
                         .from('talk_messages').select('role, content, created_at')

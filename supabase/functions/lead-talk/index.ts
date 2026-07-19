@@ -183,6 +183,15 @@ Deno.serve(async (req) => {
 
   const action = String(body.action || 'message')
 
+  // ════════════════════ PING (presence — front pinguje co ~30 s, gdy karta widoczna) ════════
+  if (action === 'ping') {
+    const sid = String(body.sessionId || '')
+    if (/^[0-9a-f-]{36}$/i.test(sid)) {
+      await supabase.from('talk_sessions').update({ last_seen_at: new Date().toISOString() }).eq('id', sid)
+    }
+    return jsonResponse({ ok: true }, 200, cors)
+  }
+
   // ════════════════════ INIT ════════════════════
   if (action === 'init') {
     const leadId = String(body.leadId || '')
@@ -261,6 +270,7 @@ Deno.serve(async (req) => {
   if (!lead) return jsonResponse({ error: 'lead_nie_istnieje' }, 404, cors)
 
   await supabase.from('talk_messages').insert({ session_id: sessionId, role: 'user', content: userMsg })
+  supabase.from('talk_sessions').update({ last_seen_at: new Date().toISOString() }).eq('id', sessionId).then(() => {})
 
   const { data: hist } = await supabase.from('talk_messages')
     .select('role,content').eq('session_id', sessionId).order('id', { ascending: true })
