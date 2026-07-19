@@ -7,7 +7,18 @@
 <link rel="icon" type="image/png" href="https://tomekniedzwiecki.pl/img/logo/tn-logo-icon-88.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.91.0"></script>
+<!-- Przełącznik aplikacji (współdzielony box). Tailwind BEZ preflight → Radar nietknięty. -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { corePlugins: { preflight: false } };</script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="components/shared-sidebar.js"></script>
+<style>
+  /* Box przełącznika działa bez preflight: w obrębie boxu odtwarzamy preflight
+     (width:0 + style:solid), żeby klasy border-* Tailwinda rysowały TYLKO zadeklarowane krawędzie */
+  #panel-switcher-btn{appearance:none;-webkit-appearance:none;background:transparent;border:0;cursor:pointer;font:inherit;color:inherit;padding:0}
+  #panel-switcher-dropdown,#panel-switcher-dropdown *,#panel-switcher-dropdown *::before,#panel-switcher-dropdown *::after{border-width:0;border-style:solid;border-color:currentColor}
+</style>
 <style>
   :root{
     --bg:#000; --surface:#0c0c0e; --surface2:#141417; --surface3:#1b1b20; --line:#222226; --line2:#2e2e34;
@@ -414,6 +425,10 @@
 <body>
 <header class="bar">
   <div class="barTop">
+    <button id="panel-switcher-btn" type="button" title="Przełącz aplikację (Ctrl+K)" class="flex items-center gap-1.5 rounded-lg px-1.5 py-1 hover:bg-white/5 transition-colors">
+      <span class="w-7 h-7 bg-white text-black rounded flex items-center justify-center"><i class="ph-bold ph-lightning text-sm"></i></span>
+      <i class="ph-bold ph-caret-up-down text-zinc-500 text-xs"></i>
+    </button>
     <div class="brand"><span class="dot"></span>Radar produktów <span class="sub">TikTok → AliExpress</span></div>
     <div class="funnel" id="funnel"></div>
     <button id="refresh" class="btn refreshBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Odśwież</button>
@@ -576,6 +591,8 @@ async function init(){
   const ALLOW=['93675a5a-ea02-488c-a6c2-4adf687ea435','7cd1830f-fca0-44d4-a419-7a822f77f919'];
   if(!ALLOW.includes(session.user.id)){$('loading').outerHTML='<div class="loader" style="color:var(--dim2);font-size:14px">Brak dostępu — ten widok jest tylko dla Maćka i Tomka.</div>';return;}
   MEID=session.user.id;
+  // Przełącznik aplikacji w lewym górnym rogu (Radar nie ma menu) — box + Alt+N + Ctrl+K
+  if(window.Sidebar?.mountPanelSwitcher) Sidebar.mountPanelSwitcher({ email: session.user.email });
   const {data:tm}=await sb.from('team_members').select('name').eq('user_id',session.user.id).maybeSingle();
   ME=tm?.name||session.user.email;
   $('fcat').innerHTML='<option value="">Wszystkie kategorie</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');

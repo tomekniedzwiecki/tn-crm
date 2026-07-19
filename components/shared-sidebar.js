@@ -894,9 +894,15 @@ function showAdminNav(isAdmin) {
     });
 }
 
-function setUserEmail(email) {
-    const el = document.getElementById('user-email');
-    if (el) el.textContent = email;
+// Wewnętrzny rdzeń: ustawia _userEmail, egzekwuje dostęp, przebudowuje box i pozycje
+// ownerEmails. updateLabel=false → nie nadpisuj kosmetycznej etykiety #user-email
+// (strony ustawiają ją same, często samym username). Używany też przez bezpiecznik
+// w setupLogout, więc KAŻDA strona (nawet nie wołająca setUserEmail) dostaje pełny box.
+function applyUserEmail(email, { updateLabel = true } = {}) {
+    if (updateLabel) {
+        const el = document.getElementById('user-email');
+        if (el) el.textContent = email;
+    }
 
     // Store for access checks
     _userEmail = email;
@@ -924,6 +930,11 @@ function setUserEmail(email) {
         if (allowed) el.classList.remove('hidden');
         else el.classList.add('hidden');
     });
+}
+
+// Publiczne API — sygnatura bez zmian (zawsze aktualizuje etykietę)
+function setUserEmail(email) {
+    applyUserEmail(email, { updateLabel: true });
 }
 
 function updateAppSwitcherVisibility() {
@@ -1054,6 +1065,21 @@ function setupLogout(supabaseClient) {
     // Badge "Kampanie" (TN Workflow) — setupLogout to jedyny punkt, gdzie każda strona
     // przekazuje supabaseClient, więc badge ładuje się wszędzie bez zmian w stronach
     if (_currentAppId === 'workflow') loadWorkflowCampaignBadge(supabaseClient);
+
+    // Centralny bezpiecznik: wypełnij _userEmail z sesji, jeśli strona nie zawołała
+    // setUserEmail. Dzięki temu box przełącznika (getAvailableApps) i skróty Alt+N
+    // działają na KAŻDEJ stronie — także lead.html / discount-codes.html / email-log.html.
+    // Całość w try/catch — nie może wywalić strony. Nie nadpisuje etykiety, jeśli już jest.
+    (async () => {
+        try {
+            const { data } = await supabaseClient.auth.getSession();
+            const email = data && data.session && data.session.user && data.session.user.email;
+            if (!email) return;
+            const labelEl = document.getElementById('user-email');
+            const hasLabel = !!(labelEl && labelEl.textContent && labelEl.textContent.trim());
+            applyUserEmail(email, { updateLabel: !hasLabel });
+        } catch (_) { /* bezpiecznik — nie blokuj strony */ }
+    })();
 }
 
 // Badge "Kampanie": nierozwiązane blokery (owner tomek/klient) + raporty nowsze niż
