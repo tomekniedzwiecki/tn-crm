@@ -368,17 +368,21 @@ def build_copy_prompt(bundle, angles):
     for a in angles:
         if a == "problem":
             schema_lines.append(
-                '  "problem": {"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
+                '  "problem": {"hook_baner":"TRANSFORMACJA PL, 2-4 słowa (np. \\"Koniec walki o pazury\\")",'
+                '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"1 zdanie EN — scena FAKTU z produktem",'
                 '"pain_vision":"1 zdanie EN — scena bólu BEZ produktu","fakt_checkmarki":["≤3 słowa PL","≤3 słowa PL","≤3 słowa PL"]}')
         elif a == "demo":
             schema_lines.append(
-                '  "demo": {"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
+                '  "demo": {"hook_baner":"PYTANIE-LUSTRO lub BENEFIT PL (np. \\"Twój pies nie znosi obcinania pazurów?\\")",'
+                '"callouts_demo":["≤3 słowa PL z FAKTÓW (np. schowek na smakołyki)","≤3 słowa PL (np. ściera pazury naturalnie)","≤3 słowa PL (np. antypoślizgowy spód)"],'
+                '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"STUDYJNA wskazówka EN, max kilka słów — '
                 'tylko rekwizyt/kolor/faktura tła obok produktu, BEZ ludzi i BEZ scen wnętrz (np. \\"a few dog treats scattered beside the board\\")"}')
         else:
             schema_lines.append(
-                '  "%s": {"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
+                '  "%s": {"hook_baner":"KRÓTKI MARKER-TEKST PL, ≤3 słowa, jak odręczna notka (np. \\"smakołyk tutaj →\\")",'
+                '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"1 zdanie EN — konkretna wizja sceny dla TEGO produktu/persony (gdzie leży, co wokół, pora dnia)"}' % a)
     schema = "{\n" + ",\n".join(schema_lines) + "\n}"
 
@@ -390,6 +394,10 @@ def build_copy_prompt(bundle, angles):
         "Opieraj się na FAKTACH z tytułu aukcji i opisów kadrów — nie zgaduj kategorii produktu z nazwy marki.\n\n"
         "ZADANIE — dla kątów: %s.\n"
         "Dla każdego kąta:\n"
+        "• hook_baner: GŁÓWNY hook renderowany WIELKI na banerze. demo = pytanie-lustro lub benefit; "
+        "problem = transformacja (przed→po); lifestyle = krótki odręczny marker-tekst. PL, z diakrytykami.\n"
+        "• callouts_demo (TYLKO demo): 3 krótkie etykiety ≤3 słowa Z FAKTÓW produktu (tytuł aukcji/opisy kadrów) "
+        "wskazujące części produktu (schowek na smakołyki / ściera pazury naturalnie / antypoślizgowy spód). ZERO zmyślania.\n"
         "• headline: 2-4 słowa PL, JEDNA obietnica, dobrze wygląda WERSALIKAMI (diakrytyki OK).\n"
         "• subline: opcjonalny, ≤6 słów PL (pusty string gdy zbędny).\n"
         "• primary_text: 2-3 zdania PL, hak w 1. zdaniu, lekkie CTA; KAŻDY kąt zaczyna się INNYM zdaniem.\n"
@@ -400,8 +408,10 @@ def build_copy_prompt(bundle, angles):
         "Dla kąta 'problem' dodatkowo:\n"
         "• pain_vision: 1 zdanie EN — scena frustracji/bólu BEZ produktu w kadrze.\n"
         "• fakt_checkmarki: 3 korzyści PL, każda ≤3 słowa.\n\n"
-        "ZASADY UCZCIWOŚCI (Meta 2026): zero liczb/cen/gwiazdek, zero personal attributes (nie oskarżaj odbiorcy "
-        "— headline bezosobowo), zero obietnic medycznych, zero opisu wyglądu produktu w scene_vision.\n\n"
+        "ZASADY UCZCIWOŚCI TWARDE (Meta 2026, decyzja Tomka): zero zmyślonych rabatów/starych cen/„-%%”, "
+        "zero urgency/countdownów, zero „darmowej dostawy” (niepotwierdzona), zero gwiazdek/opinii/liczb w copy, "
+        "zero personal attributes (headline bezosobowo), zero obietnic medycznych, zero opisu wyglądu produktu w scene_vision. "
+        "Callouty i copy TYLKO z realnych faktów produktu.\n\n"
         "ZWRÓĆ WYŁĄCZNIE obiekt JSON (bez markdown, bez komentarza) o strukturze:\n%s"
         % (name, marka or "(brak — neutralnie)", kategoria or "—", dla or "—", kat or "—",
            ton or "—", hooki or "—", fakty, ", ".join(angles), schema)
@@ -826,26 +836,233 @@ def _rgba_canvas(img_rgb):
     return img_rgb.convert("RGBA")
 
 
-def compose_demo(scene_img, headline, subline, logo_img, palette, out_path):
+# ══════════════════════════════════════════════════════════════════════════════
+# PRYMITYWY BANEROWE (DR statyki). Typografia px @1080 → skala ×(W/1080). Akcent z palety
+# (fallback pomarańcz); scrim/podkładki gwarantują kontrast ≥4,5:1; marginesy 6-8%.
+# ══════════════════════════════════════════════════════════════════════════════
+_PILL_REF = "ĄĘŚÓŻgy"
+
+
+def _accent(palette):
+    return palette[1] if len(palette) > 1 else ORANGE_LABEL
+
+
+def _text_on(bg_rgb):
+    """Kolor tekstu o WYŻSZYM kontraście vs tło (kremowy albo ciemny) — ≥4,5:1."""
+    bg = tuple(bg_rgb[:3])
+    return CREAM if contrast_ratio(CREAM, bg) >= contrast_ratio(DARK_BAR, bg) else DARK_BAR
+
+
+def draw_scrim(canvas, box, top_alpha, bottom_alpha=None):
+    """Ciemny scrim z pionowym gradientem alfy — gwarancja kontrastu pod tekstem."""
+    Image, _, _, _, _ = _pil()
+    x0, y0, x1, y1 = [int(v) for v in box]
+    w, h = max(1, x1 - x0), max(1, y1 - y0)
+    if bottom_alpha is None:
+        bottom_alpha = top_alpha
+    grad = Image.new("L", (1, h))
+    for i in range(h):
+        t = i / max(1, h - 1)
+        grad.putpixel((0, i), int(top_alpha + (bottom_alpha - top_alpha) * t))
+    band = Image.new("RGBA", (w, h), DARK_BAR + (0,))
+    band.putalpha(grad.resize((w, h)))
+    canvas.alpha_composite(band, (x0, y0))
+
+
+def measure_pill(canvas, text, font, pad):
+    Image, ImageDraw, _, _, _ = _pil()
+    tw = ImageDraw.Draw(canvas).textlength(text, font=font)
+    r = font.getbbox(_PILL_REF)
+    return int(tw + 2 * pad[0]), int((r[3] - r[1]) + 2 * pad[1])
+
+
+def draw_pill(canvas, text, font, bg_rgba, text_rgb, topleft, pad, radius=None):
+    """Wypełniona zaokrąglona pigułka z tekstem (top-left = topleft). Zwraca (x0,y0,x1,y1)."""
+    Image, ImageDraw, _, _, _ = _pil()
+    tw = ImageDraw.Draw(canvas).textlength(text, font=font)
+    r = font.getbbox(_PILL_REF)
+    W_, H_ = int(tw + 2 * pad[0]), int((r[3] - r[1]) + 2 * pad[1])
+    x0, y0 = int(topleft[0]), int(topleft[1])
+    if radius is None:
+        radius = H_ // 2
+    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    ImageDraw.Draw(layer).rounded_rectangle([x0, y0, x0 + W_, y0 + H_], radius=radius, fill=bg_rgba)
+    canvas.alpha_composite(layer)
+    tb = font.getbbox(text)
+    tcol = (text_rgb + (255,)) if len(text_rgb) == 3 else text_rgb
+    ImageDraw.Draw(canvas).text((x0 + pad[0], y0 + (H_ - (tb[3] - tb[1])) // 2 - tb[1]), text, font=font, fill=tcol)
+    return (x0, y0, x0 + W_, y0 + H_)
+
+
+def draw_pointer(canvas, start, end, color, width, dot_r):
+    """Cienka linia-wskaźnik z kropką na końcu (przy produkcie)."""
+    Image, ImageDraw, _, _, _ = _pil()
+    d = ImageDraw.Draw(canvas)
+    col = (color + (255,)) if len(color) == 3 else color
+    d.line([tuple(start), tuple(end)], fill=col, width=width)
+    dr = dot_r
+    d.ellipse([end[0] - dr, end[1] - dr, end[0] + dr, end[1] + dr], fill=col)
+
+
+def draw_curved_arrow(canvas, start, end, color, width):
+    """Odręczna krzywa strzałka (kwadratowa Béziera) + grot — marker w candid."""
+    import math
+    Image, ImageDraw, _, _, _ = _pil()
+    d = ImageDraw.Draw(canvas)
+    col = (color + (255,)) if len(color) == 3 else color
+    sx, sy = start
+    ex, ey = end
+    cxp = (sx + ex) / 2 + (ey - sy) * 0.28
+    cyp = (sy + ey) / 2 - (ex - sx) * 0.28
+    pts = []
+    for i in range(0, 21):
+        t = i / 20.0
+        pts.append(((1 - t) ** 2 * sx + 2 * (1 - t) * t * cxp + t * t * ex,
+                    (1 - t) ** 2 * sy + 2 * (1 - t) * t * cyp + t * t * ey))
+    d.line(pts, fill=col, width=width, joint="curve")
+    ax, ay = pts[-1]
+    bx, by = pts[-4]
+    ang = math.atan2(ay - by, ax - bx)
+    ln = width * 4.5
+    for da in (math.radians(152), math.radians(-152)):
+        d.line([(ax, ay), (ax + ln * math.cos(ang + da), ay + ln * math.sin(ang + da))], fill=col, width=width)
+
+
+def product_bbox(rgb, y_lo=0.42, y_hi=0.96, lum_thr=74):
+    """Zgrubny bbox największego CIEMNEGO obszaru (deska) w dolnej części kadru — do celowania callboxów."""
+    Image, _, _, _, _ = _pil()
+    W, H = rgb.size
+    sw, sh = 108, 135
+    px = rgb.resize((sw, sh), Image.LANCZOS).load()
+    xs, ys = [], []
+    for yy in range(int(sh * y_lo), int(sh * y_hi)):
+        for xx in range(sw):
+            r, g, b = px[xx, yy][:3]
+            if (0.2126 * r + 0.7152 * g + 0.0722 * b) < lum_thr:
+                xs.append(xx); ys.append(yy)
+    if len(xs) < 25:
+        return None
+    xs.sort(); ys.sort()
+    q = lambda arr, p: arr[min(len(arr) - 1, max(0, int(len(arr) * p)))]
+    return (int(q(xs, 0.05) / sw * W), int(q(ys, 0.05) / sh * H),
+            int((q(xs, 0.95) + 1) / sw * W), int((q(ys, 0.95) + 1) / sh * H))
+
+
+def _cool(img_rgb):
+    """Lekko chłodniejszy ton (−R, +B) — 'stres' po stronie PRZED."""
+    Image, _, _, _, _ = _pil()
+    r, g, b = img_rgb.convert("RGB").split()
+    r = r.point(lambda v: int(v * 0.92))
+    b = b.point(lambda v: min(255, int(v * 1.08)))
+    return Image.merge("RGB", (r, g, b))
+
+
+def clean_price(cena_pl):
+    """Czysta cena PL ('129 zł') z lp_dane; None gdy brak. BEZ starej ceny/„-%” (uczciwość ZG4)."""
+    s = str(cena_pl or "").strip()
+    if not s:
+        return None
+    m = re.search(r"(\d[\d\s.,]*)\s*(z[łl]|PLN)", s, re.I)
+    if m:
+        return "%s zł" % m.group(1).strip().rstrip(".,")
+    m = re.search(r"\d[\d\s.,]*\d|\d", s)
+    return ("%s zł" % m.group(0).strip()) if m else None
+
+
+def _logo_corner(canvas, logo_img, h_px, corner="tl", margin_frac=0.05):
+    """Małe logo na jasnej pigułce w danym rogu (chrome banera, nie na zdjęciu produktu)."""
+    if logo_img is None:
+        return
+    W, H = canvas.size
+    m = int(W * margin_frac)
+    pill = _logo_pill(logo_img, h_px, max_w=int(W * 0.30))
+    pw, ph = pill.size
+    hard = int(min(W, H) * 0.035)
+    x = m if "l" in corner else W - m - pw
+    y = m if "t" in corner else H - m - ph
+    x = max(hard, min(x, W - hard - pw))
+    y = max(hard, min(y, H - hard - ph))
+    canvas.alpha_composite(pill, (x, y))
+
+
+def compose_demo(scene_img, ca, logo_img, palette, cena_pl, out_path):
+    """CALLOUT/ANATOMIA: scena w użyciu + górny scrim z hookiem + 3 callouty-pigułki z liniami
+    do części produktu + dolny pas (COD badge + CTA). Logo małe top-left."""
     Image, ImageDraw, _, _, _ = _pil()
     canvas = _rgba_canvas(scene_img)
     W, H = canvas.size
-    draw = ImageDraw.Draw(canvas)
-    max_w = int(W * 0.86)
-    zone = (int(W * 0.07), int(H * 0.04), int(W * 0.93), int(H * 0.30))   # górna strefa negatywna
-    zone_rgb = zone_avg_rgb(scene_img, zone)
-    fill = pick_text_fill(zone_rgb, palette)
-    hl = (headline or "").upper()
-    if hl:
-        font, lines, line_h = fit_headline(draw, hl, resolve_font_path_glob, max_w, int(H * 0.20))
-        y = int(H * 0.06)
+    S = W / 1080.0
+    px = lambda v: max(1, int(round(v * S)))
+    m = int(W * 0.06)
+    accent = _accent(palette)
+    fontp = resolve_font_path_glob
+    hook = (ca.get("hook_baner") or ca.get("headline") or "").strip()
+    callouts = [str(c).strip() for c in (ca.get("callouts_demo") or []) if str(c).strip()][:3]
+
+    # ── górny scrim (0-20%) + logo top-left + HOOK biały bold, wyrównany do lewej ──
+    scrim_h = int(H * 0.20)
+    draw_scrim(canvas, (0, 0, W, scrim_h), 205, 120)
+    logo_bottom = int(H * 0.022)
+    if logo_img is not None:
+        pill = _logo_pill(logo_img, px(56), max_w=int(W * 0.30))
+        canvas.alpha_composite(pill, (m, int(H * 0.022)))
+        logo_bottom = int(H * 0.022) + pill.size[1]
+    if hook:
+        hy = logo_bottom + px(12)
+        hf, lines, lh = fit_headline(ImageDraw.Draw(canvas), hook.upper(), fontp,
+                                     int(W * 0.88), scrim_h - hy - px(6), max_lines=2, hi=px(86), lo=px(44))
+        y = hy
         for ln in lines:
-            draw_text_shadow(canvas, (W // 2, y), ln, font, fill, anchor="ma", canvas_h=H)
-            y += int(line_h * 1.14)
-        if subline:
-            sf = _font(resolve_font_path_glob, max(28, int(H * 0.026)))
-            draw_text_shadow(canvas, (W // 2, y + int(H * 0.01)), subline.upper(), sf, fill, anchor="ma", canvas_h=H)
-    place_logo(canvas, logo_img, 0.09)
+            draw_text_shadow(canvas, (m, int(y)), ln, hf, CREAM, anchor="la", canvas_h=H)
+            y += lh * 1.06
+
+    # ── dolny pas: 2 mikro-badge COD (rząd) + CTA-pigułka POD spodem (bez nachodzenia) ──
+    band_top = int(H * 0.83)
+    bot_h = H - band_top
+    draw_scrim(canvas, (0, band_top, W, H), 120, 215)
+    bf = _font(fontp, px(31))
+    bpad = (px(14), px(9))
+    by = band_top + px(18)
+    b1 = draw_pill(canvas, "PŁATNOŚĆ ZA POBRANIEM", bf, (255, 255, 255, 235), DARK_BAR, (m, by), bpad)
+    draw_pill(canvas, "14 DNI NA ZWROT", bf, (255, 255, 255, 235), DARK_BAR, (b1[2] + px(12), by), bpad)
+    ctaf = _font(fontp, px(50))
+    cta = "ZAMÓW ZA POBRANIEM  →"
+    cw, ch = measure_pill(canvas, cta, ctaf, (px(28), px(15)))
+    draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), ((W - cw) // 2, b1[3] + px(16)), (px(28), px(15)))
+
+    # ── callouty-pigułki z liniami-wskaźnikami do części produktu (schowek/powierzchnia/krawędź) ──
+    # deska = DOLNE ~40% kadru (nie ciemne tło nocy); cele docięte NAD dolnym pasem, żeby dot był na widocznej desce.
+    bbox = product_bbox(scene_img, y_lo=0.60)
+    if bbox and callouts:
+        bx0, by0, bx1, by1 = bbox
+        bw, bh = max(1, bx1 - bx0), max(1, by1 - by0)
+        clampy = lambda yv: min(int(yv), band_top - px(16))
+        targets = [
+            (int(bx0 + bw * 0.80), clampy(by0 + bh * 0.28)),   # schowek (prawa-góra deski)
+            (int(bx0 + bw * 0.32), clampy(by0 + bh * 0.30)),   # powierzchnia ścierna
+            (int(bx0 + bw * 0.55), clampy(by0 + bh * 0.55)),   # krawędź / spód
+        ]
+        yb0, yb1 = max(0, int(by0 - bh * 0.2)), min(H, by1)
+        left_busy = edge_variance(scene_img, (0, yb0, max(2, bx0), yb1))
+        right_busy = edge_variance(scene_img, (min(W - 2, bx1), yb0, W, yb1))
+        side = "left" if left_busy <= right_busy else "right"
+        cf = _font(fontp, px(40))
+        pad = (px(20), px(12))
+        top_stack, bot_stack = int(H * 0.30), band_top - px(26)
+        n = max(1, len(callouts))
+        for i, txt in enumerate(callouts):
+            t = txt.upper()
+            pw_, ph_ = measure_pill(canvas, t, cf, pad)
+            cy = int(top_stack + (bot_stack - top_stack) * (i + 0.5) / n) - ph_ // 2
+            stag = px(34) if i == 1 else 0                     # środkowa odsunięta (Z-feel)
+            if side == "left":
+                cx = m + stag; anchor_pt = (cx + pw_, cy + ph_ // 2)
+            else:
+                cx = W - m - pw_ - stag; anchor_pt = (cx, cy + ph_ // 2)
+            cx = max(m, min(cx, W - m - pw_))
+            tgt = targets[i] if i < len(targets) else (int((bx0 + bx1) / 2), int((by0 + by1) / 2))
+            draw_pointer(canvas, anchor_pt, tgt, accent, px(3), px(7))
+            draw_pill(canvas, t, cf, accent + (255,), _text_on(accent), (cx, cy), pad)
     canvas.convert("RGB").save(out_path, "PNG")
 
 
@@ -856,56 +1073,70 @@ def _draw_check(draw, x, y, size, color):
     draw.line([(x + size * 0.35, y + size * 0.9), (x + size * 0.95, y + size * 0.12)], fill=color, width=w)
 
 
-def compose_problem(pain_img, fakt_img, headline, checkmarki, marka, logo_img, palette, out_path):
+def compose_problem(pain_img, fakt_img, ca, marka, logo_img, palette, cena_pl, out_path):
+    """PRZED/PO „STRES → SPOKÓJ": pionowy split 50/50 (PAIN desat+chłodno | FAKT ciepła),
+    biała linia na styku, pigułki PRZED/PO, hook na górnym scrimie, dolny pas cena+CTA."""
     Image, ImageDraw, _, _, _ = _pil()
     W, H = FINAL_W, FINAL_H
-    bar_h = int(H * 0.13)
+    S = W / 1080.0
+    px = lambda v: max(1, int(round(v * S)))
+    m = int(W * 0.06)
+    accent = _accent(palette)
+    fontp = resolve_font_path_glob
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    panel_h = H - bar_h
     half = W // 2
-    pain_panel = cover_fit(desaturate(pain_img, 0.20), half, panel_h)
-    fakt_panel = cover_fit(fakt_img.convert("RGB"), W - half, panel_h)
-    canvas.alpha_composite(pain_panel.convert("RGBA"), (0, bar_h))
-    canvas.alpha_composite(fakt_panel.convert("RGBA"), (half, bar_h))
+    pain = _cool(desaturate(pain_img, 0.20))
+    canvas.alpha_composite(cover_fit(pain, half, H).convert("RGBA"), (0, 0))
+    canvas.alpha_composite(cover_fit(fakt_img.convert("RGB"), W - half, H).convert("RGBA"), (half, 0))
     draw = ImageDraw.Draw(canvas)
-    # pas tytułowy
-    draw.rectangle([0, 0, W, bar_h], fill=DARK_BAR + (255,))
-    # akcent = drugi kolor palety (pierwszy to zwykle ciemny primary); brak → domyślny pomarańcz
-    orange = palette[1] if len(palette) > 1 else ORANGE_LABEL
-    # LOGO na pasie tytułowym (prawy róg) — NIGDY na panelu PAIN; zwraca lewą krawędź do zawężenia headline
-    logo_x = place_logo_titlebar(canvas, logo_img, bar_h)
-    hl = (headline or "").upper()
-    if hl:
-        left_m = int(W * 0.04)
-        head_right = (logo_x - int(W * 0.02)) if logo_img is not None else (W - left_m)
-        head_cx = (left_m + head_right) // 2
-        head_max_w = max(int(W * 0.30), head_right - left_m)
-        font, lines, line_h = fit_headline(draw, hl, resolve_font_path_glob, head_max_w, int(bar_h * 0.74), max_lines=2)
-        y = (bar_h - line_h * len(lines) * 1.1) / 2
+    lw = px(7)
+    draw.rectangle([half - lw // 2, 0, half + lw // 2 + (lw % 2), H], fill=(255, 255, 255, 255))  # biała linia styku
+
+    # ── górny scrim + logo top-right + HOOK (transformacja) wyrównany do lewej (bez kolizji) ──
+    scrim_h = int(H * 0.16)
+    draw_scrim(canvas, (0, 0, W, scrim_h), 210, 110)
+    logo_left = W
+    if logo_img is not None:
+        pill = _logo_pill(logo_img, px(48), max_w=int(W * 0.22))
+        lx = W - int(W * 0.05) - pill.size[0]
+        canvas.alpha_composite(pill, (lx, int(H * 0.022)))
+        logo_left = lx
+    hook = (ca.get("hook_baner") or ca.get("headline") or "").strip()
+    if hook:
+        hmax = max(int(W * 0.40), (logo_left - int(W * 0.02)) - m)
+        hf, lines, lh = fit_headline(ImageDraw.Draw(canvas), hook.upper(), fontp, hmax, scrim_h - px(18), max_lines=2, hi=px(82), lo=px(40))
+        y = (scrim_h - lh * len(lines) * 1.04) / 2
         for ln in lines:
-            draw_text_shadow(canvas, (head_cx, int(y)), ln, font, CREAM, anchor="ma", canvas_h=H)
-            y += line_h * 1.1
-    # etykiety-pigułki nad panelami (tuż pod pasem)
-    lf = _font(resolve_font_path_glob, max(26, int(H * 0.024)))
-    _pill_label(canvas, draw, "STARY SPOSÓB", lf, GRAY_LABEL, (half // 2, bar_h + int(H * 0.03)))
-    _pill_label(canvas, draw, (marka or "TERAZ").upper(), lf, orange, (half + (W - half) // 2, bar_h + int(H * 0.03)))
-    # 3 checkmarki na panelu FAKT (dół)
-    cf = _font(resolve_font_path_glob, max(24, int(H * 0.022)))
-    cx = half + int(W * 0.03)
-    cy = H - int(H * 0.20)
-    for txt in (checkmarki or [])[:3]:
-        sz = int(H * 0.026)
-        pill = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        pd = ImageDraw.Draw(pill)
-        tw = pd.textlength(txt.upper(), font=cf)
-        pd.rounded_rectangle([cx - int(sz * 0.5), cy - int(sz * 0.3), cx + sz * 1.4 + tw + int(sz * 0.5), cy + sz * 1.3],
-                             radius=int(sz * 0.7), fill=(255, 255, 255, 150))
-        canvas.alpha_composite(pill)
-        d2 = ImageDraw.Draw(canvas)
-        _draw_check(d2, cx, cy, sz, orange + (255,))
-        d2.text((cx + sz * 1.4, cy + sz * 0.5), txt.upper(), font=cf, fill=DARK_BAR + (255,), anchor="lm")
-        cy += int(H * 0.055)
-    # logo już umieszczone na pasie tytułowym (NIE na panelu PAIN)
+            draw_text_shadow(canvas, (m, int(y)), ln, hf, CREAM, anchor="la", canvas_h=H)
+            y += lh * 1.04
+
+    # pigułki PRZED (szara) / PO (akcent) w górnych rogach połówek
+    lf = _font(fontp, px(46))
+    py = scrim_h + px(22)
+    draw_pill(canvas, "PRZED", lf, GRAY_LABEL + (240,), CREAM, (m, py), (px(22), px(11)))
+    pw2, _ = measure_pill(canvas, "PO", lf, (px(22), px(11)))
+    draw_pill(canvas, "PO", lf, accent + (255,), _text_on(accent), (W - m - pw2, py), (px(22), px(11)))
+
+    # ── dolny pas: BLOK CENY (prawdziwa) po LEWEJ + krótkie CTA po PRAWEJ (jeden rząd, bez nachodzenia) ──
+    bot_h = int(H * 0.185)
+    band_top = H - bot_h
+    draw_scrim(canvas, (0, band_top, W, H), 110, 218)
+    cena = clean_price(cena_pl)
+    if cena:
+        pf = _font(fontp, px(92))
+        sf = _font(fontp, px(35))
+        py2 = band_top + px(30)
+        draw_text_shadow(canvas, (m, py2), cena, pf, CREAM, anchor="la", canvas_h=H)
+        draw_text_shadow(canvas, (m + px(4), py2 + px(96)), "za pobraniem", sf, accent, anchor="la", canvas_h=H)
+        ctaf = _font(fontp, px(54))
+        cta = "ZAMÓW  →"
+        cw, ch = measure_pill(canvas, cta, ctaf, (px(30), px(16)))
+        draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), (W - m - cw, band_top + (bot_h - ch) // 2), (px(30), px(16)))
+    else:
+        ctaf = _font(fontp, px(52))
+        cta = "ZAMÓW ZA POBRANIEM  →"
+        cw, ch = measure_pill(canvas, cta, ctaf, (px(28), px(15)))
+        draw_pill(canvas, cta, ctaf, accent + (255,), _text_on(accent), ((W - cw) // 2, band_top + (bot_h - ch) // 2), (px(28), px(15)))
     canvas.convert("RGB").save(out_path, "PNG")
 
 
@@ -925,10 +1156,48 @@ def _pill_label(canvas, draw, text, font, color, center):
     d2.text((cx, cy), text, font=font, fill=color + (255,), anchor="mm")
 
 
-def compose_lifestyle(scene_img, logo_img, palette, out_path):
+def compose_lifestyle(scene_img, ca, logo_img, palette, out_path):
+    """CANDID/UGC-LOOK: minimum grafiki — JEDEN odręczny callout-marker (krzywa strzałka + krótki
+    tekst-naklejka, lekko obrócony) wskazujący produkt + mała żółta kapsułka „za pobraniem" w rogu.
+    Bez pasów/scrimów. Logo malutkie (6%). Ma wyglądać jak post, nie reklama."""
+    Image, ImageDraw, _, _, _ = _pil()
     canvas = _rgba_canvas(scene_img)
-    # BEZ tekstu (default); mała pigułka (≤6.5% wys.), preferuj jasny róg, góra wolna → fallback na górę
-    place_logo(canvas, logo_img, 0.07, allow_top=True, pill_frac=0.065)
+    W, H = canvas.size
+    S = W / 1080.0
+    px = lambda v: max(1, int(round(v * S)))
+    accent = _accent(palette)
+    fontp = resolve_font_path_glob
+    marker = (ca.get("hook_baner") or "").strip()
+
+    bbox = product_bbox(scene_img)
+    if marker and bbox:
+        bx0, by0, bx1, by1 = bbox
+        txt = marker.upper()
+        mf = _font(fontp, px(44))
+        pad = (px(18), px(10))
+        tw = ImageDraw.Draw(canvas).textlength(txt, font=mf)
+        r = mf.getbbox(_PILL_REF)
+        pw_, ph_ = int(tw + 2 * pad[0]), int((r[3] - r[1]) + 2 * pad[1])
+        stamp = Image.new("RGBA", (pw_, ph_), (0, 0, 0, 0))
+        sd = ImageDraw.Draw(stamp)
+        sd.rounded_rectangle([0, 0, pw_, ph_], radius=ph_ // 2, fill=(255, 255, 255, 232))
+        tb = mf.getbbox(txt)
+        sd.text((pad[0], (ph_ - (tb[3] - tb[1])) // 2 - tb[1]), txt, font=mf, fill=DARK_BAR + (255,))
+        stamp = stamp.rotate(-7, expand=True, resample=Image.BICUBIC)
+        # naklejka nad produktem, po stronie z miejscem (unikaj prawej, gdzie zwykle osoba)
+        sx = max(int(W * 0.06), min(int(bx0 + (bx1 - bx0) * 0.05), W - stamp.size[0] - int(W * 0.06)))
+        sy = max(int(H * 0.30), by0 - stamp.size[1] - px(46))
+        canvas.alpha_composite(stamp, (sx, sy))
+        draw_curved_arrow(canvas, (sx + stamp.size[0] // 2, sy + stamp.size[1] - px(4)),
+                          (int(bx0 + (bx1 - bx0) * 0.5), int(by0 + (by1 - by0) * 0.35)), accent, px(5))
+
+    # żółta kapsułka „za pobraniem" w rogu (36px)
+    yf = _font(fontp, px(36))
+    YEL = (245, 202, 60)
+    pw2, _ = measure_pill(canvas, "za pobraniem", yf, (px(16), px(9)))
+    draw_pill(canvas, "za pobraniem", yf, YEL + (240,), DARK_BAR, (W - int(W * 0.06) - pw2, int(H * 0.055)), (px(16), px(9)))
+
+    place_logo(canvas, logo_img, 0.06, allow_top=True, pill_frac=0.058)   # logo malutkie, jasny róg
     canvas.convert("RGB").save(out_path, "PNG")
 
 
@@ -1013,20 +1282,30 @@ def publish(bundle, engine, out_dir, creatives, total_usd):
 
 
 # ── kompozycja wszystkich kątów + finisz (współdzielone: generacja i --recompose) ──
-def compose_all(angles, copy, scene_imgs, out_dir, brand_name, logo_img, palette):
+def _pick_demo_scene(scene_imgs):
+    """Demo (callout/anatomia) korzysta z ISTNIEJĄCEJ sceny w użyciu — produkt większy/czytelniejszy
+    pod linie: preferuj problem_fakt (deska + smakołyki w schowku, oddzielna od lifestyle), potem
+    lifestyle_ugc, na końcu studyjny demo_hero."""
+    for key in (("problem", "fakt"), ("lifestyle", "ugc"), ("demo", "hero")):
+        if key in scene_imgs:
+            return scene_imgs[key]
+    return next(iter(scene_imgs.values())) if scene_imgs else None
+
+
+def compose_all(angles, copy, scene_imgs, out_dir, brand_name, logo_img, palette, cena_pl):
     creatives = []
     for a in angles:
         ca = copy.get(a) or {}
         out_path = os.path.join(out_dir, "ad_%s_45.png" % a)
         if a == "demo":
-            compose_demo(scene_imgs[(a, "hero")], ca.get("headline") or "", ca.get("subline") or "",
-                         logo_img, palette, out_path)
+            compose_demo(_pick_demo_scene(scene_imgs), ca, logo_img, palette, cena_pl, out_path)
         elif a == "problem":
-            compose_problem(scene_imgs[(a, "pain")], scene_imgs[(a, "fakt")], ca.get("headline") or "",
-                            ca.get("fakt_checkmarki") or [], brand_name, logo_img, palette, out_path)
+            compose_problem(scene_imgs[(a, "pain")], scene_imgs[(a, "fakt")], ca, brand_name,
+                            logo_img, palette, cena_pl, out_path)
         elif a == "lifestyle":
-            compose_lifestyle(scene_imgs[(a, "ugc")], logo_img, palette, out_path)
-        creatives.append({"angle": a, "path": out_path, "headline": ca.get("headline") or "",
+            compose_lifestyle(scene_imgs[(a, "ugc")], ca, logo_img, palette, out_path)
+        creatives.append({"angle": a, "path": out_path,
+                          "headline": (ca.get("hook_baner") or ca.get("headline") or ""),
                           "primary_text": ca.get("primary_text") or ""})
         log("Kompozycja gotowa: %s" % out_path)
     return creatives
@@ -1070,32 +1349,59 @@ def load_logo(logo_url, refs_dir):
 # ORKIESTRACJA.
 # ══════════════════════════════════════════════════════════════════════════════
 def do_recompose(args, bundle, out_dir, palette, logo_img, angles):
-    """Rekompozycja z zapisanych surowych scen (out/sceny/) — crop/kompozycja/publikacja, $0."""
+    """Rekompozycja z zapisanych surowych scen (out/sceny/) — crop/kompozycja/publikacja, $0
+    (płatnej generacji obrazów). Copy-call ODŚWIEŻANY (nowe pola hook_baner/callouts — grosze)."""
     b = bundle["branding"]
     sceny = os.path.join(out_dir, "sceny")
     state_path = os.path.join(out_dir, "adforge-state.json")
-    if not os.path.isfile(state_path):
-        raise SystemExit("--recompose: brak %s — poprzednia generacja nie zapisała scen (uruchom pełną generację raz)." % state_path)
-    state = json.loads(io.open(state_path, encoding="utf-8").read())
+    if not os.path.isdir(sceny):
+        raise SystemExit("--recompose: brak katalogu %s — uruchom pełną generację raz (sceny nie zapisane)." % sceny)
+    state = {}
+    if os.path.isfile(state_path):
+        try:
+            state = json.loads(io.open(state_path, encoding="utf-8").read())
+        except Exception:
+            state = {}
     engine = state.get("engine", args.engine)
-    copy = state.get("copy") or {}
     print("-" * 88)
     log("RECOMPOSE z %s (engine=%s) — kąty=%s" % (sceny, engine, angles))
+    # copy: użyj zapisanego, jeśli ma już nowe pola (hook_baner); inaczej świeży copy-call (grosze)
+    saved = state.get("copy") or {}
+    need_fresh = any(not (saved.get(a) or {}).get("hook_baner") for a in angles)
+    if need_fresh:
+        log("Copy-call (brak hook_baner w zapisie — odświeżam)…")
+        copy, _ = call_copy(bundle, angles)
+        merged_copy = dict(saved)
+        for a in angles:
+            merged_copy[a] = copy.get(a) or {}
+        try:
+            io.open(state_path, "w", encoding="utf-8").write(json.dumps(
+                {"engine": engine, "quality": state.get("quality", args.quality), "copy": merged_copy},
+                ensure_ascii=False, indent=1))
+        except Exception:
+            pass
+    else:
+        copy = saved
+        log("Copy z zapisu (hook_baner/callouts obecne) — bez copy-calla ($0)")
+    # załaduj WSZYSTKIE zapisane sceny (demo pożycza problem_fakt/lifestyle_ugc)
     scene_imgs = {}
+    for f in sorted(os.listdir(sceny)):
+        mm = re.match(r"^scene_([a-z]+)_([a-z]+)\.(png|webp|jpg|jpeg|avif)$", f, re.I)
+        if not mm:
+            continue
+        blob = io.open(os.path.join(sceny, f), "rb").read()
+        scene_imgs[(mm.group(1).lower(), mm.group(2).lower())] = scene_to_final(blob, engine)
+        log("  scena %s/%s ← %s" % (mm.group(1), mm.group(2), f))
+    # weryfikacja wymaganych scen per kąt (demo pożycza dowolną scenę w użyciu)
     for a in angles:
-        for kind, ang in scenes_for_angle(a):
-            hit = None
-            for ext in ("png", "webp", "jpg", "jpeg", "avif"):
-                cand = os.path.join(sceny, "scene_%s_%s.%s" % (a, kind, ext))
-                if os.path.isfile(cand):
-                    hit = cand
-                    break
-            if not hit:
-                raise SystemExit("--recompose: brak zapisanej sceny scene_%s_%s.* w %s (wygeneruj kąt '%s' raz)." % (a, kind, sceny, a))
-            blob = io.open(hit, "rb").read()
-            scene_imgs[(a, kind)] = scene_to_final(blob, engine)
-            log("  scena %s/%s ← %s" % (a, kind, os.path.basename(hit)))
-    creatives = compose_all(angles, copy, scene_imgs, out_dir, b["brand_name"], logo_img, palette)
+        if a == "demo":
+            if not any(k in scene_imgs for k in (("problem", "fakt"), ("lifestyle", "ugc"), ("demo", "hero"))):
+                raise SystemExit("--recompose: demo wymaga jakiejkolwiek sceny w użyciu (problem_fakt/lifestyle_ugc/demo_hero) — brak w %s." % sceny)
+        else:
+            for kind, _ang in scenes_for_angle(a):
+                if (a, kind) not in scene_imgs:
+                    raise SystemExit("--recompose: brak sceny scene_%s_%s.* w %s (wygeneruj kąt '%s' raz)." % (a, kind, sceny, a))
+    creatives = compose_all(angles, copy, scene_imgs, out_dir, b["brand_name"], logo_img, palette, bundle.get("cena_pl"))
     return finish(args, bundle, engine, out_dir, creatives, 0.0, mode="recompose")
 
 
@@ -1140,6 +1446,7 @@ def run(args):
     print("Packshoty do generacji (max 2): %s" % packshots)
     print("Tytuł aukcji (dezambiguacja, source=detail): %s" % (bundle.get("snap_title") or "BRAK"))
     print("Opisy kadrów (alt_pl keep, max 3): %s" % (bundle.get("alt_texts") or "BRAK"))
+    print("Cena PL (lp_dane, na blok ceny): %s → %s" % (bundle.get("cena_pl") or "BRAK", clean_price(bundle.get("cena_pl")) or "—"))
 
     logo_img = load_logo(logo_url, refs_dir)
 
@@ -1154,6 +1461,9 @@ def run(args):
     for a in angles:
         ca = copy.get(a) or {}
         print("  ── KĄT %s ──" % a.upper())
+        print("     hook_baner: %s" % ca.get("hook_baner"))
+        if a == "demo":
+            print("     callouts : %s" % ca.get("callouts_demo"))
         print("     headline : %s" % ca.get("headline"))
         print("     subline  : %s" % (ca.get("subline") or "(brak)"))
         print("     primary  : %s" % ca.get("primary_text"))
@@ -1242,8 +1552,9 @@ def run(args):
     io.open(state_path, "w", encoding="utf-8").write(json.dumps(
         {"engine": args.engine, "quality": args.quality, "copy": merged_copy}, ensure_ascii=False, indent=1))
 
-    creatives = compose_all(angles, copy, scene_imgs, out_dir, b["brand_name"], logo_img, palette)
-    return 0 if finish(args, bundle, args.engine, out_dir, creatives, total_usd, mode="gen") is not None else 0
+    creatives = compose_all(angles, copy, scene_imgs, out_dir, b["brand_name"], logo_img, palette, bundle.get("cena_pl"))
+    finish(args, bundle, args.engine, out_dir, creatives, total_usd, mode="gen")
+    return 0
 
 
 def build_argparser():

@@ -459,3 +459,17 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
   ~$1.00, diakrytyki (też wersaliki) 100% poprawne — klasa niedostępna dla silnika A (Manus
   renderuje litery sam). Tor A (Manus, edge wf2-ads) zostaje jako alternatywa; wybór silnika
   = decyzja operatora per przebieg.
+
+- **2026-07-19 — rev4 KOMPOZYCJE BANEROWE DR (feedback Tomka: „to sesja studyjna, nie banery —
+  ma konwertować" + research zwycięskich statyk i niszy pet):** warstwa kompozycji ad-forge
+  przebudowana z „premium minimal" na blueprinty DR: demo=CALLOUT/ANATOMIA (hook-pytanie na
+  scrimie + 3 pigułki-benefity z liniami do części produktu + badge COD + pas CTA),
+  problem=PRZED/PO „stres→spokój" (split, pigułki PRZED/PO, BLOK CENY z lp_dane + „za
+  pobraniem" + CTA), lifestyle=CANDID (marker-naklejka ze strzałką + kapsułka „za pobraniem",
+  zero pasów). Typografia px@1080 wg researchu (hook 72-92, callouty 36-44, cena 90-120,
+  CTA 50-58, min 30), kontrast ≥4,5:1, ścieżka Z. UCZCIWOŚĆ bez zmian: zero fikcyjnych
+  przecen/urgency/gwiazdek; cena TYLKO prawdziwa. Lekcja nadrzędna: scena AI = 55-70%
+  powierzchni i wygląda jak zdjęcie klienta (nie katalog); PERSWAZJA żyje w warstwie
+  wektorowej. Benchmark silników scen (fal.ai, $0.55): nano-banana-2/edit ($0.12, natywne
+  4:5) i flux-2-pro/edit ($0.045) biją cenowo gpt-image-2 HIGH przy równej/lepszej scenie —
+  wybór silnika czeka na decyzję Tomka.
