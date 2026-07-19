@@ -2636,41 +2636,77 @@
         // (RLS: team_members ma SELECT). Markery techniczne (<opcje>/<ustalenia>/…) usuwane.
         function stripTrMarkers(s) {
             return String(s || '')
-                .replace(/<(opcje|opcje_multi|sekcje|karuzela|ustalenia|zielone|makieta|suwak|ranking|styl_wybor|kierunki|propozycje|propozycje_zadaj|propbrak|kamien|blysk|wskaz|wybor|marka_nazwa|haslo|dopytanie|werdykt|ocena|projekt|bierny|rezygnacja)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
-                .replace(/<(opcje|opcje_multi|sekcje|karuzela|ustalenia|zielone|makieta|suwak|ranking|styl_wybor|kierunki|propozycje|propozycje_zadaj|propbrak|kamien|blysk|wskaz|wybor|marka_nazwa|haslo|dopytanie|werdykt|ocena|projekt|bierny|rezygnacja)\b[^>]*\/?>/gi, '')
+                .replace(/<(opcje|opcje_multi|sekcje|karuzela|ustalenia|zielone|makieta|suwak|ranking|styl_wybor|kierunki|propozycje|propozycje_zadaj|propbrak|kamien|blysk|wskaz|wybor|marka_nazwa|haslo|dopytanie|werdykt|ocena|projekt|bierny|rezygnacja|faza|rezerwacja)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+                .replace(/<(opcje|opcje_multi|sekcje|karuzela|ustalenia|zielone|makieta|suwak|ranking|styl_wybor|kierunki|propozycje|propozycje_zadaj|propbrak|kamien|blysk|wskaz|wybor|marka_nazwa|haslo|dopytanie|werdykt|ocena|projekt|bierny|rezygnacja|faza|rezerwacja)\b[^>]*\/?>/gi, '')
                 .replace(/\n{3,}/g, '\n\n').trim();
         }
         function escTr(s) { const d = document.createElement('div'); d.textContent = String(s || ''); return d.innerHTML; }
+        function transcriptBubbles(msgs) {
+            let shown = 0;
+            const html = (msgs || []).map(function (m) {
+                const isUser = m.role === 'user';
+                let txt = stripTrMarkers(m.content);
+                // wiadomości systemowe użytkownika („Wybieram produkt: …") zostawiamy — pokazują przebieg
+                if (!txt.trim()) return '';
+                shown++;
+                let t = ''; try { t = new Date(m.created_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+                return '<div class="flex ' + (isUser ? 'justify-end' : 'justify-start') + ' mb-2">' +
+                    '<div class="max-w-[82%] rounded-lg px-3 py-2 ' + (isUser ? 'bg-blue-500/15 border border-blue-500/25' : 'bg-zinc-800/60 border border-white/5') + '">' +
+                    '<div class="text-sm whitespace-pre-wrap leading-relaxed ' + (isUser ? 'text-blue-100' : 'text-zinc-200') + '">' + escTr(txt) + '</div>' +
+                    '<div class="text-[9px] text-zinc-500 mt-1 font-mono">' + (isUser ? 'Lead' : 'AI') + (t ? ' · ' + t : '') + '</div>' +
+                    '</div></div>';
+            }).join('');
+            return { html: html, shown: shown };
+        }
         async function renderTranscript() {
             const section = document.getElementById('transcript-section');
             if (!section || !lead || !lead.id) return;
             try {
+                const blocks = [];
+                let total = 0;
+
+                // 1) Nowa rozmowa /rozmowa (talk_*) — stemple faz jako chipy nad transkrypcją
+                const { data: tSess } = await supabaseClient
+                    .from('talk_sessions').select('id, created_at, last_phase, tags')
+                    .eq('lead_id', lead.id).order('created_at', { ascending: false }).limit(1);
+                const tSid = tSess && tSess[0] && tSess[0].id;
+                if (tSid) {
+                    const { data: tMsgs } = await supabaseClient
+                        .from('talk_messages').select('role, content, created_at')
+                        .eq('session_id', tSid).order('id', { ascending: true });
+                    const b = transcriptBubbles(tMsgs);
+                    if (b.shown) {
+                        let chips = '';
+                        try {
+                            const names = [...new Set((tSess[0].tags || []).map(x => x.t))];
+                            if (names.length) chips = '<div class="flex flex-wrap gap-1 mb-3">' + names.map(n =>
+                                '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300">' + escTr(n) + '</span>').join('') + '</div>';
+                        } catch (e) {}
+                        blocks.push('<div class="text-[10px] font-mono uppercase tracking-wider text-emerald-400 mb-2">Rozmowa AI · /rozmowa (zapisy)</div>' + chips + b.html);
+                        total += b.shown;
+                    }
+                }
+
+                // 2) Rozmowa /sklep (bud_*) — jak dotąd
                 const { data: sess } = await supabaseClient
                     .from('bud_sessions').select('id, created_at')
                     .eq('lead_id', lead.id).order('created_at', { ascending: false }).limit(1);
                 const sid = sess && sess[0] && sess[0].id;
-                if (!sid) { section.classList.add('hidden'); return; }
-                const { data: msgs } = await supabaseClient
-                    .from('bud_messages').select('role, content, created_at')
-                    .eq('session_id', sid).order('created_at', { ascending: true });
-                if (!msgs || !msgs.length) { section.classList.add('hidden'); return; }
-                const body = document.getElementById('transcript-body');
-                let shown = 0;
-                body.innerHTML = msgs.map(function (m) {
-                    const isUser = m.role === 'user';
-                    let txt = stripTrMarkers(m.content);
-                    // wiadomości systemowe użytkownika („Wybieram produkt: …") zostawiamy — pokazują przebieg
-                    if (!txt.trim()) return '';
-                    shown++;
-                    let t = ''; try { t = new Date(m.created_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
-                    return '<div class="flex ' + (isUser ? 'justify-end' : 'justify-start') + ' mb-2">' +
-                        '<div class="max-w-[82%] rounded-lg px-3 py-2 ' + (isUser ? 'bg-blue-500/15 border border-blue-500/25' : 'bg-zinc-800/60 border border-white/5') + '">' +
-                        '<div class="text-sm whitespace-pre-wrap leading-relaxed ' + (isUser ? 'text-blue-100' : 'text-zinc-200') + '">' + escTr(txt) + '</div>' +
-                        '<div class="text-[9px] text-zinc-500 mt-1 font-mono">' + (isUser ? 'Lead' : 'AI') + (t ? ' · ' + t : '') + '</div>' +
-                        '</div></div>';
-                }).join('');
-                if (!shown) { section.classList.add('hidden'); return; }
-                const cnt = document.getElementById('transcript-count'); if (cnt) cnt.textContent = shown;
+                if (sid) {
+                    const { data: msgs } = await supabaseClient
+                        .from('bud_messages').select('role, content, created_at')
+                        .eq('session_id', sid).order('created_at', { ascending: true });
+                    const b = transcriptBubbles(msgs);
+                    if (b.shown) {
+                        blocks.push((blocks.length ? '<div class="border-t border-white/10 my-4"></div>' : '') +
+                            '<div class="text-[10px] font-mono uppercase tracking-wider text-violet-400 mb-2">Rozmowa AI · /sklep</div>' + b.html);
+                        total += b.shown;
+                    }
+                }
+
+                if (!total) { section.classList.add('hidden'); return; }
+                document.getElementById('transcript-body').innerHTML = blocks.join('');
+                const cnt = document.getElementById('transcript-count'); if (cnt) cnt.textContent = total;
                 section.classList.remove('hidden');
             } catch (e) { console.error('[lead] transcript:', e); section.classList.add('hidden'); }
         }
