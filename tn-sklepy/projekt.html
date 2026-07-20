@@ -1479,6 +1479,15 @@
 
             const tile = (a, gid, mobileTile) => {
                 const webVisible = a.storage !== 'repo' && a.storage !== 'desktop';
+                const isVideo = webVisible && (/\.(mp4|webm|mov)(\?|$)/i.test(a.url || '') || a.kind === 'video' || a.kind === 'fal');
+                if (isVideo && a.url && /^https?:/.test(a.url)) {
+                    const poster = (a.meta && a.meta.poster) ? a.meta.poster : '';
+                    return `<a class="art-tile${mobileTile ? ' art-mobile' : ''}" href="${escapeHtml(a.url)}" target="_blank" rel="noopener"
+                        data-tip-title="${escapeHtml(a.label || a.kind)}" data-tip-sub="${escapeHtml(a.kind)}${a.meta && a.meta.section ? ' · ' + escapeHtml(a.meta.section) : ''}" data-tip-desc="klik = pełne wideo w nowej karcie">
+                        <video src="${escapeHtml(a.url)}"${poster ? ` poster="${escapeHtml(poster)}"` : ''} muted loop autoplay playsinline preload="metadata"
+                            style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.style.display='none'"></video>
+                        <span class="art-label">${escapeHtml(a.label || a.kind)}</span></a>`;
+                }
                 const isImg = webVisible && (/\.(png|jpe?g|webp|avif|gif)(\?|$)/i.test(a.url || '') || ['mockup','makieta','makieta_mobile','scena','dowod','proof','ad_creative','screenshot_final','styl_master','gallery','branding','brand'].includes(a.kind));
                 if (isImg && a.url && /^https?:/.test(a.url)) {
                     const cap = (a.meta && a.meta.section) ? a.meta.section : (a.label || a.kind);
