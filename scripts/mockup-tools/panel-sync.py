@@ -194,9 +194,53 @@ def link_product(project, tt, name, slug=None, sort=None, cover=None, supplier=N
 
 
 # ── 2. step_update ──
-def step_update(project, product, step, status=None, note=None, fields=None, checklist=None):
+# Kolejnosc faz landingu F0..F8 (MOST-PANEL.md). Sluzy blokadzie "dziury w fazach".
+LP_ORDER = ["lp_dane", "lp_plan", "lp_styl_marka", "lp_makiety", "lp_grafiki",
+            "lp_kod", "lp_dopasowanie", "lp_zycie", "lp_finisz"]
+
+
+def _sprawdz_kolejnosc(project, product, step):
+    """Nie pozwol zamknac fazy, gdy wczesniejsza nie jest done albo ma niezaznaczona
+    checkliste. Incydent 20.07 (mata): lp_dane bylo in_progress 5/7 (brak PASZPORT.md
+    + rezerwacji marki), a mimo to lp_plan zostalo zamkniete jako done — brak wyszedlby
+    dopiero w F6 na gate-check (PASZPORT.md jest w files.wymagane). Zwraca liste zarzutow."""
+    if step not in LP_ORDER:
+        return []
+    idx = LP_ORDER.index(step)
+    if idx == 0:
+        return []
+    rows = _get("wf2_steps", _scope_param(
+        {"project_id": f"eq.{project}", "step_key": f"in.({','.join(LP_ORDER[:idx])})",
+         "select": "step_key,status,data"}, product))
+    by_key = {r["step_key"]: r for r in (rows or [])}
+    zarzuty = []
+    for wcz in LP_ORDER[:idx]:
+        r = by_key.get(wcz)
+        if r is None:
+            continue                      # krok jeszcze nie zainicjowany — nie blokujemy
+        if r.get("status") != "done":
+            zarzuty.append(f"{wcz}: status={r.get('status')} (oczekiwane 'done')")
+            continue
+        ck = ((r.get("data") or {}).get("checklist")) or []
+        braki = [c.get("t", "?") for c in ck if isinstance(c, dict) and not c.get("done")]
+        if braki:
+            zarzuty.append(f"{wcz}: done, ale checklista {len(ck)-len(braki)}/{len(ck)} — "
+                           + "; ".join(b[:60] for b in braki))
+    return zarzuty
+
+
+def step_update(project, product, step, status=None, note=None, fields=None, checklist=None,
+                force_kolejnosc=False):
     """Aktualizuje/tworzy instancję kroku. Merge data: fields=old||new, note nadpisz,
-    checklist nadpisz. status='done' → completed_at=now, completed_by='fabryka'. Idempotentne."""
+    checklist nadpisz. status='done' → completed_at=now, completed_by='fabryka'. Idempotentne.
+    Zamkniecie fazy przy niedomknietej wczesniejszej = blokada (--force-kolejnosc omija)."""
+    if status == "done" and not force_kolejnosc:
+        zarzuty = _sprawdz_kolejnosc(project, product, step)
+        if zarzuty:
+            raise SystemExit(
+                "BLOKADA KOLEJNOSCI FAZ — nie zamykam '%s', bo wczesniejsze fazy nie sa domkniete:\n  - %s\n"
+                "Domknij je najpierw (albo --force-kolejnosc, gdy odstepstwo jest swiadome i opisane w LEDGER)."
+                % (step, "\n  - ".join(zarzuty)))
     params = _scope_param({"project_id": f"eq.{project}", "step_key": f"eq.{step}",
                            "select": "id,data,status"}, product)
     rows = _get("wf2_steps", params)
@@ -423,6 +467,8 @@ def main(argv=None):
     p.add_argument("--status"); p.add_argument("--note")
     p.add_argument("--fields", help="JSON obiekt")
     p.add_argument("--checklist", help="JSON: lista stringów lub lista {t,done}")
+    p.add_argument("--force-kolejnosc", action="store_true",
+                   help="zamknij fazę mimo niedomkniętej wcześniejszej (świadome odstępstwo — opisz w LEDGER)")
 
     p = sub.add_parser("artifact", help="dodaj artefakt (miniatura/chip)")
     p.add_argument("project"); p.add_argument("product"); p.add_argument("step")
@@ -458,7 +504,8 @@ def main(argv=None):
         if isinstance(cl, list) and cl and isinstance(cl[0], str):
             cl = [{"t": t, "done": True} for t in cl]
         print(step_update(a.project, _norm_product(a.product), a.step, status=a.status,
-                          note=a.note, fields=_parse_json(a.fields, "--fields"), checklist=cl))
+                          note=a.note, fields=_parse_json(a.fields, "--fields"), checklist=cl,
+                          force_kolejnosc=a.force_kolejnosc))
     elif a.cmd == "artifact":
         print(artifact_add(a.project, _norm_product(a.product), a.step, a.kind, a.url,
                           label=a.label, meta=_parse_json(a.meta, "--meta"), storage=a.storage))

@@ -156,6 +156,20 @@ Wynik w panelu: Drapek w portfelu (sort 5, cover, `unit_profit≈80,26`), kroki 
 lp_styl_marka/lp_makiety` = DONE (checklisty 7/6/6/8 zaznaczone), 26 artefaktów (2 gallery + 4 doc-chip
 + 4 branding/styl + 16 makiet-miniatur). Pozostałe kroki `pending`. 5 kandydatów nietkniętych.
 
+## Blokada kolejności faz (20.07)
+`panel-sync step … --status done` **odmawia zamknięcia fazy**, gdy wcześniejsza faza landingu
+(`lp_dane → lp_plan → lp_styl_marka → lp_makiety → lp_grafiki → lp_kod → lp_dopasowanie →
+lp_zycie → lp_finisz`) nie jest `done` **albo jest `done` z niezaznaczoną checklistą**.
+Wypisuje konkretne braki i kończy się błędem.
+
+**Incydent źródłowy (mata, 20.07):** `lp_dane` stało na `in_progress` 5/7 — brakowało
+`PASZPORT.md` i rezerwacji mini-marki — a mimo to `lp_plan` zostało zamknięte jako `done`.
+Fabryka poszła w F2 z dziurą w F0. `PASZPORT.md` jest w `gate-manifest.json files.wymagane`,
+więc brak wyszedłby dopiero w **F6 na gate-checku**, po wygenerowaniu wszystkich makiet i scen.
+Wykrył to Tomek, patrząc na panel — nie żaden gate. Stąd ta blokada.
+
+Odstępstwo świadome: `--force-kolejnosc` + nota w `LEDGER.md` (jak przy każdym odstępstwie Z4).
+
 ## Idempotencja
 Cała ścieżka `GET → (PATCH|POST)`; uploady `x-upsert` (nadpisują ten sam obiekt); artefakty dedup po
 URL. Puszczenie backfillu 2× = ten sam stan (Drapek: 26 artefaktów, nie 52). Bezpieczne do restartu fazy.
