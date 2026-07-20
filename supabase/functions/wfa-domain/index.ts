@@ -146,6 +146,17 @@ Deno.serve(async (req) => {
       return json({ domain, ...r });
     }
 
+    if (action === "set_ns") {
+      // GOTCHA .pl (empirycznie 20.07, sygno.pl): purchase z nameServers jest IGNOROWANY przy
+      // rejestracji .pl — NASK dostaje defaultowe NS GoDaddy (nsXX.domaincontrol.com).
+      // Po zakupie trzeba ustawić NS osobnym PATCH-em.
+      const ns = Array.isArray(body.ns) && body.ns.length ? body.ns.map((x) => String(x).toLowerCase().trim()) : DEFAULT_NS;
+      if (ns.length > 4 || ns.some((h) => !NS_RE.test(h))) return json({ error: "zle_nameservery" }, 400);
+      const r = await gd("PATCH", `/v1/domains/${domain}`, { nameServers: ns });
+      const ok = r.status === 200 || r.status === 202 || r.status === 204;
+      return json({ http: r.status, ok, ns, detail: r.data }, ok ? 200 : 502);
+    }
+
     if (action === "status") {
       const { status, data } = await gd("GET", `/v1/domains/${domain}`);
       if (data && typeof data === "object" && "authCode" in (data as Record<string, unknown>)) {
