@@ -180,7 +180,9 @@ Gotcha nano przy okazji: „przesuń dłoń NA obiekt" potrafi wygenerować DRUG
 Dla KAŻDEGO klipu przed montażem:
 1. `python qa_gate.py precheck <klip> <KARTA.json>` (lub `cv_precheck()` z modułu) — TYLKO gdy `cv_reliable:true`: maska HSV (sumuje zakresy z `hsv_ranges` przy hue-wrap) + connectedComponents = twardy licznik egzemplarzy, $0. **Interpretacja flag: >1 obiekt = duplikat egzemplarza LUB piana/blob z rozpadu fizyki — OBIE złe, oba to ODRZUT.** Gdy `cv_reliable:false` (kolory skórne/metal) → NIE ufaj CV, licznik robi VLM.
 2. `make_grids` → siatki 3×3 (2 fps; MC próbkuj 4 fps).
-3. Przegląd agentem z checklistą KARTY: **WIERSZ NA KLATKĘ** (nr, #obiektów produktu, #dłoni, flagi) — ZAKAZ oceny zbiorczej (zbiorcza przepuściła 2× duplikat 17.07). Sprawdzasz: liczbę egzemplarzy, `functional_count` (ciągłość), dłonie, twarz+oczy vs face_ref, tło, fizykę w ruchu, glify, afordancję.
+3. Przegląd agentem z checklistą KARTY: **WIERSZ NA KLATKĘ** (nr, #obiektów produktu, #dłoni, flagi) — ZAKAZ oceny zbiorczej (zbiorcza przepuściła 2× duplikat 17.07). Sprawdzasz: liczbę egzemplarzy, `functional_count` (ciągłość), dłonie, twarz+oczy vs face_ref, tło, fizykę w ruchu, glify, afordancję, **ANATOMIĘ POSTACI (pkt 3b)**.
+   - **3b. ANATOMIA CAŁEJ POSTACI (incydent „brak tyłowia" mata 20.07 — kobieta bez bioder i nóg, tułów stapiał się z pościelą, a kładła się OBOK maty):** per klatka z człowiekiem sprawdź KOMPLETNOŚĆ ciała — tułów→biodra→nogi→stopy istnieją i są ciągłe (żadna część nie „znika" pod rekwizytem/pościelą inaczej niż przez JAWNE kadrowanie), proporcje wiarygodne, ciało nie stapia się z tłem/rekwizytem, kończyny bez nienaturalnych póz (nogi pionowo w górę przy „relaksie" = REJECT). **PREWENCJA w briefach klatek (KROK 5): każda klatka z osobą MUSI specyfikować pozę CAŁEGO ciała** („her hips, bent knees and feet clearly visible on the duvet") — brief „osoba przy rekwizycie" bez pozy nóg = model amputuje dolną połowę; do negative dopisuj `missing legs, missing hips, body merging with bedding, floating body`. **Placement z kontraktu egzekwuj w RUCHU:** „kładę się NA macie" = w klatce LAST ciało NA macie (kolce widoczne po OBU stronach tułowia) — model unika kładzenia ciała na kolcach i bez wymuszenia kładzie osobę OBOK. Wymuszaj parą FLF (first=poza kompletna, last=stan docelowy), nie samym promptem ruchu.
+   - **3c. RE-BRAMKA PRZY REUSE:** klip z poprzedniej wersji użyty w nowym montażu z INNYM `ss`/`dur` = **nowa bramka na pełnym oknie ekspozycji** — stary `.pass` NIE obowiązuje (scena lezenie v1 grała 2,5 s i przeszła; w v2.1 grała 4,85 s i pokazała amputowaną anatomię + kładzenie obok maty).
 4. `save_verdict(clip, "PASS"|"REJECT", flags)` → `<klip>.verdict.json` + `<klip>.pass` przy PASS. REJECT → wróć do KROK 5/6 (pętla poprawek do wyczerpania).
 
 ### KROK 7.5 — PRODUCT-FIDELITY GATE (`product_gate.py`) — egzekwowalna, NIE-samoakceptowalna
@@ -209,6 +211,7 @@ Plan JSON (sceny {id,plik,ss,dur,vo,vf_extra,has_physical_action,sfx[],handheld}
 - [ ] Zero czytelnych glifów (etykiety/ekrany/zegary rozmyte lub poza kadrem).
 - [ ] Fizyka płynów bez piany/blobów; sztywne części bez ghostingu (brak pełnych obrotów).
 - [ ] Afordancja OK (oś narzędzia = oś pracy; ręce na kierownicy gdy auto jedzie).
+- [ ] **Anatomia postaci kompletna w KAŻDEJ klatce** (biodra/nogi/stopy istnieją i ciągłe; ciało nie stapia się z pościelą/rekwizytem; placement kontraktu w ruchu — „NA macie" znaczy NA, nie obok); klipy reuse re-bramkowane na pełnym oknie (KROK 7 pkt 3b/3c).
 - [ ] (beauty) twarz+oczy stabilne vs face_ref; jeden egzemplarz; brak biżuterii/lakieru.
 - [ ] Tożsamość z Ali (nie shop-packshot); rekwizyty/scenografia bez teleportacji.
 - [ ] Ledger sprawdzony (`ledger.json`); brak napisów wypalonych.
