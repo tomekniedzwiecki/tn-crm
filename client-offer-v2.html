@@ -1282,7 +1282,6 @@
             max-height: 3000px;
             opacity: 1;
         }
-        #acc-content-workmap.expanded { max-height: 12000px; }
         .acc-chevron { transition: transform 0.25s ease; }
         .acc-chevron.rotated { transform: rotate(180deg); }
 
@@ -1944,42 +1943,17 @@
                 </div>
             </div>
 
-            <!-- Accordion: Work map (7 etapów / 48 kroków z workflow) -->
-            <div class="mb-4 mt-12 sm:mt-16">
-                <div class="glass-card rounded-2xl border border-white/10 overflow-hidden">
-                    <button onclick="toggleAccordion('workmap')"
-                            class="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left hover:bg-white/5 transition-colors">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-8 h-8 bg-emerald-500/15 border border-emerald-500/25 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <i class="ph-bold ph-list-checks text-base text-emerald-400"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="text-white font-semibold text-sm sm:text-base">Mapa pracy: 7 etapów i 48 kroków, które wykonamy</div>
-                                <div class="text-zinc-500 text-xs">Pełen zakres — krok po kroku, bez gwiazdek</div>
-                            </div>
-                        </div>
-                        <i id="acc-chevron-workmap" class="ph ph-caret-down text-zinc-400 acc-chevron flex-shrink-0"></i>
-                    </button>
-                    <div id="acc-content-workmap" class="acc-content">
-                        <div class="p-4 sm:p-6 pt-0 border-t border-white/5">
-                            <p class="text-zinc-400 text-sm mt-5 mb-2">Tak wygląda pełen zakres współpracy. Etapy 2, 3 i 5 wykonujemy <strong class="text-white">osobno dla każdego produktu z portfela</strong>.</p>
-                            <div id="workmap-container"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Accordion: Detailed timeline -->
-            <div id="timeline-section" class="mt-12 sm:mt-16 mb-6 hidden">
+            <!-- Mapa pracy (7 etapów / 48 kroków z workflow) w stylu timeline -->
+            <div id="timeline-section" class="mt-12 sm:mt-16 mb-6">
                 <!-- Section header -->
                 <div class="flex items-center gap-3 mb-8 sm:mb-10">
-                    <div class="w-9 h-9 bg-amber-500/20 border border-amber-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="ph-bold ph-chart-line text-base text-amber-400"></i>
+                    <div class="w-9 h-9 bg-emerald-500/20 border border-emerald-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="ph-bold ph-list-checks text-base text-emerald-400"></i>
                     </div>
                     <div class="min-w-0">
-                        <h3 class="text-lg sm:text-xl font-bold text-white leading-tight">Harmonogram realizacji</h3>
+                        <h3 class="text-lg sm:text-xl font-bold text-white leading-tight">Mapa pracy — co dokładnie wykonamy</h3>
                         <div class="text-zinc-500 text-xs">
-                            <span id="timeline-count">-</span> etapów · razem <span id="timeline-days">-</span> dni pracy
+                            7 etapów · 48 kroków · ~30 dni pracy do startu kampanii, dalej tempo sterowane wynikami
                         </div>
                     </div>
                 </div>
@@ -2833,34 +2807,25 @@
 
         const STEP_COLORS = ['#8b5cf6', '#10b981', '#f97316', '#f59e0b', '#0ea5e9', '#ec4899', '#06b6d4'];
 
-        function renderTimeline(milestones) {
-            const section = document.getElementById('timeline-section');
+        // Mapa pracy renderowana w stylu timeline — źródłem jest WORK_MAP (workflow sklepów), nie offer.milestones
+        function renderTimeline() {
             const container = document.getElementById('timeline-container');
 
-            if (!milestones || milestones.length === 0) {
-                section.classList.add('hidden');
-                return;
-            }
-            section.classList.remove('hidden');
+            const stepRow = ([name, desc, sub]) => `
+                <div class="stage-del" ${sub ? 'style="margin-left:26px; opacity:.92;"' : ''}>
+                    <i class="ph-fill ph-check-circle check" ${sub ? 'style="font-size:14px; margin-top:3px;"' : ''}></i>
+                    <span><strong class="text-white">${name}</strong> <span class="text-zinc-400">— ${desc}</span></span>
+                </div>`;
 
-            const totalDays = milestones.reduce((sum, m) => sum + (m.duration_days || 0), 0);
-            document.getElementById('timeline-count').textContent = milestones.length;
-            document.getElementById('timeline-days').textContent = totalDays || '—';
-
-            const taskMeta = (responsible) => {
-                if (responsible === 'client') return { cls: 'client', label: 'Klient' };
-                if (responsible === 'shared') return { cls: 'shared', label: 'Wspólne' };
-                return { cls: 'team', label: 'TN' };
-            };
-
-            container.innerHTML = milestones.map((m, i) => {
+            container.innerHTML = WORK_MAP.map((st, i) => {
                 const num = String(i + 1).padStart(2, '0');
                 const color = STEP_COLORS[i % STEP_COLORS.length];
                 const accentVars = `--accent: ${color}; --accent-10: ${hexToRgba(color, 0.10)}; --accent-20: ${hexToRgba(color, 0.20)}; --accent-30: ${hexToRgba(color, 0.30)};`;
+                const title = st.t.split('— ')[1] || st.t;
 
-                const hasDuration = m.duration_days && m.duration_days > 0;
-                const deliverables = (m.deliverables || []).filter(d => d && d.trim());
-                const tasks = m.tasks || [];
+                const colA = st.split > 0 ? st.steps.slice(0, st.split) : st.steps;
+                const colB = st.split > 0 ? st.steps.slice(st.split) : [];
+                const cnt = st.steps.length + ' krok' + (st.steps.length < 5 ? 'i' : 'ów');
 
                 return `
                     <article class="stage" style="${accentVars}">
@@ -2868,55 +2833,32 @@
                             <div class="stage-deco">${num}</div>
                             <div class="stage-meta">
                                 <span class="stage-meta-num">Etap ${num}</span>
-                                ${hasDuration ? `
+                                <span class="stage-meta-sep"></span>
+                                <span class="stage-meta-time">${st.time}</span>
+                                ${st.per ? `
                                     <span class="stage-meta-sep"></span>
-                                    <span class="stage-meta-time">${m.duration_days} dni</span>
+                                    <span class="stage-meta-time" style="color:#fbbf24;"><i class="ph-bold ph-repeat" style="font-size:11px;"></i> każdy produkt z portfela</span>
                                 ` : ''}
                             </div>
-                            <h4 class="stage-title">${escapeHtml(m.title) || 'Etap ' + (i + 1)}</h4>
-                            ${m.description ? `<p class="stage-desc">${escapeHtml(m.description)}</p>` : ''}
+                            <h4 class="stage-title">${title}</h4>
+                            <p class="stage-desc">${st.d}</p>
                         </header>
 
-                        ${(deliverables.length > 0 || tasks.length > 0) ? `
-                            <div class="stage-body">
-                                ${deliverables.length > 0 ? `
-                                    <section>
-                                        <div class="stage-col-head">
-                                            <span>Rezultaty</span>
-                                            <span class="count">${deliverables.length}</span>
-                                        </div>
-                                        <div class="stage-list">
-                                            ${deliverables.map(d => `
-                                                <div class="stage-del">
-                                                    <i class="ph-fill ph-check-circle check"></i>
-                                                    <span>${escapeHtml(d)}</span>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </section>
-                                ` : '<section></section>'}
-
-                                ${tasks.length > 0 ? `
-                                    <section>
-                                        <div class="stage-col-head">
-                                            <span>Zadania</span>
-                                            <span class="count">${tasks.length}</span>
-                                        </div>
-                                        <div class="stage-list">
-                                            ${tasks.map(t => {
-                                                const meta = taskMeta(t.responsible);
-                                                return `
-                                                    <div class="stage-task">
-                                                        <span class="stage-tag ${meta.cls}">${meta.label}</span>
-                                                        <span>${escapeHtml(t.title)}</span>
-                                                    </div>
-                                                `;
-                                            }).join('')}
-                                        </div>
-                                    </section>
-                                ` : ''}
-                            </div>
-                        ` : ''}
+                        <div class="stage-body">
+                            <section>
+                                <div class="stage-col-head">
+                                    <span>Kroki</span>
+                                    <span class="count">${cnt}</span>
+                                </div>
+                                <div class="stage-list">${colA.map(stepRow).join('')}</div>
+                            </section>
+                            ${colB.length > 0 ? `
+                                <section>
+                                    <div class="stage-col-head"><span>Ciąg dalszy</span></div>
+                                    <div class="stage-list">${colB.map(stepRow).join('')}</div>
+                                </section>
+                            ` : '<section></section>'}
+                        </div>
                     </article>
                 `;
             }).join('');
@@ -2985,12 +2927,14 @@
 
         // ===== Mapa pracy (7 etapów / 48 kroków z workflow sklepów) =====
         const WORK_MAP = [
-            { t: 'Etap 1 — Fundament biznesu', per: false, steps: [
+            { t: 'Etap 1 — Fundament biznesu', per: false, time: '~5 dni', split: 0,
+              d: 'Zanim powstanie cokolwiek do pokazania światu, wybieramy produkty z potencjałem i budujemy markę, której się ufa.', steps: [
                 ['Selekcja portfela produktów', 'analiza bieżących trendów zakupowych, kalkulacja marży i ceny sprzedaży, wybór ~3 produktów pod Ciebie'],
                 ['Marka od zera', 'nazwa z wolną domeną .pl, logo z pełną identyfikacją, paleta kolorów i typografia'],
                 ['Domena i podstawy techniczne', 'rejestracja domeny, certyfikat SSL, konfiguracja pod sklep'],
             ]},
-            { t: 'Etap 2 — Strona sprzedażowa', per: true, steps: [
+            { t: 'Etap 2 — Strona sprzedażowa', per: true, time: '~10 dni', split: 5,
+              d: 'Każdy produkt dostaje własną, projektowaną od zera stronę — taką, z której naprawdę się kupuje.', steps: [
                 ['Weryfikacja produktu u źródła', 'potwierdzenie żywej dostawy, cen i wariantów; selekcja zdjęć produktu kadr po kadrze'],
                 ['Plan strony', 'architektura wszystkich sekcji i przewodnik graficzny całej narracji sprzedażowej'],
                 ['Kierunek wizualny', 'styl strony dopracowany pod markę — fonty, kolory, rytm, detale'],
@@ -3001,7 +2945,8 @@
                 ['Animacje i interakcje', 'płynne detale, które czuć pod palcem — zwłaszcza na telefonie'],
                 ['Odbiór jakościowy', 'twarda checklista końcowa: szybkość, linki, responsywność, poprawność treści'],
             ]},
-            { t: 'Etap 3 — Sklep gotowy do sprzedaży', per: true, steps: [
+            { t: 'Etap 3 — Sklep gotowy do sprzedaży', per: true, time: '~5 dni', split: 5,
+              d: 'Strona staje się sklepem z prawdziwego zdarzenia: płatności, dokumenty, dostawy i pomiar — wszystko dopięte i przetestowane.', steps: [
                 ['Konfiguracja sklepu', 'sklep na naszej platformie, gotowy do przyjmowania zamówień'],
                 ['Dane sprzedawcy i formalności', 'regulamin, polityka prywatności, RODO — komplet dokumentów'],
                 ['Branding sklepu', 'logo, favicon i kolory marki w całym sklepie'],
@@ -3013,14 +2958,16 @@
                 ['Strona główna sklepu', 'wizytówka marki spinająca wszystkie produkty'],
                 ['Testowy zakup', 'przechodzimy całą ścieżkę klienta od kliknięcia po potwierdzenie zamówienia'],
             ]},
-            { t: 'Etap 4 — Środowisko reklamowe', per: false, steps: [
+            { t: 'Etap 4 — Środowisko reklamowe', per: false, time: '~3 dni', split: 0,
+              d: 'Całe zaplecze kampanii przygotowane i sprawdzone, zanim wydamy pierwszą złotówkę na reklamę.', steps: [
                 ['Konto reklamowe', 'założone i skonfigurowane od zera, po bezpiecznej stronie'],
                 ['Strona marki na Facebooku i Instagramie', 'profile gotowe na ruch z reklam'],
                 ['Budżet i płatności', 'ustawienia wydatków pod kontrolą od pierwszego dnia'],
                 ['Pomiar konwersji', 'sprzedaż z reklam widoczna co do złotówki'],
                 ['Przegląd przedstartowy', 'zero braków, zanim wydamy pierwszą złotówkę na reklamę'],
             ]},
-            { t: 'Etap 5 — Materiały i kampania', per: true, steps: [
+            { t: 'Etap 5 — Materiały i kampania', per: true, time: '~7 dni', split: 7,
+              d: 'Grafiki i spot wideo produkowane jak u agencji — a na końcu kampanie gotowe do startu pod ręką Tomka.', steps: [
                 ['3 grafiki reklamowe', 'trzy różne kąty: pokaz działania, problem klienta, styl życia'],
                 ['Spot wideo — analiza wzorca', 'rozbieramy na czynniki to, co aktualnie działa w social mediach', true],
                 ['Spot wideo — scenariusz', 'sekunda po sekundzie: otwarcie, pokaz, domknięcie', true],
@@ -3032,7 +2979,8 @@
                 ['Kampanie zbudowane i sprawdzone', 'struktura, grupy odbiorców, budżety — wszystko gotowe do startu'],
                 ['Start emisji', 'kampanie ruszają pod ręką Tomka'],
             ]},
-            { t: 'Etap 6 — Testy i skalowanie', per: false, steps: [
+            { t: 'Etap 6 — Testy i skalowanie', per: false, time: 'sterowane wynikami', split: 3,
+              d: 'Twarde liczby decydują: zwycięskie produkty dostają budżet i skalę, przegrane wylatują z portfela.', steps: [
                 ['Codzienny zbiór wyników', 'kliknięcia, koszyki, zakupy — dzień po dniu, produkt po produkcie'],
                 ['Twarde werdykty testów', 'co sprzedaje — zostaje; co nie — wylatuje bez sentymentów'],
                 ['Opieka nad kampaniami', 'komentarze, świeżość kreacji, szybka reakcja na zmiany'],
@@ -3040,7 +2988,8 @@
                 ['Rotacja portfela', 'nowe produkty z selekcji w miejsce przegranych'],
                 ['Synchronizacja sprzedaży', 'zamówienia i wyniki kampanii w jednym miejscu, bez czarnej skrzynki'],
             ]},
-            { t: 'Etap 7 — Przekazanie sterów', per: false, steps: [
+            { t: 'Etap 7 — Przekazanie sterów', per: false, time: 'przy ~1000 zamówień', split: 0,
+              d: 'Sklep płynnie przechodzi w Twoje ręce — a Tomek zostaje obok jako wspólnik-doradca.', steps: [
                 ['Wdrażanie w trakcie pracy', 'uczysz się na żywym sklepie, nie z kursu'],
                 ['Przejęcie kampanii', 'decyzje reklamowe podejmujecie razem, potem samodzielnie'],
                 ['Przejęcie operacji', 'zamówienia, kontakt z klientami, zwroty — w Twoich rękach'],
@@ -3048,46 +2997,6 @@
                 ['Comiesięczne przeglądy', 'Tomek w trybie wspólnika-doradcy — siadacie razem nad wynikami'],
             ]},
         ];
-        function renderWorkMap() {
-            const wrap = document.getElementById('workmap-container');
-            if (!wrap) return;
-            wrap.innerHTML = '<div class="space-y-4 mt-4">' + WORK_MAP.map((st, i) => {
-                const num = String(i + 1).padStart(2, '0');
-                const [, title] = st.t.split('— ');
-                const per = st.per
-                    ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[10px] font-mono font-semibold whitespace-nowrap"><i class="ph-bold ph-repeat text-[10px]"></i> każdy produkt z portfela</span>'
-                    : '';
-                const cnt = st.steps.length + ' ' + (st.steps.length < 5 ? 'kroki' : 'kroków');
-                const steps = st.steps.map(([name, desc, sub], j) => `
-                    <div class="flex items-start gap-3 px-4 sm:px-5 py-2.5 ${j > 0 ? 'border-t border-white/[0.04]' : ''} ${sub ? 'ml-8 sm:ml-9 border-l border-amber-500/20 pl-4 sm:pl-5' : ''}">
-                        <span class="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full ${sub ? 'bg-amber-500/10 border border-amber-500/25' : 'bg-emerald-500/10 border border-emerald-500/30'} flex items-center justify-center">
-                            <i class="ph-bold ph-check text-[10px] ${sub ? 'text-amber-400' : 'text-emerald-400'}"></i>
-                        </span>
-                        <div class="text-sm leading-snug min-w-0">
-                            <span class="text-white font-semibold">${name}</span>
-                            <span class="text-zinc-400"> — ${desc}</span>
-                        </div>
-                    </div>`).join('');
-                return `
-                    <div class="rounded-xl border border-white/10 bg-zinc-900/40 overflow-hidden">
-                        <div class="flex items-center gap-3.5 px-4 sm:px-5 py-4 bg-white/[0.03] border-b border-white/10">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center">
-                                <span class="font-mono font-bold text-emerald-400 text-sm">${num}</span>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="text-white font-bold text-[15px] leading-tight">${title}</div>
-                                <div class="flex flex-wrap items-center gap-2 mt-1">
-                                    <span class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider">${cnt}</span>
-                                    ${per}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="py-1">${steps}</div>
-                    </div>`;
-            }).join('') + '</div>';
-        }
-        document.addEventListener('DOMContentLoaded', renderWorkMap);
-
         // ===== Accordions =====
         function toggleAccordion(name) {
             const content = document.getElementById('acc-content-' + name);
