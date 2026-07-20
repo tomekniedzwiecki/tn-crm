@@ -345,7 +345,10 @@
     /* ===================== 05 · STEROWANIE (bento) ===================== */
     #sterowanie{background:var(--paper);overflow:hidden}
     #sterowanie .ster-grid{display:grid;grid-template-columns:1.12fr 1fr;grid-template-rows:auto 1fr auto;gap:14px;
-      grid-template-areas:"head intens" "hero heat" "timer btns"}
+      grid-template-areas:"head side" "hero side" "timer btns"}
+    /* prawa kolumna = DWIE rowne karty (wg makiety 05-sterowanie): bez tego .ster-heat
+       dziedziczyla wysokosc wiersza sceny (min-height 360px) i robila sie pusta plama */
+    #sterowanie .ster-side{grid-area:side;display:grid;grid-template-rows:1fr 1fr;gap:14px;min-height:0}
     #sterowanie .ster-head{grid-area:head;align-self:center}
     #sterowanie .ster-hero{grid-area:hero;position:relative;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--line);background:var(--paper-3);min-height:360px;box-shadow:var(--shadow-md)}
     #sterowanie .ster-hero>img{width:100%;height:100%;object-fit:cover;object-position:50% 38%;position:absolute;inset:0}
@@ -355,8 +358,7 @@
     #sterowanie .stile{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
       padding:clamp(20px,2.2vw,28px);display:flex;flex-direction:column;justify-content:center}
     #sterowanie .stile .plus{top:14px;right:16px}
-    #sterowanie .ster-intens{grid-area:intens}
-    #sterowanie .ster-heat{grid-area:heat}
+    #sterowanie .ster-intens,#sterowanie .ster-heat{grid-area:auto;min-height:0}
     #sterowanie .ster-timer{grid-area:timer;flex-direction:row;align-items:center;gap:22px}
     #sterowanie .ster-btns{grid-area:btns}
     #sterowanie .stile-row{display:flex;align-items:center;gap:18px}
@@ -367,6 +369,10 @@
     @media(max-width:820px){
       #sterowanie .ster-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto auto;
         grid-template-areas:"head head" "hero hero" "intens heat" "timer btns"}
+      /* mobile: wrapper znika, karty wracaja na wlasne obszary rodzica */
+      #sterowanie .ster-side{display:contents}
+      #sterowanie .ster-intens{grid-area:intens}
+      #sterowanie .ster-heat{grid-area:heat}
       #sterowanie .ster-hero{min-height:52vw;max-height:420px;aspect-ratio:16/12}
       #sterowanie .ster-timer{flex-direction:column;align-items:flex-start;gap:6px}
     }
@@ -831,18 +837,20 @@
         <img class="scene" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/sekcje/sterowanie-hero.webp" width="1140" height="1320" loading="lazy" alt="Dłoń naciska przycisk na srebrnym panelu masażera Odprężek">
         <span class="ster-inset"><img class="scene" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/sekcje/sterowanie-panel.webp" width="748" height="408" loading="lazy" alt="Zbliżenie silikonowych głowic z delikatną ciepłą poświatą"></span>
       </figure>
-      <div class="stile ster-intens reveal" data-mo="tile">
-        <span class="plus" aria-hidden="true">+</span>
-        <div class="stile-row">
-          <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 20v-4M12 20V9M18 20V4"/></svg>
-          <div><p class="stitle">3 intensywności</p><p class="ssub">niska · średnia · wysoka</p></div>
+      <div class="ster-side">
+        <div class="stile ster-intens reveal" data-mo="tile">
+          <span class="plus" aria-hidden="true">+</span>
+          <div class="stile-row">
+            <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 20v-4M12 20V9M18 20V4"/></svg>
+            <div><p class="stitle">3 intensywności</p><p class="ssub">niska · średnia · wysoka</p></div>
+          </div>
         </div>
-      </div>
-      <div class="stile ster-heat reveal" data-mo="tile">
-        <span class="plus" aria-hidden="true">+</span>
-        <div class="stile-row">
-          <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13c0-2 2-2 2-4s-2-2-2-4"/><path d="M12 13c0-2 2-2 2-4s-2-2-2-4"/><path d="M17 13c0-2 2-2 2-4s-2-2-2-4"/><path d="M4 20h16"/></svg>
-          <div><p class="stitle">2 poziomy ciepła</p><p class="ssub">łagodne rozgrzanie głowic</p></div>
+        <div class="stile ster-heat reveal" data-mo="tile">
+          <span class="plus" aria-hidden="true">+</span>
+          <div class="stile-row">
+            <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13c0-2 2-2 2-4s-2-2-2-4"/><path d="M12 13c0-2 2-2 2-4s-2-2-2-4"/><path d="M17 13c0-2 2-2 2-4s-2-2-2-4"/><path d="M4 20h16"/></svg>
+            <div><p class="stitle">2 poziomy ciepła</p><p class="ssub">łagodne rozgrzanie głowic</p></div>
+          </div>
         </div>
       </div>
       <div class="stile ster-timer reveal" data-mo="tile">
