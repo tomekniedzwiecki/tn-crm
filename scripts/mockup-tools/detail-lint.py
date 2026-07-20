@@ -20,6 +20,11 @@ getBoundingClientRect), pobiera obrazy (PIL) i liczy:
     CALYM blokiem tresci (STANDARD F3.1b), czy tylko miekki fade (scena przeswituje pod tekstem).
     Pomiar pikselowy EFEKTU: ukryj dzieci bloku -> screenshot bboxa -> frakcja pikseli
     odbiegajacych od --paper + edge-density. Komplementarny do "najgorszego piksela pod tekstem".
+  - fade_line: pasy scenowe MOBILE (@390) — pozycja wbudowanej LINII FADE pliku sceny (foto->krem)
+    w renderowanym boksie pasa (STANDARD §2 KADR=BOHATER+LINIA FADE). Screenshot boksu -> najdluzszy
+    ciagly pas jednolitego --paper: >=25% wys. = MARTWY PAS (kadr/object-position slepy, tresc wisi
+    pod pustka) = P1; top-tekstura wysoka przy zlym kadrze = bohater przy gornej krawedzi (heurystyka) = P2.
+    Komplementarny do scrim_plateau (desktop) i img-fit (% uciecia, ale nie CO uciete).
 Wynik: lista findingow JSON {warstwa, lokalizacja, problem, severity, fix, wykryte_przez}.
 Wymaga: Chrome + numpy + Pillow.
 """
@@ -313,6 +318,58 @@ SCRIM_HIDE_JS = r"""
 })()
 """
 
+# fade_line (PASS 4, kalibracja masazer 20.07) — KADR SCENY W PASIE = BOHATER + LINIA FADE
+# (STANDARD-LANDING-SKLEPY.md §2). Komplementarny do scrim_plateau (desktop, przeswit pod tekstem)
+# i img-fit (% uciecia, ale NIE mowi CO uciete). Ten check mierzy POZYCJE wbudowanej LINII FADE pliku
+# sceny (przejscie foto->jednolity --paper) w RENDEROWANYM boksie pasa mobile. Sceny 1024x1536 maja
+# foto w polowie kadru + fade do kremu; gdy object-position slepe (center / wciete w gore), linia fade
+# wypada za wysoko -> MARTWY PAS jednolitego --paper w boksie, a karta/tresc wisi pod pustka (defekt A).
+# Detekcja pasa scenowego @390: full-bleed media (>=85% szer.) object-fit:cover, host to BAND (25-80%
+# wys. sekcji, NIE kafel/cala sekcja), z trescia PONIZEJ pasa. Pomiar EFEKTU pikselowo (nie implementacji):
+# zrzut boksa (captureBeyondViewport, DPR1) -> najdluzszy CIAGLY pas wierszy "plaski krem" (dist do
+# --paper < DEV, horiz-std < STD) jako frakcja wys. boksa. Odporny na nachodzenie karty ujemnym marginesem
+# (karta zaslania sam dol -> pas kremu w SRODKU/gorze, wiec liczymy najdluzszy ciagly run GDZIEKOLWIEK,
+# nie tylko od dolu). Zmierzone masazer: HEAD (naprawiony center-top/88%) {hero 0, problem 13, cta 6,
+# final 5, bezk 5}% vs DEFEKT d48a8f24 (slepe center 30%/18%) {hero 31, problem 71, bezk 35, final 35}%.
+FADE_JS = r"""
+(function(){
+  function vis(el){var cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden')return false;var r=el.getBoundingClientRect();return r.width>0&&r.height>0;}
+  function clsOf(el){var c=el.className;return (c&&c.baseVal!==undefined)?c.baseVal:(typeof c==='string'?c:'');}
+  var VW=window.innerWidth, out={cands:[], paper:getComputedStyle(document.documentElement).getPropertyValue('--paper').trim()}, idx=0;
+  var secs=document.querySelectorAll('section,header');
+  Array.prototype.forEach.call(secs,function(sec){
+    var sr=sec.getBoundingClientRect(); if(sr.width<=0||sr.height<=0)return;
+    var media=sec.querySelectorAll('picture,video,img'); var seenY=[];
+    Array.prototype.forEach.call(media,function(el){
+      if(!vis(el))return; var r=el.getBoundingClientRect();
+      if(r.width < VW*0.85) return;                              // tylko full-bleed
+      var img = el.tagName==='IMG'?el:el.querySelector('img');
+      var cs = img?getComputedStyle(img):getComputedStyle(el);
+      if(cs.objectFit!=='cover') return;                          // sceny=cover; contain packshoty/porownania POZA
+      var host=el;                                                // podnies do full-bleed kontenera-pasa
+      while(host.parentElement && host.parentElement!==sec){
+        var pr=host.parentElement.getBoundingClientRect();
+        if(pr.width>=VW*0.85 && Math.abs(pr.width-r.width)<12 && Math.abs(pr.height-r.height)<12){host=host.parentElement;} else break;
+      }
+      var hr=host.getBoundingClientRect();
+      var hfrac=hr.height/sr.height; if(hfrac<0.25 || hfrac>0.80) return;   // BAND, nie kafel ani cala sekcja
+      for(var i=0;i<seenY.length;i++){ if(Math.abs(seenY[i]-hr.top)<4) return; } seenY.push(hr.top);
+      var below=false;                                            // tresc PONIZEJ pasa w tej sekcji?
+      Array.prototype.forEach.call(sec.querySelectorAll('h1,h2,h3,p,button,a,[class*=card],[class*=copy]'),function(t){
+        if(!vis(t))return; var tr=t.getBoundingClientRect();
+        if(tr.top>=hr.bottom-8 && (t.textContent||'').trim().length>0) below=true;
+      });
+      if(!below) return;
+      idx++; host.setAttribute('data-fadeprobe',String(idx));
+      out.cands.push({sec:(sec.id||clsOf(sec).split(' ')[0]||'?'), idx:idx,
+        x:hr.left+window.scrollX, y:hr.top+window.scrollY, w:hr.width, h:hr.height,
+        objpos:cs.objectPosition});
+    });
+  });
+  return JSON.stringify(out);
+})()
+"""
+
 def _parse_rgb(s):
     s=(s or "").strip()
     m=re.match(r'#([0-9a-fA-F]{6})$', s)
@@ -387,7 +444,70 @@ def measure_scrim(ws):
         out.append(m)
     return out
 
-def load_and_analyze(target, width, height, mobile, do_scrim=False):
+# progi fade_line (kalibracja TDD masazer 20.07: DEFEKT d48a8f24 vs HEAD naprawiony).
+# Wiersz "plaski krem/paper" = dist do --paper < DEV I horiz-std < STD (foto: std 40-90/dev 150-320;
+# fade-krem: std 0-3/dev 4-11; przejscie: std 15-20). Dead = najdluzszy CIAGLY run takich wierszy /
+# wys. boksa. Zmierzone dead%: HEAD {hero 0, problem 13, cta 6, final 5, bezk 5} (max 13) vs
+# DEFEKT {hero 31, problem 71, bezk 35, final 35} -> prog P1 25% daje ~12pp marginesu po obu stronach.
+FADE_CREAM_DEV = 20.0    # euclid dist RGB do --paper -> wiersz kandydat na "krem"
+FADE_CREAM_STD = 8.0     # horiz std wiersza ponizej = plaski (bez tekstury foto)
+FADE_DEAD_P1   = 0.25    # najdluzszy ciagly pas kremu >= 25% wys. boksa = martwy pas (defekt A, P1)
+FADE_B_MIN     = 0.18    # kontekst zlego kadru zeby w ogole rozwazac heurystyke gornej krawedzi (B)
+FADE_TOP_STD   = 25.0    # gorne ~6% wierszy: wysoka tekstura = foto (bohater) przy krawedzi
+FADE_TOP_DEV   = 60.0    # gorne wiersze daleko od --paper = nie fade, realny podmiot
+
+def fade_metrics(im, paper):
+    arr=np.asarray(im).astype(np.float32)  # H,W,3
+    H,W,_=arr.shape
+    p=np.array(paper,dtype=np.float32)
+    lo=int(W*0.1); hi=max(int(W*0.9), lo+1)
+    band=arr[:, lo:hi, :]
+    row_mean=band.mean(axis=1)                          # H,3 sredni kolor wiersza
+    row_dev=np.sqrt(((row_mean-p)**2).sum(axis=1))      # dist do --paper
+    row_hstd=band.std(axis=1).mean(axis=1)              # pozioma tekstura wiersza (foto vs plask)
+    is_cream=(row_dev<FADE_CREAM_DEV)&(row_hstd<FADE_CREAM_STD)
+    best=0; bstart=0; cur=0; curs=0                     # najdluzszy ciagly run kremu (GDZIEKOLWIEK)
+    for y in range(H):
+        if is_cream[y]:
+            if cur==0: curs=y
+            cur+=1
+            if cur>best: best=cur; bstart=curs
+        else: cur=0
+    tn=max(1,int(H*0.06))
+    return {"H":H,"W":W,"dead_frac":round(best/H,3),"run_px":int(best),"run_start":int(bstart),
+            "top_std":round(float(row_hstd[:tn].mean()),1),"top_dev":round(float(row_dev[:tn].mean()),1)}
+
+def measure_fade(ws):
+    """Pomiar linii fade w pasach scenowych mobile: eager-load scen, kolektor FADE_JS, screenshot
+    boksu pasa (captureBeyondViewport, DPR1), metryki pikselowe najdluzszego pasa --paper + top-tekstura."""
+    try:
+        ws.call("Runtime.evaluate",{"expression":"document.querySelectorAll('img').forEach(function(i){try{i.loading='eager';}catch(e){}});window.scrollTo(0,document.body.scrollHeight);"})
+        time.sleep(1.4)
+        ws.call("Runtime.evaluate",{"expression":"window.scrollTo(0,0);"}); time.sleep(0.5)
+        res=ws.call("Runtime.evaluate",{"expression":FADE_JS,"returnByValue":True},timeout=30)
+        info=json.loads(res.get("result",{}).get("value") or '{"cands":[],"paper":""}')
+    except Exception:
+        return []
+    cands=info.get("cands",[])
+    if not cands: return []
+    paper=_parse_rgb(info.get("paper",""))
+    out=[]
+    for c in cands:
+        x=c["x"]; y=c["y"]; w=c["w"]; h=c["h"]
+        if w<40 or h<40: continue
+        try:
+            shot=ws.call("Page.captureScreenshot",{"format":"png","captureBeyondViewport":True,
+                "clip":{"x":x,"y":y,"width":w,"height":h,"scale":1}},timeout=30)
+            im=Image.open(io.BytesIO(base64.b64decode(shot["data"]))).convert("RGB")
+        except Exception:
+            continue
+        m=fade_metrics(im, paper)
+        m.update({"sec":c["sec"],"objpos":c.get("objpos",""),"bw":round(c["w"]),"bh":round(c["h"]),
+                  "paper":[int(round(v)) for v in paper]})
+        out.append(m)
+    return out
+
+def load_and_analyze(target, width, height, mobile, do_scrim=False, do_fade=False):
     chrome=chrome_path(); port=free_port(); profile=tempfile.mkdtemp(prefix="lint-")
     url=target if target.startswith(("http://","https://")) else "file:///"+os.path.abspath(target).replace("\\","/")
     args=[chrome,"--headless=new","--disable-gpu","--hide-scrollbars","--no-first-run",
@@ -407,6 +527,14 @@ def load_and_analyze(target, width, height, mobile, do_scrim=False):
         time.sleep(0.5)
         res=ws.call("Runtime.evaluate",{"expression":ANALYZER,"returnByValue":True},timeout=40)
         val=json.loads(res.get("result",{}).get("value"))
+        # fade_line (PASS 4) — pasy scenowe mobile; PRZED probem (probe mutuje suwaki/scroll)
+        if do_fade:
+            try:
+                val["fade"]=measure_fade(ws)
+            except Exception:
+                val["fade"]=[]
+        else:
+            val["fade"]=[]
         # PASS 4 PROBE (mutuje stan suwakow — dlatego PO analizie DOM)
         try:
             ws.call("Runtime.evaluate",{"expression":"window.scrollTo(0,0);"}); time.sleep(0.2)
@@ -544,6 +672,24 @@ def check_scrim_plateau(D, add):
               %(tuple(m.get("paper",[])), m["r_dev"], m["ramp"], SCRIM_DEV_PIXEL, m["bad_frac"]*100, m["p90_dev"]),
             "P1","Zamien miekki gradient na PLATEAU: solidny var(--paper) od 0%% do KRAWEDZI bloku tresci (~46-50%%), fade dopiero za nia. Self-check: krawedz bloku lezy na scrimie o opacity >=~0.9 (F3.1b)","skrypt")
 
+def check_fade_line(D, add):
+    """Pasy scenowe mobile: linia fade zle skadrowana -> martwy pas kremu (P1); bohater przy gornej
+    krawedzi (heurystyka, P2). STANDARD §2 KADR SCENY = BOHATER + LINIA FADE."""
+    for m in D.get("fade",[]):
+        rs=m["run_start"]; H=m["H"]; run=m["run_px"]
+        where = "u góry" if rs < H*0.15 else ("u dołu" if rs+run > H*0.85 else "w środku")
+        # (A) MARTWY PAS KREMU — pewny, pikselowy, P1
+        if m["dead_frac"]>=FADE_DEAD_P1:
+            add("obrazy", m["sec"]+" / scena w pasie mobile (blok %dx%dpx)"%(m["bw"],m["bh"]),
+                "Scena w boksie: martwy pas jednolitego --paper rgb%s ~%.0f%% wysokosci boksa (%s) — linia fade zle skadrowana, tresc/karta wisi pod pustka / bohater nie wypelnia kadru (object-position=%s; STANDARD §2 KADR=BOHATER+LINIA FADE)"
+                  %(tuple(m.get("paper",[])), m["dead_frac"]*100, where, m["objpos"]),
+                "P1","Ustaw object-position SWIADOMIE wzgl. bohatera i linii fade pliku: bohater CALY w kadrze, wbudowana linia fade w dolnych ~15-25%% boksa, tresc WYNURZA sie z przejscia (nie 'center'/slepo). Self-check @390: pas jednolitego --paper <=~20%% boksa","skrypt")
+        # (B) BOHATER PRZY GORNEJ KRAWEDZI — heurystyka (top-tekstura + kontekst zlego kadru), P2
+        if m["dead_frac"]>=FADE_B_MIN and m["top_std"]>=FADE_TOP_STD and m["top_dev"]>=FADE_TOP_DEV:
+            add("obrazy", m["sec"]+" / scena w pasie mobile (blok %dx%dpx)"%(m["bw"],m["bh"]),
+                "Bohater dochodzi do GORNEJ krawedzi boksa (top-tekstura std=%.0f, dev-do-paper=%.0f = foto/podmiot przy samej krawedzi) przy zle skadrowanym pasie kremu (~%.0f%%) — prawdopodobne uciecie glowy/podmiotu u gory. HEURYSTYKA — potwierdz zrzutem @390 (%%uciecia nie zastepuje oczu, §2)"%(m["top_std"],m["top_dev"],m["dead_frac"]*100),
+                "P2","Podnies object-position tak, by bohater (twarz/produkt) byl CALY w kadrze u gory; zweryfikuj zrzutem per viewport","skrypt")
+
 def check_interactive(D, add, vw):
     """Hit-test + martwa interakcja per viewport."""
     for s in D.get("probe",{}).get("sliders",[]):
@@ -668,7 +814,7 @@ def main():
         print("PAYBADGES --fix: podmieniono %d klastrow. %s"%(nsw,"; ".join(notes[:4])))
 
     D_desk=load_and_analyze(target,1280,900,False,do_scrim=True)
-    D_mob=load_and_analyze(target,390,844,True)
+    D_mob=load_and_analyze(target,390,844,True,do_fade=True)
 
     # ---- fonts ----
     fams=[f for f in D_desk["fonts"] if f["n"]>=2]
@@ -833,12 +979,13 @@ def main():
     check_interactive(D_mob, add, 390)
     paybadges_guard(D_desk, add)
     check_scrim_plateau(D_desk, add)
+    check_fade_line(D_mob, add)
 
     result={"findings":findings,"raw":{"fonts":D_desk["fonts"],"sizes":D_desk["sizes"],
             "n_imgs":len(D_desk["imgs"]),"sticky":D_desk.get("sticky"),
             "n_blocks":len(D_desk.get("blocks",[])),"n_paychips":len(D_desk.get("paychips",[])),
             "sliders":D_desk.get("probe",{}).get("sliders",[]),
-            "scrim":D_desk.get("scrim",[])}}
+            "scrim":D_desk.get("scrim",[]),"fade":D_mob.get("fade",[])}}
     txt=json.dumps(result,ensure_ascii=False,indent=1)
     if out:
         io.open(out,"w",encoding="utf-8").write(txt)

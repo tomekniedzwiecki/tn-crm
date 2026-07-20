@@ -930,7 +930,13 @@ def check_wiernosc(res, M, ctx):
             res.add("wiernosc", os.path.basename(ap), status_for(False, sev), "brak wiersza w WIERNOSC.md")
             continue
         rowtext = " ".join(row)
-        werd_src = row[ci_werd] if (0 <= ci_werd < len(row)) else rowtext
+        # FIX 20.07: dopasowany wiersz z INNEJ tabeli (pod-tabela 9-kol inset/waga/struna lub 7-kol
+        # strefa-negatywna) ma inna liczbe kolumn niz naglowek glownej tabeli -> indeksy kolumn
+        # (ci_rund/ci_cech/ci_pass2/ci_werd z naglowka 8-kol) wskazuja ZLA komorke (np. 'waga'=122
+        # czytana jako 'rundy' -> falszywy FAIL 'rundy 122>3'). Gdy ksztalt != naglowek, indeksy
+        # kolumn sa NIEWAZNE -> fallback na regex po calym rowtext (bezpiecznie zwraca None gdy brak).
+        same_shape = (header is not None and len(row) == len(header))
+        werd_src = row[ci_werd] if (0 <= ci_werd < len(row) and same_shape) else rowtext
         wm = wrx.search(werd_src) or wrx.search(rowtext)
         verdict = wm.group(1).upper() if wm else None
         if verdict == real_token:
@@ -940,17 +946,17 @@ def check_wiernosc(res, M, ctx):
             res.add("wiernosc", os.path.basename(ap), status_for(False, sev), "brak werdyktu WIERNOSC w wierszu")
             continue
         # cechy: PASS/FAIL (preferuj kolumne 'cech')
-        cech_cell = row[ci_cech] if (0 <= ci_cech < len(row)) else rowtext
+        cech_cell = row[ci_cech] if (0 <= ci_cech < len(row) and same_shape) else rowtext
         n_fail = len(frx.findall(cech_cell))
         n_pass = len(prx.findall(cech_cell))
         # pass-2 (drugie oczy): lead TAK/OK w kolumnie, albo jawny marker w wierszu
-        if 0 <= ci_pass2 < len(row):
+        if 0 <= ci_pass2 < len(row) and same_shape:
             pass2 = bool(p2lead.match(row[ci_pass2]))
         else:
             pm = p2rx.search(rowtext)
             pass2 = bool(pm) and pm.group(1).upper() in ("TAK", "OK", "ZGOD")
         # rundy
-        if 0 <= ci_rund < len(row):
+        if 0 <= ci_rund < len(row) and same_shape:
             dm = re.search(r"\d+", row[ci_rund])
             rundy = int(dm.group(0)) if dm else None
         else:

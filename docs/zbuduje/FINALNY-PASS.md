@@ -79,6 +79,22 @@ Cztery klasy uszczelnień, wszystkie w `detail-lint.py`:
   panel w innym jednolitym kolorze niż `--paper` (lewy=prawy → ramp≈0, brak false-positive) — łapie
   tylko realny poziomy fade. Zmierzone: masażer HEAD ramp {0.1/0/0/0} vs defekt 90712e46 {6.8/2.4/18.4/7.7};
   Drapek problem ramp 39.6 = realny prześwit POC (framuga+podłoga pod tekstem).
+- **FADE-LINE = KADR SCENY W PASIE (`check_fade_line`, kalibracja masażer 20.07 — most makieta→kod,
+  `STANDARD-LANDING-SKLEPY.md §2` „KADR SCENY = BOHATER + LINIA FADE"):** pasy scenowe MOBILE (@390) —
+  sceny 1024×1536 z foto w połowie kadru + wbudowaną linią fade do `--paper`. Gdy `object-position` ślepe
+  (`center` / wcięte w górę), linia fade wypada za wysoko → **MARTWY PAS jednolitego --paper w boksie**, a
+  karta/treść wisi pod pustką (hero/problem/final mobile — trzeci incydent klasy po Drapku i ster-hero).
+  Pomiar EFEKTU pikselowo (nie implementacji): detekcja pasa scenowego (full-bleed ≥85% szer., `object-fit:cover`,
+  host = BAND 25-80% wys. sekcji z treścią PONIŻEJ) → screenshot boksu (captureBeyondViewport, DPR1) →
+  **najdłuższy CIĄGŁY pas wierszy „płaski krem" (dist do --paper <20 I horiz-std <8) jako frakcja wys. boksa**.
+  Metryka jest odporna na nachodzenie karty ujemnym marginesem (karta zasłania dół → pas kremu w środku/górze,
+  więc liczymy najdłuższy run GDZIEKOLWIEK, nie od dołu). **Martwy pas ≥25% = P1** (defekt A — pewny).
+  Dodatkowo heurystyka „bohater przy górnej krawędzi" (top-tekstura wysoka + kontekst złego kadru) = **P2**
+  (defekt B — top-cut pikselowo zawodny sam w sobie: naprawiony hero też ma top-teksturę, więc B bramkowany
+  obecnością martwego pasa ≥18%, potwierdzać zrzutem). Zmierzone dead%: masażer HEAD (naprawiony center-top/88%)
+  {hero 0, problem 13, cta 6, final 5, bezk 5} (max 13) vs DEFEKT d48a8f24 (ślepe center 30%/18%)
+  {hero 31, problem 71, bezk 35, final 35} → próg 25% = ~12pp marginesu po obu stronach; Drapek 0 P1 (max 8%).
+  Komplementarny do scrim_plateau (desktop) i img-fit (% ucięcia, ale NIE mówi CO ucięte — %≠oczy, §2).
 
 **PASS 5 — SEMANTYKA (vision krzyżowy; OBOWIĄZKOWY po incydencie Odpalaka 17.07: audyt
 live znalazł błędy WYŁĄCZNIE znaczeniowe, których SSIM/linty fizycznie nie widzą — podpisy
@@ -152,8 +168,9 @@ optyczne wyrównanie). P0/P1 blokują oddanie; P2 naprawiać dopóki tanie.
 4. OBRAZY (11: role P/U/S/R, dedup cross-sekcja, kolizje warstw, kadry, światło, ikony)
 5. STANY/INTERAKCJE (6: hover/focus/disabled, empty/error, touch, sticky, reduced-motion)
 6. TREŚĆ (6: placeholdery, zakazane frazy, ceny/format, ton, duplikaty)
-7. OSADZENIE (5: odstępy bloków „przyklejone", crop/upscaling w kaflach, martwa interakcja
-   per viewport, pay-badges kanon vs imitacje, scrim=plateau pod blokiem treści §F3.1b) — PASS 4,
+7. OSADZENIE (6: odstępy bloków „przyklejone", crop/upscaling w kaflach, martwa interakcja
+   per viewport, pay-badges kanon vs imitacje, scrim=plateau pod blokiem treści §F3.1b,
+   fade_line pasów scenowych mobile — martwy pas kremu / zła linia fade §2) — PASS 4,
    pokrywa `detail-lint.py`
 
 ## NARZĘDZIA (zbudowane — reużywalne)
@@ -165,7 +182,8 @@ optyczne wyrównanie). P0/P1 blokują oddanie; P2 naprawiać dopóki tanie.
   geometry. **PASS 4:** odstępy bloków (gap<12px różny kind), crop cover >25% + upscaling DPR2,
   interakcja per viewport (hit-test 1280/390 + martwa-property PROBE), pay-badges kanon vs
   imitacje (`--fix` auto-swap klastra na SSOT), **scrim=plateau** (ramp lewy→prawy pas bloku sceny
-  >1.5 = scena prześwituje pod tekstem, §F3.1b).
+  >1.5 = scena prześwituje pod tekstem, §F3.1b), **fade_line** (pasy scenowe mobile @390 —
+  najdłuższy pas jednolitego --paper ≥25% wys. boksa = martwy pas / zła linia fade, §2 KADR=BOHATER+LINIA FADE = P1).
   **[TODO domknięcia — właściciel detail-lint, SPEC F7]:** (1) detail-lint NIE emituje jeszcze
   **h-scroll** (`scrollWidth-clientWidth==0`) — dziura do dodania (blok `finalny_pass`
   w `gate-manifest.json` już to odnotowuje). (2) Lista zakazanych fraz `bad` trzymana W KODZIE
