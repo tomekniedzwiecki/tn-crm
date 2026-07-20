@@ -251,6 +251,207 @@ def check_dopasowanie(res, M, ctx):
             res.add("dopasowanie", "werdykty mobile (MOBILE-390)", status_for(ok, msev),
                     "%d werdyktow / %d sekcji" % (n_verd, len(sections)))
 
+# ================================================================== F1a: MANIFEST SEKCJI (kontrakt kompletnosci) + F6: BRAMKA CTA (szkielet)
+def _alias_groups(sid, aliasy):
+    """(norms, raws) — klasa rownowaznosci id sekcji: znormalizowane tokeny + surowe alias-stringi
+       ze WSZYSTKICH grup aliasy_sekcji, ktore zawieraja to id (jako klucz LUB na liscie).
+       Dzieki temu manifest 'zaufanie' <-> kod 'trust' <-> plik '02' = jedna sekcja."""
+    base = norm(sid)
+    norms = {base} if base else set()
+    raws = {sid} if sid else set()
+    for k, vals in (aliasy or {}).items():
+        grp_raw = [k] + list(vals)
+        grp_norm = {norm(x) for x in grp_raw if norm(x)}
+        if base and base in grp_norm:
+            norms |= grp_norm
+            raws |= set(grp_raw)
+    return norms, raws
+
+def check_sekcje_plan(res, M, ctx):
+    """F1a — rekoncyliacja MANIFESTU SEKCJI (PLAN.md) <-> makieta d <-> <section id> <-> kompozyt.
+       Brak PLAN.md lub brak markera '## MANIFEST SEKCJI' = SKIP (landing sprzed reguly; zero regresji)."""
+    m = M.get("sekcje_plan")
+    if not m:
+        res.add("sekcje_plan", "(config)", "SKIP", "brak sekcje_plan w manifescie")
+        return
+    sev = m["severity"]; arch = ctx.get("archiwum")
+    plan = read_text(os.path.join(arch, m.get("plan_plik", "PLAN.md").replace("/", os.sep))) if arch else None
+    marker = m["manifest_marker"]
+    if not plan or marker not in plan:
+        res.add("sekcje_plan", "(brak MANIFESTU SEKCJI w PLAN.md)", "SKIP", "landing sprzed reguly")
+        return
+    aliasy = M.get("dopasowanie", {}).get("aliasy_sekcji", {})
+    # blok manifestu: od markera do nastepnego naglowka markdown (## ...)
+    after = plan.split(marker, 1)[1]
+    block = []
+    for ln in after.splitlines():
+        if re.match(r"^\s*#{1,6}\s", ln):
+            break
+        block.append(ln)
+    rx = re.compile(m["linia_regex"], re.I if m.get("linia_case_insensitive") else 0)
+    entries = []
+    for ln in block:
+        mm = rx.match(ln)
+        if mm:
+            entries.append((mm.group(1), (mm.group(2) or "").lower(), (mm.group(3) or "").lower(), mm.group(4) or ""))
+    if not entries:
+        res.add("sekcje_plan", "MANIFEST SEKCJI (parsowanie)", "WARN",
+                "marker obecny ale 0 linii sparsowanych — sprawdz format wpisow (id | typ | status)")
+        return
+    comps_n = [norm(os.path.basename(x)) for x in find_glob(arch, M["dopasowanie"]["kompozyt_glob"])]
+    sec_norm = [norm(s) for s in ctx.get("sections", [])]
+    makieta_glob = m.get("makieta_glob", "makiety/*{id}*")
+    mwyk = [x.lower() for x in m.get("makieta_wyklucz", [])]
+    st_build = m.get("status_build", "build"); st_skip = m.get("status_skip", "skip")
+    minlen = m.get("skip_powod_min_len", 6)
+    planned = set()
+    n_build = n_skip = problems = 0
+    for sid, typ, status, reszta in entries:
+        norms, raws = _alias_groups(sid, aliasy)
+        planned |= norms
+        if status == st_build:
+            n_build += 1
+            missing = []
+            # (a) makieta desktop (prob. surowe id + aliasy; filtr mobile/00-/styl-master)
+            found_mk = False
+            for tok in raws:
+                for p in find_glob(arch, makieta_glob.replace("{id}", tok)):
+                    bn = os.path.basename(p).lower()
+                    if os.path.isfile(p) and not any(w in bn for w in mwyk):
+                        found_mk = True; break
+                if found_mk:
+                    break
+            if not found_mk:
+                missing.append("makieta d")
+            # (b) <section id> w kodzie (po aliasach, rownosc znormalizowana)
+            if not any(sn in norms for sn in sec_norm):
+                missing.append("<section id>")
+            # (c) kompozyt dopasowania (substring po tokenach klasy rownowaznosci)
+            if not any(any(t and t in cn for t in norms) for cn in comps_n):
+                missing.append("kompozyt")
+            if missing:
+                problems += 1
+                res.add("sekcje_plan", "build: %s" % sid, status_for(False, sev),
+                        "brak: " + ", ".join(missing))
+        elif status == st_skip:
+            n_skip += 1
+            reason = re.sub(r"^[\s\-‐-―:|*]+", "", reszta or "")
+            if len(re.sub(r"\s", "", reason)) < minlen:
+                problems += 1
+                res.add("sekcje_plan", "skip: %s" % sid, status_for(False, sev),
+                        "SKIP bez powodu (wymagane >= %d znakow niebialych)" % minlen)
+    # nieplanowane sekcje w kodzie (spoza manifestu i spoza wyklucz_id_kod) = WARN
+    nsev = m.get("nieplanowana_severity", "WARN")
+    wyk = set(norm(x) for x in m.get("wyklucz_id_kod", []))
+    for s, sn in zip(ctx.get("sections", []), sec_norm):
+        if sn in planned or sn in wyk:
+            continue
+        problems += 1
+        res.add("sekcje_plan", "nieplanowana: %s" % s, status_for(False, nsev),
+                "sekcja w kodzie spoza MANIFESTU SEKCJI")
+    if problems == 0:
+        res.add("sekcje_plan", "manifest <-> makieta/kod/kompozyt", "PASS",
+                "%d build + %d skip — komplet pokryty" % (n_build, n_skip))
+
+_CTA_SEC_OPEN_RE = re.compile(r'<section\b[^>]*\bid\s*=\s*"([^"]+)"', re.I)
+_CTA_SEC_CLOSE_RE = re.compile(r'</section\s*>', re.I)
+
+def _cta_section_spans(markup):
+    """[(start, id, end)] dla kazdej <section id=...>; end = najblizszy </section> po starcie
+       (landingi = plaskie rodzenstwo sekcji). Do mapowania [data-checkout] -> otaczajaca sekcja.
+       Wystapienie poza jakimkolwiek spanem (przed 1. sekcja / po ostatniej) = kontener 'poza-sekcja'."""
+    closes = [mm.start() for mm in _CTA_SEC_CLOSE_RE.finditer(markup)]
+    spans = []
+    for mm in _CTA_SEC_OPEN_RE.finditer(markup):
+        start = mm.start()
+        end = next((c for c in closes if c > start), len(markup))
+        spans.append((start, mm.group(1), end))
+    return spans
+
+def check_cta(res, M, ctx):
+    """F6 — BRAMKA CTA. (a) liczba [data-checkout] >= min_count; (b) dedykowana sekcja CTA (mid-cta)
+       ORAZ final; (c) >=1 re-CTA w sekcji mid-page (poza hero/zamow/final i poza sticky/footer/topbar).
+       Proxy WARN: sekcje designed_cta obecne w kodzie bez zaprojektowanego .btn.cta. Brak html = SKIP."""
+    m = M.get("cta")
+    if not m:
+        res.add("cta", "(config)", "SKIP", "brak cta w manifescie")
+        return
+    html = ctx.get("html")
+    if not html:
+        res.add("cta", "(brak html)", "SKIP", "brak kodu HTML")
+        return
+    sev = m["severity"]
+    markup = strip_scripts(html)  # bez <script>/<style> — NIE licz '[data-checkout]' z JS/CSS
+    attr = m.get("checkout_attr", "data-checkout")
+    attr_rx = re.compile(re.escape(attr) + r"(?![-\w])", re.I)
+    spans = _cta_section_spans(markup)
+    aliasy = M.get("dopasowanie", {}).get("aliasy_sekcji", {})
+    def norms_of(sid):
+        return _alias_groups(sid, aliasy)[0]
+    # mapowanie kazdego [data-checkout] -> otaczajaca <section id> (None = kontener poza-sekcja)
+    per_section = {}
+    total = 0
+    for mm in attr_rx.finditer(markup):
+        total += 1
+        sid = None
+        for start, s_id, end in spans:
+            if start < mm.start() < end:
+                sid = s_id; break
+        per_section[sid] = per_section.get(sid, 0) + 1
+    sections = ctx.get("sections") or [s for _, s, _ in spans]
+    # (a) liczba CTA
+    min_count = m.get("min_count", 4)
+    res.add("cta", "liczba [%s] >= %d" % (attr, min_count),
+            status_for(total >= min_count, m.get("min_count_severity", sev)),
+            "%d/%d" % (total, min_count) if total >= min_count else "za malo CTA: %d/%d" % (total, min_count))
+    # (b) dedykowana sekcja CTA (mid-cta) + final
+    dedy = set(norm(x) for x in m.get("dedykowana_aliasy", []))
+    has_dedy = any(norm(s) in dedy or (norms_of(s) & dedy) for s in sections)
+    res.add("cta", "dedykowana sekcja CTA (mid-cta)",
+            status_for(has_dedy, m.get("dedykowana_severity", sev)),
+            "obecna" if has_dedy else "brak dedykowanej sekcji CTA (mid-cta)")
+    if m.get("wymagana_final", True):
+        fin = set(norm(x) for x in m.get("final_aliasy", []))
+        has_final = any(norm(s) in fin or (norms_of(s) & fin) for s in sections)
+        res.add("cta", "sekcja FINAL CTA",
+                status_for(has_final, m.get("final_severity", sev)),
+                "obecna" if has_final else "brak sekcji FINAL CTA")
+    # (c) re-CTA mid-page (desktop): >=1 [data-checkout] w sekcji spoza wyklucz + spoza kontenerow
+    rexcl = set(norm(x) for x in m.get("recta_wyklucz_sekcje", []))
+    kontenery = set(norm(x) for x in m.get("recta_kontenery_wyklucz", []))
+    recta_ids = []
+    for sid, cnt in per_section.items():
+        if sid is None or cnt <= 0:
+            continue  # poza-sekcja (sticky/topbar/footer) — nie liczy jako re-CTA mid-page
+        sn = norm(sid); ex = norms_of(sid)
+        if sn in rexcl or (ex & rexcl):
+            continue
+        if sn in kontenery or (ex & kontenery):
+            continue
+        recta_ids.append(sid)
+    res.add("cta", "re-CTA mid-page (desktop)",
+            status_for(bool(recta_ids), m.get("recta_severity", sev)),
+            ("re-CTA w: %s" % ", ".join(sorted(set(recta_ids)))) if recta_ids
+            else "brak re-CTA na desktopie (mid-page)")
+    # PROXY (WARN): sekcje designed_cta obecne w kodzie musza miec zaprojektowany .btn.cta
+    psev = m.get("designed_cta_proxy_severity", "WARN")
+    for did in m.get("designed_cta_sekcje", []):
+        dn = norm(did)
+        present_id = None
+        for s in sections:
+            if norm(s) == dn or (dn in norms_of(s)):
+                present_id = s; break
+        if not present_id:
+            continue  # nieobecna (np. mid-cta) — luke lapie check (b), nie proxy
+        slice_txt = ""
+        for start, s_id, end in spans:
+            if s_id == present_id:
+                slice_txt = markup[start:end]; break
+        low = slice_txt.lower()
+        if ("btn cta" not in low) and ("btn.cta" not in low):
+            res.add("cta", "designed CTA: %s" % present_id, status_for(False, psev),
+                    "sekcja %s bez zaprojektowanego .btn.cta (sprawdz makiete)" % present_id)
+
 def check_interakcje(res, M, ctx):
     m = M["interakcje"]; sev = m["severity"]; arch = ctx["archiwum"]
     html = ctx["html"]; ledger = ctx["ledger"] or ""
@@ -1644,6 +1845,8 @@ def extract_product_key(karta):
 CHECK_ORDER = [
     ("files", check_files),
     ("dopasowanie", check_dopasowanie),
+    ("sekcje_plan", check_sekcje_plan),
+    ("cta", check_cta),
     ("interakcje", check_interakcje),
     ("grep_forbidden", check_grep_forbidden),
     ("copy", check_copy),

@@ -18,6 +18,12 @@ się w izolacji → świat się nie różnicuje. Przewodnik = storyboard operato
 RAZ per landing, PO planie F1, PRZED makietami F2. Jedna decyzja o CIĄGU całości,
 nie 13 lokalnych decyzji o pozie.
 
+**WEJŚCIE — `ICP-GRUPA-DOCELOWA.md` (STANDARD §F0.6a), gdy istnieje.** Casting człowieka, świat/
+wnętrze, stylizacja i rekwizyty KAŻDEJ karty sekcji (pkt 3) wyprowadza się z **ICP §5 (casting)
+i §3 (kontekst użycia)** — bohater kadru = persona rdzeniowa ICP, sceneria = jej realne wnętrze,
+ANTY-CASTING = §5. To domyka oś 5 („świat/materiał ← persona + kontekst użycia") realnym źródłem,
+nie zgadywanką. **Brak pliku ICP = osąd agenta jak dotąd** (artefakt opcjonalny, niebramkowany).
+
 ## ZAWARTOŚĆ (4 bloki)
 1. ŁUK NARRACYJNY — każda sekcja = klatka filmu: świat-problem (BEZ naszego produktu —
    stary sposób/ból) → produkt WCHODZI jako rozwiązanie → mechanizm z bliska → dowód na

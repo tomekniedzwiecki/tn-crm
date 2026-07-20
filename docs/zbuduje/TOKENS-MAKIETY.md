@@ -65,7 +65,11 @@ amatora — i dlatego nie podlegają „unikatowości" (Z6 nie zwalnia z rzemios
 
 ### PARTYTURA — TOŻSAMOŚĆ, wyprowadzana z PRODUKTU i PERSONY, inna w każdym landingu
 Każda pozycja MUSI mieć **jawne uzasadnienie w `PLAN.md`** („dlaczego TEN produkt/persona
-prowadzi do TEJ decyzji") — decyzja bez uzasadnienia = decyzja z przyzwyczajenia:
+prowadzi do TEJ decyzji") — decyzja bez uzasadnienia = decyzja z przyzwyczajenia.
+> **Źródło „PERSONY" = `ICP-GRUPA-DOCELOWA.md` (STANDARD §F0.6a), gdy istnieje.** Pozycje niżej
+> oznaczone „persona/kontekst użycia" (rodzina tła, materiał/tekstura świata, nastrój, pora dnia)
+> wyprowadza się z **ICP §3 (kontekst użycia) i §5 (casting)** — nie z inline-zgadywanki. Brak
+> pliku ICP = agent wnioskuje personę jak dziś (artefakt opcjonalny, niebramkowany).
 | pozycja | zapis | źródło decyzji |
 |---|---|---|
 | rodzina fontu **display** | `--font-display` | charakter produktu (miękki/techniczny/rzemieślniczy) |

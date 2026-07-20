@@ -411,5 +411,45 @@
       { "label": "wideo w panelu (lp_kod video_count / lp_zycie video)", "severity": "FAIL", "step": "lp_kod",
         "gdy_kod_regex": "<video|\\.mp4", "tokeny": ["video", "wideo"], "kind_alt": "video" }
     ]
+  },
+
+  "_opis_SEKCJE_PLAN": "F1a MANIFEST SEKCJI = kontrakt kompletnosci (Tomek 20.07: 'pilnowac czy WSZYSTKIE sekcje ktore musza byc zostaly wygenerowane; zeby do takich sytuacji nie dochodzilo'). Powod: gate-check liczyl sekcje Z GOTOWEGO HTML -> sekcja porzucona PRZED buildem (koder pominal / plan zapomnial) byla NIEWIDZIALNA. Ten check rekoncyliuje PLAN <-> makieta <-> kod <-> kompozyt. Brak bloku w PLAN.md = SKIP (landingi sprzed reguly, retro przy dotknieciu).",
+
+  "sekcje_plan": {
+    "severity": "FAIL",
+    "plan_plik": "PLAN.md",
+    "manifest_marker": "## MANIFEST SEKCJI",
+    "linia_regex": "^\\s*\\d+[.)]?\\s*([a-z0-9][a-z0-9-]*)\\s*\\|\\s*(scenowa|kodowa)\\s*\\|\\s*(build|skip)\\b(.*)$",
+    "linia_case_insensitive": true,
+    "status_build": "build",
+    "status_skip": "skip",
+    "skip_powod_min_len": 6,
+    "_opis_powod": "Po tokenie 'skip' MUSI byc powod (>= skip_powod_min_len znakow niebialych po odcieciu separatora -/—/:). Powod bez kotwicy tresciowej = i tak przechodzi tu (kotwica KARTA/LEDGER weryfikowana przez agenta), ale PUSTY skip = FAIL.",
+    "makieta_glob": "makiety/*{id}*",
+    "makieta_wyklucz": ["mobile", "00-", "styl-master"],
+    "makieta_mobile_glob": "makiety/*{id}*mobile*",
+    "uzyj_aliasy_sekcji": "dopasowanie.aliasy_sekcji",
+    "nieplanowana_severity": "WARN",
+    "wyklucz_id_kod": ["footer", "topbar", "sticky", "sticky-buy"]
+  },
+
+  "_opis_CTA": "F6 BRAMKA CTA (Tomek 20.07 na macie: 'za malo CTA; tej dedykowanej sekcji z CTA tez nie ma'). Reguly CTA byly OPISOWE w STANDARD (mid-CTA=pelna sekcja z makieta §F4 pkt4, desktop re-CTA, FINAL CTA) i NIEEGZEKWOWANE -> mata je zgubila. (a) liczba [data-checkout] w kodzie >= min_count; (b) obecna DEDYKOWANA sekcja CTA (id in dedykowana_aliasy) ORAZ final (id in final_aliasy); (c) >=1 [data-checkout] w <section> POZA hero/sticky/zamow (re-CTA widoczny na desktopie, bo sticky-buy jest mobile-only). Landing bez szkieletu = FAIL (retro przy dotknieciu). designed_cta_sekcje = sekcje ktorych MAKIETA musi miec zaprojektowany przycisk CTA — egzekwuje KRYTYK makiet/agent (informacyjnie tutaj; skrypt moze policzyc obecnosc .btn.cta w kodzie tych sekcji jako proxy WARN).",
+
+  "cta": {
+    "severity": "FAIL",
+    "checkout_attr": "data-checkout",
+    "min_count": 4,
+    "min_count_severity": "FAIL",
+    "dedykowana_aliasy": ["mid-cta", "midcta", "cta", "recta", "re-cta"],
+    "dedykowana_severity": "FAIL",
+    "wymagana_final": true,
+    "final_aliasy": ["final", "finalcta", "final-cta"],
+    "final_severity": "FAIL",
+    "recta_wyklucz_sekcje": ["hero", "zamow", "oferta", "zamów", "final", "finalcta", "final-cta"],
+    "_opis_recta": "re-CTA MUSI byc genuine MID-page CTA (dedykowana sekcja mid-cta po klastrze dowodu), wiec wykluczamy tez final — final to domkniecie na dole, nie lata martwej strefy srodka na desktopie (sticky-buy jest mobile-only).",
+    "recta_kontenery_wyklucz": ["sticky", "sticky-buy", "topbar", "footer"],
+    "recta_severity": "FAIL",
+    "designed_cta_sekcje": ["hero", "zamow", "mid-cta", "final"],
+    "designed_cta_proxy_severity": "WARN"
   }
 }
