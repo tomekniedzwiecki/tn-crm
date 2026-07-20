@@ -44,6 +44,7 @@
 
 | L-026 | 2026-07-20 | Sygno tor D | NARZĘDZIE | audit-static bez inline-whitelisty dla ŚWIADOMYCH wyjątków (USING(true) na publicznym katalogu, runtime-placeholdery {{link}} w seedach, siatka onboard.js) → pre-push chodzi na --no-verify do końca budowy i gate słabnie; potrzebny marker `audit-ok: <powód>` w linii | ZGŁOSZONA | sygno BUILDLOG TOR D; zmiana w starterze audit-static |
 | L-027 | 2026-07-20 | Sygno tor D | PROCEDURA | Klucz główny Resend odzyskiwalny tylko przez runtime tn-crm (temp echo-fn, od razu usuwana) — działa, ale kruche i zostawia ślad deployu; kandydat: sekret w Windows CredMan jak token mgmt | ZGŁOSZONA | sygno BUILDLOG TOR D |
+| L-028 | 2026-07-20 | uwaga Tomka (panel) | PROCEDURA | Sync panelu przyrostowy „na pamięć" = rozjazdy (landing done, a 2 kroki etapu pending 0/x; auth done z checklistą 0/5) — sync to STAN DOCELOWY: po syncu pełny `steps` i porównanie CAŁEJ tabeli; 1 tor pokrywa WIELE kroków; done = deliverable kroku, cudza pozycja = nota-przeniesienie | WDROŻONA | METODYKA §3.4.6 reguły (a)(b)(c); pełny audyt 51 kroków Sygno 20.07 |
 
 ## Jak czytać statusy
 - **ZGŁOSZONA** — czeka na decyzję/budowę (retro_fabryki przegląda WSZYSTKIE przy każdym projekcie).

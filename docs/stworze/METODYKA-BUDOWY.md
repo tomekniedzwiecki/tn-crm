@@ -150,6 +150,13 @@ kontraktów fan-out = tory zgadują interfejsy = konflikty i poprawki (drożej n
    Panel /tn-app to system zapisu postępu w czasie rzeczywistym, nie raport na koniec dnia.
    Narzędzie: `tn-crm/scripts/wfa-panel-sync.mjs` (checklisty VERBATIM z WS bierze sam — zero
    ryzyka sierot); ręczny REST tylko gdy narzędzie nie pokrywa przypadku.
+   **Trzy reguły anty-rozjazdowe (incydent 20.07 — „landing gotowy, etap w panelu pusty"):**
+   (a) sync = STAN DOCELOWY, nie przyrost na pamięć — po syncu odpal `wfa-panel-sync steps`
+   i porównaj CAŁĄ tabelę z rzeczywistością (nie tylko kroki, które „pamiętasz, że dotknąłeś");
+   (b) jeden tor/sesja pokrywa często WIELE kroków (landing = research+koncept+budowa!) — mapuj
+   zakres pracy na WSZYSTKIE kroki etapu, których dotknęła, zanim uznasz sync za skończony;
+   (c) definicja done: deliverable KROKU istnieje z dowodem; pozycja checklisty z cudzego zakresu
+   = nota „przeniesiona do <krok>", a NIE wieczne in_progress całego kroku.
 4.7. **ŻNIWA LEKCJI (pętla uczenia fabryki — decyzja 20.07):** każdy wpis BUILDLOG kończy się sekcją
    **`LEKCJE → FABRYKA:`** — lista rzeczy, których TA sesja nauczyła się o BUDOWANIU (nie o tej apce),
    z typem `[MODUŁ]` / `[NARZĘDZIE]` / `[DOKTRYNA]` / `[PROCEDURA]` — albo jawne „brak". Zasada kciuka:
