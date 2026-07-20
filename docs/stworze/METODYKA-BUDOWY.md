@@ -236,6 +236,18 @@ Tomek przegląda DOWODY, nie kod.
   w momencie aha (contextual capture). Model per apka potwierdza krok `pricing`.
 - AI w produkcie tylko jako silnik jednego workflow niszy (mierzalna oszczędność w 1. sesji użytkownika), nigdy bajer.
 - Mobile-first zawsze (nisze B2B pracują z telefonu — patrz Grzegorz: „fachowiec w trasie").
+- **Seed danych referencyjnych = REALNE treści z autorytatywnego źródła, nie `TODO-seed`.** Apki compliance
+  (analizator umów, checklisty norm) stoją na treściach ustaw/norm — **fabryka SAMA seeduje realne, dosłowne
+  (verbatim) brzmienia** ze wskazaniem źródła (Dz.U./nr publikacji) i datami wersji (`obowiazuje_od/_do` —
+  wersjonowanie stanu prawnego), a ekspert niszy TYLKO WERYFIKUJE (bramka akceptu w kroku `prawne`/demo). **Zakaz
+  budowania rdzenia na `TODO-seed-tresci` do końca etapu budowy** (lekcja Sygno: prowizoryczne placeholdery
+  przetrwały do LIVE — reguły biegły na opisach zamiast na treści). Wiersz prowizoryczny (gdy verbatim naprawdę
+  niedostępny w sesji) = **jawna flaga `do_akceptu_eksperta`/`provisional=true`**, widoczna w panelu jako dług do
+  domknięcia — nigdy „cichy" placeholder udający dane.
+- **Deliverable „raport" = profesjonalny WYDRUK, nie zrzut ekranu.** Apka, której wynik klient niesie dalej
+  (na negocjacje, do podpisu, do księgowej), MUSI mieć drukowalny arkusz: `@page` (A4+marginesy), nagłówek
+  print-only (logo, tytuł, ID, stan prawny/wersja+data), `break-inside:avoid` na sekcjach. Szczegóły: CLAUDE.md
+  startera „ARKUSZ DRUKU". (Luka Sygno: był `@media print` chowający chrome, brakło paginacji i nagłówka drukowego.)
 
 ## 6a. Pipeline designu (krok `design`, Etap 3) — pętla repo ↔ Claude Design
 
@@ -261,6 +273,14 @@ Dwukierunkowa synchronizacja przez narzędzie **DesignSync** (skill `/design-syn
    ad hoc wpisany w CLAUDE.md apki (sekcja 🚫). Zero AI-sztampy (generyczne gradienty/fiolet).
 
 ## 7. Start rynkowy (Etap 5 — kolejność kanałów)
+
+**⛔ BRAMKA CRONÓW (mechaniczna, przed zaliczeniem kroku `start`/`platnosci`).** „Plik migracji `0002_cron.sql`
+istnieje" ≠ „job biegnie". INCYDENT Sygno 20.07: apka miała włączone 3/6 cronów — lifecycle-emails/
+stripe-processor/reconcile BRAKOWAŁY, więc maile cyklu życia w ogóle nie chodziły, a nikt nie zauważył (żadnego
+błędu — po prostu „nic się nie dzieje"). Zasada: **`select jobname from cron.job` MUSI zawierać komplet z manifestu
+apki** (checklista na górze `0002_cron.sql` + ewentualne crony domenowe: worker pipeline, nbp/ai-billing) PRZED
+zaliczeniem kroku. Weryfikuj też realny przebieg: `select jobname,status,start_time from cron.job_run_details order
+by start_time desc` (nie „scheduled bez runów"). Deklaracja „włączyłem" nie wystarcza — dowód = zrzut `cron.job`.
 
 Soft launch: 5-10 userów z sieci operatora (beta, testimoniale) → publiczny start po tygodniu.
 GTM 0→50: (1) sieć operatora + grupy branżowe → (2) outreach z AI-personalizacją (RODO: uzasadniony interes,
