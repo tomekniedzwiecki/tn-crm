@@ -62,6 +62,38 @@ Sekwencja krótkich sesji z celem i kryterium „zrobione" ZANIM sesja ruszy. Wz
 Twarda zasada (badania: 2× dłuższe zadanie = 4× więcej porażek): sesje KRÓTKIE, domykane, nie sklejane.
 Scope creep: wszystko spoza `01-MVP-SCOPE.md` → `wfa_notes` „na później", NIGDY do bieżącej sesji.
 
+## 2a. Tempo bez utraty jakości (Z8-app — wzór fabryki landingów, decyzja 20.07)
+
+Jakości pilnują GATE'y i audyty — więc tempo optymalizujemy wszędzie tam, gdzie bramka i tak
+przepuści tylko dobry wynik. Zasady (lekcja incydentu 0024: najdroższy czas = pętla audytowa
+„zbuduj → Opus wykrywa → napraw → re-test → re-audyt", ~5 przebiegów agentów):
+
+1. **Shift-left zamiast pętli audytowej.** Tanie detektory (audit-static WARN-y na migracjach,
+   `rls-matrix.mjs`, check-deploy, detektory placeholderów) odpala SESJA BUDUJĄCA przed oddaniem
+   kroku. Audyt adwersarski Opus ma POTWIERDZAĆ czystość, nie odkrywać znane klasy błędów —
+   każda klasa odkryta przez audyt zamiast przez detektor = kandydat na nowy detektor (żniwa lekcji).
+2. **Fixture-first:** krok `schemat_db` ODDAJE `tests/rls-fixture.json` + zielony przebieg
+   `rls-matrix.mjs` jako dowód (sesja, która projektowała schemat, zna FK/NOT NULL najlepiej —
+   koszt ~10 min; bez tego koszt = pełna pętla audytowa po fakcie).
+3. **Modele per typ kroku (jawny `model:` przy KAŻDYM spawnie):** default wykonanie = Sonnet;
+   Haiku dla czysto mechanicznych (deploy-all, check-deploy, panel-sync, przebiegi testów wg gotowej
+   macierzy, backfill); **Opus WYŁĄCZNIE** dla audytów bezpieczeństwa (NIGDY Fable — SECURITY-I-TESTY-GATE),
+   architektury schematu/promptów AI funkcji głównej i krytyka UX. Gate'y ubezpieczają jakość →
+   tańszy model musi przejść te same progi. Mini-runda krytyka (§3.4.5) = Sonnet dla kroków
+   niewrażliwych; Opus tylko przy powierzchni wrażliwej.
+4. **Równoległość świadoma:** kroki niezależne = jedna sesja, spawn równoległy (wzór: auth_konta +
+   logo; S2 Supabase + S3 Resend). Audyt adwersarski w TLE — sesja kontynuuje kroki NIEZALEŻNE od
+   audytowanej powierzchni i konsumuje werdykt przed pierwszym krokiem zależnym. Nie czekaj na wynik,
+   od którego nie zależysz; nie buduj na powierzchni, której audyt trwa.
+5. **Podwójny niezależny audyt TYLKO dla najwyższej stawki** (izolacja danych firm, płatności) —
+   przy 0024 dwa audyty dały komplementarne znaleziska (jeden RPC-leak, drugi column-grants), więc
+   redundancja się broni; dla pozostałych powierzchni 1 audyt + tani krytyk.
+6. **Deploy hurtowo w tle:** redeploy-all (po zmianie `_shared/`) = zadanie tła, 3–4 równoległe joby;
+   sesja w tym czasie robi następną fazę i na końcu weryfikuje `check-deploy.mjs`.
+7. **Miernik tempa:** wpis BUILDLOG notuje czas ścienny sesji (start–koniec, 1 linia) —
+   `retro_fabryki` porównuje tempo między apkami i wskazuje, który krok zjada czas (tak znaleźliśmy
+   pętlę audytową). Optymalizacje tempa = te same żniwa lekcji, typ `[PROCEDURA]`/`[NARZĘDZIE]`.
+
 ## 3. Rytuał każdej sesji budowlanej
 
 1. Przeczytaj `BUILDLOG.md` + swoją sekcję z `08-PLAN-SESJI.md` + odpowiednie pliki paczki.
