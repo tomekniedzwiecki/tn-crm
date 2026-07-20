@@ -1422,13 +1422,14 @@
             document.getElementById('spar-content').innerHTML = '<div class="text-zinc-600 text-xs">Ładuję dane ze sparingu…</div>';
             const sid = project.spar_session_id;
             const [sumQ, itemsQ, sessQ] = await Promise.all([
-                supabaseClient.from('spar_knowhow_summary').select('handoff_pack, handoff_generated_at, summary_text, items_count, status, closed_at').eq('session_id', sid).maybeSingle(),
-                supabaseClient.from('spar_knowhow_items').select('kind').eq('session_id', sid).range(0, 4999),
+                supabaseClient.from('spar_knowhow_summary').select('handoff_pack, handoff_generated_at, summary_text, summary_ai_generated_at, items_count, status, closed_at').eq('session_id', sid).maybeSingle(),
+                supabaseClient.from('spar_knowhow_items').select('kind, scope, content, created_at, file_path, file_mime_type, meta').eq('session_id', sid).order('created_at', { ascending: true }).range(0, 4999),
                 supabaseClient.from('spar_sessions').select('name, problem_summary, preview_brief, preview_images').eq('id', sid).maybeSingle(),
             ]);
+            const rawItems = itemsQ.data || [];
             const itemsByKind = {};
-            (itemsQ.data || []).forEach(it => { itemsByKind[it.kind||'inne'] = (itemsByKind[it.kind||'inne']||0) + 1; });
-            sparData = { summary: sumQ.data || null, itemsByKind, session: sessQ.data || null, totalItems: (itemsQ.data||[]).length };
+            rawItems.forEach(it => { itemsByKind[it.kind||'inne'] = (itemsByKind[it.kind||'inne']||0) + 1; });
+            sparData = { summary: sumQ.data || null, itemsByKind, items: rawItems, session: sessQ.data || null, totalItems: rawItems.length };
             document.getElementById('spar-sub').textContent = 'sesja ' + sid.slice(0,8);
             const spTab = document.getElementById('ptab-spow-status');
             if (spTab) { spTab.textContent = (sparData.summary?.status === 'closed') ? '' : '●'; spTab.style.color = '#f5b955'; }
@@ -1464,8 +1465,19 @@
             </div>`;
         }
         function renderSparing() {
-            const { summary, itemsByKind, session, totalItems } = sparData;
+            const { summary, session, items } = sparData;
             let h = '';
+
+            // Podsumowanie rozmowy (streszczenie AI) — NAD handoffem
+            if (summary && summary.summary_text) {
+                h += `<div class="bg-zinc-900/60 border border-[#262626] rounded-lg p-5">
+                    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+                        <div class="text-[11px] uppercase tracking-wider text-zinc-400"><i class="ph ph-note mr-1"></i>Podsumowanie rozmowy</div>
+                        ${summary.summary_ai_generated_at ? `<span class="text-[10px] text-zinc-600">AI · ${fmtDate(summary.summary_ai_generated_at)}</span>` : ''}
+                    </div>
+                    <div class="text-[12.5px] text-zinc-300 leading-relaxed whitespace-pre-line">${escapeHtml(summary.summary_text)}</div>
+                </div>`;
+            }
 
             // Handoff pack
             if (summary && summary.handoff_pack) {
@@ -1483,14 +1495,78 @@
                 </div>`;
             }
 
-            // Baza wiedzy — licznik itemów po kind
-            const kinds = Object.keys(itemsByKind);
-            h += `<div>
-                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Baza wiedzy spowiednika — ${totalItems} itemów</div>
-                <div class="flex flex-wrap gap-2">${kinds.length ? kinds.map(k =>
-                    `<span class="inline-flex items-center gap-1.5 border border-[#2a2a2a] rounded-md px-2.5 py-1 text-[11px] text-zinc-300">${escapeHtml(k)}<span class="border-l border-[#2a2a2a] pl-1.5 text-[#52a8ff] font-mono">${itemsByKind[k]}</span></span>`
-                ).join('') : '<span class="text-zinc-600 text-[11px]">brak itemów bazy wiedzy</span>'}</div>
-            </div>`;
+            // Notatki spowiednika — pełny przegląd (to samo, co widzi klient w „Notatki z dopracowania", + więcej)
+            // Dedupe jak u klienta (spar-project): klucz = kind + znormalizowana treść, zostaje PIERWSZE
+            // (dane ASC po created_at); scope z duplikatu przenosimy, gdy zachowany go nie ma.
+            {
+                const jsAttr = (v) => escapeHtml(String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+                const seen = new Map();
+                const uniq = [];
+                (items || []).forEach(it => {
+                    if (!it || typeof it.content !== 'string' || !it.content) return;
+                    const key = (it.kind || '') + '|' + it.content.trim().toLowerCase().replace(/\s+/g, ' ');
+                    const kept = seen.get(key);
+                    if (kept) { if (!kept.scope && it.scope) kept.scope = it.scope; return; }
+                    seen.set(key, it);
+                    uniq.push(it);
+                });
+                const total = uniq.length;
+                const scopeTag = (sc) => {
+                    const L = sc === 'v1' ? '[v1]' : sc === 'pozniej' ? '[później]' : sc === 'poza' ? '[poza]' : '';
+                    return L ? `<span class="text-[10px] text-zinc-500 ml-1.5">${L}</span>` : '';
+                };
+                const PEW = { wysoka: ['wysoka', '#45a557'], srednia: ['średnia', '#f5a623'], niska: ['niska', '#e5484d'] };
+                const rowHtml = (it) => {
+                    const m = (it && it.meta) || {};
+                    const isKh = typeof it.file_path === 'string' && it.file_path.indexOf('spar-knowhow/') === 0;
+                    const fileLink = isKh
+                        ? `<div class="mt-1"><a href="#" onclick="downloadSparFile('${jsAttr(it.file_path)}');return false" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] inline-flex items-center gap-1"><i class="ph ph-download-simple"></i>Pobierz plik</a></div>`
+                        : '';
+                    let extractHtml = '';
+                    if (m.extract) {
+                        const pew = PEW[m.pewnosc];
+                        const pewBadge = pew ? `<span class="text-[9.5px] px-1.5 py-0.5 rounded border ml-1" style="color:${pew[1]};border-color:${pew[1]}66">pewność: ${pew[0]}</span>` : '';
+                        extractHtml = `<details class="mt-1.5">
+                            <summary class="cursor-pointer text-[11px] text-zinc-400 hover:text-zinc-200 select-none inline-flex items-center gap-1.5 flex-wrap"><i class="ph ph-file-magnifying-glass text-zinc-600"></i>Odczytana treść pliku (AI)${pewBadge}</summary>
+                            <div class="mt-2 p-3 rounded-md bg-[#0d0d0d] border border-[#1f1f1f] max-h-72 overflow-y-auto">
+                                <div class="text-[12px] text-zinc-300 whitespace-pre-wrap break-words">${escapeHtml(m.extract)}</div>
+                                ${m.nieczytelne_fragmenty ? `<div class="mt-2 text-[11px] text-[#f5b955] border-t border-[#1f1f1f] pt-2"><i class="ph ph-warning mr-1"></i>Fragmenty nieczytelne: ${escapeHtml(m.nieczytelne_fragmenty)}</div>` : ''}
+                            </div>
+                        </details>`;
+                    }
+                    const fromFileChip = (it.kind !== 'zalacznik' && m.from_file)
+                        ? `<span class="text-[10px] text-zinc-500 ml-1.5 inline-flex items-center gap-0.5"><i class="ph ph-paperclip"></i>z pliku: ${escapeHtml(m.from_file)}</span>`
+                        : '';
+                    return `<div class="py-1.5 border-b border-[#161616] last:border-0">
+                        <div class="text-[12.5px] text-zinc-300 break-words">${escapeHtml(it.content)}${scopeTag(it.scope)}${fromFileChip} <span class="text-zinc-600 text-[10px]">${fmtDate(it.created_at)}</span></div>
+                        ${fileLink}${extractHtml}
+                    </div>`;
+                };
+                const groupsDef = [
+                    ['Wymagania', 'ph-list-checks', ['wymaganie']],
+                    ['Decyzje', 'ph-git-branch', ['decyzja']],
+                    ['Wnioski', 'ph-lightbulb', ['wniosek']],
+                    ['Cenowe', 'ph-currency-circle-dollar', ['intel_cenowy']],
+                    ['Uwagi', 'ph-push-pin', ['uwaga', 'cytat']],
+                    ['Linki', 'ph-link-simple', ['link']],
+                    ['Załączniki', 'ph-paperclip', ['zalacznik']],
+                    ['Do ustalenia', 'ph-question', ['luka', 'sprzecznosc', 'zalozenie']],
+                ];
+                let groupsHtml = '';
+                groupsDef.forEach(([title, icon, kinds]) => {
+                    const list = uniq.filter(it => kinds.indexOf(it.kind) !== -1);
+                    if (!list.length) return;
+                    const open = list.length <= 6 ? ' open' : '';
+                    groupsHtml += `<details class="bg-[#111] border border-[#262626] rounded-md px-3.5 py-2.5"${open}>
+                        <summary class="cursor-pointer select-none text-[11px] uppercase tracking-wider text-zinc-400 flex items-center gap-2"><i class="ph ${icon} text-zinc-600"></i>${title}<span class="text-[#52a8ff] font-mono">${list.length}</span></summary>
+                        <div class="mt-2">${list.map(rowHtml).join('')}</div>
+                    </details>`;
+                });
+                h += `<div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Notatki spowiednika — ${total} pozycji</div>
+                    ${groupsHtml ? `<div class="space-y-2">${groupsHtml}</div>` : '<div class="text-zinc-600 text-[11px]">Brak notatek bazy wiedzy.</div>'}
+                </div>`;
+            }
 
             // Problem summary (karta projektu)
             const ps = session && session.problem_summary;
@@ -1523,6 +1599,18 @@
             </div>`;
 
             document.getElementById('spar-content').innerHTML = h;
+        }
+        // Załączniki spowiednika lądują w PRYWATNYM buckecie `spar-knowhow` (prefiks 'spar-knowhow/'
+        // w file_path) — public URL nie zadziała, więc generujemy signed URL na żądanie (SELECT-policy
+        // team_members istnieje). Globalna — wołana z inline onclick w przeglądzie notatek.
+        async function downloadSparFile(filePath) {
+            const key = String(filePath || '').replace(/^spar-knowhow\//, '');
+            if (!key) { showToast('Brak ścieżki pliku', 'error'); return; }
+            try {
+                const { data, error } = await supabaseClient.storage.from('spar-knowhow').createSignedUrl(key, 3600);
+                if (error || !data || !data.signedUrl) { showToast('Nie udało się pobrać pliku', 'error'); console.error('downloadSparFile', error); return; }
+                window.open(data.signedUrl, '_blank');
+            } catch (e) { showToast('Nie udało się pobrać pliku', 'error'); console.error('downloadSparFile', e); }
         }
         async function loadTranscript() {
             const box = document.getElementById('spar-transcript');
@@ -2177,8 +2265,8 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
             const map = {
                 mvp_scope: 'Na bazie 00-KONTEKST i handoff packu wygeneruj PROPOZYCJĘ MVP do decyzji Tomka: 3–5 funkcji rdzenia (co JEST), świadome cięcia (czego NIE MA), metryka aktywacji (aha-moment) + time-to-first-value < 10 min, granica „jakie zmiany po zobaczeniu v1 są w cenie, a jakie są rozwojem" oraz kryteria „gotowe" per funkcja. Zapisz jako 01-MVP-SCOPE.md w paczce. Najszybszy go-to-market, zero przekombinowania. Tomek tnie i zatwierdza — oznacz miejsca wymagające jego decyzji.',
                 pricing: 'Przygotuj pricing tej aplikacji do MOJEJ decyzji, w trzech ruchach: (1) ZBIERZ kontekst z bazy (Supabase MCP): pakiet wiedzy (spar_knowhow_summary.handoff_pack), raport rynkowy i economics (spar_sessions.market_report / economics po sesji z kontekstu), 01-MVP-SCOPE; (2) WYPUŚĆ 2 agentów researchowych (Agent tool, model opus, równolegle): a) realne ceny konkurencji i substytutów tej niszy w Polsce — nazwy i ceny ZE ŹRÓDEŁ, b) wrażliwość cenowa tej grupy zawodowej + benchmarki SaaS o podobnym ACV; (3) zaproponuj 2 warianty pricingu (plan miesięczny + roczny, trial z kartą, ewentualna stawka beta dla sieci operatora) z uzasadnieniem liczbami. Potem DOPRACUJ cennik ze mną w rozmowie — pytaj, iteruj. PO MOIM POTWIERDZENIU zapisz finalny cennik w kroku: pole plany + kotwica (data.fields) oraz podsumowanie w notatce.',
-                kickoff: 'Przygotuj DRAFT maila przekazującego klientowi DOSTĘP do portalu postępu (Gmail create_draft; styl Tomka: krótko, ciepło, konkretnie — NIE wysyłaj). Treść: (1) ruszamy z budową — co się będzie działo w najbliższych tygodniach (2-3 zdania po ludzku, bez żargonu); (2) link do portalu postępu: https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=<unique_token projektu — pobierz z wfa_projects>. Napisz WPROST, że przy PIERWSZYM wejściu klient sam ustawi swoje hasło do portalu — nic nie przekazujemy osobno, żadnego hasła w mailu. NIC o umowie ani materiałach — umowa ma własny krok „Umowa", a materiały branżowe zbieramy w Etapie 3 „Dane operatora". Docelowo ten mail wysyła się automatycznie w chwili powstania projektu (po spowiedniku) — na razie ręcznie.',
-                nazwa: 'Krok end-to-end, minimalny udział Tomka. FAZA 0 — STAN: sprawdź wfa_projects (name/slug/domain/vercel_project) i notatkę kroku; wykonuj TYLKO brakujące fazy (sesja bywa odpalana wielokrotnie — ma być idempotentna).\nFAZA 1 — USP I NAZWY (gdy name/domain puste): (a) wyprowadź USP z PEŁNEJ bazy wiedzy (spar_knowhow_summary.handoff_pack + spar_knowhow_items: problem, kto płaci i DLACZEGO, mechanizm, anty-pozycjonowanie vs konkurencja i dzisiejsze obejścia) oraz 01-MVP-SCOPE; zapisz USP w 1-2 zdaniach i przedstaw NA POCZĄTKU do akceptacji. (b) Zaproponuj 20 nazw z WOLNYMI domenami, SZEROKIE SPEKTRUM stylów naraz — OBOWIĄZKOWO oba światy (uwaga Tomka 15.07): Ⅰ. polskie znaczące (idiomy języka branży, zbitki dwuwyrazowe, postać/tożsamość, mechanizm USP, efekt u klienta końcowego) oraz Ⅱ. SaaS-owe neologizmy BEZ znaczenia — krótkie (2-3 sylaby), dobrze brzmiące, globalne, łatwe do wymówienia po polsku (wzorce: Notion/Linear/Vanta; zbitki fonemów pasujące tonem do niszy, końcówki -o/-ly/-io/-a); filtr nadrzędny: DUMA użytkownika końcowego — powie tę nazwę kolegom z dumą; zakaz nazw = goła kategoria produktu; pojedyncze prawdziwe polskie słowa .pl są praktycznie zawsze zajęte — celuj w idiomy dwuwyrazowe, zbitki i neologizmy. DOMENY: dla nazw polskich .pl; dla neologizmów sprawdzaj RÓWNOLEGLE .pl, .com, .io, .app i rekomenduj najlepszą parę nazwa+końcówka (apka PL może żyć na .pl, ale neologizm z wolnym .com to atut). Dostępność .pl: curl https://rdap.dns.pl/domain/<domena> (404=wolna, 200=zajęta); przy 429 fallback WHOIS whois.dns.pl:43 (PowerShell TcpClient); inne TLD: curl https://rdap.org/domain/<domena> (404=wolna). Tabela pogrupowana stylami: nazwa + co niesie (USP/duma) + ocena, z rekomendacją; wybór W ROZMOWIE. PO WYBORZE: UPDATE wfa_projects SET name=..., slug=..., domain=... WHERE id (id w kontekście).\nFAZA 2 — VERCEL OD RAZU (gdy nazwa wybrana, vercel_project puste): placeholder w KATALOGU TYMCZASOWYM (scratchpad; NIGDY deploy z roota c:\\repos_tn): index.html „Już wkrótce" (nazwa + tagline z USP, kolory z makiet sparingu, meta robots noindex) → cd <katalog> && npx vercel deploy --prod --yes (CLI = konto tomekniedzwieckis-projects, plan Pro) → npx vercel domains add <domena> <slug> i npx vercel domains add www.<domena> <slug> → weryfikacja: curl https://<slug>.vercel.app = 200 → UPDATE wfa_projects SET vercel_project=<slug>, app_url=https://<domena>. Do notatki kroku dopisz dla Etapu 2: projekt Vercel JUŻ ISTNIEJE — krok repo_vercel podpina repo do niego, NIE tworzy nowego.\nFAZA 3 — DOMENA (rozmowa): zapytaj Tomka wprost, czy domena KUPIONA. NIE → poproś o zakup (registrar dowolny, np. LH.pl/OVH), krok in_progress, koniec sesji. TAK → podaj delegację NS do ustawienia: ns1.vercel-dns.com + ns2.vercel-dns.com (LH.pl: Konfiguracja domeny → „Zewnętrzny serwer DNS"; alternatywa u innego registrara: A @ 76.76.21.21 + CNAME www cname.vercel-dns.com) i poproś o potwierdzenie.\nFAZA 4 — DOMKNIĘCIE: po potwierdzeniu Tomka sprawdź npx vercel domains inspect <domena> (Current NS = Intended) oraz curl -sI https://<domena> (200 + SSL). Propagacja NS trwa do kilku godzin — jeśli jeszcze nie weszła: krok in_progress z notatką „czeka propagacja NS", sprawdzisz w następnej sesji. Gdy działa: checklista w pełni done, status=done.',
+                kickoff: 'Przygotuj DRAFT maila przekazującego klientowi DOSTĘP do portalu postępu (Gmail create_draft; styl Tomka: krótko, ciepło, konkretnie — NIE wysyłaj). PRZED pisaniem ustal FORMY GRAMATYCZNE adresata (lekcja Sygno 20.07: klient „magm5" okazał się kobietą): imię z leada, a gdy go brak — przejrzyj wiadomości usera w spar_messages pod kątem form czasowników („zauważyłam" vs „zauważyłem"); nadal niepewne = formy bezosobowe/Państwo. Treść: (1) ruszamy z budową — co się będzie działo w najbliższych tygodniach (2-3 zdania po ludzku, bez żargonu); (2) link do portalu postępu: https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=<unique_token projektu — pobierz z wfa_projects>. Napisz WPROST, że przy PIERWSZYM wejściu klient sam ustawi swoje hasło do portalu — nic nie przekazujemy osobno, żadnego hasła w mailu. NIC o umowie ani materiałach — umowa ma własny krok „Umowa", a materiały branżowe zbieramy w Etapie 3 „Dane operatora". Docelowo ten mail wysyła się automatycznie w chwili powstania projektu (po spowiedniku) — na razie ręcznie.',
+                nazwa: 'Krok end-to-end, minimalny udział Tomka. FAZA 0 — STAN: sprawdź wfa_projects (name/slug/domain/vercel_project) i notatkę kroku; wykonuj TYLKO brakujące fazy (sesja bywa odpalana wielokrotnie — ma być idempotentna).\nFAZA 1 — USP I NAZWY (gdy name/domain puste): (a) wyprowadź USP z PEŁNEJ bazy wiedzy (spar_knowhow_summary.handoff_pack + spar_knowhow_items: problem, kto płaci i DLACZEGO, mechanizm, anty-pozycjonowanie vs konkurencja i dzisiejsze obejścia) oraz 01-MVP-SCOPE; zapisz USP w 1-2 zdaniach i przedstaw NA POCZĄTKU do akceptacji. (b) OBOWIĄZKOWO dołącz do kandydatów nazwę roboczą klienta z makiet sparingu (spar_sessions.preview_brief.nazwa — klient już ją widział i lubi; lekcja: DW „Rozmowny Plan", Sygno „Luki Publiczne") i sprawdź jej domenę. Zaproponuj 20 nazw z WOLNYMI domenami, SZEROKIE SPEKTRUM stylów naraz — OBOWIĄZKOWO oba światy (uwaga Tomka 15.07): Ⅰ. polskie znaczące (idiomy języka branży, zbitki dwuwyrazowe, postać/tożsamość, mechanizm USP, efekt u klienta końcowego) oraz Ⅱ. SaaS-owe neologizmy BEZ znaczenia — krótkie (2-3 sylaby), dobrze brzmiące, globalne, łatwe do wymówienia po polsku (wzorce: Notion/Linear/Vanta; zbitki fonemów pasujące tonem do niszy, końcówki -o/-ly/-io/-a); filtr nadrzędny: DUMA użytkownika końcowego — powie tę nazwę kolegom z dumą; zakaz nazw = goła kategoria produktu; pojedyncze prawdziwe polskie słowa .pl są praktycznie zawsze zajęte — celuj w idiomy dwuwyrazowe, zbitki i neologizmy. DOMENY: dla nazw polskich .pl; dla neologizmów sprawdzaj RÓWNOLEGLE .pl, .com, .io, .app i rekomenduj najlepszą parę nazwa+końcówka (apka PL może żyć na .pl, ale neologizm z wolnym .com to atut). Dostępność .pl: curl https://rdap.dns.pl/domain/<domena> (404=wolna, 200=zajęta); przy 429 fallback WHOIS whois.dns.pl:43 (PowerShell TcpClient); inne TLD: curl https://rdap.org/domain/<domena> (404=wolna). Tabela pogrupowana stylami: nazwa + co niesie (USP/duma) + ocena, z rekomendacją; wybór W ROZMOWIE. PO WYBORZE: UPDATE wfa_projects SET name=..., slug=..., domain=... WHERE id (id w kontekście).\nFAZA 2 — VERCEL OD RAZU (gdy nazwa wybrana, vercel_project puste): placeholder w KATALOGU TYMCZASOWYM (scratchpad; NIGDY deploy z roota c:\\repos_tn): index.html „Już wkrótce" (nazwa + tagline z USP, kolory z makiet sparingu, meta robots noindex) → cd <katalog> && npx vercel deploy --prod --yes (CLI = konto tomekniedzwieckis-projects, plan Pro) → npx vercel domains add <domena> <slug> i npx vercel domains add www.<domena> <slug> → weryfikacja: curl https://<slug>.vercel.app = 200 → UPDATE wfa_projects SET vercel_project=<slug>, app_url=https://<domena>. Do notatki kroku dopisz dla Etapu 2: projekt Vercel JUŻ ISTNIEJE — krok repo_vercel podpina repo do niego, NIE tworzy nowego.\nFAZA 3 — DOMENA (rozmowa): zapytaj Tomka wprost, czy domena KUPIONA. NIE → poproś o zakup (registrar dowolny, np. LH.pl/OVH), krok in_progress, koniec sesji. TAK → podaj delegację NS do ustawienia: ns1.vercel-dns.com + ns2.vercel-dns.com (LH.pl: Konfiguracja domeny → „Zewnętrzny serwer DNS"; alternatywa u innego registrara: A @ 76.76.21.21 + CNAME www cname.vercel-dns.com) i poproś o potwierdzenie.\nFAZA 4 — DOMKNIĘCIE: po potwierdzeniu Tomka sprawdź npx vercel domains inspect <domena> (Current NS = Intended) oraz curl -sI https://<domena> (200 + SSL). Propagacja NS trwa do kilku godzin — jeśli jeszcze nie weszła: krok in_progress z notatką „czeka propagacja NS", sprawdzisz w następnej sesji. Gdy działa: checklista w pełni done, status=done.',
                 logo: 'Krok LOGO I FAVICON (standard fabryki, decyzja Tomka 15.07). Cel: jedna tożsamość graficzna z WYBRANEJ nazwy, w JEDNYM źródle. (1) GENERACJA: edge fn generate-image tn-crm (provider dla LOGO = GPT-image-2, quality medium, auth x-cron-secret) — 4-6 wariantów logo z nazwy aplikacji (brief: nisza, ton z makiet/tokenów designu, JASNE tło, wordmark albo sygnet+wordmark, bez sloganów, bez detali gubiących się w małej skali); pokaż mi warianty do wyboru W ROZMOWIE. (2) FAVICON: z wybranego logo wyprowadź kwadratowy znak (sygnet/monogram): favicon PNG 32 + apple-touch 180 + PWA 512. (3) JEDNO ŹRÓDŁO: wgraj pliki do Storage APLIKACJI (publiczny bucket brand/), zapisz app_settings.brand_logo_url + app_settings.favicon_url w bazie aplikacji; landing, panel usera, panel operatora, auth i wspólny layout maili czytają WYŁĄCZNIE z tych ustawień (fallback: tekstowy wordmark, gdy puste). (4) PANEL OPERATORA: Ustawienia → sekcja „Marka": podgląd bieżącego logo/faviconu + upload własnych (podmiana działa wszędzie od razu). (5) LEKCJE/BACKPORT: czego brakowało w starterze → template saas-startera z placeholderami {{...}}.',
                 design: 'LEKCJA fabryki (S3b Dobry Wstęp): w pętli krytyka podawaj krytykowi ZMIERZONE wartości (kontrast WCAG liczony instrumentalnie, px) jako prawdę gruntową — świeże oko generuje kontrastowe false-positive’y w nieskończoność i pętla nie zbiega; naprawiaj mierzone <AA, odrzucaj z dowodem >=AA. Zbuduj SYSTEM DESIGNU tej aplikacji w pętli z Claude Design przez narzędzie DesignSync (jeśli dostępny jest skill /design-sync — użyj go; inaczej wołaj DesignSync bezpośrednio). Plan:\n(1) ŹRÓDŁA — NIE sampluj makiet od nowa: kontrakt tokenów JUŻ istnieje w brief/04-STYLEGUIDE (wyprodukował go krok Paczka: zbadane hexy, tabela kontrastów WCAG z regułami użycia, warianty tekstowe success/warning, typografia, geometria, komponenty kluczowe, zasady PDF/mobile, pryncypia UX) — 04 jest WIĄŻĄCY. Makiety (spar_sessions.preview_images) otwieraj tylko jako referencję układów/moodu przy składaniu komponentów i ekranów. Z 02-SPEC weź pełen inwentarz ekranów i komponentów; z 00-KONTEKST ton niszy (np. teren/rękawice = większe cele dotykowe).\n(2) TOKENY — jedno źródło prawdy w RUNTIME: wpisz wartości z 04 do :root w public/css/base.css (1:1, plus tokeny rozszerzone z 04: radius-sm/lg/pill, ciepłe cienie, --color-success-text/--color-warning-text). Klasy komponentów niszy dopisz do base.css (starter: jeden plik CSS, sekcje komentowane). design-system/tokens.css = AUTOGENEROWANA kopia :root z base.css (nagłówek „NIE edytuj — źródło: base.css") wyłącznie po to, by podglądy były samowystarczalne w Claude Design.\n(3) BIBLIOTEKA W REPO (katalog design-system/): osobne pliki preview HTML per komponent, KAŻDY z pierwszą linią <!-- @dsCard group="..." --> (grupy: Brand, Type, Colors, Components, Forms, Screens). Zakres: fundamenty; komponenty we WSZYSTKICH stanach (przyciski, inputy+walidacja, karty, tabele, modale, toasty, empty states, nawigacja); wzorce specyficzne TEJ apki (np. dokument/PDF oferty, listy pozycji, chipy statusów); na dowód spójności 2-3 PEŁNE ekrany wzorcowe złożone w 100% z komponentów. Mobile-first. Zero AI-sztampy (żadnych generycznych gradientów i fioletu).\n(4) PĘTLA SAMODOSKONALENIA (autonomiczna — NIE czekaj na moją akceptację): render-check przez PLAYWRIGHT z repo apki (screenshot każdej karty desktop + 375px; chrome-devtools NIE widzi lokalnych plików — nie używaj go tutaj), potem krytyk w świeżym kontekście (subagent: spójność tokenów między komponentami, kontrast wg tabeli z 04, kompletność stanów, mobile, „czy ekrany wzorcowe wyglądają jak jeden produkt"); każdą uwagę napraw i powtórz — iteruj, aż krytyk nie ma zastrzeżeń (max 4 rundy, potem zapisz otwarte uwagi w BUILDLOG).\n(5) PUSH DO CLAUDE DESIGN (DesignSync): list_projects → w razie braku create_project „<Nazwa apki> Design System" → finalize_plan → write_files (podglądy + tokens.css — muszą renderować się samodzielnie). To NIEBLOKUJĄCY podgląd dla mnie — podaj link i JEDŹ DALEJ; brak dostępu do DesignSync w sesji = zanotuj w BUILDLOG i nie blokuj kroku. Jeśli kiedyś coś tam zmienię, na hasło „zsynchronizuj design": list_files → diff → get_file TYLKO zmienionych → repo, komponent po komponencie.\n(6) INTEGRACJA I DOMKNIĘCIE: do 04-STYLEGUIDE dopisz sekcję „Biblioteka" (spis kart design-system/ + jak używać); do CLAUDE.md apki w 🚫: „stylowanie ad hoc poza design-systemem zabronione — tylko tokeny i komponenty z base.css/design-system"; wpis do BUILDLOG (rundy pętli + werdykt krytyka jako dowód) + commit + push; uwagi wg zasad (a-d); checklista wg faktów, notatka z dowodami, activity.',
                 dane_operatora: 'Zdigitalizuj dane domenowe operatora (pliki/linki w kroku „Dane operatora"): odczytaj źródła (PDF/zdjęcia/arkusze), ustrukturyzuj wg 03-SCHEMAT-DB.sql, oczyść (nazwy, duplikaty, jednostki), wygeneruj seed SQL gotowy do wgrania. Wypisz pozycje niepewne do potwierdzenia z klientem.',
