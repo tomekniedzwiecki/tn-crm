@@ -305,7 +305,10 @@ KONTRAKTEM dla F2/F4/gate. Blok w `PLAN.md` (nagłówek dokładnie `## MANIFEST 
   („0 klipów", „0 opinii z treścią"), NIGDY „nie zdążyłem". **Cichy brak planowanej sekcji = FAIL**, nie „może być".
 - **Gate `sekcje_plan`** (F6, `gate-check.py`) rekoncyliuje: KAŻDA `build` z manifestu ↔ makieta ↔ `<section id>` ↔
   kompozyt dopasowania. Planowana `build` bez pokrycia = **FAIL**; sekcja w kodzie spoza manifestu = WARN (nieplanowana);
-  `SKIP` bez powodu = FAIL. **Brak `## MANIFEST SEKCJI` w PLAN.md = SKIP** (landingi sprzed reguły — retro przy dotknięciu).
+  `SKIP` bez powodu = FAIL. Manifest MUSI zawierać rdzeń `hero · zamow · final · mid-cta` jako `build` (brak rdzeniowej = FAIL).
+- **MANIFEST JEST WYMAGANY dla NOWYCH landingów (inaczej cała gwarancja byłaby opcjonalna):** landing, którego kod
+  (`index.html`) dotknięto **od 20.07**, BEZ `## MANIFEST SEKCJI` w PLAN.md = **FAIL** (gate `sekcje_plan`, dyskryminator
+  po mtime kodu). Landing sprzed reguły (kod starszy) = SKIP — retro włącza się SAM przy najbliższym dotknięciu (mtime dziś).
 - **Powód (Tomek na macie — brak dedykowanej sekcji CTA i wideo):** dotąd gate liczył sekcje **Z GOTOWEGO HTML**
   → sekcja porzucona PRZED buildem (koder ją pominął, plan o niej „zapomniał") była NIEWIDZIALNA. Manifest zamienia
   pytanie „co zbudowano?" na „co MIAŁO powstać?" — i egzekwuje różnicę.
@@ -450,6 +453,10 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
 3. **MAKIETY WSZYSTKICH SEKCJI planu** (pokrycie CAŁEGO planu — tylko czysta stopka bez
    makiety), przyrostowo: hero+1 → po 2. Każda: ref = styl-master + realne zdjęcie produktu
    gdy w kadrze; 3:2 DUŻE; polskie teksty przykładowe; pełny układ UI.
+   **CTA W KADRZE (szkielet CTA):** brief makiet `hero · oferta #zamow · mid-cta · final` MUSI
+   jawnie zamówić ZAPROJEKTOWANY przycisk `.btn.cta` (kształt/kontrast/etykieta akcji, strefa pod
+   cenę, kolejność cena→CTA) — CTA jest częścią KOMPOZYCJI makiety, nie „dorobkiem kodera"
+   (egzekwuje KRYTYK pkt +11; goły re-CTA w kodzie na makiecie bez CTA = FAIL projektowy).
 4. **PARY desktop+mobile (F2.4)**: z każdej makiety desktop wariant MOBILE 2:3.
    **🔴 MOBILE = PROJEKT OD ZERA POD TELEFON, NIE ŚCIŚNIĘTY DESKTOP (Tomek 19.07 na masażerze,
    po obejrzeniu makiety hero-m: „wzorzec jest źle, bo to wygląda jak ściśnięty desktop —
@@ -590,6 +597,12 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
     + jawny zakaz wordmark/ceny/★/benefit-chips/klejmów/nazw materiałów, jeśli nie należą do tej
     sekcji.** Krytyk: dorobiony element spoza sekcji = REGEN. Klejm zdrowotny / materiał sprzeczny
     ze specem = REGEN bezwarunkowy (nie „uwaga-copy").
+    (+ 11) **🎯 CTA W KADRZE (szkielet CTA, Tomek 20.07: „za mało CTA; dedykowanej sekcji nie ma;
+    do makiet dodać prośbę o zaprojektowane CTA"): czy makiety `hero · oferta #zamow · mid-cta · final`
+    mają ZAPROJEKTOWANY przycisk `.btn.cta`** — kształt/kontrast/czytelna etykieta akcji, strefa pod cenę,
+    kolejność cena→CTA? **Brak zaprojektowanego CTA na którejś z tych 4 makiet = REGEN makiety** (nie
+    „przycisk dorobi koder" — goły re-CTA dodany w kodzie = FAIL projektowy). Sekcja mid-CTA bez CTA
+    w kadrze = ta sama wada, o której mówił Tomek, o krok subtelniejsza.
 - **🥇 BRIEF CELU > DYKTAT ELEMENTÓW (Tomek 16.07, potwierdzone testem A/B na hero Uśmieszka):**
   najlepsze makiety wychodzą, gdy prompt opowiada CO sprzedajemy, KOMU i CO klient ma poczuć,
   a PRAWDZIWE fakty (cena, oceny, cechy, płatności) podaje jako MATERIAŁ do wyboru — kompozycję
@@ -1179,7 +1192,8 @@ procesu) · problem→rozwiązanie · demo „jak działa" 1-2-3 · sekcja wideo
 lightbox, wpleść UGC) · social proof (3-6 opinii ze zdjęciami; małe N uczciwie; 0 opinii →
 sekcję pomiń) · oferta box #zamow („co dostajesz", warianty-buttony gdy API poda, gwarancja
 zwrotu) · FAQ tuż nad finałem (COD? zwrot jak? wysyłka „pod Twój adres" BEZ terminów ·
-1 produktowe) · FINAL CTA + mini-opinia · sticky bar.
+1 produktowe) · **mid-CTA (DEDYKOWANA, WYMAGANA — „drugi moment decyzji" po klastrze dowodu; pełna sekcja z makietą d+m
+i własnym `[data-checkout]`, §CTA-szkielet pkt 3; ≠ opcjonalne sekcje typu „0 opinii→pomiń" — SKIP tylko z notą LEDGER + wpisem w MANIFEŚCIE)** · FINAL CTA + mini-opinia · sticky bar.
 
 **⛔ ZAKAZ ★/LICZBY OPINII NAD FOLDEM (Tomek 18.07):** topbar i hero NIE pokazują liczby
 opinii ani gwiazdek — dla persony COD/AWE (lęk #1 = scam) REDUKCJA RYZYKA (płatność przy

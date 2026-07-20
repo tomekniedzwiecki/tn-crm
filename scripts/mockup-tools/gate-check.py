@@ -18,6 +18,7 @@ Wymaga: Pillow, imagehash, requests (venv scripts/mockup-tools/.venv).
 NIE modyfikuje niczego — czyta artefakty i (opcjonalnie) siec + baze.
 """
 import sys, os, re, json, glob, argparse, fnmatch, subprocess, tempfile, time
+from datetime import datetime
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
@@ -278,7 +279,25 @@ def check_sekcje_plan(res, M, ctx):
     plan = read_text(os.path.join(arch, m.get("plan_plik", "PLAN.md").replace("/", os.sep))) if arch else None
     marker = m["manifest_marker"]
     if not plan or marker not in plan:
-        res.add("sekcje_plan", "(brak MANIFESTU SEKCJI w PLAN.md)", "SKIP", "landing sprzed reguly")
+        # LUKA1: brak manifestu NIE jest juz bezwarunkowym SKIP (to czynilo cala gwarancje
+        # OPCJONALNA). Dyskryminator po mtime kodu (index.html = ctx["code"]): kod dotkniety
+        # >= wymagany_od_data BEZ manifestu = FAIL (nowy landing MUSI miec F1a); kod starszy /
+        # brak sciezki = SKIP (landing sprzed reguly, retro przy dotknieciu).
+        cutoff = m.get("wymagany_od_data")
+        code_path = ctx.get("code")
+        new = False
+        if cutoff and code_path:
+            try:
+                cutoff_ts = datetime.strptime(cutoff, "%Y-%m-%d").timestamp()
+                new = os.path.getmtime(code_path) >= cutoff_ts
+            except Exception:
+                new = False
+        if new:
+            res.add("sekcje_plan", "MANIFEST SEKCJI wymagany (nowy landing)",
+                    status_for(False, m.get("brak_manifestu_nowy_severity", "FAIL")),
+                    "kod po %s bez '%s' w PLAN.md — F1a wymagany" % (cutoff, marker))
+        else:
+            res.add("sekcje_plan", "(brak MANIFESTU SEKCJI w PLAN.md)", "SKIP", "landing sprzed reguly")
         return
     aliasy = M.get("dopasowanie", {}).get("aliasy_sekcji", {})
     # blok manifestu: od markera do nastepnego naglowka markdown (## ...)
@@ -340,6 +359,21 @@ def check_sekcje_plan(res, M, ctx):
                 problems += 1
                 res.add("sekcje_plan", "skip: %s" % sid, status_for(False, sev),
                         "SKIP bez powodu (wymagane >= %d znakow niebialych)" % minlen)
+    # LUKA7: RDZEN kompletnosci PLANU. Manifest sprawdzal 'czy zbudowano co zaplanowano',
+    # nie 'czy zaplanowano komplet'. rdzen_wymagany = sekcje ktore MUSZA byc w manifescie
+    # jako BUILD (nie skip). Rdzen musi zmapowac sie (przez klase rownowaznosci aliasow)
+    # na jakikolwiek wpis 'build'; brak = FAIL (plan pominal hero/oferte/mid-cta/final).
+    build_norms = set()
+    for _sid, _typ, _status, _reszta in entries:
+        if _status == st_build:
+            build_norms |= _alias_groups(_sid, aliasy)[0]
+    rsev = m.get("rdzen_severity", "FAIL")
+    for rid in m.get("rdzen_wymagany", []):
+        rnorms = _alias_groups(rid, aliasy)[0]
+        if not (build_norms & rnorms):
+            problems += 1
+            res.add("sekcje_plan", "rdzen sekcji: " + rid, status_for(False, rsev),
+                    "brak rdzeniowej sekcji '" + rid + "' jako build w MANIFEŚCIE")
     # nieplanowane sekcje w kodzie (spoza manifestu i spoza wyklucz_id_kod) = WARN
     nsev = m.get("nieplanowana_severity", "WARN")
     wyk = set(norm(x) for x in m.get("wyklucz_id_kod", []))
@@ -399,17 +433,45 @@ def check_cta(res, M, ctx):
                 sid = s_id; break
         per_section[sid] = per_section.get(sid, 0) + 1
     sections = ctx.get("sections") or [s for _, s, _ in spans]
+    kontenery = set(norm(x) for x in m.get("recta_kontenery_wyklucz", []))
     # (a) liczba CTA
     min_count = m.get("min_count", 4)
+    # LUKA6: sticky-buy jest mobile-only. min_count_wyklucz_kontenery=true => total do progu
+    # liczony BEZ kontenerow poza-sekcja (per_section[None]) i sekcji-kontenerow
+    # (recta_kontenery_wyklucz: sticky/topbar/footer) => min_count=4 = realne CTA w sekcjach
+    # TRESCI widoczne na desktopie (hero+oferta+mid-cta+final).
+    total_thr = total
+    if m.get("min_count_wyklucz_kontenery"):
+        excl_n = per_section.get(None, 0)
+        for sid_k, cnt_k in per_section.items():
+            if sid_k is None:
+                continue
+            if norm(sid_k) in kontenery or (norms_of(sid_k) & kontenery):
+                excl_n += cnt_k
+        total_thr = total - excl_n
+    ok_min = total_thr >= min_count
     res.add("cta", "liczba [%s] >= %d" % (attr, min_count),
-            status_for(total >= min_count, m.get("min_count_severity", sev)),
-            "%d/%d" % (total, min_count) if total >= min_count else "za malo CTA: %d/%d" % (total, min_count))
+            status_for(ok_min, m.get("min_count_severity", sev)),
+            "%d/%d" % (total_thr, min_count) if ok_min else "za malo CTA: %d/%d" % (total_thr, min_count))
     # (b) dedykowana sekcja CTA (mid-cta) + final
     dedy = set(norm(x) for x in m.get("dedykowana_aliasy", []))
     has_dedy = any(norm(s) in dedy or (norms_of(s) & dedy) for s in sections)
     res.add("cta", "dedykowana sekcja CTA (mid-cta)",
             status_for(has_dedy, m.get("dedykowana_severity", sev)),
             "obecna" if has_dedy else "brak dedykowanej sekcji CTA (mid-cta)")
+    # LUKA2: sama obecnosc <section id=mid-cta> nie wystarcza — dedykowana sekcja CTA MUSI
+    # zawierac >=1 [data-checkout], inaczej 'sekcja ktorej sensem jest CTA' nie ma przycisku
+    # a bramka zielona.
+    if has_dedy and m.get("dedykowana_ma_checkout"):
+        dedy_id = None
+        for s in sections:
+            if norm(s) in dedy or (norms_of(s) & dedy):
+                dedy_id = s; break
+        dcnt = per_section.get(dedy_id, 0) if dedy_id is not None else 0
+        res.add("cta", "dedykowana sekcja CTA ma [%s]" % attr,
+                status_for(dcnt >= 1, m.get("dedykowana_severity", sev)),
+                "%d [%s] w sekcji %s" % (dcnt, attr, dedy_id) if dcnt >= 1
+                else "sekcja %s BEZ [%s] — dedykowana sekcja CTA bez przycisku" % (dedy_id, attr))
     if m.get("wymagana_final", True):
         fin = set(norm(x) for x in m.get("final_aliasy", []))
         has_final = any(norm(s) in fin or (norms_of(s) & fin) for s in sections)
@@ -433,8 +495,12 @@ def check_cta(res, M, ctx):
             status_for(bool(recta_ids), m.get("recta_severity", sev)),
             ("re-CTA w: %s" % ", ".join(sorted(set(recta_ids)))) if recta_ids
             else "brak re-CTA na desktopie (mid-page)")
-    # PROXY (WARN): sekcje designed_cta obecne w kodzie musza miec zaprojektowany .btn.cta
-    psev = m.get("designed_cta_proxy_severity", "WARN")
+    # PROXY: sekcje designed_cta obecne w kodzie musza miec zaprojektowany .btn.cta.
+    # LUKA3: sekcje zawsze-obecne (designed_cta_proxy_fail_sekcje: hero/zamow/final) BEZ .btn.cta
+    # = realny defekt => FAIL; pozostale designed_cta_sekcje (np. mid-cta) => WARN (brak samej
+    # sekcji lapie dedykowana_severity/dedykowana_ma_checkout).
+    psev_warn = m.get("designed_cta_proxy_severity", "WARN")
+    fail_secs = set(norm(x) for x in m.get("designed_cta_proxy_fail_sekcje", []))
     for did in m.get("designed_cta_sekcje", []):
         dn = norm(did)
         present_id = None
@@ -449,6 +515,7 @@ def check_cta(res, M, ctx):
                 slice_txt = markup[start:end]; break
         low = slice_txt.lower()
         if ("btn cta" not in low) and ("btn.cta" not in low):
+            psev = "FAIL" if dn in fail_secs else psev_warn
             res.add("cta", "designed CTA: %s" % present_id, status_for(False, psev),
                     "sekcja %s bez zaprojektowanego .btn.cta (sprawdz makiete)" % present_id)
 
