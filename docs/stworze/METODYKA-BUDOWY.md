@@ -9,6 +9,16 @@
 sama tak długo, jak to możliwe, bez udziału Tomka. „Wymaga decyzji Tomka" NIE jest powodem do stopu, jeśli
 da się przyjąć rozsądny DOMYŚLNY wybór — wtedy buduj PARAMETRYZOWALNIE (env/config z bezpieczną domyślną),
 wdróż i odnotuj „(zmienisz jednym flagiem)". Po każdym domkniętym kroku sięgaj po następny.
+
+**DECYZJE PRODUKTOWE = SESJA (decyzja Tomka 20.07, projekt Sygno).** MVP scope, pricing (plany/ceny/
+trial/limity), wybór logo, kanony nazewnictwa, rozstrzygnięcia otwartych decyzji z handoffu — sesja
+ROZSTRZYGA SAMA na bazie danych projektu (handoff, research agentów, market_report). Przy decyzjach
+otwartych/spornych wolno spawnować PANEL AGENTÓW-DORADCÓW (2-3 subagentów Opus z różnymi soczewkami +
+synteza) — to narzędzie namysłu, nie pytanie do Tomka. Każde rozstrzygnięcie: zapis w DECYZJE.md
+projektu + wfa_notes (kind=decyzja, status=done) + notatka kroku; Tomek dostaje wynik INFORMACYJNIE
+i może nadpisać jednym zdaniem (wtedy: naprawa + aktualizacja artefaktów). Przy Tomku zostają TYLKO:
+wybór nazwy + zakup domeny, wydatki zewnętrzne z jego pieniędzy (prawnik, subskrypcje), fizyczne
+wysyłki do realnych ludzi. Akcept PRODUKTU = klient-operator przy demo (bramka merytoryczna).
 **PAUZA (przygotowując wszystko aż do bramki, i robiąc RÓWNOLEGLE inne rzeczy z backlogu) tylko przy PRAWDZIWYCH
 bramkach:** wysyłka maili/SMS do realnych ludzi (nigdy autonomicznie), płatności/Stripe/ceny, operacje
 destrukcyjne, ryzykowny deploy prod apki LIVE z realnymi userami (→ gałąź+preview). Pre-launch (cron off,
@@ -80,12 +90,18 @@ Po ukończeniu fazy budowy (i przy każdej dużej zmianie): nowa sesja dostaje W
 (niezależność od rozumowania budowniczego). Zadanie: ZNALEŹĆ błędy (nie potwierdzić poprawność) —
 korekty do listy, każda z file:line i scenariuszem błędu. Wynik → checklist poprawek w kroku panelu.
 
-## 5. Bramki człowieka (jedyne miejsca, gdzie Tomek MUSI patrzeć w kod/dane)
+## 5. Bramki człowieka (AKTUALIZACJA 20.07 — Tomek zdelegował decyzje produktowe sesji)
 
-- **RLS + płatności** (audyt, Etap 4) — kategorie, w których kod z AI zawodzi najczęściej (45% oblewa testy bezpieczeństwa).
-- **Test kluczem anon** — wykonany i wklejony jako dowód (przy S2 ORAZ w audycie).
-- Decyzje: MVP scope, pricing, nazwa, akcept klienta, start produkcyjny.
-Wszystko inne: Tomek przegląda DOWODY, nie kod.
+- **Tomek decyduje TYLKO:** wybór nazwy + zakup domeny · wydatki zewnętrzne z jego pieniędzy
+  (prawnik, nowe subskrypcje) · fizyczna wysyłka maili/SMS do realnych ludzi (drafty robi sesja,
+  wysyła człowiek — zasada bezpieczeństwa, nie decyzja merytoryczna).
+- **Sesja rozstrzyga (z panelem agentów-doradców przy spornych):** MVP scope, pricing, logo,
+  kanony nazewnictwa, otwarte decyzje handoffu, start produkcyjny pre-launch. Audit trail =
+  DECYZJE.md + wfa_notes + dziennik retro; Tomek nadpisuje jednym zdaniem.
+- **Klient-operator akceptuje PRODUKT** przy demo_klienta/testy_klienta (bramka merytoryczna niszy).
+- Techniczne bramki (RLS/płatności/test kluczem anon) egzekwuje GATE A/B + audyt — subagent Opus
+  (audyty bezpieczeństwa NIGDY na Fable 5 — patrz SECURITY-I-TESTY-GATE.md), nie Tomek.
+Tomek przegląda DOWODY, nie kod.
 
 ## 6. Zasady jakości produktu (wpisane w spec, nie opcjonalne)
 

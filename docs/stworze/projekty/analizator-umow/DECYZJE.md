@@ -7,15 +7,20 @@
 
 ## Decyzje Etapu 1 (fundamentowe)
 
-| # | Decyzja | Rekomendacja sesji | Status |
+> **20.07: Tomek delegował decyzje Etapu 1 sesji** („Ty jesteś dużo lepszy w podjęciu tych decyzji;
+> ja decyduję o domenie"). Wszystkie D1-D7 = ROZSTRZYGNIĘTE przez sesję wg rekomendacji; Tomek może
+> każdą nadpisać jednym zdaniem — wtedy naprawa + aktualizacja artefaktów.
+
+| # | Decyzja | Rozstrzygnięcie | Status |
 |---|---|---|---|
-| **D1** | Model kont: firma multi-user od startu? | **TAK** — handoff wymaga „uprawniony użytkownik konta firmy"; model prosty: właściciel zaprasza e-mailem, wszyscy równorzędni; granulacja ról = v1.1. | PROPOZYCJA (kluczowa) |
-| **D2** | Kanon nazewnictwa statusów (baza niespójna: UWAGA/DO DECYZJI/NEGOCJUJ vs ekranowe podpisz/negocjuj/stop) | Pozycja: **Zgodny / Niezgodny / UWAGA**; kolumna „Uwagi": **DO DECYZJI**; werdykt: **OK DO PODPISU / NEGOCJUJ PRZED PODPISEM** (bez STOP). Flagi wizualne makiet (LUKA/SPRZECZNOŚĆ/RYZYKO) = warstwa ikon, mapowana 1:1; potwierdzić z klientką przy demo. | PROPOZYCJA |
-| **D3** | Walidacja merytoryczna („testy zatwierdzone przez eksperta branżowego") | Zestaw umów testowych od klientki-operatorki (ona jest ekspertem niszy) + jej akcept w kroku testy_klienta. Udział prawnika PZP = opcja płatna, osobna decyzja. | PROPOZYCJA |
-| **D4** | Udział prawnika PZP w walidacji + treść disclaimera | Disclaimer i komunikaty prawne = krok `prawne` (przed startem, twardy gate z handoffu „zatwierdzone prawnie komunikaty przed uruchomieniem"); rekomendacja: jeden przegląd prawnika przed START. | PROPOZYCJA |
-| **D5** | Osobne środowisko per firma (bariera poufności) | v1: wspólna infra + twarda izolacja RLS + szyfrowanie + osobne klucze; „dedykowane środowisko" = przyszły plan enterprise (pricing D-19). NIE budować multi-env w v1. | PROPOZYCJA (wpływa na pricing) |
-| **D6** | Pakiety produktowe / limity analiz | Wg PRICING-propozycja.md (limit analiz/mc per plan; dedykowane środowisko poza cennikiem v1). | PROPOZYCJA → krok pricing |
-| **D7** | Zatwierdzanie zanonimizowanej kopii przed analizą | TAK — podgląd kopii + przycisk „Analizuj" (jawny krok budujący zaufanie; bariera zakupowa #1 = poufność). | PROPOZYCJA |
+| **D1** | Model kont: firma multi-user od startu? | **TAK** — handoff wymaga „uprawniony użytkownik konta firmy"; model prosty: właściciel zaprasza e-mailem, wszyscy równorzędni; granulacja ról = v1.1. | ROZSTRZYGNIĘTE (sesja, 20.07) |
+| **D2** | Kanon nazewnictwa statusów | Pozycja: **Zgodny / Niezgodny / UWAGA**; kolumna „Uwagi": **DO DECYZJI**; werdykt: **OK DO PODPISU / NEGOCJUJ PRZED PODPISEM** (bez STOP). Flagi makiet (LUKA/SPRZECZNOŚĆ/RYZYKO) = warstwa ikon 1:1; walidacja z KLIENTKĄ przy demo (jej produkt — ona jest właściwą bramką, nie Tomek). | ROZSTRZYGNIĘTE (sesja, 20.07) |
+| **D3** | Walidacja merytoryczna | Zestaw umów testowych od klientki-operatorki + jej akcept w kroku testy_klienta. | ROZSTRZYGNIĘTE (sesja, 20.07) |
+| **D4** | Prawnik + disclaimer | Disclaimer/komunikaty = krok `prawne` przed startem (twardy gate z handoffu). Zaangażowanie prawnika = WYDATEK zewnętrzny → jedno pytanie do Tomka przy kroku `prawne` (razem z tematem prawnika fachmata — jedna rozmowa, nie dwie). | ROZSTRZYGNIĘTE (sesja; wydatek→Tomek przy `prawne`) |
+| **D5** | Osobne środowisko per firma | v1: wspólna infra + twarda izolacja RLS + szyfrowanie + osobne klucze; dedykowane środowisko = przyszły enterprise. | ROZSTRZYGNIĘTE (sesja, 20.07) |
+| **D6** | Pricing / limity | **WARIANT A**: Start 249 zł netto/mc (5 analiz, 3 userów) / Pro 449 zł (15 analiz, bez limitu userów); rocznik = 2 mies. gratis (2490/4490); trial 14 dni BEZ karty (2 analizy + demo-analiza); founding 149 zł lock 12 mies. dla 20 firm z sieci PFP; nadmiar 99/79 zł. 249 nie 199 (branża płaci kilkaset zł/mc za SaaS; founding amortyzuje wejście; kotwica: kancelaria 1-3 tys. zł/analizę). Limity w app_settings — kalibracja po pomiarze kosztu AI/analizę w S4. | ROZSTRZYGNIĘTE (sesja, 20.07) |
+| **D7** | Zatwierdzanie zanonimizowanej kopii | TAK — podgląd kopii + przycisk „Analizuj". | ROZSTRZYGNIĘTE (sesja, 20.07) |
+| **D8** | Logo | **Wariant v2: sygnet-pieczątka S (bursztynowa ramka) + wordmark** — spójny z językiem produktu (werdykt-PIECZĄTKA na raporcie), sygnet daje favicon wprost (czytelny @32px, czego marker v3 nie daje). Marker zostaje w UI produktu (highlighty klauzul), nie musi być w logo. | ROZSTRZYGNIĘTE (sesja, 20.07) |
 
 ## Rozstrzygnięte bazą wiedzy (wpisane do specu, nie ruszać)
 - Format podstawy prawnej: nr artykułu + krótki opis, tylko gdy przepis ma zastosowanie.
