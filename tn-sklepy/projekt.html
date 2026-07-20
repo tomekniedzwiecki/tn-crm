@@ -1389,10 +1389,37 @@
             drawerCtx = { key, productId: productId || null };
             renderDrawer();
             document.getElementById('step-drawer-wrap').classList.remove('hidden');
+            syncDeepLink();
         }
-        function closeStep() { document.getElementById('step-drawer-wrap').classList.add('hidden'); drawerCtx = null; }
+        function closeStep() { document.getElementById('step-drawer-wrap').classList.add('hidden'); drawerCtx = null; syncDeepLink(); }
         // przełączanie produktu w otwartym drawerze (iteracja po portfelu bez zamykania)
-        function sdSwitchProduct(pid) { if (!drawerCtx) return; drawerCtx.productId = pid; renderDrawer(); }
+        function sdSwitchProduct(pid) { if (!drawerCtx) return; drawerCtx.productId = pid; renderDrawer(); syncDeepLink(); }
+
+        // ── deep-link do warsztatu kroku (?id=<projekt>&p=<produkt>&s=<step_key>) ──
+        // Tomek: „daj link, żebym wszedł DOKŁADNIE w to miejsce". URL trzyma otwarty
+        // produkt+krok; wejście z takim URL auto-otwiera drawer. history.replaceState =
+        // bez wpisu w historii wstecz (drawer to stan, nie nowa strona).
+        function syncDeepLink() {
+            const q = new URLSearchParams(location.search);
+            if (drawerCtx && drawerCtx.key) {
+                q.set('s', drawerCtx.key);
+                if (drawerCtx.productId) q.set('p', drawerCtx.productId); else q.delete('p');
+            } else { q.delete('s'); q.delete('p'); }
+            history.replaceState(null, '', location.pathname + '?' + q.toString());
+        }
+        function applyDeepLink() {
+            const q = new URLSearchParams(location.search);
+            const sk = q.get('s'), pid = q.get('p');
+            if (!sk) return;
+            const def = defFor(sk);
+            if (def && typeof def.stage === 'number') { activeStage = def.stage; renderPills(); renderStage(); }
+            openStep(sk, pid);
+            // dosuń galerię makiet do widoku, gdy krok ją ma (render drawera jest synchroniczny)
+            setTimeout(() => {
+                const g = document.querySelector('#step-drawer-wrap .art-group-head, #step-drawer-wrap .art-tile');
+                if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+        }
 
         // galeria artefaktów kroku — makiety desktop / mobile / reszta, każda grupa z osobną
         // nawigacją lightbox (Tomek chce wygodnie przeglądać makiety po powiększeniu).
@@ -2873,6 +2900,8 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             await loadAll();
             // przywróć ostatnio oglądaną zakładkę
             try { const t = localStorage.getItem('wf2_psec_' + projectId); if (t) switchPsec(t); } catch(_) {}
+            // deep-link: ?p=<produkt>&s=<step_key> → auto-otwórz warsztat kroku
+            try { applyDeepLink(); } catch(_) {}
         })();
     </script>
 </body>
