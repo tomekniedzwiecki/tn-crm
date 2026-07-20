@@ -119,6 +119,10 @@ interface SparChatRequest {
   path?: string | null
   attachAck?: boolean | null
   attachName?: string | null
+  // retryReply: ponów odpowiedź asystenta na ISTNIEJĄCĄ historię BEZ zapisu tury usera
+  // (ratunek po padniętej turze — front pokazuje „Spróbuj ponownie"). Warunek: ostatnia
+  // wiadomość historii ma role='user'. Działa we WSZYSTKICH trybach (sparing i know-how).
+  retryReply?: boolean | null
 }
 
 // ── Konto z JWT (Supabase Auth) ───────────────────────────────────────────────
@@ -821,6 +825,69 @@ async function generateHandoffPack(
   }
 }
 
+// Fallback promptu streszczenia wizji — używany, gdy klucza aplikacja_knowhow_summary
+// nie ma w settings (edytowalny z panelu „Źródło prawdy" jak pozostałe aplikacja_knowhow_*).
+const SUMMARY_FALLBACK = `Napisz zwięzłe ale KOMPLETNE streszczenie zebranej wizji dla Tomka (właściciela firmy budującej aplikację): czym jest produkt, dla kogo, rdzeń v1, model cenowy, kluczowe decyzje, największe ryzyka i otwarte pytania. 1500-3000 znaków, po polsku, bez lania wody.`
+
+// STRESZCZENIE WIZJI (summary_text): przy domknięciu etapu buduje czytelny opis
+// zebranej wizji dla Tomka (Dossier w panelu). Kolumna spar_knowhow_summary.summary_text
+// istnieje od 18.06 i front ją renderuje, ale automat zapisu nigdy nie był podłączony —
+// dlatego stare sesje mają NULL. Czyta kartę projektu + wszystkie spar_knowhow_items.
+// Zwraca długość zapisanego streszczenia (0 = pusto/błąd — dla eventu backfillu).
+// Każda porażka zostawia trwały ślad (stampKnowhowError 'extract_error') — zero cichych awarii.
+async function generateKnowhowSummary(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+): Promise<number> {
+  try {
+    const apiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!apiKey) { await stampKnowhowError(supabase, sessionId, null, 'extract_error', 'summary: brak OPENAI_API_KEY'); return 0 }
+    await ensureKnowhowPrompts(supabase)
+    const { data: sess } = await supabase.from('spar_sessions').select('problem_summary, preview_brief, lead_id').eq('id', sessionId).maybeSingle()
+    const { data: itemsRaw } = await supabase.from('spar_knowhow_items').select('kind, scope, source_tag, content, url').eq('session_id', sessionId).order('created_at', { ascending: true })
+    const items = (itemsRaw || []) as Array<Record<string, unknown>>
+    const card = (sess?.problem_summary as Record<string, unknown> | null) || (sess?.preview_brief as Record<string, unknown> | null) || {}
+    const leadId = (sess?.lead_id as string | null) ?? null
+    // Brak jakiejkolwiek treści = nie ma z czego streszczać; to też jawny sygnał, nie cisza.
+    if (!items.length && !Object.keys(card).length) {
+      await stampKnowhowError(supabase, sessionId, leadId, 'extract_error', 'summary: brak danych (0 items, pusta karta)')
+      return 0
+    }
+    const itemsTxt = items.map((i) => `- [${i.kind}${i.scope ? '/' + i.scope : ''}] ${i.content}${i.url ? ' (' + i.url + ')' : ''}`).join('\n')
+    // Ten sam sufit znaków co handoff (bogate bazy: 150+ pozycji) — 60k ≈ 15-20k tokenów.
+    const userMsg = `KARTA PROJEKTU:\n${JSON.stringify(card).slice(0, 4000)}\n\nZEBRANE ELEMENTY (baza wiedzy):\n${itemsTxt.slice(0, 60000)}`
+    const res = await openaiFetchRetry({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        max_completion_tokens: 4000, // streszczenie krótsze niż handoff; reasoning (low) liczy się do puli
+        reasoning_effort: 'low',
+        messages: [ { role: 'system', content: KH.summary || SUMMARY_FALLBACK }, { role: 'user', content: userMsg } ],
+      }),
+    }, 'knowhow-summary')
+    if (!res.ok) { console.error('[spar-chat] summary http', res.status); await stampKnowhowError(supabase, sessionId, leadId, 'extract_error', `summary: OpenAI HTTP ${res.status}`); return 0 }
+    const data = await res.json().catch(() => null) as { choices?: Array<{ message?: { content?: string } }> } | null
+    const text = (data?.choices?.[0]?.message?.content || '').trim()
+    if (!text) {
+      // 200 OK, ale pusta treść = streszczenie się nie wygenerowało (deliverable znika cicho)
+      await stampKnowhowError(supabase, sessionId, leadId, 'extract_error', 'summary: pusta odpowiedź modelu')
+      return 0
+    }
+    await supabase.from('spar_knowhow_summary').upsert({
+      session_id: sessionId,
+      lead_id: leadId,
+      summary_text: text,
+      summary_ai_generated_at: new Date().toISOString(),
+    }, { onConflict: 'session_id' })
+    return text.length
+  } catch (e) {
+    console.error('[spar-chat] generateKnowhowSummary error:', e)
+    await stampKnowhowError(supabase, sessionId, null, 'extract_error', `summary: ${String(e).slice(0, 200)}`)
+    return 0
+  }
+}
+
 // ── BRAMKA POTENCJAŁU (GA) ───────────────────────────────────────────────────
 // Instrukcja wstrzykiwana do sessionContext (kanał sparing): model po domknięciu
 // rdzenia wystawia <ocena> zamiast samodzielnego werdyktu/podglądu, a backend
@@ -860,20 +927,20 @@ let RESIGNATION_INSTRUCTION = ''
 // Ładowane raz na cold-start (ensureKnowhowPrompts); pusty fallback to bezpiecznik, nie treść.
 // Edycja z panelu „Źródło prawdy". (Faza 1 single-source 2026-06-20.)
 let KH_LOADED = false
-const KH = { base: '', src_wlasny: '', src_ai: '', src_wspolny: '', resume: '', extract: '', handoff: '', idea_hint: '', attach_extract: '' }
+const KH = { base: '', src_wlasny: '', src_ai: '', src_wspolny: '', resume: '', extract: '', handoff: '', idea_hint: '', attach_extract: '', summary: '' }
 async function ensureKnowhowPrompts(supabase: ReturnType<typeof createClient>): Promise<void> {
   if (KH_LOADED) return
   try {
     const { data } = await supabase.from('settings').select('key, value').in('key', [
       'aplikacja_knowhow_base', 'aplikacja_knowhow_src_wlasny', 'aplikacja_knowhow_src_ai', 'aplikacja_knowhow_src_wspolny',
       'aplikacja_knowhow_resume', 'aplikacja_knowhow_extract', 'aplikacja_knowhow_handoff', 'aplikacja_knowhow_idea_source_hint',
-      'aplikacja_knowhow_attach_extract',
+      'aplikacja_knowhow_attach_extract', 'aplikacja_knowhow_summary',
     ])
     const v = (k: string) => ((data || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''
     KH.base = v('aplikacja_knowhow_base'); KH.src_wlasny = v('aplikacja_knowhow_src_wlasny'); KH.src_ai = v('aplikacja_knowhow_src_ai')
     KH.src_wspolny = v('aplikacja_knowhow_src_wspolny'); KH.resume = v('aplikacja_knowhow_resume'); KH.extract = v('aplikacja_knowhow_extract')
     KH.handoff = v('aplikacja_knowhow_handoff'); KH.idea_hint = v('aplikacja_knowhow_idea_source_hint')
-    KH.attach_extract = v('aplikacja_knowhow_attach_extract')
+    KH.attach_extract = v('aplikacja_knowhow_attach_extract'); KH.summary = v('aplikacja_knowhow_summary')
     KH_LOADED = true
   } catch (e) { console.error('[spar-chat] ensureKnowhowPrompts', e) }
 }
@@ -1224,12 +1291,28 @@ Deno.serve(async (req) => {
       } catch (slackErr) {
         console.error('[spar-chat] knowhow_closed slack error:', slackErr)
       }
-      // Handoff pack w tle (nie blokuje odpowiedzi na przycisk)
+      // Handoff pack + streszczenie wizji (summary_text) w tle — nie blokują odpowiedzi
+      // na przycisk. Oba czytają tę samą Bazę wiedzy (karta + spar_knowhow_items) i lecą
+      // RÓWNOLEGLE; każdy stempluje własny błąd (stampKnowhowError), więc pad jednego nie
+      // gasi drugiego. allSettled: żadna porażka nie odrzuca promisy z waitUntil.
       const erHp = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
-      const hpPromise = generateHandoffPack(sb, sessionId)
-      if (erHp && typeof erHp.waitUntil === 'function') erHp.waitUntil(hpPromise)
-      else hpPromise.catch((e) => console.error('[spar-chat] handoff bg error:', e))
+      const bgPromise = Promise.allSettled([generateHandoffPack(sb, sessionId), generateKnowhowSummary(sb, sessionId)])
+      if (erHp && typeof erHp.waitUntil === 'function') erHp.waitUntil(bgPromise)
+      else bgPromise.catch((e) => console.error('[spar-chat] knowhow_close bg error:', e))
       return jsonResponse({ ok: true }, 200, corsHeaders)
+    }
+
+    // ── Backfill streszczenia wizji (summary_text) — TYLKO wywołanie wewnętrzne ──
+    // Kolumna spar_knowhow_summary.summary_text istnieje od 18.06 i front ją renderuje
+    // (Dossier w tn-aplikacje), ale automat zapisu nigdy nie był podłączony — stare sesje
+    // mają NULL. Ten event regeneruje summary_text NIEZALEŻNIE od stanu zamknięcia etapu;
+    // wyłącznie service-role (isTrustedInternalCall), synchronicznie (czekamy na wynik).
+    if (body.event === 'knowhow_regen_summary') {
+      if (!isTrustedInternalCall(req)) return jsonResponse({ error: 'brak_dostepu' }, 403, corsHeaders)
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      const len = await generateKnowhowSummary(sb, sessionId)
+      if (len > 0) return jsonResponse({ ok: true, len }, 200, corsHeaders)
+      return jsonResponse({ ok: false, error: 'summary_nieudane' }, 502, corsHeaders)
     }
 
     // ── ZAŁĄCZNIKI SPOWIEDNIKA: spinacz w czacie (PDF/PNG/JPG) ───────────────
@@ -1445,7 +1528,9 @@ Deno.serve(async (req) => {
     if (profession && profession.length > 200) {
       return jsonResponse({ error: 'brak_profesji' }, 400, corsHeaders)
     }
-    if (!message && body.knowhowResume !== true && body.attachAck !== true) {
+    // retryReply ponawia odpowiedź na istniejącą historię — nie niesie treści usera,
+    // więc puste `message` jest tu dozwolone (jak knowhowResume/attachAck).
+    if (!message && body.knowhowResume !== true && body.attachAck !== true && body.retryReply !== true) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
@@ -1667,11 +1752,41 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
     }
 
+    // ── PONOWIENIE ODPOWIEDZI NA ISTNIEJĄCĄ HISTORIĘ (bez nowej tury usera) ───
+    // Dwa wyzwalacze, jedna mechanika — model odpowiada na historię BEZ dokładania
+    // kolejnej wiadomości usera (ostatni wpis historii JEST tą turą usera):
+    //  (Z2) event retryReply — jawny „ratunek" po padniętej turze (stream padł, front
+    //       pokazał „Spróbuj ponownie"). Działa w KAŻDYM trybie (sparing i know-how).
+    //  (Z1) dedup powtórzonych kliknięć — klient klika ten sam chip N razy, bo odpowiedź
+    //       nie przyszła (incydent: 6 identycznych ogonowych wpisów user, zero odpowiedzi).
+    //       Każdy kolejny klik z tą samą treścią NIE dokłada duplikatu.
+    const histArr = (history || []) as Array<{ role: string; content: string }>
+    const lastHist = histArr.length ? histArr[histArr.length - 1] : null
+    const lastIsUser = !!lastHist && lastHist.role === 'user'
+    const lastUserContent = lastIsUser ? String(lastHist!.content) : ''
+    const retryReply = body.retryReply === true
+    if (retryReply && !lastIsUser) {
+      // Nie ma czego ponawiać: ostatni głos należy do asystenta albo historia jest pusta.
+      return jsonResponse({ error: 'nic_do_ponowienia' }, 400, corsHeaders)
+    }
+    // Dedup: nowa wiadomość jest IDENTYCZNA (po trim) z ostatnim wpisem user w historii.
+    // Tylko dla realnej tury usera (nie zaczepka/ack/retry) i tylko gdy message niepuste.
+    // Gdy w ogonie jest już 2+ identycznych wpisów user (wcześniejsze klik-klik) — i tak
+    // porównujemy z OSTATNIM, więc kolejnego duplikatu po prostu nie dołożymy.
+    const isRepeatClick = !retryReply && !knowhowResume && !attachAck
+      && !!message && lastIsUser && lastUserContent.trim() === message.trim()
+    if (isRepeatClick) {
+      console.log('[spar-chat] dedup powtórzonego kliknięcia — ponawiam odpowiedź bez duplikatu, session:', sessionId)
+    }
+    // Wspólna flaga: generuj odpowiedź na istniejącą historię, NIE dokładaj tury usera.
+    const regenerateOnHistory = retryReply || isRepeatClick
+
     // ── Append wiadomości usera ──────────────────────────────────────────────
-    // Zaczepka know-how (knowhowResume) i ack załącznika (attachAck): brak realnej
-    // wiadomości usera → NIE zapisujemy jej do historii. Model dostaje syntetyczny
-    // wyzwalacz jako ostatnią turę.
-    if (!knowhowResume && !attachAck) {
+    // Zaczepka know-how (knowhowResume), ack załącznika (attachAck) oraz ponowienie
+    // (regenerateOnHistory): brak NOWEJ wiadomości usera → NIE zapisujemy jej do
+    // historii. Model dostaje syntetyczny wyzwalacz (resume/ack) albo — przy ponowieniu —
+    // po prostu istniejącą historię jako ostatnią turę.
+    if (!knowhowResume && !attachAck && !regenerateOnHistory) {
       const { error: userMsgError } = await supabase
         .from('spar_messages')
         .insert({ session_id: sessionId, role: 'user', content: message, channel: mode })
@@ -1713,10 +1828,15 @@ Deno.serve(async (req) => {
 
     const RESUME_TRIGGER = '[SYSTEM: Rozmówca wrócił do rozmowy i czeka — zagadnij go zgodnie z instrukcją POWRÓT DO ROZMOWY.]'
     const ATTACH_ACK_TRIGGER = `[SYSTEM: Klient właśnie dodał plik „${attachAckName}". Jego odczytana treść jest w historii rozmowy jako ostatnia wiadomość klienta (blok [ZAŁĄCZNIK: …]). Potwierdź krótko przyjęcie pliku i pokaż, że znasz jego treść: odnieś się KONKRETNIE do 2-3 najważniejszych elementów z pliku (nazwy, liczby, reguły — nie ogólniki). Potem pociągnij rozmowę dalej: zadaj jedno najważniejsze pytanie o lukę lub niejasność wynikającą z tej treści. NIE przepisuj całego pliku, NIE dziękuj przesadnie.]`
-    const messages = [
-      ...(history || []).map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (attachAck ? ATTACH_ACK_TRIGGER : message) },
-    ]
+    // Przy ponowieniu (retryReply/dedup) ostatnia wiadomość historii JEST turą usera —
+    // messages = historia bez zmian; model po prostu odpowiada (żadnego syntetycznego
+    // dopisku). W pozostałych przypadkach doklejamy turę usera (realną albo wyzwalacz).
+    const messages = regenerateOnHistory
+      ? histArr.map((m) => ({ role: m.role, content: m.content }))
+      : [
+          ...histArr.map((m) => ({ role: m.role, content: m.content })),
+          { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (attachAck ? ATTACH_ACK_TRIGGER : message) },
+        ]
 
     // Kontekst sesji dla modelu: profesja + punkt wyjścia (kafelek lub własne
     // słowa rozmówcy). Źródłem prawdy jest wiersz sesji w DB; dla nowej sesji
@@ -1842,14 +1962,18 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         }),
       }, 'chat-main')
     } catch (err) {
+      // Z3: OpenAI padło DEFINITYWNIE (wyjątek po retry) ZANIM stream ruszył — jawny,
+      // jednolity błąd z komunikatem do wyświetlenia + prostą ścieżką ponowienia
+      // (retryReply). NIE zaczynamy streamu, więc front dostaje czysty 502 JSON.
       console.error('[spar-chat] OpenAI fetch wyjątek po retry:', err)
-      return jsonResponse({ error: 'blad_ai' }, 502, corsHeaders)
+      return jsonResponse({ error: 'generacja_nieudana', message: 'Nie udało się wygenerować odpowiedzi — kliknij „Spróbuj ponownie".' }, 502, corsHeaders)
     }
 
     if (!openaiResponse.ok || !openaiResponse.body) {
+      // Z3: non-ok albo brak body po retry — również przed startem streamu → ten sam kontrakt.
       const errorText = await openaiResponse.text().catch(() => '')
       console.error('[spar-chat] OpenAI API error po retry:', openaiResponse.status, errorText)
-      return jsonResponse({ error: 'blad_ai' }, 502, corsHeaders)
+      return jsonResponse({ error: 'generacja_nieudana', message: 'Nie udało się wygenerować odpowiedzi — kliknij „Spróbuj ponownie".' }, 502, corsHeaders)
     }
 
     // ── Transform SSE: OpenAI delta -> content_block_delta/text_delta ────────
@@ -2105,9 +2229,12 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
 
           // Tryb know-how: cicha ekstrakcja wiedzy z tej wymiany → Baza wiedzy (w tle).
           // Zaczepka (knowhowResume) nie niesie treści usera → nie ma czego ekstrahować.
+          // Przy ponowieniu (retryReply/dedup) realna tura usera to OSTATNI wpis historii,
+          // nie `message` (puste dla retryReply) — ekstrahujemy z faktycznej wiadomości.
           if (isKnowHowMode && !knowhowResume && assistantText.trim()) {
             const khLead = ((existingSession?.lead_id as string | null | undefined) ?? leadId) ?? null
-            const khPromise = extractKnowhowAsync(supabase, sessionId, khLead, ideaSource, message, assistantText, (existingSession?.problem_summary as Record<string, unknown> | null) ?? null, OPENAI_API_KEY)
+            const khUserMsg = regenerateOnHistory ? lastUserContent : message
+            const khPromise = extractKnowhowAsync(supabase, sessionId, khLead, ideaSource, khUserMsg, assistantText, (existingSession?.problem_summary as Record<string, unknown> | null) ?? null, OPENAI_API_KEY)
             const erKh = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
             if (erKh && typeof erKh.waitUntil === 'function') erKh.waitUntil(khPromise)
             else khPromise.catch((e) => console.error('[spar-chat] knowhow extract bg error:', e))

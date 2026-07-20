@@ -445,6 +445,28 @@ Deno.serve(async (req) => {
       else sparingMessages = (sm || []) as { role: string; content: string }[]
     }
 
+    // Digest know-how („Notatki z dopracowania") — read-only, TYLKO dla zweryfikowanego
+    // WŁAŚCICIELA sesji i TYLKO po pełnej płatności (full_paid_at = etap know-how). Zwraca
+    // same treści zebrane przez spowiednika (kind/scope/content/created_at) — ŻADNYCH
+    // meta/file_path/url. Klient widzi, co system już zapisał z rozmowy.
+    type KhRow = { kind: string; scope: string | null; content: string; created_at: string }
+    let knowhowDigest: { counts: Record<string, number>; items: KhRow[] } | null = null
+    if (authUser && ownerId && authUser.id === ownerId && session.full_paid_at) {
+      const { data: khItems, error: khErr } = await supabase
+        .from('spar_knowhow_items')
+        .select('kind, scope, content, created_at')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true })
+        .limit(300)
+      if (khErr) console.error('[spar-project] knowhow digest fetch error:', khErr)
+      else {
+        const items = (khItems || []) as KhRow[]
+        const counts: Record<string, number> = {}
+        for (const it of items) counts[it.kind] = (counts[it.kind] || 0) + 1
+        knowhowDigest = { counts, items }
+      }
+    }
+
     const brief = (session.preview_brief || {}) as Record<string, unknown>
     const karta = (session.problem_summary || null) as Record<string, unknown> | null
     // business_plan / market_report bez _meta (licznik generacji to wewnętrzna kuchnia)
@@ -568,6 +590,8 @@ Deno.serve(async (req) => {
       wspolpraca: collabMessages || [],
       // null = brak uprawnień (anonimowy dostęp przez sessionId); [] = właściciel bez wiadomości
       historia: sparingMessages,
+      // null = brak uprawnień / przed pełną płatnością; { counts, items } dla właściciela w know-how
+      knowhow_digest: knowhowDigest,
       // front po zalogowaniu wie, czy rozmowa należy do tego konta
       wlasciciel: !!(authUser && ownerId && authUser.id === ownerId),
     }, 200, cors)
