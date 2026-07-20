@@ -1097,6 +1097,18 @@ function khStorageUrl(path) {
   try { return supabaseClient.storage.from('attachments').getPublicUrl(clean).data.publicUrl; }
   catch (e) { return '#'; }
 }
+// Załączniki z czatu spowiednika lądują w PRYWATNYM buckecie `spar-knowhow` (prefiks
+// 'spar-knowhow/' w file_path) — public URL nie zadziała, więc generujemy signed URL na żądanie.
+// (Storage policy SELECT dla team_members już istnieje.) Globalna — wołana z inline onclick w row().
+async function downloadKhFile(filePath) {
+  const key = String(filePath || '').replace(/^spar-knowhow\//, '');
+  if (!key) { toast('Brak ścieżki pliku'); return; }
+  try {
+    const { data, error } = await supabaseClient.storage.from('spar-knowhow').createSignedUrl(key, 3600);
+    if (error || !data || !data.signedUrl) { toast('Nie udało się pobrać pliku'); console.error('downloadKhFile', error); return; }
+    window.open(data.signedUrl, '_blank');
+  } catch (e) { toast('Nie udało się pobrać pliku'); console.error('downloadKhFile', e); }
+}
 function leadWiedzaHTML() {
   const { s, wiedza } = leadData;
   const sum = (wiedza && wiedza.summary) || {};
@@ -1118,16 +1130,46 @@ function leadWiedzaHTML() {
   const stageCls = !s.full_paid_at ? 'text-zinc-400'
     : (s.knowhow_closed_at ? 'text-emerald-400' : 'text-blue-400');
 
-  const row = (i) => `
+  // ── Helpery dla załączników z czatu spowiednika (bucket prywatny spar-knowhow + ekstrakt AI) ──
+  const PEW = { wysoka: ['wysoka', 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'], srednia: ['średnia', 'bg-amber-500/10 text-amber-400 border-amber-500/20'], niska: ['niska', 'bg-red-500/10 text-red-400 border-red-500/20'] };
+  const fmtBytes = (b) => { b = Number(b); if (!b || b <= 0) return ''; return b < 1048576 ? (b / 1024).toFixed(b < 10240 ? 1 : 0) + ' KB' : (b / 1048576).toFixed(1) + ' MB'; };
+  // Escape do inline onclick: najpierw warstwa JS-stringa (\\ i '), potem esc() dla atrybutu HTML
+  // — samo esc() nie wystarcza, bo HTML-decode &#39;→' przełamałby literał JS.
+  const jsAttr = (v) => esc(String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+  const row = (i) => {
+    const m = i.meta || {};
+    const isKh = typeof i.file_path === 'string' && i.file_path.indexOf('spar-knowhow/') === 0;
+    const sizeStr = fmtBytes(m.size_bytes);
+    const fileLink = i.file_path
+      ? (isKh
+        ? `<a href="#" onclick="downloadKhFile('${jsAttr(i.file_path)}');return false" class="text-[12px] text-blue-400 hover:text-blue-300"><i class="ph ph-download-simple mr-1"></i>Pobierz plik</a>`
+        : `<a href="${esc(khStorageUrl(i.file_path))}" target="_blank" rel="noopener" class="text-[12px] text-blue-400 hover:text-blue-300"><i class="ph ph-download-simple mr-1"></i>Pobierz plik</a>`)
+      : (i.kind === 'zalacznik' ? '<div class="text-[11px] text-amber-400/80 mt-0.5"><i class="ph ph-hourglass-medium mr-1"></i>obiecane — oczekuje na plik</div>' : '');
+    const pewCfg = PEW[m.pewnosc];
+    const pewBadge = pewCfg ? `<span class="text-[10px] px-1.5 py-0.5 rounded border ${pewCfg[1]}">pewność: ${pewCfg[0]}</span>` : '';
+    const extractHtml = m.extract ? `
+          <details class="mt-2">
+            <summary class="cursor-pointer text-[11px] text-zinc-400 hover:text-zinc-200 select-none flex items-center gap-1.5 flex-wrap"><i class="ph ph-file-magnifying-glass text-zinc-600"></i>Odczytana treść pliku (AI)${pewBadge}</summary>
+            <div class="mt-2 p-3 rounded-lg bg-black/40 border border-white/5 max-h-72 overflow-y-auto">
+              <div class="text-[12px] text-zinc-300 whitespace-pre-wrap break-words">${esc(m.extract)}</div>
+              ${m.nieczytelne_fragmenty ? `<div class="mt-2 text-[11px] text-amber-400/90 border-t border-white/5 pt-2"><i class="ph ph-warning mr-1"></i>Fragmenty nieczytelne: ${esc(m.nieczytelne_fragmenty)}</div>` : ''}
+            </div>
+          </details>` : '';
+    const fromFileChip = (i.kind !== 'zalacznik' && m.from_file)
+      ? `<span class="text-[10px] px-1.5 py-0.5 rounded border bg-zinc-500/10 text-zinc-400 border-zinc-500/20"><i class="ph ph-paperclip mr-0.5"></i>z pliku: ${esc(m.from_file)}</span>`
+      : '';
+    return `
       <div class="flex items-start gap-2.5 p-3 rounded-lg bg-black/30 border border-white/5">
         <div class="min-w-0 flex-1">
-          <div class="text-sm text-zinc-200 break-words">${esc(i.content)}</div>
+          <div class="text-sm text-zinc-200 break-words">${esc(i.content)}${sizeStr ? ` <span class="text-[10px] font-normal text-zinc-500">· ${sizeStr}</span>` : ''}</div>
           ${i.url ? `<a href="${esc(i.url)}" target="_blank" rel="noopener" class="text-[12px] text-blue-400 hover:text-blue-300 break-all"><i class="ph ph-link mr-1"></i>${esc(i.url)}</a>` : ''}
-          ${i.file_path ? `<a href="${esc(khStorageUrl(i.file_path))}" target="_blank" rel="noopener" class="text-[12px] text-blue-400 hover:text-blue-300"><i class="ph ph-download-simple mr-1"></i>Pobierz plik</a>` : (i.kind === 'zalacznik' ? '<div class="text-[11px] text-amber-400/80 mt-0.5"><i class="ph ph-hourglass-medium mr-1"></i>obiecane — oczekuje na plik</div>' : '')}
-          <div class="mt-1.5 flex items-center gap-2 flex-wrap">${i.scope ? scopeTag(i.scope) : ''}${srcTag(i.source_tag)}<span class="text-[10px] text-zinc-600">${fmtDate(i.created_at)}</span></div>
+          ${fileLink}
+          <div class="mt-1.5 flex items-center gap-2 flex-wrap">${i.scope ? scopeTag(i.scope) : ''}${srcTag(i.source_tag)}${fromFileChip}<span class="text-[10px] text-zinc-600">${fmtDate(i.created_at)}</span></div>
+          ${extractHtml}
         </div>
         <button onclick="deleteWiedzaItem('${i.id}')" class="shrink-0 w-7 h-7 text-zinc-600 hover:text-red-400 hover:bg-white/5 rounded-lg flex items-center justify-center transition" title="Usuń element"><i class="ph ph-trash text-sm"></i></button>
       </div>`;
+  };
   const block = (title, icon, kind, empty) => {
     const list = by(kind);
     return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">

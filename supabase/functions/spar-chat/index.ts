@@ -65,11 +65,22 @@ const MAX_TURNS_HARD_GATE = 7        // #10: twardy backstop — kontakt wymusza
 // SPAR_REQUIRE_ACCOUNT=true → bramkę przechodzi TYLKO zweryfikowane konto (JWT);
 // false (default, okres przejściowy) → wystarczy e-mail w sesji jak dotąd
 const REQUIRE_ACCOUNT = (Deno.env.get('SPAR_REQUIRE_ACCOUNT') || 'false') === 'true'
+// ── Załączniki spowiednika (know-how): PDF/PNG/JPG spinaczem w czacie ─────────
+// Bucket PRIVATE (migracja 20260720): upload signed URL-em z eventu attach_init,
+// odczyt treści przez model w attach_done. Limity anty-abuse per sesja/godzina.
+const ATTACH_BUCKET = 'spar-knowhow'
+const MAX_ATTACH_BYTES = 20 * 1024 * 1024
+const ATTACH_MIME: Record<string, string> = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' }
+const MAX_ATTACH_PER_SESSION = 30
+const MAX_ATTACH_PER_HOUR = 10
 const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.6-sol'
 // 3000: odpowiedź z markerem <projekt> (pełny brief z 4 widokami) potrafi
 // przekroczyć 1500 — ucięty </projekt> = parseProjekt zwraca null i brief
 // NIE trafia do bazy (podgląd się nie generuje mimo zapowiedzi w tekście)
 const OPENAI_MAX_COMPLETION_TOKENS = 6000 // 3000->6000 przy gpt-5.6-sol: reasoning (medium) liczy sie do puli
+// Model odczytu załącznika: default = model czatu (gpt-5.x czyta PDF przez input
+// "file" i obrazy przez image_url); override env gdyby trzeba było podmienić.
+const ATTACH_MODEL = Deno.env.get('SPAR_ATTACH_MODEL') || OPENAI_MODEL
 
 // ── Cache system promptów (mapa per klucz settings, 5 min) ───────────────────
 const PROMPT_CACHE_TTL_MS = 5 * 60 * 1000
@@ -100,6 +111,14 @@ interface SparChatRequest {
   // message; stempluje left_screen_at/left_screen dla precyzyjnego SMS powrotu
   event?: string | null
   screen?: string | null
+  // Załączniki spowiednika: event knowhow_attach_init (filename+size_bytes →
+  // signed upload URL) i knowhow_attach_done (path → odczyt treści przez model).
+  // attachAck: tura AI po udanym odczycie (bez tury usera — jak knowhowResume).
+  filename?: string | null
+  size_bytes?: number | null
+  path?: string | null
+  attachAck?: boolean | null
+  attachName?: string | null
 }
 
 // ── Konto z JWT (Supabase Auth) ───────────────────────────────────────────────
@@ -186,6 +205,15 @@ interface StreamUsage {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Base64 dużych plików (PDF → file_data dla OpenAI) bez przepełnienia stosu
+// (String.fromCharCode(...20MB) by wybuchł — chunkowanie po 32 KB).
+function toBase64(buf: Uint8Array): string {
+  let bin = ''
+  const CH = 0x8000
+  for (let i = 0; i < buf.length; i += CH) bin += String.fromCharCode(...buf.subarray(i, i + CH))
+  return btoa(bin)
+}
 
 function jsonResponse(
   body: Record<string, unknown>,
@@ -832,21 +860,39 @@ let RESIGNATION_INSTRUCTION = ''
 // Ładowane raz na cold-start (ensureKnowhowPrompts); pusty fallback to bezpiecznik, nie treść.
 // Edycja z panelu „Źródło prawdy". (Faza 1 single-source 2026-06-20.)
 let KH_LOADED = false
-const KH = { base: '', src_wlasny: '', src_ai: '', src_wspolny: '', resume: '', extract: '', handoff: '', idea_hint: '' }
+const KH = { base: '', src_wlasny: '', src_ai: '', src_wspolny: '', resume: '', extract: '', handoff: '', idea_hint: '', attach_extract: '' }
 async function ensureKnowhowPrompts(supabase: ReturnType<typeof createClient>): Promise<void> {
   if (KH_LOADED) return
   try {
     const { data } = await supabase.from('settings').select('key, value').in('key', [
       'aplikacja_knowhow_base', 'aplikacja_knowhow_src_wlasny', 'aplikacja_knowhow_src_ai', 'aplikacja_knowhow_src_wspolny',
       'aplikacja_knowhow_resume', 'aplikacja_knowhow_extract', 'aplikacja_knowhow_handoff', 'aplikacja_knowhow_idea_source_hint',
+      'aplikacja_knowhow_attach_extract',
     ])
     const v = (k: string) => ((data || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''
     KH.base = v('aplikacja_knowhow_base'); KH.src_wlasny = v('aplikacja_knowhow_src_wlasny'); KH.src_ai = v('aplikacja_knowhow_src_ai')
     KH.src_wspolny = v('aplikacja_knowhow_src_wspolny'); KH.resume = v('aplikacja_knowhow_resume'); KH.extract = v('aplikacja_knowhow_extract')
     KH.handoff = v('aplikacja_knowhow_handoff'); KH.idea_hint = v('aplikacja_knowhow_idea_source_hint')
+    KH.attach_extract = v('aplikacja_knowhow_attach_extract')
     KH_LOADED = true
   } catch (e) { console.error('[spar-chat] ensureKnowhowPrompts', e) }
 }
+
+// Fallback promptu odczytu załącznika — używany, gdy klucza nie ma w settings
+// (nowy klucz; edytowalny z panelu „Źródło prawdy" jak pozostałe aplikacja_knowhow_*).
+const ATTACH_EXTRACT_FALLBACK = `Jesteś modułem odczytu załączników w systemie „Spowiednik" (etap dopracowania wizji aplikacji po pełnej płatności). Klient dodał plik do rozmowy. Twoje zadanie: PRZECZYTAĆ plik w całości i oddać jego treść tak wiernie, żeby dalsza rozmowa i zespół budujący aplikację mogli się na niej opierać bez ponownego zaglądania do pliku.
+
+Zwróć WYŁĄCZNIE poprawny JSON (bez markdown, bez komentarzy):
+{
+  "czytelny": true,
+  "powod": "",
+  "opis": "1-2 zdania: czym jest ten dokument i czego dotyczy",
+  "tresc": "PEŁNE, wierne odwzorowanie istotnej treści pliku po polsku: cały tekst, tabele w markdown (z nagłówkami kolumn), listy, liczby, ceny, nazwy i oznaczenia DOKŁADNIE jak w pliku; przy obrazach/zrzutach ekranu - dokładny opis co widać (układ, teksty, przyciski, dane). Zachowaj strukturę dokumentu (nagłówki sekcji). NIE streszczaj agresywnie - lepiej za dużo niż za mało; pomiń wyłącznie stopki, numery stron i ozdobniki.",
+  "pewnosc": "wysoka|srednia|niska",
+  "nieczytelne_fragmenty": "opcjonalnie: co było nieczytelne, ucięte lub niepewne",
+  "items": [ {"kind": "wymaganie|wniosek|link|uwaga|cytat|intel_cenowy|luka|decyzja|sprzecznosc|zalozenie", "scope": "v1|pozniej|poza|nieznane", "content": "konkret 1-2 zdania", "url": "tylko dla kind=link"} ]
+}
+"czytelny": false ustaw TYLKO gdy naprawdę nie widzisz treści (pusty/uszkodzony plik, nieczytelny skan) - wtedy wypełnij "powod". W "items" wyciągnij 3-15 najważniejszych elementów wiedzy dla zespołu budującego aplikację (wymagania i reguły biznesowe -> wymaganie, cenniki/stawki -> intel_cenowy, otwarte pytania -> luka, sprzeczności z wcześniejszymi ustaleniami -> sprzecznosc). "pewnosc" oceń uczciwie: "wysoka" tylko gdy odczytałeś wszystko bez zgadywania.`
 function knowhowInstruction(ideaSource: string): string {
   const src = ideaSource === 'ai' ? KH.src_ai : ideaSource === 'wspolny' ? KH.src_wspolny : KH.src_wlasny
   return `${KH.base}\n${src}`
@@ -1185,6 +1231,209 @@ Deno.serve(async (req) => {
       else hpPromise.catch((e) => console.error('[spar-chat] handoff bg error:', e))
       return jsonResponse({ ok: true }, 200, corsHeaders)
     }
+
+    // ── ZAŁĄCZNIKI SPOWIEDNIKA: spinacz w czacie (PDF/PNG/JPG) ───────────────
+    // attach_init: walidacja + signed upload URL do prywatnego bucketa.
+    // attach_done: model CZYTA plik (PDF jako input "file", obraz jako vision),
+    // pełny ekstrakt trafia (1) do historii rozmowy jako wiadomość klienta
+    // [ZAŁĄCZNIK: …] — każda kolejna tura spowiednika zna treść pliku, oraz
+    // (2) do Bazy wiedzy: karta 'zalacznik' (plik + meta.extract dla panelu)
+    // + elementy merytoryczne. Błąd odczytu = jawny komunikat, NIGDY cichy sukces.
+    if (body.event === 'knowhow_attach_init' || body.event === 'knowhow_attach_done') {
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      const au = await verifyAuthUser(req, sb)
+      const { data: sess } = await sb.from('spar_sessions')
+        .select('id, lead_id, auth_user_id, full_paid_at, knowhow_closed_at, idea_source, problem_summary, preview_brief')
+        .eq('id', sessionId).maybeSingle()
+      if (!sess) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, corsHeaders)
+      const ownerId = (sess.auth_user_id as string | null) || null
+      if (ownerId && !isTrustedInternalCall(req) && (!au || au.id !== ownerId)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
+      }
+      // Spinacz istnieje TYLKO w trybie spowiednika (po pełnej płatności, przed
+      // domknięciem etapu) — spójnie z twardym lockiem tur po knowhow_closed_at.
+      if (!sess.full_paid_at) return jsonResponse({ error: 'tylko_spowiednik' }, 403, corsHeaders)
+      if (sess.knowhow_closed_at) return jsonResponse({ error: 'knowhow_zamkniety' }, 403, corsHeaders)
+      const leadId = (sess.lead_id as string | null) || null
+
+      if (body.event === 'knowhow_attach_init') {
+        const filename = String(body.filename || '').trim().slice(0, 200)
+        const size = Number(body.size_bytes || 0)
+        const ext = (filename.split('.').pop() || '').toLowerCase()
+        if (!filename || !ATTACH_MIME[ext]) {
+          return jsonResponse({ error: 'zly_typ', message: 'Dozwolone formaty: PDF, PNG, JPG.' }, 400, corsHeaders)
+        }
+        if (!(size > 0) || size > MAX_ATTACH_BYTES) {
+          return jsonResponse({ error: 'za_duzy', message: 'Maksymalny rozmiar pliku to 20 MB.' }, 400, corsHeaders)
+        }
+        // Anty-abuse: limit plików per sesja i per godzina (liczymy karty 'zalacznik' z plikiem)
+        const [{ count: attTotal }, { count: attHour }] = await Promise.all([
+          sb.from('spar_knowhow_items').select('id', { count: 'exact', head: true })
+            .eq('session_id', sessionId).eq('kind', 'zalacznik').not('file_path', 'is', null),
+          sb.from('spar_knowhow_items').select('id', { count: 'exact', head: true })
+            .eq('session_id', sessionId).eq('kind', 'zalacznik').not('file_path', 'is', null)
+            .gte('created_at', new Date(Date.now() - 3600_000).toISOString()),
+        ])
+        if ((attTotal || 0) >= MAX_ATTACH_PER_SESSION) {
+          return jsonResponse({ error: 'limit_zalacznikow', message: 'Osiągnięto limit załączników w tej rozmowie.' }, 429, corsHeaders)
+        }
+        if ((attHour || 0) >= MAX_ATTACH_PER_HOUR) {
+          return jsonResponse({ error: 'limit_zalacznikow', message: 'Sporo plików naraz — odczekaj chwilę i spróbuj ponownie.' }, 429, corsHeaders)
+        }
+        const uid = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+        const safeBase = filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'plik'
+        const path = `${sessionId}/${uid}-${safeBase}.${ext}`
+        const { data: signed, error: signErr } = await sb.storage.from(ATTACH_BUCKET).createSignedUploadUrl(path)
+        if (signErr || !signed) {
+          console.error('[spar-chat] attach sign error:', signErr)
+          return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
+        }
+        return jsonResponse({ ok: true, upload_url: signed.signedUrl, token: signed.token, path, mime: ATTACH_MIME[ext] }, 200, corsHeaders)
+      }
+
+      // ── knowhow_attach_done: plik wgrany → odczyt treści przez model ────────
+      const path = String(body.path || '').trim()
+      const filename = String(body.filename || '').trim().slice(0, 200) || (path.split('/').pop() || 'plik')
+      if (!path.startsWith(`${sessionId}/`) || path.includes('..')) {
+        return jsonResponse({ error: 'zla_sciezka' }, 400, corsHeaders)
+      }
+      const ext = (path.split('.').pop() || '').toLowerCase()
+      if (!ATTACH_MIME[ext]) return jsonResponse({ error: 'zly_typ' }, 400, corsHeaders)
+      const { data: blob, error: dlErr } = await sb.storage.from(ATTACH_BUCKET).download(path)
+      if (dlErr || !blob) {
+        console.error('[spar-chat] attach download error:', dlErr)
+        return jsonResponse({ error: 'nie_wgrano', message: 'Plik nie dotarł na serwer — spróbuj ponownie.' }, 409, corsHeaders)
+      }
+      const buf = new Uint8Array(await blob.arrayBuffer())
+      if (!buf.byteLength || buf.byteLength > MAX_ATTACH_BYTES) {
+        return jsonResponse({ error: 'za_duzy', message: 'Nieprawidłowy rozmiar pliku.' }, 400, corsHeaders)
+      }
+
+      await ensureKnowhowPrompts(sb)
+      const extractPrompt = KH.attach_extract || ATTACH_EXTRACT_FALLBACK
+      const khCard = (sess.problem_summary as Record<string, unknown> | null) || (sess.preview_brief as Record<string, unknown> | null)
+      const ctxTxt = khCard ? `KONTEKST PROJEKTU (czego dotyczy budowana aplikacja): ${JSON.stringify(khCard).slice(0, 900)}\n\n` : ''
+      const userParts: Array<Record<string, unknown>> = [
+        { type: 'text', text: `${ctxTxt}Nazwa pliku od klienta: ${filename}. Odczytaj plik zgodnie z instrukcją.` },
+      ]
+      if (ext === 'pdf') {
+        userParts.push({ type: 'file', file: { filename, file_data: `data:application/pdf;base64,${toBase64(buf)}` } })
+      } else {
+        // Obraz: signed URL zamiast base64 (mniejszy request; OpenAI pobiera sam)
+        const { data: su, error: suErr } = await sb.storage.from(ATTACH_BUCKET).createSignedUrl(path, 900)
+        if (suErr || !su) {
+          console.error('[spar-chat] attach signedUrl error:', suErr)
+          return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
+        }
+        userParts.push({ type: 'image_url', image_url: { url: su.signedUrl, detail: 'high' } })
+      }
+
+      let parsed: Record<string, unknown> | null = null
+      let attachUsage: { prompt_tokens?: number; completion_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } } | null = null
+      try {
+        const payload: Record<string, unknown> = {
+          model: ATTACH_MODEL,
+          max_completion_tokens: 16000, // długie PDF-y: pełny ekstrakt + reasoning liczy się do puli
+          messages: [
+            { role: 'system', content: extractPrompt },
+            { role: 'user', content: userParts },
+          ],
+        }
+        if (ATTACH_MODEL.startsWith('gpt-5')) payload.reasoning_effort = 'medium'
+        const res = await openaiFetchRetry({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}` },
+          body: JSON.stringify(payload),
+        }, 'knowhow-attach-extract')
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => '')
+          console.error('[spar-chat] attach extract http', res.status, errBody.slice(0, 400))
+          await stampKnowhowError(sb, sessionId, leadId, 'extract_error', `załącznik ${filename}: OpenAI HTTP ${res.status}`)
+          return jsonResponse({ error: 'ekstrakcja_nieudana', message: 'Nie udało się odczytać pliku — spróbuj ponownie za chwilę.' }, 502, corsHeaders)
+        }
+        const data = await res.json().catch(() => null) as { choices?: Array<{ message?: { content?: string } }>; usage?: typeof attachUsage } | null
+        attachUsage = data?.usage || null
+        const content = data?.choices?.[0]?.message?.content || ''
+        const tryParse = (s: string) => { try { const p = JSON.parse(s); if (p && typeof p === 'object') parsed = p as Record<string, unknown> } catch (_e) { /* ignore */ } }
+        tryParse(content)
+        if (!parsed) { const m = content.match(/\{[\s\S]*\}/); if (m) tryParse(m[0]) }
+      } catch (e) {
+        console.error('[spar-chat] attach extract error:', e)
+        await stampKnowhowError(sb, sessionId, leadId, 'extract_error', `załącznik ${filename}: ${String(e).slice(0, 200)}`)
+        return jsonResponse({ error: 'ekstrakcja_nieudana', message: 'Nie udało się odczytać pliku — spróbuj ponownie za chwilę.' }, 502, corsHeaders)
+      }
+
+      // Koszt odczytu → spar_usage (kind 'attach', panel TN Aplikacje)
+      if (attachUsage) {
+        const inTok = attachUsage.prompt_tokens || 0
+        const cachedTok = attachUsage.prompt_tokens_details?.cached_tokens || 0
+        const outTok = attachUsage.completion_tokens || 0
+        await sb.from('spar_usage').insert({
+          session_id: sessionId, kind: 'attach', model: ATTACH_MODEL,
+          input_tokens: inTok, cached_tokens: cachedTok, output_tokens: outTok,
+          cost_usd: chatCostUsd(ATTACH_MODEL, inTok, cachedTok, outTok),
+          meta: { filename, size_bytes: buf.byteLength },
+        }).then(({ error: uErr }) => { if (uErr) console.error('[spar-chat] attach usage insert error:', uErr) })
+      }
+
+      const p = (parsed || {}) as Record<string, unknown>
+      const tresc = typeof p.tresc === 'string' ? p.tresc.trim() : ''
+      const readable = parsed && p.czytelny !== false && tresc.length >= 10
+      if (!readable) {
+        const powod = typeof p.powod === 'string' && p.powod.trim() ? p.powod.trim().slice(0, 300) : 'Nie udało się odczytać treści pliku.'
+        await stampKnowhowError(sb, sessionId, leadId, 'extract_error', `załącznik ${filename}: nieczytelny — ${powod}`)
+        return jsonResponse({ ok: false, error: 'plik_nieczytelny', message: powod }, 422, corsHeaders)
+      }
+      const opis = (typeof p.opis === 'string' ? p.opis.trim() : '').slice(0, 500) || 'Załącznik od klienta.'
+      const trescCut = tresc.slice(0, 20000)
+      const pewnosc = ['wysoka', 'srednia', 'niska'].includes(p.pewnosc as string) ? (p.pewnosc as string) : 'srednia'
+      const nieczytelne = typeof p.nieczytelne_fragmenty === 'string' ? p.nieczytelne_fragmenty.trim().slice(0, 500) : ''
+
+      // (1) Historia rozmowy: pełny ekstrakt jako wiadomość KLIENTA (kanał sparing)
+      // — od tej chwili każda tura spowiednika ma treść pliku w kontekście, a front
+      // renderuje blok [ZAŁĄCZNIK: …] jako kafelek pliku (nie ścianę tekstu).
+      const attachMsg = `[ZAŁĄCZNIK: ${filename}]\n${opis}\n\n=== ODCZYTANA TREŚĆ PLIKU (automatycznie) ===\n${trescCut}`
+      const { error: amErr } = await sb.from('spar_messages').insert({ session_id: sessionId, role: 'user', content: attachMsg, channel: 'sparing' })
+      if (amErr) {
+        console.error('[spar-chat] attach message insert error:', amErr)
+        return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
+      }
+
+      // (2) Baza wiedzy: karta załącznika (plik + pełny ekstrakt w meta dla panelu)
+      const itemRows: Array<Record<string, unknown>> = [{
+        session_id: sessionId, lead_id: leadId, kind: 'zalacznik', scope: null, source_tag: 'klient',
+        content: `${filename} — ${opis}`.slice(0, 1000), url: null,
+        file_path: `${ATTACH_BUCKET}/${path}`, file_mime_type: ATTACH_MIME[ext], created_by: null,
+        meta: {
+          auto: true, from_file: true, size_bytes: buf.byteLength, pewnosc,
+          extract: trescCut, ...(nieczytelne ? { nieczytelne_fragmenty: nieczytelne } : {}),
+        },
+      }]
+      // + elementy merytoryczne wyciągnięte z pliku (ta sama walidacja co extractKnowhowAsync)
+      const VALID_KH = new Set(['wniosek', 'wymaganie', 'link', 'zalacznik', 'uwaga', 'cytat', 'intel_cenowy', 'luka', 'decyzja', 'sprzecznosc', 'zalozenie'])
+      const SCOPES_KH = new Set(['v1', 'pozniej', 'poza', 'nieznane'])
+      const rawItems = Array.isArray(p.items) ? p.items as Array<Record<string, unknown>> : []
+      for (const it of rawItems.slice(0, 15)) {
+        if (!it || typeof it.content !== 'string' || !(it.content as string).trim()) continue
+        const kind = it.kind === 'zalacznik' ? 'uwaga' : (it.kind as string) // karta pliku już jest — nie dubluj
+        if (!VALID_KH.has(kind)) continue
+        itemRows.push({
+          session_id: sessionId, lead_id: leadId, kind,
+          scope: SCOPES_KH.has(it.scope as string) ? (it.scope as string) : null,
+          source_tag: 'klient', content: String(it.content).slice(0, 1000),
+          url: (kind === 'link' && typeof it.url === 'string') ? (it.url as string).slice(0, 2000) : null,
+          created_by: null, meta: { auto: true, from_file: filename },
+        })
+      }
+      const { error: itemsErr } = await sb.from('spar_knowhow_items').insert(itemRows)
+      if (itemsErr) {
+        console.error('[spar-chat] attach items insert error:', itemsErr)
+        await stampKnowhowError(sb, sessionId, leadId, 'extract_error', `załącznik ${filename}: insert ${itemsErr.message || '?'}`)
+      }
+      await refreshKnowhowSummary(sb, sessionId, leadId, (sess.idea_source as string | null) || 'wlasny')
+
+      return jsonResponse({ ok: true, filename, opis, pewnosc, items_added: itemRows.length - 1 }, 200, corsHeaders)
+    }
     // Czat startuje BEZ maila i BEZ profesji (czat-first; bramka inline po
     // MAX_TURNS_BEZ_KONTAKTU turach). Jeśli pola przyszły — walidujemy format.
     if (email && (email.length > 320 || !EMAIL_RE.test(email))) {
@@ -1193,7 +1442,7 @@ Deno.serve(async (req) => {
     if (profession && profession.length > 200) {
       return jsonResponse({ error: 'brak_profesji' }, 400, corsHeaders)
     }
-    if (!message && body.knowhowResume !== true) {
+    if (!message && body.knowhowResume !== true && body.attachAck !== true) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
@@ -1246,6 +1495,13 @@ Deno.serve(async (req) => {
     if (body.knowhowResume === true && !isKnowHowMode) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
     }
+    // Tura AI po udanym odczycie załącznika (bez tury usera — wiadomość
+    // [ZAŁĄCZNIK: …] już siedzi w historii po knowhow_attach_done).
+    const attachAck = body.attachAck === true && isKnowHowMode
+    if (body.attachAck === true && !isKnowHowMode) {
+      return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
+    }
+    const attachAckName = String(body.attachName || 'plik').trim().slice(0, 200)
 
     // Decyzja Tomka 2026-07-11: etap spowiednika KOŃCZY SIĘ twardo. Po knowhow_closed_at
     // nie przyjmujemy nowych tur (dopiski w trakcie budowy = pełzanie zakresu; nowe pomysły
@@ -1409,9 +1665,10 @@ Deno.serve(async (req) => {
     }
 
     // ── Append wiadomości usera ──────────────────────────────────────────────
-    // Zaczepka know-how (knowhowResume): brak realnej wiadomości usera → NIE zapisujemy
-    // jej do historii. Model dostaje syntetyczny wyzwalacz jako ostatnią turę.
-    if (!knowhowResume) {
+    // Zaczepka know-how (knowhowResume) i ack załącznika (attachAck): brak realnej
+    // wiadomości usera → NIE zapisujemy jej do historii. Model dostaje syntetyczny
+    // wyzwalacz jako ostatnią turę.
+    if (!knowhowResume && !attachAck) {
       const { error: userMsgError } = await supabase
         .from('spar_messages')
         .insert({ session_id: sessionId, role: 'user', content: message, channel: mode })
@@ -1452,9 +1709,10 @@ Deno.serve(async (req) => {
     }
 
     const RESUME_TRIGGER = '[SYSTEM: Rozmówca wrócił do rozmowy i czeka — zagadnij go zgodnie z instrukcją POWRÓT DO ROZMOWY.]'
+    const ATTACH_ACK_TRIGGER = `[SYSTEM: Klient właśnie dodał plik „${attachAckName}". Jego odczytana treść jest w historii rozmowy jako ostatnia wiadomość klienta (blok [ZAŁĄCZNIK: …]). Potwierdź krótko przyjęcie pliku i pokaż, że znasz jego treść: odnieś się KONKRETNIE do 2-3 najważniejszych elementów z pliku (nazwy, liczby, reguły — nie ogólniki). Potem pociągnij rozmowę dalej: zadaj jedno najważniejsze pytanie o lukę lub niejasność wynikającą z tej treści. NIE przepisuj całego pliku, NIE dziękuj przesadnie.]`
     const messages = [
       ...(history || []).map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : message },
+      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (attachAck ? ATTACH_ACK_TRIGGER : message) },
     ]
 
     // Kontekst sesji dla modelu: profesja + punkt wyjścia (kafelek lub własne
@@ -1491,6 +1749,10 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // chip <opcje>„Domykamy etap" i ogłosił „Etap domknięty. Ruszam z budową" —
         // klient uznał etap za zamknięty, a knowhow_closed_at zostało NULL.
         else sessionContext += `\n\n[ZAMKNIĘCIE ETAPU = PRZYCISK, NIE CZAT] Etap dopracowania zamyka WYŁĄCZNIE klient przyciskiem „To już wszystko — przejdź do budowy" w interfejsie (poza oknem czatu). Ty NIE możesz zamknąć etapu: NIGDY nie ogłaszaj „etap domknięty", NIE pisz „ruszam z budową", NIE podsuwaj w <opcje> pozycji typu „Domykamy etap". Gdy klient sygnalizuje koniec — podsumuj krótko zebrane i skieruj go wprost do tego przycisku.`
+        // Załączniki: twardy opis mechaniki, bo model wcześniej HALUCYNOWAŁ spinacz,
+        // którego nie było (incydent magm5 2026-07-19: „kliknij spinacz / przeciągnij
+        // PDF" gdy UI nie miał żadnego uploadu — klientka utknęła z plikiem).
+        if (!knowhowClosed) sessionContext += `\n\n[ZAŁĄCZNIKI OD KLIENTA — MECHANIKA] Klient może dodać plik (PDF, PNG lub JPG, do 20 MB) przyciskiem SPINACZA po lewej stronie pola wiadomości; na komputerze zadziała też przeciągnięcie pliku na okno rozmowy. System automatycznie odczytuje każdy plik i wstawia jego treść do rozmowy jako wiadomość klienta w bloku [ZAŁĄCZNIK: nazwa] — traktuj ją jak pełnoprawny wsad klienta i AKTYWNIE korzystaj z tej wiedzy w dalszej rozmowie (odwołuj się do konkretów z pliku). NIGDY nie mów, że nie możesz otworzyć/odczytać pliku, skoro jego treść jest w rozmowie. Gdy klient pyta, jak przesłać plik — wskaż spinacz przy polu wiadomości. Gdy spinacz nie działa — poproś o odświeżenie strony; NIE wymyślaj innych kanałów (mail, wklejanie zrzutów po stronach itp.). Inne formaty niż PDF/PNG/JPG: poproś o zapis do PDF albo zrzut ekranu (PNG/JPG).`
         // Powrót do rozmowy („wróć do rozmowy") — proaktywna zaczepka zamiast reakcji na turę.
         if (knowhowResume) sessionContext += `\n\n${KH.resume}`
       } else if (existingSession?.verdict === 'zielony') {
