@@ -34,6 +34,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { adminGate } from "../_shared/bud-owner.ts";
 
 const BASE_URL = 'https://gateway.trevio.pl/partner/v1';
+// Front API (storefront) — istnieje obok partner/v1 (sonda 20.07: /front/v1 = 401 bez klucza).
+// Dostępny WYŁĄCZNIE w trybie raw przez body.base='front' (discovery — czy klucz partnera tam działa).
+const FRONT_BASE_URL = 'https://gateway.trevio.pl/front/v1';
 const ALLOWED_ORIGINS = ['https://crm.tomekniedzwiecki.pl', 'https://tn-crm.vercel.app', 'http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'];
 function cors(o: string | null): Record<string, string> {
   const a = o && ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0];
@@ -42,12 +45,14 @@ function cors(o: string | null): Record<string, string> {
 const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
 let API_KEY = '';
+let FRONT_KEY = '';
 
 // fetch do platformy z retry na 429 (Retry-After; limit 120 req/min) i 1 retry na 5xx
-async function pf(method: string, path: string, opts: { query?: Record<string, unknown>; body?: unknown } = {}): Promise<{ status: number; data: unknown }> {
-  const url = new URL(BASE_URL + path);
+async function pf(method: string, path: string, opts: { query?: Record<string, unknown>; body?: unknown; base?: string } = {}): Promise<{ status: number; data: unknown }> {
+  const url = new URL((opts.base === 'front' ? FRONT_BASE_URL : BASE_URL) + path);
+  const key = opts.base === 'front' ? (FRONT_KEY || API_KEY) : API_KEY;   // front ma własny klucz (sekret ecom_front_API); do czasu jego otrzymania próbujemy partnerskim
   for (const [k, v] of Object.entries(opts.query || {})) if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-  const init: RequestInit = { method, headers: { 'X-Api-Key': API_KEY, 'Accept': 'application/json' } };
+  const init: RequestInit = { method, headers: { 'X-Api-Key': key, 'Accept': 'application/json' } };
   if (opts.body !== undefined && method !== 'GET') {
     (init.headers as Record<string, string>)['Content-Type'] = 'application/json';
     init.body = JSON.stringify(opts.body);
@@ -155,6 +160,7 @@ Deno.serve(async (req) => {
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const WF2 = Deno.env.get('WF2_GEN_SECRET') || '';
     API_KEY = Deno.env.get('ecom_platform_API') || '';
+    FRONT_KEY = Deno.env.get('ecom_front_API') || '';
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
     const okSecret = !!WF2 && req.headers.get('x-wf2-secret') === WF2;   // pusty sekret NIGDY nie autoryzuje
@@ -216,7 +222,7 @@ Deno.serve(async (req) => {
         const method = String(body.method || 'GET').toUpperCase();
         const path = s(body.path);
         if (!ALLOWED_METHODS.includes(method) || !path.startsWith('/') || path.includes('..') || /^\/\//.test(path)) return J({ error: 'nieprawidlowe_wywolanie' }, 400);
-        out = await pf(method, path, { query: (body.query || {}) as Record<string, unknown>, body: body.body });
+        out = await pf(method, path, { query: (body.query || {}) as Record<string, unknown>, body: body.body, base: s(body.base) || undefined });
         break;
       }
       default:
