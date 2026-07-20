@@ -229,8 +229,24 @@
             width: min(228px, 58vw); border-radius: 30px; background: #171310; padding: 7px;
             box-shadow: var(--shadow-2); position: relative; cursor: pointer;
         }
-        .tt-embed { border-radius: 24px; overflow: hidden; aspect-ratio: 9 / 16; max-height: min(430px, 46svh); background: #0c0a08; position: relative; }
-        .tt-embed iframe { width: 100%; height: 100%; border: 0; display: block; }
+        .tt-embed {
+            border-radius: 24px; overflow: hidden; aspect-ratio: 9 / 16; max-height: min(410px, 44svh);
+            background: radial-gradient(120% 90% at 50% 10%, #24312A 0%, #14100C 68%);
+            position: relative;
+        }
+        .tt-embed::before {
+            content: ''; position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
+            width: 58px; height: 58px; border-radius: 50%;
+            background: rgba(253, 251, 246, 0.95);
+            box-shadow: 0 8px 26px rgba(0,0,0,0.35);
+        }
+        .tt-embed::after {
+            content: ''; position: absolute; left: 50%; top: 44%; transform: translate(-46%, -50%);
+            width: 0; height: 0; border-style: solid; border-width: 11px 0 11px 18px;
+            border-color: transparent transparent transparent #26201A;
+        }
+        .tt-phone.loaded .tt-embed::before, .tt-phone.loaded .tt-embed::after { display: none; }
+        .tt-embed iframe { width: 100%; height: 100%; border: 0; display: block; position: relative; z-index: 2; }
         .tt-cta {
             position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3;
             background: rgba(253,251,246,0.94); color: var(--ink); border-radius: 999px;
@@ -1300,20 +1316,30 @@
             pbIO.observe(s0);
         }
 
-        // Inline playery TikTok (wzorzec z /zbuduje) — montowane dopiero, gdy scena wejdzie w kadr
+        // Inline playery TikTok (wzorzec z /zbuduje): iframe montowany DOPIERO na klik
+        // (autoplay=1), grający jest zawsze jeden — czysta scena bez cookie-banera na starcie.
         let ttMounted = false;
         function mountTikToks() {
             if (ttMounted) return;
             ttMounted = true;
             document.querySelectorAll('.tt-card').forEach(card => {
-                const vid = card.dataset.vid;
-                const src = 'https://www.tiktok.com/player/v1/' + encodeURIComponent(vid)
-                    + '?music_info=0&description=0&rel=0&native_context_menu=0&closed_caption=0&timestamp=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&autoplay=0';
-                card.querySelector('.tt-embed').innerHTML =
-                    `<iframe src="${src}" loading="lazy" allow="autoplay; fullscreen; encrypted-media" allowfullscreen title="Trend produktowy"></iframe>`;
-                card.querySelector('.tt-phone').classList.add('loaded');
+                card.querySelector('.tt-phone').addEventListener('click', () => playTikTok(card));
             });
-            gtag('event', 'offer_trends_view', { page_version: PAGE_VERSION });
+        }
+        function playTikTok(card) {
+            const phone = card.querySelector('.tt-phone');
+            if (phone.classList.contains('loaded')) return;
+            // zatrzymaj (usuń) poprzedni grający player
+            document.querySelectorAll('.tt-phone.loaded').forEach(p => {
+                p.querySelector('.tt-embed').innerHTML = '';
+                p.classList.remove('loaded');
+            });
+            const src = 'https://www.tiktok.com/player/v1/' + encodeURIComponent(card.dataset.vid)
+                + '?music_info=0&description=0&rel=0&native_context_menu=0&closed_caption=0&timestamp=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&autoplay=1';
+            card.querySelector('.tt-embed').innerHTML =
+                `<iframe src="${src}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen title="Trend produktowy"></iframe>`;
+            phone.classList.add('loaded');
+            gtag('event', 'offer_trend_play', { page_version: PAGE_VERSION, vid: card.dataset.vid });
         }
 
         let counterDone = false;
