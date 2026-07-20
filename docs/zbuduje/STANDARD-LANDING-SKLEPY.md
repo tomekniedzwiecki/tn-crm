@@ -60,12 +60,31 @@ Odstępstwo raportowane w LEDGER (który autor), ale NIE jest już wadą samą w
 opinii, jeden prawdziwy minus w porównaniu, zero fałszywej pilności. Szczegóły: sekcja 4.
 
 **Z6 — GŁÓWNE ZASADY, NIE SZABLON (Tomek 16.07: „będę tworzyć setki landingów i chcę, aby
-były unikatowe").** Standard podaje ZASADY (jasne tła, jeden ciepły akcent na CTA, wierność
-produktu, prawdziwe dane, mikro-oferta w hero, mobile = mniej niż desktop) i CEL — nie
-narzuca layoutu, kompozycji ani konkretnego wyglądu. Briefy makiet = brief celu (F2 🥇);
-layouty poprzednich produktów są inspiracją POZIOMU jakości, NIGDY wzorem do kopiowania.
-Świętość makiety (Z2) działa W OBRĘBIE jednego landingu (wierność przeniesienia po akcepcie);
-między landingami rządzi unikatowość (spójne z anty-doorway, sekcja 5 GEO).
+były unikatowe"; EGZEKUCJA dołożona 20.07 po audycie 4 gotowych landingów).** Standard podaje
+ZASADY (jasne tła, JEDEN akcent w twardym scope, wierność produktu, prawdziwe dane, mikro-oferta
+w hero, mobile = mniej niż desktop) i CEL — nie narzuca layoutu, kompozycji ani konkretnego
+wyglądu. Briefy makiet = brief celu (F2 🥇); layouty poprzednich produktów są inspiracją POZIOMU
+jakości, NIGDY wzorem do kopiowania. Świętość makiety (Z2) działa W OBRĘBIE jednego landingu
+(wierność przeniesienia po akcepcie); między landingami rządzi unikatowość (spójne z anty-doorway,
+sekcja 5 GEO).
+
+**Z6 miał dotąd zero egzekucji — i to się zemściło.** Audyt 20.07 ocenił parę **masażer ↔ Drapek
+na 9/10** w skali „ta sama strona z podmienionym produktem": oba najnowsze, oba po doktrynie
+TOKENS-MAKIETY z 19.07, ta sama para fontów, akcent w tym samym paśmie, ta sama mapa sekcji, ten
+sam kształt CTA. Diagnoza: fabryka miała pełen aparat wykrywający ZA MAŁO spójności i **ZERO
+mechanizmu wykrywającego ZA MAŁO różnicy**. Z6 egzekwują odtąd trzy rzeczy:
+1. **PODZIAŁ KANON / PARTYTURA** (`TOKENS-MAKIETY.md` §KANON vs PARTYTURA): KANON = poziom
+   warsztatu (rytm 8pt, jasne tła, jeden akcent, para fontów z kontrastem, ciepła głębia,
+   mechanika modułów, hierarchia oferty) — nietykalny i identyczny wszędzie. PARTYTURA = tożsamość
+   (kroje, kolor akcentu — **wolno i zaleca się wyprowadzić z realnego koloru produktu**, rodzina
+   tła, świat/materiał, archetyp hero, dobór i kolejność sekcji, sygnatura) — inna w każdym
+   landingu, obowiązkowo uzasadniona w `PLAN.md`. **Odchylenie w PARTYTURZE nie jest defektem
+   i nie wolno go „naprawiać" do normy z poprzedniego landingu.**
+2. **BIBLIOTEKA ARCHETYPÓW HERO** (§F2 pkt 2) — archetyp NIE MOŻE powtórzyć archetypu poprzednio
+   zbudowanego landingu; wybór + uzasadnienie w `PLAN.md` (`archetyp-hero: <litera>`).
+3. **GATE CROSS-LANDING** — `gate-check.py` blok `cross_landing` (font display · ΔE akcentu ·
+   archetyp · sekwencja sekcji) porównuje budowany landing z 3 poprzednimi. To jedyne miejsce
+   w fabryce, które patrzy POZA jeden slug.
 
 **Z7 — KARTA PRAWDY = JEDYNE ŹRÓDŁO DANYCH.** Wszystkie fakty produktu (cena, specs, opis,
 warianty, dowody) żyją w JEDNYM bloku generowanym w F0.6 (format §1a). Żaden brief (plan F1,
@@ -218,7 +237,16 @@ briefing.md, aktualizowany o ten standard): cel+kontekst, zdjęcia produktu jako
 (MAX 2 — limit edge), dane F0, pełne opinie, wymagania-zawsze, zakazy, kalibracja Z2/Z3.
 GPT zwraca: koncepcję pod TEN produkt (motyw przewodni = wizualna metafora korzyści,
 NIGDY „clean e-commerce"), dobór i kolejność sekcji z uzasadnieniem, paletę+font+charakter,
-listę grafik, funkcje konwersji. FILTR PLANU (my): zakazy, formularz→CTA checkout_url,
+listę grafik, funkcje konwersji.
+**⚠️ PLAN.md NIESIE PARTYTURĘ (20.07, Z6):** plan zamyka się dopiero z jawnymi decyzjami
+i uzasadnieniami dla: **rodziny tła · koloru akcentu (domyślnie wyprowadzonego z realnego koloru
+produktu) · pary krojów · sygnatury · archetypu hero linią `archetyp-hero: <litera>` (biblioteka
+§F2 pkt 2) · doboru i KOLEJNOŚCI sekcji**. Uzasadnienie brzmi „ten produkt/persona prowadzi
+do tego, bo…", nigdy „jak poprzednio". Agent PRZED planem sprawdza partyturę 3 poprzednich
+landingów (`gate-check.py --cross-only <slug>` albo ich `TOKENS-MAKIETY.md`) i celowo się od
+niej odbija — inaczej gate `cross_landing` zablokuje landing dopiero w F6, po wygenerowaniu
+wszystkich makiet.
+FILTR PLANU (my): zakazy, formularz→CTA checkout_url,
 esencja produktu na scenach kluczowych, jasne tła, **ANTY-MISMATCH ROZSZERZONY (GALERIA-ALI §5):
 tabela CLAIM→ŹRÓDŁO ∈ {tytuł detail, specs, galeria detail, opinie, opis-FAKTY po destylacji};
 KAŻDA korzyść NIESIE KOTWICĘ w nawiasie („służy latami (spec: Materiał=stal nierdzewna)");
@@ -293,6 +321,14 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    jasno, hierarchia, minimalny fake-tekst, **czy plansza pokazuje KOMPLET DNA
    (paleta+2 fonty+radius+ikony+trust-pill+głębia)**; FAIL→regeneracja promptu. **Z tej planszy agent SPISUJE `TOKENS-MAKIETY.md` (F2.5) — SSOT tokenów
    makiety wstrzykiwany do KAŻDEGO promptu makiety (pełny format: `docs/zbuduje/TOKENS-MAKIETY.md`).**
+   **⚠️ STYL-MASTER JEST GENEROWANY Z PARTYTURY, NIE Z NAWYKU (20.07):** prompt planszy DNA dostaje
+   decyzje partytury PODJĘTE WCZEŚNIEJ (rodzina tła, para krojów, kolor akcentu — domyślnie
+   wyprowadzony z realnego koloru produktu, sygnatura) i wypisane hexami/nazwami krojów. Plansza
+   „w domyślnym kremie z amberem" = generacja z priora = źródło rodzeństwa. **F2.5 wypełnia
+   `TOKENS-MAKIETY.md` z JAWNYM podziałem na sekcję `## KANON` (przepisaną 1:1 z SSOT) i
+   `## PARTYTURA` (decyzje TEGO landingu + jednozdaniowe uzasadnienie przy KAŻDEJ pozycji:
+   kroje · kolor akcentu · rodzina tła · sygnatura · archetyp hero z `PLAN.md`). Partytura bez
+   uzasadnień = F2.5 NIEZAMKNIĘTY** (chip w panelu nie wystarcza — plik musi mieć oba nagłówki).
 1.5. **BRANDING (F2.5, pipeline R3 19.07) — favicon + wordmark; PO styl-masterze, PRZED hero**
    (`scripts/mockup-tools/brand-forge.py`; SSOT rezerwacji: `bud_brand_names`, F0; parasol =
    claim `wf2_projects.name` przez `--project-id`, reserve-before-generate). **FAVICON/znak —
@@ -326,6 +362,30 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    w makiecie = tekst; kod odtwarza live-text). Każdy plik obejrzany (Read) przed użyciem.
 2. **HERO-MAKIETA** (pełny 1. ekran: topbar, nagłówek PL, scena z produktem, karta wtopiona
    w scenę, pay-row; gate WOW — iterować max 3, wybrać najlepszą).
+
+   **🏛️ BIBLIOTEKA ARCHETYPÓW HERO (20.07 — PARTYTURA, nie kanon).** Hero to najmocniejszy nośnik
+   tożsamości landingu: audyt 20.07 wykazał, że po podmianie palety i zdjęć strony i tak czytały
+   się jako rodzeństwo, bo **wszystkie hero dzieliły jeden układ**. Archetyp wybiera się w F1
+   (plan), zapisuje w `PLAN.md` linią **`archetyp-hero: <litera>`** wraz z uzasadnieniem („dlaczego
+   TEN produkt prowadzi do TEGO układu") i kopiuje do `TOKENS-MAKIETY.md` §9.
+   **REGUŁA TWARDA: archetyp NIE MOŻE powtórzyć archetypu bezpośrednio poprzedniego zbudowanego
+   landingu** (egzekucja: `gate-check.py` blok `cross_landing`, severity FAIL).
+
+   | # | archetyp | układ | kiedy stosować |
+   |---|---|---|---|
+   | **A** | **scena pełnoekranowa + copy na scrimie** | scena full-bleed na cały 1. ekran, nagłówek i karta oferty na półprzezroczystym scrimie | ⚠️ **ZUŻYTY — wymaga jawnego uzasadnienia w PLAN.md.** Sensowny tylko gdy scena JEST argumentem sprzedażowym (efekt widoczny gołym okiem: światło, przestrzeń, przemiana wnętrza) |
+   | **B** | **split 55/45** | copy na płaskim polu tła po jednej stronie, scena obok jako osobny blok | produkt wymagający wyjaśnienia słowem (mechanizm, specs, „co to właściwie robi"). *Wzorzec: masażer* |
+   | **C** | **karta nachodząca na scenę** | scena u góry, karta mikro-oferty wjeżdża na jej dolną krawędź ujemnym marginesem | impuls + mocna oferta cenowa; naturalnie przenosi się na mobile (fold z ceną). *Wzorzec: Drapek* |
+   | **D** | **packshot centralny na płaskim polu koloru** | produkt wycięty, wyśrodkowany na jednolitym polu z rodziny tła; copy i cena POD nim | katalogowo-editorial: produkt ładny sam z siebie, ma wyrazisty kształt/kolor; gdy akcent pochodzi z produktu (§TOKENS „akcent z produktu") |
+   | **E** | **big-type dominujący** | typografia jest bohaterem (H1 na 2/3 ekranu), produkt jako mniejszy wycięty obiekt zakotwiczony w rogu/przy linii bazowej | krótka, mocna obietnica; produkty proste, gdzie zdjęcie niewiele dodaje; marki z charakternym display |
+   | **F** | **dyptyk** | dwa kadry obok siebie o równej wadze (kontekst + detal / przed + po), copy na pasie pod lub między nimi | produkt o dwóch stanach albo dwóch zastosowaniach; gdy sam kontrast jest argumentem |
+   | **G** | **pas editorialny z okładką** | wąski pas nagłówka nad pełnoszerokim, niskim kadrem (proporcja „okładki magazynu"), oferta w kolumnie bocznej | produkty premium/rzemieślnicze, gdzie liczy się nastrój i materiał, a cena nie jest pierwszym argumentem |
+   | **H** | **stos zoning'owy (mobile-first)** | trzy jawne strefy jedna pod drugą: kadr → hook big-type → karta oferty, z widoczną granicą między strefami | produkty impulsowe z ruchu Reels, gdzie desktop jest wtórny; najlepszy stosunek fold/treść na 390px |
+
+   Dobór prowadzi PRODUKT, nie estetyka dnia: *co jest najmocniejszym argumentem — scena, słowo,
+   sam kształt produktu, czy kontrast dwóch stanów?* Archetyp determinuje też strukturę hero
+   mobile (F2.4): B/C/H przenoszą się wprost, A i G wymagają przeprojektowania pod fold
+   (⛔ ściśnięty desktop).
 3. **MAKIETY WSZYSTKICH SEKCJI planu** (pokrycie CAŁEGO planu — tylko czysta stopka bez
    makiety), przyrostowo: hero+1 → po 2. Każda: ref = styl-master + realne zdjęcie produktu
    gdy w kadrze; 3:2 DUŻE; polskie teksty przykładowe; pełny układ UI.
@@ -388,18 +448,27 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
   stroke. Gate KRYTYKA rozszerzony: „gdzie tu ślad ręki projektanta?" — brak 3/4 warstw =
   regeneracja makiety. Anty-AI-card: banuj shadow-lg + rounded-2xl/3xl.
 - **🎯 STYLE-DNA MAKIET (F2.5, twarde — pełny format `docs/zbuduje/TOKENS-MAKIETY.md`; „pełny
-  zestaw" 19.07).** Ponad warstwy detalu (a-d) KAŻDY prompt makiety niesie akapit STYLE-DNA
-  z `TOKENS-MAKIETY.md` (SSOT domykający dryf A/B/C/radius/ikon):
-  - **PARA FONTÓW Z KONTRASTEM (koniec mono-Baloo):** display zaokrąglony-ciepły = twarz marki
-    (domyślnie Baloo 2) niesie H1/H2/markę; **osobny WYRAZISTY krój** (humanist typu Nunito Sans
-    „rymuje" z Baloo, LUB ciepły grotesk kondensowany) niesie **eyebrow · LICZBY · CENY · wymiary ·
-    długie akapity · label**. ⛔ ZIMNY tech (Inter/Helvetica) i ⛔ jeden krój na wszystko = FAIL
-    kalibracji premium. Skala modularna 1.333 (1.5 dla wielkiego H1), body 16-18/lh 1.5-1.6,
-    H1 desktop 56-80px, **H1 mobile floor 36-40px** (31px = za skromnie).
-  - **DYSCYPLINA AMBER (scope twardy):** amber = **TYLKO** {CTA · swash pod 1 słowem · gwiazdki
-    ratingu}. **WSZYSTKIE ikony funkcjonalne (korzyści/materiał/kroki/lupa/FAQ +−) = charcoal
-    (`--ink`).** Trust-pill = JEDEN styl globalnie (kremowy z charcoal). Body = ciepła prawie-czerń
-    (`#33281F/#2A211B`), nie `#000`, nie mglisty jasny.
+  zestaw" 19.07, podział KANON/PARTYTURA 20.07).** Ponad warstwy detalu (a-d) KAŻDY prompt makiety
+  niesie akapit STYLE-DNA z `TOKENS-MAKIETY.md` (SSOT domykający dryf A/B/C/radius/ikon).
+  **Akapit ma DWIE części: KANON — identyczny w każdym landingu; PARTYTURA — konkrety TEGO
+  produktu. Nakazowa jest struktura ról, nie konkretne kroje i hexy:**
+  - **PARA FONTÓW Z KONTRASTEM (koniec mono-Baloo):** KANON = display (twarz marki: H1/H2/marka)
+    i **osobny WYRAZISTY krój** na **eyebrow · LICZBY · CENY · wymiary · długie akapity · label**
+    MUSZĄ być rozróżnialne na pierwszy rzut oka. ⛔ ZIMNY tech (Inter/Helvetica) jako jedyny krój
+    i ⛔ jeden krój na wszystko = FAIL kalibracji premium. **PARTYTURA = KTÓRE kroje** — Baloo 2
+    nie jest już domyślną (masażer i Drapek dzieliły ją, stąd 9/10 zbieżności); `--font-display`
+    identyczny z którymś z 3 poprzednich landingów = FAIL gate'u `cross_landing`. Skala modularna
+    1.333 (1.5 dla wielkiego H1), body 16-18/lh 1.5-1.6, H1 desktop 56-80px, **H1 mobile floor
+    36-40px** (31px = za skromnie).
+  - **DYSCYPLINA JEDYNEGO AKCENTU (scope twardy):** akcent = **TYLKO** {CTA · swash pod 1 słowem ·
+    gwiazdki ratingu}. **WSZYSTKIE ikony funkcjonalne (korzyści/materiał/kroki/lupa/FAQ +−) =
+    charcoal (`--ink`).** Trust-pill = JEDEN styl globalnie. Body = prawie-czerń dostrojona do
+    rodziny tła, nie `#000`, nie mglisty jasny. **PARTYTURA = KTÓRY kolor:** wolno (i zaleca się)
+    wyprowadzić go z realnego koloru produktu — reguła „kolor produktu nigdy jako UI-accent"
+    jest USUNIĘTA (20.07); ΔE < 15 wobec 3 poprzednich landingów = FAIL gate'u `cross_landing`.
+  - **RODZINA TŁA (PARTYTURA):** jasne ≠ tylko kremowe. Dozwolone: krem · kość słoniowa · piasek ·
+    glina rozbielona · chłodna biel · blady szałwiowy · bladoróżowy · jasny błękit (warunek KANONU:
+    wysoka jasność + niskie nasycenie + WCAG dla body). ⛔ ciemne tła i neon — bez zmian.
   - **RYTM 8pt + hojny whitespace:** siatka 8/16/24/32/48/64/96; padding sekcji desktop 96-128px,
     mobile 64-80px; szerokość treści ~1160-1200px; kolumna tekstu 50-75 znaków. Whitespace = luksus.
   - **WARIANCJA EDYTORIALNA SEKCJI** (koniec „stosu identycznych kart"): mieszać edge-to-edge scena
@@ -413,11 +482,18 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
     editorial (copy lewo / ostra scena prawo). Mikro-interakcje = §3 CTA + F5.2 (press ~0.97,
     sticky slide-in, reveal 200-400ms, ciepły easing, `prefers-reduced-motion`).
   - **✅ KRYTYK — CHECKLISTA STYLE-DNA (F2, przed akceptem; brak = regeneracja makiety):**
-    (1) para fontów z REALNYM kontrastem (nie mono)? (2) amber tylko CTA+swash+rating, WSZYSTKIE
+    (1) para fontów z REALNYM kontrastem (nie mono)? (2) akcent tylko CTA+swash+rating, WSZYSTKIE
     ikony funkcjonalne charcoal? (3) desktop↔mobile TEJ sekcji = ten sam bohater + jeden styl ikon?
     (4) H1 mobile ≥36px / big-type? (5) głębia = warstwowe CIEPŁE cienie (nie jeden czarny)?
     (+ 6) **EMOCJA↔PRODUKT (F1.7a) egzekwowane NA MAKIECIE, nie na finale:** scena `03-problem`
     ma ZERO naszego produktu (nie odkładać do PASS 5 pyt. 6 — łapać przy akceptcie makiety).
+    (+ 8) **🔀 CROSS-LANDING (20.07, po werdykcie audytu masażer↔Drapek 9/10): „czy ten landing
+    dałoby się pomylić z POPRZEDNIM? na których osiach się różni?"** — krytyk dostaje hero
+    poprzedniego landingu jako drugą kotwicę i wymienia RÓŻNICE po nazwie: rodzina tła · kolor
+    akcentu · font display · archetyp hero · świat/materiał. **Mniej niż 3 osie różnicy =
+    regeneracja partytury (F2.5), nie kosmetyka makiety.** Odpowiedź „różni się kolorem produktu
+    i zdjęciami" = NIE ZALICZONE (to nie są osie — to zawartość). Pytanie (7) = mobile-od-zera
+    (F2.4), pytanie o POZĘ produktu = §2.
 - **🥇 BRIEF CELU > DYKTAT ELEMENTÓW (Tomek 16.07, potwierdzone testem A/B na hero Uśmieszka):**
   najlepsze makiety wychodzą, gdy prompt opowiada CO sprzedajemy, KOMU i CO klient ma poczuć,
   a PRAWDZIWE fakty (cena, oceny, cechy, płatności) podaje jako MATERIAŁ do wyboru — kompozycję
@@ -795,21 +871,34 @@ CAŁY standard" — tak lekcje wchodzą do następnej generacji automatycznie.
 **JASNE TŁA — zawsze.** Tła stron/sekcji wyłącznie jasne (kremy/biele/pastele); ciemne tylko
 jako akcenty tekstu/ikon. Footer JASNY. (Badania: jasne = wierność zdjęć, czytelność, zaufanie
 masowego B2C; „ciemne+neon" = AI-slop; dark wygrywa tylko w niszach premium/B2B.)
-**CTA: kontrast + izolacja** — jeden ciepły kolor, WYŁĄCZNIE na przycisku zakupu.
+**⚠️ „Jasne" ≠ „kremowe" (20.07): rodzina tła to PARTYTURA** — krem · kość słoniowa · piasek ·
+glina/terakota rozbielona · chłodna biel · blady szałwiowy · bladoróżowy · jasny błękit; warunek
+KANONU dla każdej: wysoka jasność + niskie nasycenie + WCAG dla body. Zawężenie do kremu było
+nawykiem, nie regułą — i to ono najmocniej robiło z landingów rodzeństwo (audyt 20.07).
+⛔ ciemne tła i neon: BEZ ZMIAN (decyzja anty-scam Tomka).
+**CTA: kontrast + izolacja** — JEDEN kolor akcentu, WYŁĄCZNIE na przycisku zakupu (+ swash, ★).
 
-**🍊 DYSCYPLINA AMBER — SCOPE JEDYNEGO AKCENTU (Tomek 19.07; amber rozlał się poza CTA — ikony
-korzyści/materiału niespójne, trust-pill raz biały raz amber, gwiazdki, lupka).** Twarda reguła
+**🍊 DYSCYPLINA JEDYNEGO AKCENTU — SCOPE (Tomek 19.07; amber rozlał się poza CTA — ikony
+korzyści/materiału niespójne, trust-pill raz biały raz amber, gwiazdki, lupka; przemianowane
+z „DYSCYPLINY AMBER" i uwolnione od konkretnego koloru 20.07).** Twarda reguła
 (SSOT tokenów: `TOKENS-MAKIETY.md`; egzekwuje KRYTYK na makiecie):
-- **W CIEPLE (amber `--cta`) WOLNO TYLKO:** przycisk CTA · swash `.hi`/`.ac` pod JEDNYM słowem
-  nagłówka · gwiazdki ratingu ★. **Nic więcej.**
+- **W AKCENCIE (`--cta`) WOLNO TYLKO:** przycisk CTA · swash `.hi`/`.ac` pod JEDNYM słowem
+  nagłówka · gwiazdki ratingu ★. **Nic więcej.** To jest KANON — scope się nie zmienia.
+- **KTÓRY to kolor = PARTYTURA (20.07): wolno i ZALECA SIĘ wyprowadzić akcent z realnego koloru
+  produktu.** Dawna reguła „kolor produktu nigdy jako UI-accent" (tokeny masażera: `--green`
+  *„appears ONLY in the product photography and in the logo, never as a UI accent"*) jest
+  **USUNIĘTA** — wykluczała z UI jedyny kolor niosący tożsamość produktu i zostawiała wszystkim
+  landingom ten sam amber. Egzekucja różnicy: `gate-check.py` blok `cross_landing` (ΔE koloru
+  akcentu < 15 wobec 3 poprzednich landingów = FAIL).
 - **CHARCOAL (`--ink`) = WSZYSTKIE ikony funkcjonalne:** korzyści · materiał · kroki demo · lupa
-  galerii · FAQ „+/−" · dividery · znaczniki. Ikona funkcjonalna w amber = FAIL kalibracji.
-- **Trust-pill = JEDEN styl globalnie:** kremowy fill (`--paper`) + tekst/border charcoal — nie raz
-  biały, raz amber.
-- **Body = ciepła prawie-czerń / głęboki brąz** (`#33281F`/`#2A211B`) — ⛔ `#000`, ⛔ mglisty jasny
-  (`#6E6053` za jasny na długiej stronie).
+  galerii · FAQ „+/−" · dividery · znaczniki. Ikona funkcjonalna w akcencie = FAIL kalibracji.
+- **Trust-pill = JEDEN styl globalnie:** fill z rodziny tła (`--paper`) + tekst/border charcoal —
+  nie raz biały, raz w kolorze akcentu.
+- **Body = prawie-czerń dostrojona do rodziny tła** (`#33281F`/`#2A211B` na kremie) — ⛔ `#000`,
+  ⛔ mglisty jasny (`#6E6053` za jasny na długiej stronie). **Kontrast = KANON, odcień = partytura**
+  (⛔ cofanie odcienia „do normy z poprzedniego landingu").
 - Reguła KODU (l. „NIE zmieniać samego tokena `--cta`") zostaje: nie remapuj żywego `--cta`; nowa
-  makieta po prostu rysuje ikony funkcjonalne w charcoal od początku (nie odwołują się do amber).
+  makieta po prostu rysuje ikony funkcjonalne w charcoal od początku (nie odwołują się do akcentu).
 
 **WIERNOŚĆ PRODUKTU — 4 WARUNKI (każda generacja z produktem w kadrze; przepisane po
 incydencie Latarek 17.07 — „grinder-pen zamiast gilotyny", klient dostałby inny produkt):**
@@ -895,9 +984,11 @@ makiety mają zwykle KURSYWNY SERIF-AKCENT na słowie-kluczu nagłówka — kode
 font szeryfowy (np. Fraunces italic) + klasę `.ac` i owinąć akcenty; każda sekcja treściowa
 MUSI mieć eyebrow+`<h2>` zgodny z makietą (gate: sekcja bez nagłówka = błąd); wyrównanie
 nagłówków wg makiety (edytorialne=lewa, nie domyślne centrowanie). **PARA FONTÓW Z KONTRASTEM
-(19.07 — koniec mono-Baloo): display zaokrąglony (Baloo 2) = H1/H2/marka; osobny WYRAZISTY krój
-(humanist typu Nunito Sans / ciepły grotesk — ⛔ NIE zimny Inter) = eyebrow, LICZBY, CENY, wymiary,
-akapity, label. H1 mobile FLOOR 36-40px (dziś 31px = za skromnie). Role + skala = `TOKENS-MAKIETY.md`.**
+(19.07 — koniec mono-Baloo): display = H1/H2/marka; osobny WYRAZISTY krój (humanist / ciepły
+grotesk — ⛔ NIE zimny Inter) = eyebrow, LICZBY, CENY, wymiary, akapity, label. H1 mobile FLOOR
+36-40px (dziś 31px = za skromnie). **KTÓRE kroje = PARTYTURA (20.07) — Baloo 2 nie jest domyślną
+(masażer i Drapek dzieliły ją → 9/10 zbieżności); `--font-display` == któryś z 3 poprzednich
+landingów = FAIL gate'u `cross_landing`.** Role + skala = `TOKENS-MAKIETY.md`.**
 Grafika-first: scena
 w interaktywnym stage'u NIE może być wyprana ani mała (tło stage=transparent, spoczynkowy
 glow ≤0.42, kadr ≥520px desktop) — biały wash marnuje bogatą generację.
@@ -996,11 +1087,15 @@ chip „Płacisz przy odbiorze" przykrywał hero-wideo na 390px.
 - **Copy action-first, ⛔ NIGDY COD na przycisku:** „Zamawiam <Produkt>" (1. os. + nazwa = poczucie
   własności, spójny czasownik na WSZYSTKICH przyciskach). „zapłacę przy odbiorze"/„za pobraniem" jako
   tekst przycisku = ZAKAZ — COD to ważna informacja, ale schodzi do mikrocopy/reassure POD przyciskiem.
-- **Design (kanoniczny `.btn.cta` — jedna zmiana → wszystkie landingi):** akcent na kremie/ciepłym
-  zdjęciu ma mieć kontrast ≥3:1 (WCAG 1.4.11). Sam token `--cta` bywa za jasny → kamuflaż („przycisk
-  harmonizuje zamiast dominować"). `.btn.cta` dostaje **GRADIENT z głębszym dołem** + **cień CIEPŁO-
-  BRĄZOWY** (nie akcent-glow — unosi z tła) + inset highlight + hairline. Tekst ciemny (biały na amber
-  ≈2.5:1 = WCAG FAIL). ⛔ **NIE zmieniać samego tokena** `--cta` (dzielą go swash `.hi`, węzły demo, FAQ).
+- **Design (kanoniczny `.btn.cta` — jedna zmiana → wszystkie landingi):** akcent na tle papieru /
+  ciepłym zdjęciu ma mieć kontrast ≥3:1 (WCAG 1.4.11). Jasny akcent bywa za słaby → kamuflaż
+  („przycisk harmonizuje zamiast dominować"). `.btn.cta` dostaje **GRADIENT z głębszym dołem** +
+  **cień CIEPŁO-BRĄZOWY** (nie akcent-glow — unosi z tła) + inset highlight + hairline.
+  **`--cta-ink` DOBIERANY DO AKCENTU, nie odwrotnie (20.07, partytura):** na jasnym akcencie
+  (amber/koral/piaskowy) tekst CIEMNY — biały na amber ≈2.5:1 = WCAG FAIL; na akcencie ciemnym
+  i nasyconym (zieleń butelkowa, głęboki błękit, burgund — typowe gdy akcent wyprowadzony
+  z koloru produktu) tekst BIAŁY. Mierzyć, nie zakładać. ⛔ **NIE zmieniać samego tokena**
+  `--cta` w trakcie budowy (dzielą go swash `.hi`, węzły demo, FAQ).
 - **Efekty (clinical-warmth):** hover-lift+cień, sheen-sweep (`::after`, ~.7s), arrow-nudge,
   `:focus-visible`; idle „breathing" = puls SAMEGO cienia (3.4s, klasa `.pulse` TYLKO hero+final,
   `prefers-reduced-motion`). ⛔ zakaz: heartbeat/szybki puls, neon-glow, flip koloru, migotanie (tandeta).
@@ -1279,6 +1374,48 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-20 (KANON vs PARTYTURA + GATE CROSS-LANDING — decyzja Tomka po audycie 4 gotowych
+  landingów na żywo)**: **FAKTY Z AUDYTU:** (1) para **masażer ↔ Drapek = 9/10** w skali „jak
+  bardzo wyglądają jak ta sama strona z podmienionym produktem" — oba najnowsze, oba PO doktrynie
+  TOKENS-MAKIETY z 19.07, czyli **doktryna podniosła jakość i JEDNOCZEŚNIE zacieśniła zbieżność**
+  (*„wymiana palety i zdjęć nie wystarcza — sygnaturę robi mapa sekcji + para font-display +
+  kształt CTA"*); (2) **asymetria aparatu**: fabryka miała pełen zestaw narzędzi wykrywających ZA
+  MAŁO spójności (SSOT tokenów + STYLE-DNA w KAŻDYM prompcie + checklista krytyka + „rozjazd
+  tokenu = regeneracja" + wymóg pliku w manifeście) i **ZERO mechanizmu wykrywającego ZA MAŁO
+  różnicy** — `gate-check.py` był w całości zakotwiczony w jednym slugu, phash near-dup działał
+  tylko WEWNĄTRZ landingu, krytyk F2 nie miał pytania „czy to wygląda jak poprzedni landing";
+  (3) **najostrzejszy dowód**: `--green` — jedyny kolor wyprowadzony z produktu — miał w tokenach
+  masażera JAWNY ZAKAZ wejścia do UI (*„appears ONLY in the product photography and in the logo,
+  never as a UI accent"*), czyli gdy fabryka wyprowadzała tożsamość z produktu, natychmiast
+  usuwała ją z interfejsu i wracała do wspólnego ambera.
+  **ZMIANY:** (a) `TOKENS-MAKIETY.md` rozdzielony na **KANON** (poziom warsztatu: rytm 8pt, jasne
+  tła, ≤3 kolory i DOKŁADNIE JEDEN akcent w twardym scope, para fontów z kontrastem, jeden
+  radius/ikony/trust-pill, ciepła głębia + grain, mechanika modułów, hierarchia oferty, ISTNIENIE
+  sygnatury) i **PARTYTURĘ** (kroje, kolor akcentu, rodzina tła, materiał/nastrój, archetyp hero,
+  dobór i kolejność sekcji, KTÓRY detal jest sygnaturą) — partytura obowiązkowo uzasadniona
+  w `PLAN.md`, a **odchylenie w jej obrębie NIE jest defektem i nie wolno go „naprawiać" do
+  normy** (cofanie dotyczy odtąd wyłącznie KANONU); (b) **reguła „kolor produktu nigdy jako
+  UI-accent" USUNIĘTA** — akcent wolno i ZALECA SIĘ wyprowadzić z realnego koloru produktu;
+  (c) **„jasne" ≠ „kremowe"** — dozwolona rodzina rozszerzona jawnie (krem, kość słoniowa, piasek,
+  glina rozbielona, chłodna biel, blady szałwiowy, bladoróżowy, jasny błękit; warunek: wysoka
+  jasność + niskie nasycenie + WCAG). ⛔ ciemne tła i neon BEZ ZMIAN (decyzja anty-scam);
+  (d) **BIBLIOTEKA ARCHETYPÓW HERO A–H** (§F2 pkt 2) — A „scena pełnoekranowa + scrim" oznaczony
+  jako ZUŻYTY (wymaga uzasadnienia); archetyp nie może powtórzyć poprzedniego landingu;
+  (e) **8 typów sygnatury wydawniczej** (swash / plusiki / hairline-ramka / stempel / numeracja
+  krokowa / znacznik-rożek / marker / taśma) — TOKENS §8; (f) **osie różnorodności CROSS-LANDING**
+  (PRZEWODNIK §2b): min. **3 z 5** osi różnicy vs poprzedni landing (rodzina tła · kolor akcentu ·
+  font display · archetyp hero · świat/materiał); (g) **Z6 dostał egzekucję** (dotąd jedno zdanie
+  bez gate'u); (h) **checklista krytyka F2 pyt. (8)**: „czy ten landing dałoby się pomylić
+  z poprzednim? na których osiach się różni?" — <3 osie = regeneracja PARTYTURY, nie kosmetyka;
+  (i) **F2.5 generuje per-landing TOKENS z jawnymi nagłówkami `## KANON` i `## PARTYTURA`**;
+  (j) **NOWY GATE `cross_landing`** w `gate-check.py` + `gate-manifest.json` (progi jako DANE:
+  `n_poprzednich=3`, `delta_e_min=15`, `sekwencja_pct_warn=80`): font display identyczny z 3
+  poprzednimi = FAIL · ΔE (CIE76/Lab) akcentu <15 = FAIL · archetyp hero == bezpośrednio
+  poprzedni = FAIL · sekwencja `<section id>` >80% podobna (LCS-Dice) = WARN · brak poprzedników
+  lub danych = SKIP. Tryb `--cross-only <slug>` do sprawdzenia partytury PRZED budową.
+  Zero zmian w HTML gotowych landingów (masażer/Drapek zostają jak są — gate raportuje na nich
+  FAIL zgodnie z prawdą; retro przy najbliższym dotknięciu).
 
 - **2026-07-19 (BRANDING R3 — pytanie Tomka „czy flow loga i marki jest tak dobre, jak się da?";
   synteza: research best-practices + audyt adwersarialny brand-forge, 2× Sonnet)**: F2.5

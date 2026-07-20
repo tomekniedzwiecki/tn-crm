@@ -117,6 +117,33 @@
     }
   },
 
+  "_opis_CROSS_LANDING": "ANTY-RODZENSTWO (20.07). Powod: audyt 4 gotowych landingow dal werdykt masazer <-> Drapek = 9/10 w skali 'ta sama strona z podmienionym produktem' — oba PO doktrynie TOKENS-MAKIETY z 19.07. Fabryka miala pelny aparat wykrywajacy ZA MALO spojnosci (SSOT + STYLE-DNA w kazdym prompcie + checklista krytyka + 'rozjazd tokenu = regeneracja') i ZERO mechanizmu wykrywajacego ZA MALO ROZNICY: gate-check byl w calosci zakotwiczony w JEDNYM slugu, phash near-dup dziala tylko WEWNATRZ landingu. Ten blok to jedyny check patrzacy POZA slug. Doktryna: STANDARD Z6 + TOKENS-MAKIETY.md 'KANON vs PARTYTURA' + PRZEWODNIK-GRAFICZNY §2b.",
+
+  "cross_landing": {
+    "severity": "FAIL",
+    "_opis": "Porownuje budowany landing z N poprzednio ZBUDOWANYMI (kolejnosc = mtime kod_glob/<slug>/index.html; nowszy = pozniejszy). Font display i akcent czytane z ZYWEGO HTML (:root + link do webfontow) — nie wymagaja archiwum. Archetyp hero z PLAN.md w archiwum (linia 'archetyp-hero: X'). Brak poprzednikow / brak danych = SKIP (nie crash, nie FAIL) — check musi dzialac na pierwszym landingu i na landingach sprzed doktryny.",
+    "n_poprzednich": 3,
+    "delta_e_min": 15,
+    "sekwencja_pct_warn": 80,
+    "sekwencja_severity": "WARN",
+    "font_severity": "FAIL",
+    "akcent_severity": "FAIL",
+    "archetyp_severity": "FAIL",
+    "kod_glob": "c:/repos_tn/tn-crm/sklepy/tomek-niedzwiecki/*/index.html",
+    "wyklucz_slugi": [],
+    "_opis_font": "Kolejnosc zrodel fontu display: (1) token --font-display z :root, (2) font-family z reguly CSS obejmujacej h1/h2, (3) pierwsza rodzina z linku Google Fonts. Porownanie po znormalizowanej nazwie rodziny (lowercase, bez separatorow).",
+    "font_display_tokeny": ["--font-display", "--font-disp", "--font-title", "--font-h"],
+    "font_naglowek_selektory": ["h1", "h2", ".h1", ".hero h1"],
+    "_opis_akcent": "Token akcentu = JEDYNY kolor akcentu landingu (historyczna nazwa --cta). Warianty -d/-ink/-soft/-2 pomijane (hover/tekst-na-przycisku/tint). Delta E = CIE76 na Lab (sRGB->XYZ D65->Lab); <15 = kolory z tego samego pasma = brak roznicy tozsamosciowej.",
+    "akcent_tokeny": ["--cta", "--accent", "--amber", "--brand", "--akcent"],
+    "akcent_wyklucz_sufiksy": ["-d", "-ink", "-soft", "-2", "-3", "-dark", "-hover", "-light"],
+    "_opis_archetyp": "Zrodlo = PLAN.md w archiwum landingu (glob jak sciezki.archiwum_glob). Brak linii w ktorymkolwiek z pary = SKIP (landingi sprzed 20.07 nie maja archetypu).",
+    "archetyp_plik": "PLAN.md",
+    "archetyp_regex": "archetyp[-_ ]?hero\\s*\\*{0,2}\\s*[:=]\\s*[*\\s_]{0,6}([A-Za-z])\\b",
+    "_opis_sekwencja": "Podobienstwo sekwencji <section id> = LCS-Dice (2*LCS/(len_a+len_b)) po normalizacji aliasami sekcja_typy.aliasy — order-aware, wiec zmiana KOLEJNOSCI sekcji obniza wynik (o to chodzi). Jaccard na zbiorze raportowany informacyjnie. WARN (nie FAIL), bo rdzen sekcji bywa wymuszony produktem.",
+    "sekwencja_wyklucz_id": ["footer", "topbar", "sticky"]
+  },
+
   "sieroty": {
     "severity": "FAIL",
     "assets_glob": "assets/*",

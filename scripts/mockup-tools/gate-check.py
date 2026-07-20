@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-gate-check.py <slug> [--archiwum <dir>] [--code <index.html>] [--manifest <json>] [--product-key <uuid>] [--no-net]
+gate-check.py <slug> [--archiwum <dir>] [--code <index.html>] [--manifest <json>] [--product-key <uuid>] [--no-net] [--cross-only]
 
 Zbiorczy GATE kompletnosci artefaktow landingu fabryki (R11a + R11b).
 Zrodlo prawdy o kompletnosci = TEN skrypt + gate-manifest.json (DANE), nie deklaracja agenta.
@@ -8,7 +8,11 @@ EXIT: 0 = brak FAIL (WARN/SKIP dozwolone), 1 = >=1 FAIL.
 
 Kategorie (manifest): files, dopasowanie, interakcje, grep_forbidden, sieroty, wagi,
 phash, baza, wideo_kafle, makiety_mobile, og_image, ledger_fazy, werdykt_rubryka,
-layout_diff, wiernosc, panel_sync (most fabryka->panel tn-sklepy wf2_*).
+layout_diff, wiernosc, cross_landing (anty-rodzenstwo vs 3 poprzednie landingi),
+panel_sync (most fabryka->panel tn-sklepy wf2_*).
+
+--cross-only: odpala WYLACZNIE check cross_landing (partytura vs poprzednie landingi) —
+do uzycia w F1/F2.5, PRZED wygenerowaniem makiet, zeby nie odbic sie od gate'u dopiero w F6.
 
 Wymaga: Pillow, imagehash, requests (venv scripts/mockup-tools/.venv).
 NIE modyfikuje niczego — czyta artefakty i (opcjonalnie) siec + baze.
@@ -984,6 +988,254 @@ def check_wiernosc(res, M, ctx):
             res.add("wiernosc", os.path.basename(ap), status_for(False, sev),
                     "NIEZGODNA — grafika niezgodna z produktem (petla regen/eskalacja niedomknieta)")
 
+# ================================================================== CROSS-LANDING: anty-rodzenstwo (partytura vs N poprzednich)
+# Powod (audyt 20.07): masazer <-> Drapek = 9/10 'ta sama strona z podmienionym produktem'.
+# Caly gate byl zakotwiczony w JEDNYM slugu — zero mechanizmu na ZA MALO ROZNICY.
+# Doktryna: STANDARD Z6 + TOKENS-MAKIETY.md 'KANON vs PARTYTURA' + PRZEWODNIK-GRAFICZNY §2b.
+_GENERIC_FONTS = {"sans-serif", "serif", "monospace", "cursive", "fantasy", "system-ui",
+                  "ui-sans-serif", "ui-serif", "-apple-system", "blinkmacsystemfont",
+                  "inherit", "initial", "unset", "segoe ui", "helvetica neue", "arial",
+                  "roboto", "helvetica", "georgia", "times new roman"}
+
+def _hex_to_rgb(h):
+    h = h.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+def _rgb_to_lab(rgb):
+    """sRGB (0-255) -> CIE Lab (D65). Bez zaleznosci zewnetrznych (Pillow niepotrzebny)."""
+    def inv(c):
+        c = c / 255.0
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (inv(x) for x in rgb)
+    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
+    y = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 1.00000
+    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
+    def f(t):
+        return t ** (1.0 / 3) if t > 0.008856 else (7.787 * t + 16.0 / 116)
+    fx, fy, fz = f(x), f(y), f(z)
+    return (116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz))
+
+def _delta_e76(h1, h2):
+    """CIE76 na Lab — wystarczajaco ostry do pytania 'czy to ten sam kolor akcentu'."""
+    a, b = _rgb_to_lab(_hex_to_rgb(h1)), _rgb_to_lab(_hex_to_rgb(h2))
+    return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
+
+def _css_source(html):
+    """HTML bez <script>/<template>/<noscript>, ale Z ZACHOWANYM <style> — strip_scripts()
+       wycina takze <style>, wiec do parsowania CSS (tokeny :root, reguly h1) jest bezuzyteczny."""
+    return re.sub(r"(?is)<(script|template|noscript)\b[^>]*>.*?</\1>", " ", html or "")
+
+def _root_vars(html):
+    """{--token: wartosc} ze WSZYSTKICH blokow :root{...}; pierwsze wystapienie wygrywa."""
+    out = {}
+    for m in re.finditer(r":root\s*\{(.*?)\}", _css_source(html), re.S):
+        body = re.sub(r"/\*.*?\*/", " ", m.group(1), flags=re.S)
+        for decl in body.split(";"):
+            if ":" not in decl:
+                continue
+            k, v = decl.split(":", 1)
+            k, v = k.strip(), v.strip()
+            if k.startswith("--") and k not in out:
+                out[k] = v
+    return out
+
+def _first_family(decl):
+    """Pierwsza NIEgeneryczna rodzina z deklaracji font-family."""
+    for part in (decl or "").split(","):
+        p = part.strip().strip('"').strip("'").strip()
+        if not p or p.startswith("var(") or p.lower() in _GENERIC_FONTS:
+            continue
+        return p
+    return None
+
+def _font_display(html, m):
+    """(rodzina, zrodlo) — (1) token --font-display, (2) regula CSS z h1/h2, (3) link Google Fonts."""
+    # komentarze CSS WYCIETE: '/* wymuszony lam h1 */' przed regula .hero-price dawalo
+    # falszywe trafienie selektora h1 (masazer -> 'Nunito Sans' zamiast display 'Baloo 2')
+    css = re.sub(r"/\*.*?\*/", " ", _css_source(html), flags=re.S)
+    rv = _root_vars(html)
+    for tok in m.get("font_display_tokeny", []):
+        fam = _first_family(rv.get(tok, ""))
+        if fam:
+            return fam, tok
+    sels = [s.lower() for s in m.get("font_naglowek_selektory", ["h1"])]
+    for mm in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+        sel, body = mm.group(1).strip().lower(), mm.group(2)
+        if "font-family" not in body:
+            continue
+        if not any(re.search(r"(^|[\s,>+~])" + re.escape(s) + r"($|[\s,{:.\[])", sel + " ") for s in sels):
+            continue
+        fam = _first_family(re.search(r"font-family\s*:\s*([^;}]+)", body).group(1))
+        if fam:
+            return fam, "css h1/h2"
+    for href in re.findall(r"fonts\.googleapis\.com/css2\?([^\"'\s>]+)", html or ""):
+        fams = re.findall(r"family=([^&:]+)", href.replace("&amp;", "&"))
+        if fams:
+            return fams[0].replace("+", " ").strip(), "google fonts"
+    return None, None
+
+def _akcent_hex(html, m):
+    """(hex, token) jedynego akcentu; warianty -d/-ink/-soft pomijane (hover/tekst/tint)."""
+    rv = _root_vars(html)
+    bad = tuple(m.get("akcent_wyklucz_sufiksy", []))
+    for tok in m.get("akcent_tokeny", []):
+        if tok.endswith(bad):
+            continue
+        val = rv.get(tok, "")
+        vm = re.search(r"var\(\s*(--[\w-]+)", val)
+        if vm:
+            val = rv.get(vm.group(1), "")
+        hm = re.search(r"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b", val)
+        if hm:
+            return "#" + hm.group(1), tok
+    return None, None
+
+def _sekcje_norm(html, M, m):
+    al = M.get("sekcja_typy", {}).get("aliasy", {})
+    excl = [norm(x) for x in m.get("sekwencja_wyklucz_id", [])]
+    out = []
+    for sid in parse_sections(html):
+        n = norm(al.get(sid, sid))
+        if n and n not in excl:
+            out.append(n)
+    return out
+
+def _lcs_len(a, b):
+    dp = [0] * (len(b) + 1)
+    for x in a:
+        prev = 0
+        for j, y in enumerate(b):
+            cur = dp[j + 1]
+            dp[j + 1] = prev + 1 if x == y else max(dp[j + 1], dp[j])
+            prev = cur
+    return dp[len(b)]
+
+def _archetyp(arch_dir, m):
+    if not arch_dir:
+        return None
+    md = read_text(os.path.join(arch_dir, m.get("archetyp_plik", "PLAN.md").replace("/", os.sep)))
+    if not md:
+        return None
+    am = re.search(m.get("archetyp_regex", r"archetyp[-_ ]?hero\s*[:=]\s*([A-Za-z])\b"), md, re.I)
+    return am.group(1).upper() if am else None
+
+def _poprzednicy(M, m, ctx):
+    """[(slug, html, archiwum)] — N landingow zbudowanych PRZED tym (mtime index.html), od najnowszego."""
+    pat = m.get("kod_glob", "").replace("/", os.sep)
+    excl = set(m.get("wyklucz_slugi", [])) | {ctx["slug"]}
+    try:
+        mine = os.path.getmtime(ctx["code"])
+    except OSError:
+        return []
+    cand = []
+    for p in glob.glob(pat):
+        s = os.path.basename(os.path.dirname(p))
+        if s in excl:
+            continue
+        try:
+            t = os.path.getmtime(p)
+        except OSError:
+            continue
+        if t < mine:
+            cand.append((t, s, p))
+    cand.sort(reverse=True)
+    out = []
+    for _, s, p in cand[:int(m.get("n_poprzednich", 3))]:
+        html = read_text(p)
+        if html:
+            out.append((s, html, latest_archiwum(M["sciezki"]["archiwum_glob"], s)))
+    return out
+
+def check_cross_landing(res, M, ctx):
+    """ANTY-RODZENSTWO — partytura TEGO landingu vs N poprzednio zbudowanych.
+       Font display / kolor akcentu / archetyp hero = FAIL; sekwencja sekcji = WARN.
+       Brak poprzednikow lub brak danych = SKIP (pierwszy landing, landingi sprzed doktryny)."""
+    m = M.get("cross_landing")
+    if not m:
+        res.add("cross_landing", "(config)", "SKIP", "brak cross_landing w manifescie")
+        return
+    prev = _poprzednicy(M, m, ctx)
+    if not prev:
+        res.add("cross_landing", "(poprzednie landingi)", "SKIP",
+                "brak wczesniejszych landingow — nie ma z czym porownac")
+        return
+    res.add("cross_landing", "poprzednicy (od najnowszego)", "PASS",
+            ", ".join(s for s, _, _ in prev))
+    html = ctx["html"]
+
+    # --- 1. FONT DISPLAY (partytura; identyczny z ktoryms z N = FAIL)
+    sev_f = m.get("font_severity", m["severity"])
+    fam, src = _font_display(html, m)
+    if not fam:
+        res.add("cross_landing", "font display", "SKIP", "nie wykryto rodziny display w kodzie")
+    else:
+        same = [s for s, h, _ in prev if (_font_display(h, m)[0] or "") and norm(_font_display(h, m)[0]) == norm(fam)]
+        res.add("cross_landing", "font display != 3 poprzednie", status_for(not same, sev_f),
+                ("'%s' (zrodlo: %s)" % (fam, src)) if not same
+                else "'%s' POWTORZONY z: %s — partytura z nawyku (TOKENS §1)" % (fam, ", ".join(same)))
+
+    # --- 2. KOLOR AKCENTU (Delta E CIE76 < progu = to samo pasmo = FAIL)
+    sev_a = m.get("akcent_severity", m["severity"])
+    dmin = float(m.get("delta_e_min", 15))
+    hx, tok = _akcent_hex(html, m)
+    if not hx:
+        res.add("cross_landing", "akcent: dE >= %.0f" % dmin, "SKIP",
+                "nie wykryto tokena akcentu (%s)" % "/".join(m.get("akcent_tokeny", [])))
+    else:
+        bliskie, opis = [], []
+        for s, h, _ in prev:
+            ph, _t = _akcent_hex(h, m)
+            if not ph:
+                continue
+            d = _delta_e76(hx, ph)
+            opis.append("%s %s dE=%.1f" % (s, ph, d))
+            if d < dmin:
+                bliskie.append("%s (%s, dE=%.1f)" % (s, ph, d))
+        if not opis:
+            res.add("cross_landing", "akcent: dE >= %.0f" % dmin, "SKIP",
+                    "poprzednie landingi bez wykrywalnego tokena akcentu")
+        else:
+            res.add("cross_landing", "akcent: dE >= %.0f" % dmin, status_for(not bliskie, sev_a),
+                    ("%s [%s] · %s" % (hx, tok, "; ".join(opis))) if not bliskie
+                    else "%s ZA BLISKO: %s (akcent = partytura, wolno wyprowadzic z koloru produktu)"
+                         % (hx, "; ".join(bliskie)))
+
+    # --- 3. ARCHETYP HERO (vs BEZPOSREDNIO poprzedni)
+    sev_h = m.get("archetyp_severity", m["severity"])
+    mine_a = _archetyp(ctx["archiwum"], m)
+    prev_slug, _ph, prev_arch_dir = prev[0]
+    prev_a = _archetyp(prev_arch_dir, m)
+    if not mine_a or not prev_a:
+        brak = []
+        if not mine_a: brak.append("ten landing")
+        if not prev_a: brak.append(prev_slug)
+        res.add("cross_landing", "archetyp hero != poprzedni", "SKIP",
+                "brak linii 'archetyp-hero:' w PLAN.md: %s" % ", ".join(brak))
+    else:
+        ok = mine_a != prev_a
+        res.add("cross_landing", "archetyp hero != poprzedni", status_for(ok, sev_h),
+                ("%s (poprzedni %s: %s)" % (mine_a, prev_slug, prev_a)) if ok
+                else "OBA '%s' — hero to najmocniejszy nosnik tozsamosci (STANDARD §F2 pkt 2)" % mine_a)
+
+    # --- 4. SEKWENCJA SEKCJI (LCS-Dice; WARN — rdzen bywa wymuszony produktem)
+    sev_s = m.get("sekwencja_severity", "WARN")
+    prog = float(m.get("sekwencja_pct_warn", 80))
+    a = _sekcje_norm(html, M, m)
+    b = _sekcje_norm(prev[0][1], M, m)
+    if not a or not b:
+        res.add("cross_landing", "sekwencja sekcji < %.0f%%" % prog, "SKIP", "brak <section id> po ktorejs stronie")
+    else:
+        lcs = _lcs_len(a, b)
+        dice = 200.0 * lcs / (len(a) + len(b))
+        jac = 100.0 * len(set(a) & set(b)) / max(1, len(set(a) | set(b)))
+        ok = dice <= prog
+        res.add("cross_landing", "sekwencja sekcji < %.0f%%" % prog, status_for(ok, sev_s),
+                "LCS-Dice %.0f%% vs %s (Jaccard %.0f%%, %d/%d sekcji wspolnych w kolejnosci)%s"
+                % (dice, prev_slug, jac, lcs, max(len(a), len(b)),
+                   "" if ok else " — mapa sekcji z nawyku (PLAN F1)"))
+
 # ================================================================== PANEL-SYNC: egzekwowalny most fabryka -> panel tn-sklepy (wf2_*)
 def _pg_crm(M, env, table, params, timeout):
     """GET PostgREST na projekcie CRM. Host WYMUSZONY z manifestu (panel_sync.host),
@@ -1404,6 +1656,7 @@ CHECK_ORDER = [
     ("werdykt_rubryka", check_werdykt_rubryka),
     ("layout_diff", check_layout_diff),
     ("wiernosc", check_wiernosc),
+    ("cross_landing", check_cross_landing),
     ("panel_sync", check_panel_sync),
     ("published", check_published),
     ("finalny_pass", check_finalny_pass),
@@ -1417,6 +1670,8 @@ def main():
     ap.add_argument("--manifest", default=os.path.join(SCRIPT_DIR, "gate-manifest.json"))
     ap.add_argument("--product-key")
     ap.add_argument("--no-net", action="store_true", help="pomin siec i baze")
+    ap.add_argument("--cross-only", action="store_true",
+                    help="tylko check cross_landing (partytura vs poprzednie landingi) — F1/F2.5")
     ap.add_argument("--published", help="tryb go-live: URL/sciezka LIVE — FAIL gdy zostaly {{}}/noindex/nierozwiazane id")
     args = ap.parse_args()
 
@@ -1433,8 +1688,10 @@ def main():
     print("=" * 74)
 
     if not arch or not os.path.isdir(arch):
-        print("BLAD: brak katalogu archiwum dla slug=%s" % slug)
-        return 1
+        if not args.cross_only:
+            print("BLAD: brak katalogu archiwum dla slug=%s" % slug)
+            return 1
+        arch = ""  # --cross-only: archiwum potrzebne tylko na archetyp (-> SKIP)
     html = read_text(code)
     if html is None:
         print("BLAD: brak pliku kodu %s" % code)
@@ -1463,7 +1720,8 @@ def main():
     print("-" * 74)
 
     res = Results()
-    for name, fn in CHECK_ORDER:
+    order = [(n, f) for n, f in CHECK_ORDER if n == "cross_landing"] if args.cross_only else CHECK_ORDER
+    for name, fn in order:
         try:
             fn(res, M, ctx)
         except Exception as e:
