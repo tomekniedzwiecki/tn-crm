@@ -884,6 +884,18 @@ Grafika-first: scena
 w interaktywnym stage'u NIE może być wyprana ani mała (tło stage=transparent, spoczynkowy
 glow ≤0.42, kadr ≥520px desktop) — biały wash marnuje bogatą generację.
 
+**🎯 KADR SCENY W SLOCIE = BOHATER + LINIA FADE (Tomek 20.07 na masażerze — hero/problem/final
+mobile miały bohatera uciętego u góry i martwy pas kremu w boksie; trzeci incydent tej klasy
+po Drapku i ster-hero):** dla KAŻDEJ sceny w pasie/slocie (zwłaszcza pionowe 2:3 w pasach
+mobile) `object-position` ustawia się ŚWIADOMIE względem dwóch punktów pliku: (1) BOHATER
+(twarz/produkt w pełni w kadrze — nigdy ucięta głowa), (2) LINIA FADE (wbudowane przejście
+foto→krem ma wypadać w dolnych ~15-25% boksa, a treść/karta pod pasem WYNURZA SIĘ z tego
+przejścia — nie wisi pod pustym pasem kremu). ⛔ default `center` dla scen z fade = zakaz.
+Werdykt WIZUALNY kadru (zrzut per viewport: „bohater cały? martwa strefa zminimalizowana?
+treść na przejściu?") = część zamknięcia sekcji w F7.1; `img-fit.py` mierzy % ucięcia, ale
+NIE mówi CO ucięte — procent nie zastępuje oczu. Egzekucja maszynowa: check `fade_line`
+(pozycja linii fade pliku w renderowanym boksie) — patrz img-fit/detail-lint.
+
 **Detale rzemiosła:** media kart = jeden `aspect-ratio`+`object-fit:cover` na sekcję
 (UWAGA: atrybut HTML `height` na `<img>` BIJE CSS aspect-ratio — dla kafli dawać w CSS
 i width, i height) · hero mobile: jasny panel/scrim pod copy (tekst nie może nachodzić
