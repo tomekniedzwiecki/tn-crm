@@ -59,7 +59,7 @@ Deploy: zawsze `--no-verify-jwt --project-ref yxmavwkwnfuphjqbelws` z katalogu `
 
 - `collect-trendy.mjs N` — skan hashtagowy (requireShop) → ingest → dedup
 - `img-hash.py` — phash packshotów (Python imagehash/PIL czyta webp; edge nie dekoduje obrazów). **Odpalać po każdej serii skanów, przed dedupem** — produkty z crona czekają na hash do lokalnej sesji
-- `rev-run.cjs` / `paced-run.cjs` / `multi-run.cjs` — reverse-image AliExpress (Playwright, aparat Ali, anti-bot per IP ~65-70/sesję, cooldowny). Wybierają packshot `[SHOP]` przed okładką `[COVER]`. **2026-07-16: dopasowanie Ali WSTRZYMANE na życzenie Tomka**
+- `rev-run.cjs` / `paced-run.cjs` / `multi-run.cjs` — reverse-image AliExpress (Playwright, aparat Ali, anti-bot per IP ~65-70/sesję, cooldowny). Wybierają packshot `[SHOP]` przed okładką `[COVER]`. **2026-07-20: dopasowanie Ali WZNOWIONE (sygnał Tomka; wcześniej pauza od 16.07)**
 
 ## Reguły jakości (auto-filter przydatności)
 

@@ -666,6 +666,7 @@ function _thumb(x){const p=_packshots(x);return p.length?p[0]:(x.cover||'');}
 function _qReady(x){const s=x.tt_shop||{};const price=s.price_real!=null||s.price_display;return s.sold_count!=null&&!!price&&_packshots(x).length>0;}
 function _qDogrywka(x){return !x.shop_url&&!x.tt_shop;}
 function _qNopack(x){return (!!x.tt_shop||!!x.shop_url)&&_packshots(x).length===0;}
+function _qAli(x){return Array.isArray(x.ali_candidates)&&x.ali_candidates.length>0;}   // runner znalazł propozycje Ali → operator wybiera aukcję
 function soldClass(n){if(n==null)return 'na';if(n<10000)return 'g1';if(n<=50000)return 'g2';return 'g3';}
 
 // ── FILTRY / SORT ──
@@ -700,6 +701,7 @@ function rowMatches(x){
     if(SUBQ==='ready'&&!_qReady(x))return false;
     if(SUBQ==='dogrywka'&&!_qDogrywka(x))return false;
     if(SUBQ==='nopack'&&!_qNopack(x))return false;
+    if(SUBQ==='ali'&&!_qAli(x))return false;
   }
   if(FPROOF&&!(x.tt_shop&&+x.tt_shop.sold_count>0))return false;
   if(FSEASONOFF&&!_seasonOff(x))return false;
@@ -781,6 +783,8 @@ function renderChips(){
     const rn=ROWS.filter(x=>x.status==='pending'&&_qReady(x)).length;
     const dn=ROWS.filter(x=>x.status==='pending'&&_qDogrywka(x)).length;
     const pn=ROWS.filter(x=>x.status==='pending'&&_qNopack(x)).length;
+    const an=ROWS.filter(x=>x.status==='pending'&&_qAli(x)).length;
+    h+=`<button class="fchip sq ${SUBQ==='ali'?'on':''}" onclick="setSubq('ali')" title="Runner znalazł aukcje AliExpress — wybierz właściwą (klik w kandydata = zatwierdzenie z linkiem)">🔗 Z propozycją Ali${an?` · ${an}`:''}</button>`;
     h+=`<button class="fchip sq ${SUBQ==='ready'?'on':''}" onclick="setSubq('ready')">✅ Gotowe do decyzji${rn?` · ${rn}`:''}</button>`;
     h+=`<button class="fchip sq ${SUBQ==='dogrywka'?'on':''}" onclick="setSubq('dogrywka')">◦ Do dogrywki${dn?` · ${dn}`:''}</button>`;
     h+=`<button class="fchip sq ${SUBQ==='nopack'?'on':''}" onclick="setSubq('nopack')">🖼 Bez packshotów${pn?` · ${pn}`:''}</button>`;
@@ -864,6 +868,7 @@ function listRowHtml(x){
         ${sc!=null?`<span class="rsc">⚡${sc}</span>`:''}
         ${hasVid?`<span class="ic" title="ma wideo">🎬</span>`:''}
         ${packs.length?`<span class="ic" title="packshoty">🖼${packs.length}</span>`:''}
+        ${x.status==='pending'&&_qAli(x)?`<span class="ic" title="propozycje AliExpress do wyboru">🔗${x.ali_candidates.length}</span>`:''}
         ${(()=>{const g=x.key?GROWTH.get(x.key):null;return g!=null&&g>0?`<span class="grBadge" title="wzrost sprzedaży tydzień do tygodnia">▲ +${g}%/tydz.</span>`:'';})()}
         ${seasonMiniHtml(x)}
       </div>
