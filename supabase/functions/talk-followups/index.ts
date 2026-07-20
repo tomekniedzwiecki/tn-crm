@@ -513,7 +513,14 @@ Deno.serve(async (req: Request) => {
         : (Date.parse(lead.created_at || '') || 0)
       if (anchorMs) anchored.push({ lead, sess, anchorMs })
     }
-    anchored.sort((a, b) => a.anchorMs - b.anchorMs)
+    // Priorytet: leady z WYSTAWIONĄ ofertą (seria B, najbliżej rezerwacji) idą
+    // PRZED backlogiem serii A — inaczej stare leady zjadają budżet dzienny,
+    // a najgorętsi czekają dni na pierwszy mail. W obrębie grup: najstarsi pierwsi.
+    anchored.sort((a, b) => {
+      const ao = a.sess?.offer_token ? 0 : 1
+      const bo = b.sess?.offer_token ? 0 : 1
+      return ao !== bo ? ao - bo : a.anchorMs - b.anchorMs
+    })
 
     // dzienny sufit: ile followupów już wyszło dziś (od północy Warszawy w przybliżeniu UTC-dnia)
     let mailBudget = MAX_PER_RUN
