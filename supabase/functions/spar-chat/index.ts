@@ -1432,7 +1432,10 @@ Deno.serve(async (req) => {
       }
       await refreshKnowhowSummary(sb, sessionId, leadId, (sess.idea_source as string | null) || 'wlasny')
 
-      return jsonResponse({ ok: true, filename, opis, pewnosc, items_added: itemRows.length - 1 }, 200, corsHeaders)
+      // `content` = ta sama treść co zapisana do historii (attachMsg) — front renderuje
+      // kafelek live IDENTYCZNIE jak po przeładowaniu (blok „Zobacz, co system odczytał"
+      // dostępny od razu, nie dopiero po F5). `tresc` osobno dla wygody.
+      return jsonResponse({ ok: true, filename, opis, pewnosc, items_added: itemRows.length - 1, tresc: trescCut, content: attachMsg }, 200, corsHeaders)
     }
     // Czat startuje BEZ maila i BEZ profesji (czat-first; bramka inline po
     // MAX_TURNS_BEZ_KONTAKTU turach). Jeśli pola przyszły — walidujemy format.
