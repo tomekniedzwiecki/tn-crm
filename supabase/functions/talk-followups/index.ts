@@ -51,6 +51,7 @@ const MAX_START_AGE_H = 30 * 24      // nie zaczynaj serii, gdy kotwica starsza 
 const CHANNEL_GAP_MS = 10 * 3600 * 1000
 const MAX_PER_RUN = 6
 const DAILY_CAP = 60                 // twardy sufit wysyłek/dobę (higiena reputacji domeny)
+const TOTAL_CAP_PER_LEAD = 7         // wspólny sufit dotknięć na człowieka (obie serie razem)
 
 // ── SERIA B: lead z WYSTAWIONĄ ofertą (talk_sessions.offer_token, bez wpłaty) ─
 // Oś liczona od PIERWSZEJ oferty leada (regeneracja po wygaśnięciu NIE restartuje
@@ -296,7 +297,7 @@ async function withSignature(SUPABASE_URL: string, SERVICE_KEY: string, subject:
   return html
 }
 
-const LEAD_COLS = 'id, name, email, phone, direction, current_income, budget, weekly_hours, experience, open_question, created_at, followups_muted_at'
+const LEAD_COLS = 'id, name, email, phone, direction, current_income, budget, weekly_hours, experience, open_question, created_at, followups_muted_at, status'
 const SESS_COLS = 'id, lead_id, offer_token, last_seen_at, last_phase, tags, turns, is_test, created_at'
 const OFFER_COLS = 'id, lead_id, unique_token, valid_until, view_count, viewed_at, created_at'
 const PROMPT_KEYS_A = ['rozmowa_followup_system', 'rozmowa_followup_krok1', 'rozmowa_followup_krok2', 'rozmowa_followup_krok3', 'rozmowa_followup_krok4', 'rozmowa_followup_krok5']
@@ -394,7 +395,11 @@ Deno.serve(async (req: Request) => {
     // ── Przebieg crona ───────────────────────────────────────────────────────
     const now = Date.now()
     const hour = warsawHour()
-    const out: Record<string, number> = { sent: 0, sent_oferta: 0, skipped_flag_off: 0, skipped_offer_off: 0, cancelled: 0, errors: 0, candidates: 0, candidates_oferta: 0 }
+    const out: Record<string, number> = {
+      sent: 0, sent_oferta: 0, skipped_flag_off: 0, skipped_offer_off: 0, cancelled: 0,
+      errors: 0, candidates: 0, candidates_oferta: 0,
+      skipped_cap: 0, skipped_offer_crm: 0, offer_token_stale: 0, offer_token_orphan: 0,
+    }
     if (hour < 8 || hour >= 21) return jsonResponse({ ok: true, window: 'closed', hour }, 200)
     if (!promptsReady && !promptsReadyOffer) return jsonResponse({ ok: false, error: 'prompty_niekompletne — uzupełnij w crm/settings' }, 200)
 
@@ -449,15 +454,40 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Ostatni outbound mail do leada (bramka między-dotykowa 10 h) — okno 24 h wystarcza.
+    // Mapa adres → leady. Dopasowania po mailu są konieczne, bo część zamówień
+    // i maili masowych nie ma lead_id, a jeden człowiek bywa w bazie kilka razy
+    // (rejestracja przez różne lejki) — płatność na jednym rekordzie musi zatrzymać
+    // serię na wszystkich jego bliźniakach.
+    const leadEmails: string[] = []
+    const emailToLeadIds = new Map<string, string[]>()
+    for (const l of leadById.values()) {
+      const k = String(l.email || '').toLowerCase().trim()
+      if (!k) continue
+      if (!emailToLeadIds.has(k)) { emailToLeadIds.set(k, []); leadEmails.push(k) }
+      emailToLeadIds.get(k)!.push(String(l.id))
+    }
+
+    // Ostatni outbound mail do leada (bramka między-dotykowa 10 h) — okno 24 h.
+    // Dopasowanie po lead_id ORAZ po adresie: masowe wysyłki zapisują maile bez
+    // lead_id, więc sam lead_id ich nie widzi i followup potrafiłby dojść tuż po masówce.
     const lastMailByLead = new Map<string, number>()
     {
+      const since = new Date(now - 24 * 3600 * 1000).toISOString()
+      const mark = (ids: string[], iso: string) => {
+        const ts = Date.parse(iso) || 0
+        for (const lid of ids) if (ts > (lastMailByLead.get(lid) || 0)) lastMailByLead.set(lid, ts)
+      }
       const { data: em } = await supabase.from('email_messages')
         .select('lead_id, created_at').eq('direction', 'outbound').in('lead_id', leadIds)
-        .gte('created_at', new Date(now - 24 * 3600 * 1000).toISOString()).limit(2000)
-      for (const m of (em || []) as { lead_id: string; created_at: string }[]) {
-        const ts = Date.parse(m.created_at) || 0
-        if (ts > (lastMailByLead.get(m.lead_id) || 0)) lastMailByLead.set(m.lead_id, ts)
+        .gte('created_at', since).limit(2000)
+      for (const m of (em || []) as { lead_id: string; created_at: string }[]) mark([m.lead_id], m.created_at)
+      if (leadEmails.length) {
+        const { data: em2 } = await supabase.from('email_messages')
+          .select('to_email, created_at').eq('direction', 'outbound').in('to_email', leadEmails)
+          .gte('created_at', since).limit(2000)
+        for (const m of (em2 || []) as { to_email: string; created_at: string }[]) {
+          mark(emailToLeadIds.get(String(m.to_email || '').toLowerCase().trim()) || [], m.created_at)
+        }
       }
     }
     // Bramka reputacji: mail #3+ wymaga ≥1 DOSTARCZONEGO wcześniejszego followupu
@@ -469,32 +499,60 @@ Deno.serve(async (req: Request) => {
         .not('delivered_at', 'is', null).limit(2000)
       for (const m of (dm || []) as { lead_id: string }[]) deliveredLeads.add(m.lead_id)
     }
-    // Opłacone zamówienia → twardy stop serii.
+    // Opłacone zamówienia → TWARDY STOP obu serii. Dopasowanie po lead_id ORAZ po
+    // customer_email: zamówienia oznaczone jako opłacone ręcznie w orders.html omijają
+    // backfill webhooka i zostają z lead_id = NULL (incydent 20.07: klient po wpłacie
+    // 11 000 zł kwalifikował się do maila „wróć do rozmowy").
+    // FAIL-CLOSED: gdy zapytanie padnie, przerywamy przebieg — bez działającej ochrony
+    // NIE wysyłamy nic. Bez filtra .in(leadIds), żeby nie budować kilkukilobajtowego URL-a.
     const paidLeads = new Set<string>()
     {
-      const { data: po } = await supabase.from('orders')
-        .select('lead_id').eq('status', 'paid').in('lead_id', leadIds).limit(2000)
-      for (const o of (po || []) as { lead_id: string }[]) if (o.lead_id) paidLeads.add(o.lead_id)
+      const { data: po, error: poErr } = await supabase.from('orders')
+        .select('lead_id, customer_email').eq('status', 'paid').limit(5000)
+      if (poErr) {
+        console.error('[talk-followups] paid-guard padł — przerywam przebieg:', poErr)
+        return jsonResponse({ ok: false, error: 'paid_guard_unavailable' }, 200)
+      }
+      for (const o of (po || []) as { lead_id: string | null; customer_email: string | null }[]) {
+        if (o.lead_id) paidLeads.add(o.lead_id)
+        const k = String(o.customer_email || '').toLowerCase().trim()
+        if (k) for (const lid of emailToLeadIds.get(k) || []) paidLeads.add(lid)
+      }
     }
-    // Oferty z rozmowy dla leadów z offer_token (seria B). Kotwica osi = PIERWSZA
-    // oferta leada (regeneracja po wygaśnięciu nie restartuje serii).
+    // Oferty leadów — WSZYSTKIE, nie tylko source='rozmowa'. Lead z ofertą wystawioną
+    // ręcznie w CRM dostawał serię A obiecującą, że „dopiero dostanie wycenę", choć
+    // miał już ofertę na 11-12 tys. (incydent 20.07, 8 leadów) — a przypomnienia
+    // dublował offer-emails-cron. Takich leadów seria A nie dotyka.
     // deno-lint-ignore no-explicit-any
-    const offersByLead = new Map<string, { firstMs: number; rows: any[] }>()
+    const offersByLead = new Map<string, any[]>()
     {
-      const withOffer = [...sessByLead.values()].filter((s) => s.offer_token)
-        .map((s) => String(s.lead_id)).filter((id) => leadById.has(id))
-      if (withOffer.length) {
-        const { data: offs } = await supabase.from('client_offers').select(OFFER_COLS)
-          .eq('source', 'rozmowa').in('lead_id', withOffer).limit(2000)
-        for (const o of (offs || [])) {
-          const lid = String(o.lead_id)
-          const e = offersByLead.get(lid) || { firstMs: Infinity, rows: [] }
-          e.rows.push(o)
-          const ts = Date.parse(o.created_at || '') || 0
-          if (ts && ts < e.firstMs) e.firstMs = ts
-          offersByLead.set(lid, e)
+      // deno-lint-ignore no-explicit-any
+      const collect = (rows: any[] | null) => {
+        for (const o of (rows || [])) {
+          const lid = String(o.lead_id || '')
+          if (!lid || !leadById.has(lid)) continue
+          const arr = offersByLead.get(lid) || []
+          if (!arr.some((x) => x.id === o.id)) arr.push(o)
+          offersByLead.set(lid, arr)
         }
       }
+      // GOTCHA: PostgREST tnie wynik na db-max-rows (1000) NIEZALEŻNIE od .limit() —
+      // przy zapytaniu „wszystkie oferty z 180 dni" najnowsze (te z rozmowy) wypadały
+      // poza pulę i kod uznawał żywe oferty za osierocone. Dlatego DWA zapytania:
+      // (1) komplet ofert z rozmowy (jest ich mało), (2) najnowsze oferty CRM.
+      const { data: talkOffers, error: e1 } = await supabase.from('client_offers')
+        .select(OFFER_COLS + ', source').eq('source', 'rozmowa')
+        .order('created_at', { ascending: false }).limit(1000)
+      if (e1) {
+        console.error('[talk-followups] pobranie ofert z rozmowy padło — przerywam:', e1)
+        return jsonResponse({ ok: false, error: 'offers_unavailable' }, 200)
+      }
+      collect(talkOffers)
+      const { data: crmOffers } = await supabase.from('client_offers')
+        .select(OFFER_COLS + ', source')
+        .gte('created_at', new Date(now - 180 * 24 * 3600 * 1000).toISOString())
+        .order('created_at', { ascending: false }).limit(1000)
+      collect(crmOffers)
     }
 
     // Recovery martwych claimów: pending oznacza „claim zrobiony, wysyłka w toku".
@@ -520,13 +578,18 @@ Deno.serve(async (req: Request) => {
         : (Date.parse(lead.created_at || '') || 0)
       if (anchorMs) anchored.push({ lead, sess, anchorMs })
     }
-    // Priorytet: leady z WYSTAWIONĄ ofertą (seria B, najbliżej rezerwacji) idą
-    // PRZED backlogiem serii A — inaczej stare leady zjadają budżet dzienny,
-    // a najgorętsi czekają dni na pierwszy mail. W obrębie grup: najstarsi pierwsi.
+    // Kolejność obsługi — TRZY grupy, bo sam wiek kotwicy odwracał priorytet:
+    // 20.07 cały dzienny budżet zjadły leady sprzed 28-30 dni, a lead, który skończył
+    // rozmowę tego dnia (moment najwyższej konwersji), czekał na mail „+3 h" dni.
+    //   0) oferta wystawiona (najbliżej rezerwacji)
+    //   1) świeża cisza < 48 h (okno odzysku)
+    //   2) backlog — najstarsi pierwsi
+    const FRESH_MS = 48 * 3600 * 1000
+    const bucket = (x: { sess: { offer_token?: string } | null; anchorMs: number }) =>
+      x.sess?.offer_token ? 0 : (now - x.anchorMs < FRESH_MS ? 1 : 2)
     anchored.sort((a, b) => {
-      const ao = a.sess?.offer_token ? 0 : 1
-      const bo = b.sess?.offer_token ? 0 : 1
-      return ao !== bo ? ao - bo : a.anchorMs - b.anchorMs
+      const ab = bucket(a), bb = bucket(b)
+      return ab !== bb ? ab - bb : a.anchorMs - b.anchorMs
     })
 
     // dzienny sufit: ile followupów już wyszło dziś (od północy Warszawy w przybliżeniu UTC-dnia)
@@ -543,19 +606,42 @@ Deno.serve(async (req: Request) => {
       const id = String(lead.id)
       if (lead.followups_muted_at) continue
       if (paidLeads.has(id)) { await cancelPending(id); continue }
+      // Lead zamknięty w pipelinie: 'won' = kupił (choćby poza systemem), 'lost' =
+      // odpuścił i dostaje własne maile z automatyzacji („Oferta nieaktualna").
+      if (lead.status === 'won' || lead.status === 'lost') { await cancelPending(id); continue }
+      const tAll = touches.get(id)
+      // Wspólny sufit dotknięć — serie A i B liczą się osobno, więc bez tego lead,
+      // który po serii A wrócił i dostał ofertę, dostawał nawet 10 maili w miesiąc.
+      if ((tAll?.sentKinds.size || 0) >= TOTAL_CAP_PER_LEAD) { out.skipped_cap++; continue }
 
       const hoursSince = (now - anchorMs) / 3_600_000
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const allOffers = offersByLead.get(id) || []
 
       // ── SERIA B: oferta wystawiona, rezerwacja nie wpłacona ────────────────
       if (sess?.offer_token) {
-        const offs = offersByLead.get(id)
-        // deno-lint-ignore no-explicit-any
-        const current = offs?.rows.find((o: any) => o.unique_token === sess.offer_token) || null
-        if (!offs || !current) continue
+        const rozmowaOffers = allOffers.filter((o) => o.source === 'rozmowa')
+        // Osierocony token (oferta skasowana/zmieniona w CRM) blokował leada w obu
+        // seriach po cichu — bierzemy najnowszą ofertę z rozmowy, a gdy nie ma żadnej,
+        // czyścimy token i lead wraca do serii A.
+        let current = rozmowaOffers.find((o) => o.unique_token === sess.offer_token) || null
+        if (!current && rozmowaOffers.length) {
+          current = [...rozmowaOffers].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0]
+          out.offer_token_stale++
+        }
+        if (!current) {
+          console.error(`[talk-followups] offer_token bez oferty (lead ${id}) — czyszczę token`)
+          await supabase.from('talk_sessions').update({ offer_token: null }).eq('id', sess.id)
+          out.offer_token_orphan++
+          continue
+        }
         const t = touches.get(id)
         const sentCnt = OFFER_KINDS.filter((k) => t?.sentKinds.has(k)).length
         if (sentCnt >= OFFER_KINDS.length) continue
-        const hoursSinceOffer = (now - offs.firstMs) / 3_600_000
+        // Kotwica = AKTUALNA oferta (nie pierwsza w historii): regeneracja po wygaśnięciu
+        // to nowe zdarzenie sprzedażowe — inaczej treść mówiła „zostało 7 dni", a oś
+        // wysyłała krok „oferta zaraz wygasa".
+        const hoursSinceOffer = (now - (Date.parse(current.created_at || '') || now)) / 3_600_000
         if (hoursSinceOffer < THRESH_OFFER_H[sentCnt]) continue
         if (sentCnt > 0 && t?.lastSent && now - t.lastSent < MIN_SPACING_OFFER_H[sentCnt] * 3_600_000) continue
         if (t?.lastSent && now - t.lastSent < CHANNEL_GAP_MS) continue
@@ -576,7 +662,6 @@ Deno.serve(async (req: Request) => {
         try {
           const { subject, body: mailBody } = await generateMail(supabase, settings, lead, sess, sentCnt, current)
           const talkUrl = `${TALK_URL_BASE}${id}`
-          const todayStr = new Date().toISOString().slice(0, 10)
           const offerUrl = String(current.valid_until) >= todayStr ? `${OFFER_URL_BASE}${current.unique_token}` : null
           const html = mdToHtml(mailBody, talkUrl, offerUrl)
           const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
@@ -600,6 +685,18 @@ Deno.serve(async (req: Request) => {
       }
 
       // ── SERIA A: przed ofertą ──────────────────────────────────────────────
+      // Lead z ofertą wystawioną poza rozmową (ręcznie w CRM) NIE dostaje serii A:
+      // jej przekaz („dostaniesz konkretny plan i wycenę") kłamałby wobec oferty,
+      // którą już ma, a przypomnienia prowadzi dla niej offer-emails-cron.
+      {
+        const externalOffer = allOffers.some((o) => {
+          if (o.source === 'rozmowa') return false
+          const vu = String(o.valid_until || '')
+          if (vu >= todayStr) return true                              // wciąż ważna
+          return (now - (Date.parse(vu + 'T23:59:59Z') || 0)) < 30 * 24 * 3600 * 1000  // świeżo wygasła
+        })
+        if (externalOffer) { out.skipped_offer_crm++; continue }
+      }
       if (hoursSince < THRESH_H[0]) continue // świeża aktywność — może wciąż rozmawia
       const t = touches.get(id)
       const sentCnt = KINDS.filter((k) => t?.sentKinds.has(k)).length

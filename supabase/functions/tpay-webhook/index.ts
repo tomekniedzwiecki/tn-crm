@@ -763,8 +763,11 @@ Deno.serve(async (req) => {
           const { data: leadMatch } = await supabase
             .from('leads')
             .select('id')
-            .eq('email', order.customer_email.toLowerCase().trim())
-            .order('created_at', { ascending: true })
+            // ilike: leads.email bywa zapisany z wielkimi literami (21 rekordów) —
+            // .eq po samym lowercase zamówienia nie trafiał. NAJNOWSZY lead: to na nim
+            // toczy się bieżący lejek (followupy), więc to jego ma chronić stop po płatności.
+            .ilike('email', order.customer_email.trim())
+            .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
           if (leadMatch?.id) {

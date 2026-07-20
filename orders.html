@@ -762,8 +762,18 @@
             });
 
             // Expose functions for external use
-            window.setLeadSearchValue = function(leadId) {
-                const lead = leads.find(l => l.id === leadId);
+            // Lista `leads` ma tylko 500 najnowszych — starszy lead NIE jest w niej obecny.
+            // Wcześniej leciało clearSelection(), więc zapis edytowanego zamówienia KASOWAŁ
+            // powiązanie z leadem (a od niego zależy m.in. stop followupów po płatności).
+            // Teraz dociągamy leada z bazy zamiast czyścić wybór.
+            window.setLeadSearchValue = async function(leadId) {
+                if (!leadId) { clearSelection(); return; }
+                let lead = leads.find(l => l.id === leadId);
+                if (!lead) {
+                    const { data } = await supabaseClient.from('leads')
+                        .select('id, email, name, company').eq('id', leadId).maybeSingle();
+                    lead = data || null;
+                }
                 if (lead) {
                     const display = `${lead.email}${lead.name ? ' - ' + lead.name : ''}${lead.company ? ' (' + lead.company + ')' : ''}`;
                     selectLead(leadId, display);

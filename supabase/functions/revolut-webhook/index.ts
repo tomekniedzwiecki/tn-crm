@@ -613,8 +613,10 @@ Deno.serve(async (req) => {
               const { data: leadMatch } = await supabase
                 .from('leads')
                 .select('id')
-                .eq('email', order.customer_email.toLowerCase().trim())
-                .order('created_at', { ascending: true })
+                // lustro tpay-webhook: ilike (leads.email bywa z wielkimi literami)
+                // + najnowszy lead (na nim toczy się bieżący lejek/followupy)
+                .ilike('email', order.customer_email.trim())
+                .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle()
               if (leadMatch?.id) {

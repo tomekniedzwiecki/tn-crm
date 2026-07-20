@@ -3037,7 +3037,10 @@
             trackInitiateCheckout('full');
             await logCheckoutStart('full', getEffectivePrice());
 
+            // lead_id OBOWIĄZKOWO (spójnie z rezerwacją i dopłatą) — bez niego zamówienie
+            // powstaje bez powiązania z leadem, a followupy nie wiedzą, że klient zapłacił.
             let checkoutUrl = `/checkout?offer=${offer.id}`;
+            if (lead?.id) checkoutUrl += `&lead_id=${lead.id}`;
             if (clientOffer?.id) {
                 checkoutUrl += `&client_offer=${clientOffer.id}`;
             }

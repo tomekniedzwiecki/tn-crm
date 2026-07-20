@@ -517,6 +517,24 @@ Deno.serve(async (req) => {
       throw new Error(`Nieprawidłowy adres email: ${recipientEmail}`)
     }
 
+    // GLOBALNA LISTA WYPISÓW — jeden gate dla WSZYSTKICH silników (followupy talk/bud/spar,
+    // drip, automatyzacje, oferty). Wcześniej `email_suppressions` honorował wyłącznie
+    // outreach-send, więc człowiek po wypisie albo po RODO (rodo_erase_lead dopisuje go
+    // tutaj) dalej dostawał maile. Zwracamy 200, żeby nie wywracać retry w silnikach.
+    try {
+      const { data: suppressed } = await supabase
+        .from('email_suppressions').select('email').ilike('email', recipientEmail.trim()).maybeSingle()
+      if (suppressed) {
+        console.log('[send-email] Adres na liście wypisów — pomijam:', recipientEmail)
+        return new Response(
+          JSON.stringify({ success: true, skipped: 'suppressed' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      }
+    } catch (supErr) {
+      console.error('[send-email] Sprawdzenie wypisów nieudane (wysyłam dalej):', supErr)
+    }
+
     // Send via Resend
     const emailPayload: Record<string, any> = {
       from: fromAddressTransactional,
