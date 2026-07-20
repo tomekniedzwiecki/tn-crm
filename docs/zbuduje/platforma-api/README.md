@@ -194,6 +194,17 @@ bez captchy/klucza = wektor spamu zamówień COD — zgłosić Adrianowi (rate-l
 (d) Adrian dopisuje do docs przewodniki narracyjne (flow+ciastka) — nasza empiria powyżej już to pokrywa,
 zweryfikować zgodność gdy wyjdą. Guides w docs: na razie 1 (`custom-html-pages`).
 
+### ⚠️ CACHE STRON isHtml (odkryte 20/21.07 przy iteracji demo checkoutu)
+
+`PUT pages/{id}/html` na ISTNIEJĄCEJ ścieżce NIE propaguje się od razu — storefront (Vercel,
+`X-Vercel-Cache: HIT`) serwuje starą wersję **>10 minut**, i to nawet po cyklu
+`isHtml:false → true`. NOWA ścieżka = świeży kod natychmiast. Konsekwencje:
+1. **Iteracja/hotfix landinga:** po PUT odczekaj i ZWERYFIKUJ live (grep markera nowej wersji)
+   zanim uznasz publikację za skuteczną; w praktyce publikuj poprawki krytyczne pod nową
+   ścieżką albo czekaj na wygaśnięcie cache.
+2. **DO ADRIANA:** PUT html powinien rewalidować cache storefrontu (revalidatePath) — bez tego
+   hotfix buga na landingu w trakcie kampanii czeka w kolejce cache'u. (Zgłoszone 21.07.)
+
 ### Przewodniki w docs (LIVE 20.07 późny wieczór): `visitor-identity` + `checkout-flow` (+custom-html-pages)
 
 Zgodne 1:1 z naszym flow empirycznym. Doprecyzowania z przewodników:

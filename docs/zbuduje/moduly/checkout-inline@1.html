@@ -34,6 +34,10 @@ CO JEST NIETYKALNE (mechanika i prawo — NIE RUSZAĆ):
     purchaseOnDelivery|purchase; Meta AddToCart+InitiateCheckout @submit, Purchase
     (eventID=orderId) TYLKO ścieżki COD i BLIK-sukces — NIGDY przy redirect online.
 
+WYMÓG INTEGRACJI ze sticky-buy: landing z checkout-inline MUSI chować pasek sticky-buy,
+gdy sekcja #zamow jest w viewport (drugi IO obok obserwera .hero — wzorzec w demo
+usmieszek-checkout). Sticky przysłania CTA checkoutu na mobile = zabity submit (E2E 21.07).
+
 ⛔ ANTY-WZORCE (naruszenie = ODSTĘPSTWO w LEDGER):
   • widoczne pole kodu rabatowego, liczniki presji, wymuszona rejestracja/konto,
   • 2 kolumny pól na mobile, osobne pola Imię/Nazwisko, pole „potwierdź e-mail",
@@ -577,13 +581,14 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
     var qs = '';
     if (query) { var parts = []; for (var k in query) if (query[k] != null) parts.push(k + '=' + encodeURIComponent(query[k])); qs = parts.length ? ('?' + parts.join('&')) : ''; }
     return fetch(apiUrl(path) + qs, { method: 'GET', headers: { 'accept': 'application/json' } })
-      .then(function (r) { if (!r.ok) throw new Error('GET ' + path + ' → ' + r.status); return r.status === 204 ? null : r.json(); });
+      .then(function (r) { if (!r.ok) throw new Error('GET ' + path + ' → ' + r.status); return r.text().then(function (t) { return t && t.trim() ? JSON.parse(t) : null; }); });
   }
   function apiPost(path, body) {
     return fetch(apiUrl(path), { method: 'POST', headers: { 'content-type': 'application/json', 'accept': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) {
         if (!r.ok) return r.text().then(function (t) { var e = new Error('POST ' + path + ' → ' + r.status); e.status = r.status; e.detail = t; throw e; });
-        return r.status === 204 ? null : r.json();
+        // puste body przy 200 (np. cart/item, checkout-details) = null — JSON.parse('') by wywalił flow
+        return r.text().then(function (t) { return t && t.trim() ? JSON.parse(t) : null; });
       });
   }
 
