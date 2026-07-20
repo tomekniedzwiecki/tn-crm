@@ -10,7 +10,8 @@
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.2/src/index.js" integrity="sha384-J7cw2fbG1T4C5MirTVUxsZGaMfw2m0XsCgOQEqUvB1OF9VIsHWuZF1GmyVRzs7eu" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="panel.css">
+    <link rel="stylesheet" href="/tn-sklepy/panel.css">
+    <script src="/tn-sklepy/panel-core.js"></script>
     <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }</script>
     <style>
         /* Portal = jedna wąska, wyśrodkowana kolumna. Ciemny motyw Geist (spójny z panelem). */
@@ -69,8 +70,8 @@
         .task-num { width:24px; height:24px; border-radius:50%; border:1.5px solid #3a3a40; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:600; color:#a1a1aa; }
         .task.done .task-num { border-color:#3b8a52; background:rgba(69,165,87,.16); color:#5fce8c; }
         .task-tt { flex:1; min-width:0; }
-        .task-t { color:#fff; font-size:14.5px; font-weight:600; letter-spacing:-.01em; }
-        .task-m { color:#71717a; font-size:12.5px; margin-top:1px; }
+        .task-t { display:block; color:#fff; font-size:14.5px; font-weight:600; letter-spacing:-.01em; }
+        .task-m { display:block; color:#71717a; font-size:12.5px; margin-top:2px; }
         .task.done .task-m { color:#79a687; }
         .task-pill { font-size:11px; padding:2px 9px; border-radius:99px; white-space:nowrap; flex-shrink:0; font-weight:500; }
         .pill-todo { background:rgba(245,166,35,.14); color:#f5b955; }
@@ -83,7 +84,7 @@
         @media (max-width:560px){ .task-body { padding:2px 15px 18px 15px; } }
         .guide { color:#c8c8cd; font-size:13.5px; line-height:1.65; }
         .guide b { color:#fff; }
-        .guide ol { margin:8px 0 8px 18px; } .guide ol li { margin:5px 0; }
+        .guide ol { list-style:decimal; margin:8px 0 8px 18px; padding-left:4px; } .guide ol li { margin:5px 0; }
         .guide .note { background:rgba(0,112,243,.06); border:1px solid rgba(0,112,243,.25); border-radius:8px; padding:12px 14px; font-size:12.5px; color:#a9c9f0; margin-top:12px; line-height:1.6; }
         .guide .warn { background:rgba(245,166,35,.07); border:1px solid rgba(245,166,35,.28); border-radius:8px; padding:12px 14px; font-size:12.5px; color:#f5deb0; margin-top:12px; line-height:1.6; }
         .copybox { display:inline-flex; align-items:center; gap:8px; background:#111; border:1px solid #2e2e2e; border-radius:8px; padding:7px 10px; margin:6px 0; font-family:'JetBrains Mono',monospace; font-size:13px; color:#fff; }
@@ -514,7 +515,8 @@
         $('sec-tasks').classList.remove('hidden');
         const front = frontStage();
         const todo = defs.filter(d => { const st = stepFor(d.key, null); return st && st.status !== 'done' && st.status !== 'skipped' && taskReached(d, st, front); }).length;
-        $('tasks-count').textContent = todo ? `${todo} do zrobienia` : 'wszystko zrobione';
+        const doneN = defs.filter(d => { const st = stepFor(d.key, null); return st && st.status === 'done'; }).length;
+        $('tasks-count').textContent = todo ? `${todo} do zrobienia` : (doneN ? 'wszystko zrobione' : 'na razie nic po Twojej stronie');
         $('tasks-list').innerHTML = defs.map((d, i) => taskCard(d, i, front)).join('');
     }
     function taskReached(d, st, front) {
