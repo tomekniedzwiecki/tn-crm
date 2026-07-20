@@ -4,7 +4,10 @@
 // odpytywania partner API w request-path — limit 120 req/min zostaje nietknięty).
 //
 // GET ?product=<wf2_products.id>
-// → { name, price, currency, checkout_url, cod, status }
+// → { name, price, currency, checkout_url, cod, status, sold,
+//     platform: { website_id, product_id, variant_id } }
+//   Blok `platform` (dodany 2026-07-20) zasila moduł checkout-inline@1 — własny checkout
+//   na landingu przez Public Storefront API Trevio. Te ID są jawne w publicznym storefroncie.
 //
 // Bez auth — zwraca WYŁĄCZNIE dane jawnie publikowane na landingu (cena, link kasy,
 // nazwa wyświetleniowa). Zero PII, zero kosztów, zero linków do paneli.
@@ -40,13 +43,32 @@ Deno.serve(async (req) => {
     // ⚠️ ENDPOINT PUBLICZNY NA SERVICE-ROLE: lista kolumn poniżej = JEDYNA bariera
     // przed wyciekiem. NIGDY select('*'); dokładasz kolumnę = upewnij się, że jest
     // jawnie publikowana na landingu (zero PII/kosztów/marż zakupu).
+    // ALLOWLISTA (dozwolone jako JAWNE PUBLICZNIE):
+    //   project_id            — klucz wewnętrzny (do policzenia sold / pobrania sklepu),
+    //   name, price, checkout_url, status, margin_mode — cena i link kasy widoczne na landingu,
+    //   platform_product_id, platform_variant_id — ID produktu/wariantu w Public Storefront
+    //     API Trevio (api.trevio.pl/storefront/*); te ID są JAWNE w publicznym storefroncie
+    //     (koszyk/checkout keyed nimi bez klucza), zero PII/kosztów — potrzebne modułowi
+    //     checkout-inline@1 do złożenia zamówienia z poziomu landinga.
     const { data, error } = await supabase
       .from("wf2_products")
-      .select("project_id, name, price, checkout_url, status, margin_mode")
+      .select("project_id, name, price, checkout_url, status, margin_mode, platform_product_id, platform_variant_id")
       .eq("id", id)
       .maybeSingle();
     if (error) throw error;
     if (!data) return json({ error: "not_found" }, 404);
+
+    // websiteId sklepu (Public Storefront API keyuje wszystko websiteId+clientId).
+    // wf2_projects.platform_shop_id = JAWNY identyfikator sklepu w storefroncie — zero PII.
+    let websiteId: string | null = null;
+    try {
+      const { data: proj } = await supabase
+        .from("wf2_projects")
+        .select("platform_shop_id")
+        .eq("id", data.project_id)
+        .maybeSingle();
+      websiteId = proj?.platform_shop_id ?? null;
+    } catch (_) { /* brak sklepu ≠ brak ceny — landing i tak działa z fallbackiem kasy */ }
 
     // social-proof: ile zamówień z platformy zawiera ten produkt (mapowanie robi wf2-orders-sync).
     // Uczciwe liczby własnego sklepu — landing pokazuje TYLKO przy sensownym progu (decyzja frontu).
@@ -70,6 +92,14 @@ Deno.serve(async (req) => {
         cod: true,
         status: data.status,
         sold,
+        // blok dla modułu checkout-inline@1 (własny checkout na landingu przez
+        // Public Storefront API). null-e gdy sklep/produkt jeszcze nie zsynchronizowane
+        // z platformą — moduł spada wtedy na fallback „bezpieczna kasa" (checkout_url).
+        platform: {
+          website_id: websiteId,
+          product_id: data.platform_product_id ?? null,
+          variant_id: data.platform_variant_id ?? null,
+        },
       },
       200,
       // cena zmienia się rzadko (test→scale) — 5 min cache na edge'ach/CDN wystarcza
