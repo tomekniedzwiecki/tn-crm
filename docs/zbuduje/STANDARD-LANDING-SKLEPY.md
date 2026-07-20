@@ -481,6 +481,18 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
   - **HERO: OSTRA fotografia** (produkt bohaterem, nie plamą — mniej blur); rozważ wariant split
     editorial (copy lewo / ostra scena prawo). Mikro-interakcje = §3 CTA + F5.2 (press ~0.97,
     sticky slide-in, reveal 200-400ms, ciepły easing, `prefers-reduced-motion`).
+  - **🎬 HERO PROJEKTOWANY POD HERO-VIDEO (F5.2) — NIE osobno (Tomek 20.07, na macie/Kłujku):**
+    scena hero staje się pierwszą klatką pętli Kling image-to-video (first=last), więc MUSI mieć
+    **NOŚNIK subtelnego, ZAPĘTLONEGO ruchu** — inaczej Kling nie ma czego animować (albo, gorzej,
+    zaczyna morfować sam produkt). Podział sceny: **STREFA STATYCZNA = produkt** (ostry, niezmienny —
+    cechy wierności NIE mogą się ruszać) + **STREFA RUCHU = otoczenie** (min. jeden nośnik: światło
+    kierunkowe „oddychające" jasnością / miękka tkanina falująca i wracająca / kurz-pyłki w promieniu /
+    para / delikatny oddech osoby). Ruch **cykliczny** (domyka pętlę bez skoku), **subtelny/premium**
+    (nie gadżet), **NIGDY na produkcie**. ⛔ **martwy packshot na PŁASKIM polu koloru = najgorszy hero
+    do animacji** (martwa natura — Kling nic nie ruszy). Przy archetypie **D** (packshot centralny)
+    obowiązkowo: faktura + światło dnia (drewno/koc/len, długie cienie okna, roślina/firana na brzegu)
+    zamiast gładkiego tła — pole koloru zostaje, ale ożywione. To jest wymóg F2, nie F5.2: hero, który
+    tego nie ma, wraca do regeneracji, zanim ktokolwiek go zakoduje.
   - **✅ KRYTYK — CHECKLISTA STYLE-DNA (F2, przed akceptem; brak = regeneracja makiety):**
     (1) para fontów z REALNYM kontrastem (nie mono)? (2) akcent tylko CTA+swash+rating, WSZYSTKIE
     ikony funkcjonalne charcoal? (3) desktop↔mobile TEJ sekcji = ten sam bohater + jeden styl ikon?
@@ -494,6 +506,17 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
     regeneracja partytury (F2.5), nie kosmetyka makiety.** Odpowiedź „różni się kolorem produktu
     i zdjęciami" = NIE ZALICZONE (to nie są osie — to zawartość). Pytanie (7) = mobile-od-zera
     (F2.4), pytanie o POZĘ produktu = §2.
+    (+ 9) **🎬 ANIMOWALNOŚĆ HERO (tylko sekcja hero): czy scena ma nośnik subtelnego zapętlonego
+    ruchu w OTOCZENIU (światło/tkanina/kurz/oddech), przy produkcie w strefie statycznej?** Martwy
+    packshot na płaskim polu = hero nie da się zanimować przez Kling (F5.2) → regeneracja hero.
+    (+ 10) **🩹 ANTI-BLEED (mata/Kłujek 20.07): makieta = DOKŁADNIE JEDNA sekcja i nic więcej.**
+    gpt-image na „lekkich" sekcjach (pas CSS, demo, akordeon, chipy) zapełnia pustą kanwę
+    HALUCYNUJĄC pełny blok hero+oferta+benefity — dokleja wordmark, cenę, ★rating, chipy-korzyści.
+    To przemyca **klejmy zdrowotne i zakazane materiały** (regeneracja/sen/„len/bawełna/ABS") poza
+    kontrolą KARTY/PASZPORTU. **Do KAŻDEGO promptu makiety: „EXACTLY ONE SECTION AND NOTHING ELSE"
+    + jawny zakaz wordmark/ceny/★/benefit-chips/klejmów/nazw materiałów, jeśli nie należą do tej
+    sekcji.** Krytyk: dorobiony element spoza sekcji = REGEN. Klejm zdrowotny / materiał sprzeczny
+    ze specem = REGEN bezwarunkowy (nie „uwaga-copy").
 - **🥇 BRIEF CELU > DYKTAT ELEMENTÓW (Tomek 16.07, potwierdzone testem A/B na hero Uśmieszka):**
   najlepsze makiety wychodzą, gdy prompt opowiada CO sprzedajemy, KOMU i CO klient ma poczuć,
   a PRAWDZIWE fakty (cena, oceny, cechy, płatności) podaje jako MATERIAŁ do wyboru — kompozycję
