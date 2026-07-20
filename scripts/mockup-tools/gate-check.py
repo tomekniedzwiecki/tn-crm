@@ -17,7 +17,7 @@ do uzycia w F1/F2.5, PRZED wygenerowaniem makiet, zeby nie odbic sie od gate'u d
 Wymaga: Pillow, imagehash, requests (venv scripts/mockup-tools/.venv).
 NIE modyfikuje niczego — czyta artefakty i (opcjonalnie) siec + baze.
 """
-import sys, os, re, json, glob, argparse, fnmatch, subprocess, tempfile
+import sys, os, re, json, glob, argparse, fnmatch, subprocess, tempfile, time
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
@@ -1128,7 +1128,9 @@ def _poprzednicy(M, m, ctx):
     try:
         mine = os.path.getmtime(ctx["code"])
     except OSError:
-        return []
+        # kod jeszcze nie istnieje (--cross-only PRZED budowa): wszystkie ZBUDOWANE
+        # landingi sa poprzednikami (cutoff = teraz), a nie 'brak poprzednikow'.
+        mine = time.time()
     cand = []
     for p in glob.glob(pat):
         s = os.path.basename(os.path.dirname(p))
@@ -1694,8 +1696,22 @@ def main():
         arch = ""  # --cross-only: archiwum potrzebne tylko na archetyp (-> SKIP)
     html = read_text(code)
     if html is None:
-        print("BLAD: brak pliku kodu %s" % code)
-        return 1
+        # --cross-only ma dzialac PRZED budowa kodu (manifest: 'sprawdzenie partytury PRZED
+        # budowa'). Gdy nie ma jeszcze index.html, czytamy REALNE tokeny z bloku :root{}
+        # w TOKENS-MAKIETY.md archiwum (font display + akcent = te same, ktore trafia do kodu).
+        if args.cross_only and arch:
+            tok_md = read_text(os.path.join(arch, "TOKENS-MAKIETY.md"))
+            # pierwszy blok :root{...} ZAWIERAJACY custom-property (pomija puste ':root{}'
+            # z naglowka/prozy przed blokiem CSS)
+            block = next((mm.group(0) for mm in re.finditer(r":root\s*\{[^{}]*\}", tok_md or "", re.S)
+                          if "--" in mm.group(0)), None)
+            if block:
+                html = "<style>%s</style>" % block
+                print("  (kod jeszcze nie istnieje — tokeny czytane z TOKENS-MAKIETY.md :root)")
+        if html is None:
+            print("BLAD: brak pliku kodu %s%s" % (code,
+                  " oraz brak bloku :root w TOKENS-MAKIETY.md" if args.cross_only else ""))
+            return 1
 
     env = load_env(M["sciezki"]["env"].replace("{slug}", slug))
     karta = read_text(os.path.join(arch, "KARTA-PRAWDY.md"))

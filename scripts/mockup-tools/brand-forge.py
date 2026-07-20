@@ -85,7 +85,15 @@ def reserve_name(product_id, name, slug, service_key, landing_ref=None, user_ref
     url = "%s/rest/v1/bud_brand_names" % project_url()
     hdr = _rest_headers(service_key, {"Prefer": "return=representation,resolution=ignore-duplicates"})
     req = urllib.request.Request(url, data=body, headers=hdr, method="POST")
-    raw = urllib.request.urlopen(req, timeout=30).read()
+    try:
+        raw = urllib.request.urlopen(req, timeout=30).read()
+    except urllib.error.HTTPError as e:
+        # 409: UNIQUE, ktorego `resolution=ignore-duplicates` nie pokrywa (inny conflict target
+        # niz PK — np. UNIQUE(name) albo UNIQUE(slug)). To nadal KOLIZJA, nie awaria skryptu —
+        # rozstrzyga ja wywolujacy przez reservation_check (czy to nasz wlasny, wczesniejszy wpis).
+        if e.code == 409:
+            return False, None
+        raise
     rows = json.loads(raw.decode("utf-8") or "[]")
     if not rows:   # ON CONFLICT DO NOTHING -> 0 wierszy = kolizja
         return False, None
@@ -599,10 +607,24 @@ def main():
     else:
         ok, row = reserve_name(args.product_id, args.nazwa, slug, service_key, args.landing_ref, args.user_ref)
         if not ok:
-            print("KOLIZJA — nazwa '%s' lub slug '%s' zajete dla product_id=%s. Podaj nastepna kandydatke."
-                  % (args.nazwa, slug, args.product_id))
-            sys.exit(3)
-        print("[a] zarezerwowano nazwe:", json.dumps(row, ensure_ascii=False))
+            # IDEMPOTENCJA (20.07): rezerwacja mogla powstac WCZESNIEJ w tym samym landingu
+            # (F0/karta prawdy rezerwuje nazwe przed F2.5). Ta sama trojka product_id+nazwa+slug
+            # to NIE kolizja, tylko powtorzony przebieg — inaczej brand-forge nie da sie uruchomic
+            # drugi raz i trzeba omijac rezerwacje wrapperem (precedens Drapek 19.07).
+            hits = reservation_check(args.product_id, args.nazwa, slug, service_key)
+            mine = [h for h in hits
+                    if (h.get("name") or "").strip().lower() == args.nazwa.strip().lower()
+                    and (h.get("slug") or "") == slug]
+            if mine:
+                print("[a] rezerwacja JUZ ISTNIEJE dla tego produktu (idempotentnie, bez zmian):",
+                      json.dumps(mine[0], ensure_ascii=False))
+            else:
+                print("KOLIZJA — nazwa '%s' lub slug '%s' zajete dla product_id=%s przez INNY wpis: %s. "
+                      "Podaj nastepna kandydatke."
+                      % (args.nazwa, slug, args.product_id, json.dumps(hits, ensure_ascii=False)))
+                sys.exit(3)
+        else:
+            print("[a] zarezerwowano nazwe:", json.dumps(row, ensure_ascii=False))
 
     # (b) generacja: K metafor x ceil(count/K) wariantow (diversity-first)
     print("[b] OCR (tesseract):", "DOSTEPNY" if ocr_available() else
