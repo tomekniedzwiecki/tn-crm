@@ -1282,6 +1282,7 @@
             max-height: 3000px;
             opacity: 1;
         }
+        #acc-content-workmap.expanded { max-height: 12000px; }
         .acc-chevron { transition: transform 0.25s ease; }
         .acc-chevron.rotated { transform: rotate(180deg); }
 
@@ -1939,6 +1940,31 @@
                         <p class="relative text-zinc-300 text-sm sm:text-[15px] leading-relaxed">
                             Po pierwszym etapie wspólnie decydujemy o kontynuacji. Jeśli któryś z nas nie chce kontynuować — kończymy i <strong class="text-emerald-300">zwracam Ci wpłatę</strong>. Współpracujemy tylko z chęcią po obu stronach.
                         </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion: Work map (7 etapów / 48 kroków z workflow) -->
+            <div class="mb-4 mt-12 sm:mt-16">
+                <div class="glass-card rounded-2xl border border-white/10 overflow-hidden">
+                    <button onclick="toggleAccordion('workmap')"
+                            class="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left hover:bg-white/5 transition-colors">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 bg-emerald-500/15 border border-emerald-500/25 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="ph-bold ph-list-checks text-base text-emerald-400"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-white font-semibold text-sm sm:text-base">Mapa pracy: 7 etapów i 48 kroków, które wykonamy</div>
+                                <div class="text-zinc-500 text-xs">Pełen zakres — krok po kroku, bez gwiazdek</div>
+                            </div>
+                        </div>
+                        <i id="acc-chevron-workmap" class="ph ph-caret-down text-zinc-400 acc-chevron flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-content-workmap" class="acc-content">
+                        <div class="p-4 sm:p-6 pt-0 border-t border-white/5">
+                            <p class="text-zinc-400 text-sm mt-5 mb-2">Tak wygląda pełen zakres współpracy. Etapy 2, 3 i 5 wykonujemy <strong class="text-white">osobno dla każdego produktu z portfela</strong>.</p>
+                            <div id="workmap-container"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2956,6 +2982,93 @@
 
             document.getElementById('schedule-total').textContent = formatPrice(paymentSchedule.total_amount) + ' PLN';
         }
+
+        // ===== Mapa pracy (7 etapów / 48 kroków z workflow sklepów) =====
+        const WORK_MAP = [
+            { t: 'Etap 1 — Fundament biznesu', per: false, steps: [
+                ['Selekcja portfela produktów', 'analiza bieżących trendów zakupowych, kalkulacja marży i ceny sprzedaży, wybór ~3 produktów pod Ciebie'],
+                ['Marka od zera', 'nazwa z wolną domeną .pl, logo z pełną identyfikacją, paleta kolorów i typografia'],
+                ['Domena i podstawy techniczne', 'rejestracja domeny, certyfikat SSL, konfiguracja pod sklep'],
+            ]},
+            { t: 'Etap 2 — Strona sprzedażowa', per: true, steps: [
+                ['Weryfikacja produktu u źródła', 'potwierdzenie żywej dostawy, cen i wariantów; selekcja zdjęć produktu kadr po kadrze'],
+                ['Plan strony', 'architektura wszystkich sekcji i przewodnik graficzny całej narracji sprzedażowej'],
+                ['Kierunek wizualny', 'styl strony dopracowany pod markę — fonty, kolory, rytm, detale'],
+                ['Projekty wszystkich sekcji', 'każda sekcja projektowana osobno, w wersji na komputer i na telefon'],
+                ['Sceny produktowe', 'profesjonalne ujęcia produktu do każdej sekcji — własne, spójne, bez stocków'],
+                ['Budowa strony', 'strona kodowana wiernie do projektów, sekcja po sekcji'],
+                ['Kontrola zgodności', 'porównujemy gotową stronę z projektami i poprawiamy każdy rozjazd'],
+                ['Animacje i interakcje', 'płynne detale, które czuć pod palcem — zwłaszcza na telefonie'],
+                ['Odbiór jakościowy', 'twarda checklista końcowa: szybkość, linki, responsywność, poprawność treści'],
+            ]},
+            { t: 'Etap 3 — Sklep gotowy do sprzedaży', per: true, steps: [
+                ['Konfiguracja sklepu', 'sklep na naszej platformie, gotowy do przyjmowania zamówień'],
+                ['Dane sprzedawcy i formalności', 'regulamin, polityka prywatności, RODO — komplet dokumentów'],
+                ['Branding sklepu', 'logo, favicon i kolory marki w całym sklepie'],
+                ['Dostawy i płatności', 'kurier + płatność przy odbiorze, BLIK, karty — tak, jak kupują Polacy'],
+                ['Podpięcie domeny', 'sklep pod adresem Twojej marki'],
+                ['Pomiar od pierwszego dnia', 'analityka i pixel reklamowy — każda wizyta i każdy zakup policzone'],
+                ['Karta produktu i kasa', 'produkt z wariantami, cenami i dopracowaną ścieżką zakupu'],
+                ['Publikacja strony sprzedażowej', 'strona produktu wpięta w sklep i wystawiona na świat'],
+                ['Strona główna sklepu', 'wizytówka marki spinająca wszystkie produkty'],
+                ['Testowy zakup', 'przechodzimy całą ścieżkę klienta od kliknięcia po potwierdzenie zamówienia'],
+            ]},
+            { t: 'Etap 4 — Środowisko reklamowe', per: false, steps: [
+                ['Konto reklamowe', 'założone i skonfigurowane od zera, po bezpiecznej stronie'],
+                ['Strona marki na Facebooku i Instagramie', 'profile gotowe na ruch z reklam'],
+                ['Budżet i płatności', 'ustawienia wydatków pod kontrolą od pierwszego dnia'],
+                ['Pomiar konwersji', 'sprzedaż z reklam widoczna co do złotówki'],
+                ['Przegląd przedstartowy', 'zero braków, zanim wydamy pierwszą złotówkę na reklamę'],
+            ]},
+            { t: 'Etap 5 — Materiały i kampania', per: true, steps: [
+                ['3 grafiki reklamowe', 'trzy różne kąty: pokaz działania, problem klienta, styl życia'],
+                ['Spot wideo — analiza wzorca', 'rozbieramy na czynniki to, co aktualnie działa w social mediach', true],
+                ['Spot wideo — scenariusz', 'sekunda po sekundzie: otwarcie, pokaz, domknięcie', true],
+                ['Spot wideo — ujęcia', 'produkcja wszystkich ujęć z Twoim produktem', true],
+                ['Spot wideo — kontrola jakości', 'każde ujęcie przeglądane klatka po klatce', true],
+                ['Spot wideo — montaż i dźwięk', 'cięcia, muzyka, lektor, napisy — całość pod polskie social media', true],
+                ['Spot wideo — finał', 'gotowa kreacja plus warianty pierwszych sekund do testów', true],
+                ['Zestaw reklam z tekstami', 'komplet wariantów dopasowanych do różnych umiejscowień'],
+                ['Kampanie zbudowane i sprawdzone', 'struktura, grupy odbiorców, budżety — wszystko gotowe do startu'],
+                ['Start emisji', 'kampanie ruszają pod ręką Tomka'],
+            ]},
+            { t: 'Etap 6 — Testy i skalowanie', per: false, steps: [
+                ['Codzienny zbiór wyników', 'kliknięcia, koszyki, zakupy — dzień po dniu, produkt po produkcie'],
+                ['Twarde werdykty testów', 'co sprzedaje — zostaje; co nie — wylatuje bez sentymentów'],
+                ['Opieka nad kampaniami', 'komentarze, świeżość kreacji, szybka reakcja na zmiany'],
+                ['Skalowanie zwycięzców', 'stopniowe podnoszenie budżetów tam, gdzie liczby się spinają'],
+                ['Rotacja portfela', 'nowe produkty z selekcji w miejsce przegranych'],
+                ['Synchronizacja sprzedaży', 'zamówienia i wyniki kampanii w jednym miejscu, bez czarnej skrzynki'],
+            ]},
+            { t: 'Etap 7 — Przekazanie sterów', per: false, steps: [
+                ['Wdrażanie w trakcie pracy', 'uczysz się na żywym sklepie, nie z kursu'],
+                ['Przejęcie kampanii', 'decyzje reklamowe podejmujecie razem, potem samodzielnie'],
+                ['Przejęcie operacji', 'zamówienia, kontakt z klientami, zwroty — w Twoich rękach'],
+                ['Stery', 'przy ~1000 zamówień sklep prowadzisz Ty'],
+                ['Comiesięczne przeglądy', 'Tomek w trybie wspólnika-doradcy — siadacie razem nad wynikami'],
+            ]},
+        ];
+        function renderWorkMap() {
+            const wrap = document.getElementById('workmap-container');
+            if (!wrap) return;
+            wrap.innerHTML = WORK_MAP.map(st => {
+                const per = st.per
+                    ? '<span class="inline-block align-[2px] ml-2 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[10px] font-mono font-semibold whitespace-nowrap">× każdy produkt z portfela</span>'
+                    : '';
+                const cnt = st.steps.length + ' ' + (st.steps.length < 5 ? 'kroki' : 'kroków');
+                const steps = st.steps.map(([name, desc, sub]) => `
+                    <div class="flex items-baseline gap-2.5 py-2 border-b border-white/5 ${sub ? 'pl-5' : ''}">
+                        <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full ${sub ? 'bg-amber-500/60' : 'bg-emerald-500/70'} translate-y-[-1px]"></span>
+                        <div class="text-sm"><strong class="text-white font-semibold">${name}</strong> <span class="text-zinc-400">— ${desc}</span></div>
+                    </div>`).join('');
+                return `
+                    <div class="flex items-baseline justify-between gap-3 mt-6 pb-2 border-b border-white/10">
+                        <div class="text-white font-bold text-[15px]">${st.t}${per}</div>
+                        <div class="flex-shrink-0 text-zinc-500 text-[10px] font-mono uppercase tracking-wider">${cnt}</div>
+                    </div>${steps}`;
+            }).join('');
+        }
+        document.addEventListener('DOMContentLoaded', renderWorkMap);
 
         // ===== Accordions =====
         function toggleAccordion(name) {
