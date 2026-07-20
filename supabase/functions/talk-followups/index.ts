@@ -497,6 +497,13 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Recovery martwych claimów: pending oznacza „claim zrobiony, wysyłka w toku".
+    // Normalnie trwa sekundy. Gdyby funkcję ubito między claimem a update/rollback
+    // (wall-clock/timeout), wiersz zostałby pending NA ZAWSZE i przez UNIQUE(lead_id,kind)
+    // zablokował retry leada. Zwolnij osierocone pending starsze niż 20 min.
+    await supabase.from('talk_followups').delete()
+      .eq('status', 'pending').lt('created_at', new Date(now - 20 * 60 * 1000).toISOString())
+
     async function cancelPending(leadId: string) {
       const { count } = await supabase.from('talk_followups')
         .update({ status: 'cancelled' }, { count: 'exact' }).eq('lead_id', leadId).eq('status', 'pending')
