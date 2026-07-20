@@ -259,6 +259,12 @@ krok budowy domyka się dowodami budowy). Kolejność Przeglądu:
 9. `ux_petla` = „Pętla poprawek — do wyczerpania" (świeże rundy całego produktu aż czysta runda),
 10. `audyt` (bezpieczeństwo) — NA KOŃCU, bo audytuje stan finalny PO poprawkach; kamień
 „Aplikacja przeszła pełny przegląd" przeniesiony z `poprawki` na `audyt`.
+11. `retro_fabryki` — „Retro fabryki (żniwa lekcji)" (decyzja 20.07): OSTATNI krok Etapu 5, PRZED Etapem 6/`demo_klienta`.
+    Krok WEWNĘTRZNY (bez `milestone_label` — klient go nie widzi w portalu). Przenosi lekcje z BUILDLOG apki
+    (`LEKCJE → FABRYKA` + Otwarte/DO PÓŹNIEJ) do księgi głównej `docs/stworze/LEKCJE-FABRYKI.md` ze statusami,
+    commituje backporty kodowe do saas-starter, rozstrzyga lekcje `[NARZĘDZIE]` (zbuduj albo ZGŁOSZONA z powodem),
+    podbija wzorce z ≥2 apek do modułu (`MODULES.md`) i aktualizuje STAN WDROŻENIA dotkniętych SSOT-ów.
+    Domyka pętlę uczenia fabryki (METODYKA-BUDOWY.md §3 pkt 4.7 „Żniwa lekcji" + §3b runbook padu).
 
 ## 6.3. Moduł „Testy klienta" (spowiednik testów, decyzja Tomka 15.07)
 
@@ -451,3 +457,9 @@ prompt czatu ×3, front ×2 pliki; backupy `_backup_20260711`): „kod i pełna 
       (żaden anon). **Migracja `20260717f_wfa_activation_stats.sql` + deploy edge `--no-verify-jwt`: sesja główna.**
       Kontrakt push = nagłówek edge `wfa-activation-ingest/index.ts`.
 - [ ] F4 automaty — NIE ZACZĘTE (poza powiadomieniem spowiednika wyżej)
+- [x] **Krok `retro_fabryki` (pętla uczenia fabryki)** — 2026-07-20. Nowy, OSTATNI krok Etapu 5 „Przegląd i jakość"
+      (`wfa_step_defs`: stage 5, sort 65, po `audyt`/60, przed Etapem 6/`demo_klienta`; owner admin, `milestone_label`
+      NULL — krok wewnętrzny, klient go nie widzi). WS + checklista w `tn-app/projekt.html`. Domyka pętlę: żniwa lekcji
+      z BUILDLOG-ów apek → księga główna `docs/stworze/LEKCJE-FABRYKI.md` (nowa) ze statusami, backporty do saas-starter,
+      awans wzorców z ≥2 apek do `MODULES.md`. SSOT metodyki: `METODYKA-BUDOWY.md` §3 pkt 4.7 („Żniwa lekcji") + §3b
+      (runbook padu sesji).

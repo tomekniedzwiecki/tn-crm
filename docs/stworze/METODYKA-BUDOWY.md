@@ -67,9 +67,38 @@ Scope creep: wszystko spoza `01-MVP-SCOPE.md` → `wfa_notes` „na później", 
 1. Przeczytaj `BUILDLOG.md` + swoją sekcję z `08-PLAN-SESJI.md` + odpowiednie pliki paczki.
 2. Wykonaj TYLKO cel sesji.
 3. **Commit → deploy preview → DOWODY** (wynik testu / curl / screenshot — wklejone, nie „zrobione ✓").
-4. Dopisz wpis do `BUILDLOG.md`.
+4. Dopisz wpis do `BUILDLOG.md`. **Pisz go PRZYROSTOWO** (szkielet „Cel + Zrobione:" na starcie sesji,
+   dopisywany po każdej domkniętej fazie) — sesja, która padnie w połowie, zostawia odczytywalny stan (§3b).
 4.5. MINI-RUNDA KRYTYKA (decyzja Tomka 15.07): zaraz po commicie sesji świeży subagent-krytyk (bez kontekstu budowy) przechodzi WYŁĄCZNIE ZAKRES TEJ SESJI na prodzie/preview i szuka usterek. Znaleziska naprawia się od ręki przed domknięciem kroku; pełna pętla adwersarska do wyczerpania (sekcja 4) zostaje w etapie Przegląd.
+4.7. **ŻNIWA LEKCJI (pętla uczenia fabryki — decyzja 20.07):** każdy wpis BUILDLOG kończy się sekcją
+   **`LEKCJE → FABRYKA:`** — lista rzeczy, których TA sesja nauczyła się o BUDOWANIU (nie o tej apce),
+   z typem `[MODUŁ]` / `[NARZĘDZIE]` / `[DOKTRYNA]` / `[PROCEDURA]` — albo jawne „brak". Zasada kciuka:
+   naprawiłeś coś, co następna apka może powtórzyć → to lekcja. Lekcje `[NARZĘDZIE]` (honor-system,
+   który powinien być skryptem/gate'em) wypisuj ZAWSZE — to one historycznie ginęły. Drobny backport
+   kodowy możesz zrobić od ręki (commit do saas-starter + wiersz w `LEKCJE-FABRYKI.md` ze statusem
+   WDROŻONA); resztę zbiera krok `retro_fabryki`. Księga główna: `docs/stworze/LEKCJE-FABRYKI.md`.
 5. Jeśli utknąłeś na decyzji biznesowej — NIE zgaduj: zapisz pytanie w BUILDLOG „DO DECYZJI TOMKA" i zakończ sesję.
+
+## 3b. Pad sesji i odzysk stanu (runbook — lekcja „aplikacja 3" 20.07)
+
+Pad techniczny (błędy API tura-po-turze, zabity proces, utrata kontekstu) ≠ utknięcie decyzyjne.
+Zasady, dzięki którym pad kosztuje minuty, nie godziny:
+
+1. **BUILDLOG przyrostowo** (patrz §3 pkt 4) — to jedyna pamięć międzysesyjna. Wpis-szkielet na starcie.
+2. **Commit per domknięta faza** (`S<n>: <faza>`), nie per sesja — `git log` = druga, niezależna oś odzysku.
+3. **Agenci tła piszą wyniki TRWALE** (plik w repo/scratchpadzie), zanim zgłoszą sukces — zwrotka do
+   padniętego orkiestratora ginie, plik zostaje. (To uratowało „aplikację 3": GATE A i auth E2E przetrwały pad.)
+4. **Rozpoznanie padu:** powtarzający się błąd API = NIE retry w pętli. Jeśli da się jeszcze pisać —
+   dopisz do BUILDLOG `PRZERWANO — <ostatnia ukończona faza>, <następny krok>` i zakończ.
+5. **Odzysk = BUILDLOG-first:** nowa sesja czyta (1) ostatni wpis BUILDLOG, (2) `git log`/`git status`,
+   (3) task-outputy agentów w scratchpadzie padłej sesji; transkrypt padłej sesji = źródło OSTATNIEJ
+   instancji (gdy 1–3 się nie zgadzają), nie pierwszej.
+6. **Idempotentne wznowienie:** przed dopisaniem czegokolwiek zweryfikuj stan świata (SELECT-y, `check-deploy.mjs`,
+   `ls migrations/`) — pad mógł nastąpić między akcją a wpisem; nie ufaj „zrobione ✓" bez dowodu.
+7. **Byty zewnętrzne** (konta testowe, dane w bazie, sekrety) — zawsze wypisane w „Otwarte / DO PÓŹNIEJ"
+   z identyfikatorami; bez tego pad = sierocy stan, którego nikt nie sprzątnie.
+8. **Marker wznowienia:** status kroku w panelu ustawiaj `in_progress` na starcie sesji, `done` dopiero po
+   wpisie BUILDLOG — `in_progress` + brak świeżego wpisu = „byłem, padłem, wznów", nie „zacznij od nowa".
 
 ## 3a. Cykl życia Uwag (wfa_notes) — uwagi nigdy nie „leżą"
 
