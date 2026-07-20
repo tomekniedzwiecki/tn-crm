@@ -124,7 +124,11 @@ kontraktów fan-out = tory zgadują interfejsy = konflikty i poprawki (drożej n
    worktree ≠ FAIL — odnotować).
 4. **Scalanie SEKWENCYJNE przez orkiestratora** (kolejność ukończenia): merge toru → `audit-static` →
    `preflight`/smoke → (przy zmianie schematu) `rls-matrix` → mini-krytyk toru (Sonnet; Opus gdy
-   powierzchnia wrażliwa) → wpis BUILDLOG toru → następny merge. Push main dopiero po zielonym merge.
+   powierzchnia wrażliwa) → wpis BUILDLOG toru → **sync panelu /tn-app (statusy+checklisty kroków
+   pokrytych przez tor — VERBATIM z WS; krok częściowy = in_progress z odhaczonymi pozycjami;
+   blockery zewnętrzne = notatka przy kroku)** → następny merge. Push main dopiero po zielonym merge.
+   (Lekcja 20.07: kronika bez statusów kroków = panel kłamie o postępie — sync jest częścią merge,
+   nie osobną uprzejmością.)
 5. **Front testowany lokalnie przed merge** (serwer statyczny + ŻYWY backend — cors dopuszcza localhost);
    weryfikacja na prawdziwej domenie po pushu main.
 6. **Twardo sekwencyjne (NIE zrównoleglać):** onboarding S8b (projektuje się na REALNYM aha rdzenia) →
@@ -140,6 +144,12 @@ kontraktów fan-out = tory zgadują interfejsy = konflikty i poprawki (drożej n
 4. Dopisz wpis do `BUILDLOG.md`. **Pisz go PRZYROSTOWO** (szkielet „Cel + Zrobione:" na starcie sesji,
    dopisywany po każdej domkniętej fazie) — sesja, która padnie w połowie, zostawia odczytywalny stan (§3b).
 4.5. MINI-RUNDA KRYTYKA (decyzja Tomka 15.07): zaraz po commicie sesji świeży subagent-krytyk (bez kontekstu budowy) przechodzi WYŁĄCZNIE ZAKRES TEJ SESJI na prodzie/preview i szuka usterek. Znaleziska naprawia się od ręki przed domknięciem kroku; pełna pętla adwersarska do wyczerpania (sekcja 4) zostaje w etapie Przegląd.
+4.6. **SYNC PANELU NATYCHMIAST (decyzja Tomka 20.07 — „zrobione = odnotowane w systemie"):**
+   status kroku `in_progress` ustawiasz NA STARCIE sesji, a `done` + odhaczone checklisty + notatka
+   (i wpis kroniki przy większych ruchach) — ZARAZ po domknięciu kroku/fazy, PRZED przejściem dalej.
+   Panel /tn-app to system zapisu postępu w czasie rzeczywistym, nie raport na koniec dnia.
+   Narzędzie: `tn-crm/scripts/wfa-panel-sync.mjs` (checklisty VERBATIM z WS bierze sam — zero
+   ryzyka sierot); ręczny REST tylko gdy narzędzie nie pokrywa przypadku.
 4.7. **ŻNIWA LEKCJI (pętla uczenia fabryki — decyzja 20.07):** każdy wpis BUILDLOG kończy się sekcją
    **`LEKCJE → FABRYKA:`** — lista rzeczy, których TA sesja nauczyła się o BUDOWANIU (nie o tej apce),
    z typem `[MODUŁ]` / `[NARZĘDZIE]` / `[DOKTRYNA]` / `[PROCEDURA]` — albo jawne „brak". Zasada kciuka:
