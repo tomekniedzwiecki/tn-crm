@@ -1412,6 +1412,33 @@
             }
         }
 
+        // media z PRYWATNYCH bucketów inline (wzorzec = cudzy content, NIGDY public URL):
+        // elementy z [data-priv-src="bucket/ścieżka"] dostają signed URL (1 h) po renderze.
+        async function hydratePrivMedia(root) {
+            const els = (root || document).querySelectorAll('[data-priv-src]:not([data-priv-done])');
+            if (!els.length) return;
+            const byBucket = {};
+            els.forEach(el => {
+                const m = el.dataset.privSrc.match(/^([^/]+)\/(.+)$/);
+                if (!m) return;
+                (byBucket[m[1]] = byBucket[m[1]] || []).push({ el, path: m[2] });
+            });
+            for (const [bucket, items] of Object.entries(byBucket)) {
+                try {
+                    const { data, error } = await supabaseClient.storage.from(bucket)
+                        .createSignedUrls(items.map(i => i.path), 3600);
+                    if (error || !data) throw error || new Error('brak signedUrls');
+                    data.forEach((d, i) => {
+                        const el = items[i] && items[i].el;
+                        if (!el) return;
+                        el.dataset.privDone = '1';
+                        if (d && d.signedUrl) el.src = d.signedUrl;
+                        else el.style.display = 'none';
+                    });
+                } catch (e) { console.warn('hydratePrivMedia', bucket, e); }
+            }
+        }
+
         function artifactsGallery(list) {
             if (!list.length) return '';
             const KIND_ICON = { mockup:'ph-layout', makieta:'ph-layout', makieta_mobile:'ph-device-mobile', brand:'ph-palette', branding:'ph-palette', styl_master:'ph-paint-brush', proof:'ph-git-diff', dowod:'ph-git-diff', scena:'ph-image', gallery:'ph-images', ad_creative:'ph-megaphone', video:'ph-film-slate', doc:'ph-file-text', link:'ph-link', screenshot_final:'ph-monitor', gate_check:'ph-seal-check', landing_live:'ph-rocket-launch' };
@@ -1576,6 +1603,7 @@
             }
             h += `<div><label class="text-xs text-zinc-500 block mb-1">Notatka / linki robocze</label><textarea id="sd-note" rows="3" class="fld resize-y">${escapeHtml((st.data && st.data.note) || '')}</textarea><button onclick="sdSaveNote()" class="mt-1.5 text-xs text-[#52a8ff] hover:text-[#78b6ff]">Zapisz notatkę</button></div>`;
             document.getElementById('sd-body').innerHTML = h;
+            hydratePrivMedia(document.getElementById('sd-body'));
             renderDrawerFooter(st);
         }
         function renderDrawerFooter(st) {
@@ -1781,15 +1809,41 @@
             let h = '<div class="space-y-3">';
             h += `<div class="flex items-center gap-2 text-[12.5px] text-zinc-200 font-medium"><i class="ph ph-film-slate text-[#52a8ff]"></i> Kreacja wideo 15 s <span class="text-[10.5px] text-zinc-500 font-normal">— fabryka AI-video (kref/FLF · bramki QA + wierności · LOOP CLOSE · −14 LUFS)</span></div>`;
 
-            // ── KREACJA: kafel jak w grafikach — player inline + badge AI + akcept ✓ Tomka ──
+            // ── artefakty wzorca (oryginał TikTok — CUDZY content, PRYWATNY bucket wf2-video,
+            //    inline przez signed URL po hydratacji [data-priv-src]) ──
+            const allArts0 = subs.flatMap(d2 => artifactsFor(p.id, d2.key));
+            const wzVid = allArts0.find(a => a.kind === 'wzorzec_ref');
+            const wzStrip = allArts0.find(a => a.kind === 'wzorzec_strip');
+            const wzMeta = (wzVid && wzVid.meta) || (wzStrip && wzStrip.meta) || {};
+
+            // ── KREACJA vs ORYGINAŁ: side-by-side (Tomek porównuje na pierwszy rzut oka) ──
             if (p.video_url) {
                 const approved = p.video_status === 'done';
-                h += `<div class="ads-cr" style="max-width:280px">
-                    <video src="${escapeHtml(p.video_url)}" controls preload="metadata" playsinline style="width:100%;aspect-ratio:9/16;background:#000;border-radius:6px"></video>
-                    <span class="ads-cr-angle">kreacja 15 s · 9:16</span>
-                    ${p.video_ai_labeled ? '<span class="ads-cr-ai" title="oznaczona jako AI (disclosure przy publikacji — Meta 2026)">AI</span>' : ''}
-                    <button onclick="wf2VideoToggleApprove()" class="ads-cr-ok ${approved ? 'is-ok' : ''}" style="bottom:auto;top:34px" title="${approved ? 'zaakceptowana — kliknij, by cofnąć' : 'AKCEPTUJ kreację (finał fabryki)'}"><i class="ph ${approved ? 'ph-check-circle' : 'ph-circle'}"></i></button>
+                h += `<div class="flex gap-3 flex-wrap items-start">
+                    <div>
+                        <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Nasza kreacja</div>
+                        <div class="ads-cr" style="max-width:250px">
+                            <video src="${escapeHtml(p.video_url)}" controls preload="metadata" playsinline style="width:250px;aspect-ratio:9/16;background:#000;border-radius:6px"></video>
+                            <span class="ads-cr-angle">kreacja 15 s · 9:16</span>
+                            ${p.video_ai_labeled ? '<span class="ads-cr-ai" title="oznaczona jako AI (disclosure przy publikacji — Meta 2026)">AI</span>' : ''}
+                            <button onclick="wf2VideoToggleApprove()" class="ads-cr-ok ${approved ? 'is-ok' : ''}" style="bottom:auto;top:34px" title="${approved ? 'zaakceptowana — kliknij, by cofnąć' : 'AKCEPTUJ kreację (finał fabryki)'}"><i class="ph ${approved ? 'ph-check-circle' : 'ph-circle'}"></i></button>
+                        </div>
+                    </div>
+                    ${wzVid ? `<div>
+                        <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Oryginał (wzorzec TikTok)</div>
+                        <div class="ads-cr" style="max-width:250px">
+                            <video data-priv-src="${escapeHtml(wzVid.url)}" controls preload="metadata" playsinline style="width:250px;aspect-ratio:9/16;background:#000;border-radius:6px"></video>
+                            <span class="ads-cr-angle">${wzMeta.duration_s ? wzMeta.duration_s + ' s · ' : ''}cudzy content — tylko podgląd</span>
+                        </div>
+                        <div class="text-[10px] text-zinc-500 mt-1.5 space-x-2">
+                            ${wzMeta.tiktok_url ? `<a href="${escapeHtml(wzMeta.tiktok_url)}" target="_blank" class="text-[#52a8ff] hover:text-[#78b6ff]">TikTok ↗</a>` : ''}
+                            ${wzMeta.plays ? `<span>${(wzMeta.plays / 1e6).toFixed(1).replace('.', ',')} mln odtw.</span>` : ''}
+                            ${wzMeta.cuts_per_min ? `<span>${String(wzMeta.cuts_per_min).replace('.', ',')} cięć/min</span>` : ''}
+                        </div>
+                    </div>` : ''}
                 </div>`;
+                if (wzStrip) h += `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Klatki oryginału (cała oś czasu)</div>
+                    <img data-priv-src="${escapeHtml(wzStrip.url)}" style="width:100%;border-radius:6px;border:1px solid #1f1f1f" loading="lazy"></div>`;
                 if (!approved) h += `<div class="text-[10.5px] text-[#f5b955]">Czeka na Twój akcept (✓ na kaflu) — po akcepcie fabryka robi pack hooków (≤3 wersje) i kopiuje finał do ads/.</div>`;
             } else {
                 const vm = VIDEO_STATUS_META[p.video_status] || ['#a1a1aa', p.video_status || 'nie zaczęte'];
@@ -1802,9 +1856,9 @@
             const vcSum = vc.reduce((s, c) => s + (+c.amount || 0), 0);
             if (vcSum > 0) h += `<div class="text-[10.5px] text-zinc-500 font-mono">koszt fabryki wideo (fal): $${vcSum.toFixed(2)} · ${vc.length} poz. (szczegóły: zakładka Koszty)</div>`;
 
-            // ── MATERIAŁY FABRYKI: wszystkie artefakty avi_* jednym rzutem (wzorzec, KARTA,
-            //    blueprint, arkusz klatek, siatki QA, identity board, preview) ──
-            const allArts = subs.flatMap(d => artifactsFor(p.id, d.key));
+            // ── MATERIAŁY FABRYKI: wszystkie artefakty avi_* jednym rzutem (KARTA, blueprint,
+            //    arkusz klatek, siatki QA, identity board, preview); wzorzec_* już wyżej — bez dubli ──
+            const allArts = allArts0.filter(a => a.kind !== 'wzorzec_ref' && a.kind !== 'wzorzec_strip');
             if (allArts.length) {
                 h += `<div class="border border-[#1f1f1f] rounded-md px-3 py-2.5 bg-[#0d0d0d]">
                     <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Materiały fabryki (${allArts.length})</div>

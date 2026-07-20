@@ -6,7 +6,7 @@
 
 ## 1. Rozpoznanie archetypu
 Jest twarz, jest synchronizowana mowa, jest eye-contact przerywany spojrzeniem na urządzenie. Urządzenie działa NA CIELE (głowa/skóra/twarz). Jeśli twarzy nie ma → to hands-POV, nie ten plik.
-> **Sam gadający/reagujący prezenter to za mało (gadżet + UGC reakcja/testimonial):** gdy produkt NIE działa na ciele, a twarz tylko komentuje → idź do **`PLAYBOOK-gadzet-handsPOV.md`**. Kondensacja 15 s (SSOT 0c) tnie gadanie jako pierwsze, więc gadająca głowa nie przetrwa montażu — a to najdroższy i najtrudniejszy archetyp (dryf twarzy). Ten plik bierz TYLKO, gdy twarz/emocja JEST treścią dowodu (produkt działa NA ciele/twarzy).
+> **Reguła rozstrzygająca — WIERNOŚĆ WZORCOWI (rewizja 20.07, wycofuje wersję sprzed):** bierz ten plik ZAWSZE gdy nośnik viralności wzorca to TWARZ / emocja / reakcja / testimonial (`blueprint.wzorzec.viral_carrier` = face-testimonial / reaction) — **także gdy produkt NIE działa na ciele**, a twarz tylko przeżywa/komentuje. Poprzednia reguła („gadżet + gadająca głowa → hands-POV, bo kondensacja 15 s tnie gadanie") była OSZCZĘDNOŚCIĄ i została WYCOFANA (decyzja Tomka 20.07: „twarze zdecydowanie wtedy, kiedy są potrzebne — to one oddają emocje"). Kondensuj testimonial do ≤15 s Z twarzą; gdy tylko część scen niesie emocję — **HYBRYDA** (twarz/omnihuman na beatach testimonialu + kref/flf na demie/rezultacie). `gadzet-handsPOV` tylko gdy wzorzec sam był bez twarzy. Ryzyko dryfu twarzy = świadomie akceptowane (wierność > oszczędność).
 
 ## 2. Mapa silników — trzy silniki po funkcji sceny
 Dobór z testów A/B 17.07: **wierność oryginałowi = sekret virala**, każdą scenę z gestem prowadź drivingiem.
@@ -41,7 +41,11 @@ VO = **ElevenLabs v3** z tagami emocji `[skeptical]`/`[gasp]`/`[laughs]` i PAUZA
 5. **CIĄGŁOŚĆ REKWIZYTÓW** (kabel!) — kolor/obecność kabla i rekwizytów identyczne we wszystkich scenach z urządzeniem (`consistency` w blueprincie).
 
 ## WARIANT: produkt-na-ciele BEZ MOWY (caption-driven; masazer 19.07)
-Wzorzec = testimonial niesiony NAPISAMI (zero lip-sync, osoba pasywnie odbiera dzialanie):
-DROP OmniHuman/MC; sceny produktowe = kref (multi-view refy), przejscia/loop-close = FLF;
-emocje = mimika bez mowy (ulga, oddech) + SFX/ambient; narracja = VO off-screen albo
-caption Tomka. Persona chainowana z hook_first wystarcza przy minimalnej twarzy.
+**Bierz TYLKO gdy wzorzec sam NIE miał mówiącej twarzy** (satisfying / ASMR / pasywny odbiór
+działania, `viral_carrier` = asmr-sound / hands-demo). ⚠️ Gdy wzorzec był MÓWIONYM
+testimonialem twarzy (np. mata @thebeccaflores) — to NIE ten wariant: idź w pełne
+beauty/omnihuman albo HYBRYDĘ, twarz oddaje emocję (rewizja 20.07, patrz reguła §1).
+Wariant BEZ MOWY dla wzorca testimonialowego = utrata nośnika viralności (błąd maty v1).
+Gdy wariant SŁUSZNY: DROP OmniHuman/MC; sceny produktowe = kref (multi-view refy),
+przejscia/loop-close = FLF; emocje = mimika bez mowy (ulga, oddech) + SFX/ambient; narracja
+= VO off-screen albo caption Tomka. Persona chainowana z hook_first wystarcza przy minimalnej twarzy.
