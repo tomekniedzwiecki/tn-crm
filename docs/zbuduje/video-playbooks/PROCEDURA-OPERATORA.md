@@ -122,6 +122,15 @@ MONTAŻ  montaz.build(...) + napisy — lokalne.
 - NIE przycinaj/ściszaj VO ani nie skracaj renderów, żeby zdążyć — jakość first-time to cała wartość (kolizja VO = przeprojektuj mapowanie, KROK 4).
 - NIE łącz RÓŻNYCH projektów w jednym `gen_batch` bez różnych `project=` (ledger miesza koszty po tagu).
 
+### MASTER-WNĘTRZE — spójność scenografii przy WIELU kadrach tej samej przestrzeni (zestaw v2, 20.07)
+Gdy kreacja ma wiele UJĘĆ tej samej przestrzeni (kabina auta, kuchnia, łazienka), klatki FIRST
+generowane niezależnie z cropów narzędzi dają KAŻDĄ scenę w INNEJ przestrzeni (4 różne auta
+w 15 s — odrzut Tomka). FIX: wybierz JEDNĄ klatkę-kanon przestrzeni (master-wnętrze) i każdą
+klatkę FIRST generuj jako "NEW ANGLE of the SAME car/room" z masterem jako Image 1 + cropem
+narzędzia jako Image 2; master dokładaj też do reference_image_urls kref. Analog master-frame
+produktu, zastosowany do SCENOGRAFII. Bramka: porównanie każdej sceny z masterem (materiały/
+kolory/światło), nie tylko produktu z packshotem.
+
 ## KROK 5b — WIERNOŚĆ NA KLATKACH (0i — PRZED renderami)
 **DOKTRYNA „EDYTUJ PRAWDĘ" (v3 — nadrzędna):** klatki produktowe = nano-EDYCJA packshotu
 (otoczenie/aktor dorysowane WOKÓŁ pikseli produktu); produkt STATYCZNY wewnątrz sceny
