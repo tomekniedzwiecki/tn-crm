@@ -35,6 +35,8 @@ const MAX_PAGES = 50;                 // bezpiecznik: 50×200 = 10 000 zamówie�
 const UPSERT_CHUNK = 500;             // wsad upsertów wf2_orders
 const READ_PAGE = 1000;              // PostgREST domyślny limit 1000 — czytamy stronami (pamięć)
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
+// statusy płatności traktowane jako opłacone (tolerancyjnie, lowercase) — COD 'Pending' NIE jest tu (=is_paid false)
+const PAY_SUCCESS = ['paid', 'completed', 'succeeded', 'success', 'settled', 'captured', 'finished', 'done', 'zaplacone', 'oplacone'];
 
 // ── tolerancyjne parsowanie pól (kształt odpowiedzi /orders nieznany dokładnie) ──
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v));
@@ -78,7 +80,7 @@ function extractOrders(raw: unknown): Record<string, unknown>[] {
 }
 
 type MappedLine = { name: string; price: number; quantity: number; product_id: string | null };
-type MappedOrder = { id: string; number: string; order_date: string; value: number; delivery_cost: number; is_cod: boolean | null; lines: MappedLine[] };
+type MappedOrder = { id: string; number: string; order_date: string; value: number; delivery_cost: number; is_cod: boolean | null; payments: Record<string, unknown>[]; is_paid: boolean | null; paid_at: string | null; payment_method: string | null; lines: MappedLine[] };
 
 // mapowanie surowego zamówienia platformy → nasz kształt (braki pól → defaulty, nigdy crash)
 function mapOrder(o: Record<string, unknown>): MappedOrder {
@@ -89,7 +91,32 @@ function mapOrder(o: Record<string, unknown>): MappedOrder {
   const order_date = parsed && !isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
   const value = amt(pick(o, ['value', 'total', 'totalValue', 'totalGross', 'grossValue', 'amount', 'sum', 'price']));
   const delivery_cost = amt(pick(o, ['deliveryCost', 'delivery_cost', 'shippingCost', 'shipping_cost', 'deliveryPrice', 'shipping']));
-  const is_cod = toBoolOrNull(pick(o, ['isCashOnDelivery', 'is_cod', 'isCod', 'cod', 'cashOnDelivery', 'paymentMethod']));
+  let is_cod = toBoolOrNull(pick(o, ['isCashOnDelivery', 'is_cod', 'isCod', 'cod', 'cashOnDelivery', 'paymentMethod']));
+
+  // ── płatności (SHAPES: payments[] {status,type,amount,isCashOnDelivery,isBlik,provider,createdAt}) ──
+  const payRaw = pick(o, ['payments']);
+  const payments: Record<string, unknown>[] = Array.isArray(payRaw) ? payRaw as Record<string, unknown>[] : [];
+  const payStatus = (p: Record<string, unknown>) => str(pick(p, ['status', 'state', 'paymentStatus'])).toLowerCase();
+  // metoda: isCashOnDelivery→cod, isBlik→blik, inaczej provider/type/method lowercase
+  const payMethod = (p: Record<string, unknown>): string | null => {
+    if (toBoolOrNull(pick(p, ['isCashOnDelivery'])) === true) return 'cod';
+    if (toBoolOrNull(pick(p, ['isBlik'])) === true) return 'blik';
+    return str(pick(p, ['provider', 'type', 'method', 'paymentMethod'])).toLowerCase() || null;
+  };
+  const successPay = payments.find((p) => PAY_SUCCESS.includes(payStatus(p)));
+  // is_paid: NULL gdy brak płatności, true gdy którakolwiek success, inaczej false (COD 'Pending' = false)
+  const is_paid: boolean | null = payments.length === 0 ? null : !!successPay;
+  let paid_at: string | null = null;
+  if (successPay) {
+    const pRaw = pick(successPay, ['paidAt', 'paid_at', 'date', 'createdAt']);
+    const pd = pRaw != null ? new Date(str(pRaw)) : null;
+    paid_at = pd && !isNaN(pd.getTime()) ? pd.toISOString() : null;
+  }
+  const methodSource = successPay || payments[0];
+  const payment_method = methodSource ? payMethod(methodSource) : null;
+  // is_cod: OR z payments[].isCashOnDelivery (uzupełnia gdy zamówienie nie miało flagi COD)
+  if (payments.some((p) => toBoolOrNull(pick(p, ['isCashOnDelivery'])) === true)) is_cod = true;
+
   const linesRaw = pick(o, ['products', 'lines', 'items', 'orderLines', 'orderItems', 'positions']);
   const arr = Array.isArray(linesRaw) ? linesRaw as Record<string, unknown>[] : [];
   const lines: MappedLine[] = arr.map((l) => ({
@@ -98,7 +125,55 @@ function mapOrder(o: Record<string, unknown>): MappedOrder {
     quantity: num(pick(l, ['quantity', 'qty', 'count'])) || 1,
     product_id: null,
   }));
-  return { id, number, order_date, value, delivery_cost, is_cod, lines };
+  return { id, number, order_date, value, delivery_cost, is_cod, payments, is_paid, paid_at, payment_method, lines };
+}
+
+// ── ekstrakcja atrybucji do kolumn (SHAPES: sessions[], primarySession, lastTouch, clickIds) ──
+// Sesja primary = sessions.find(sessionId===primarySession.sessionId) || lastTouch. Kształt tolerancyjny.
+function extractAttribution(body: Record<string, unknown>): {
+  attributed_source: string | null; attribution_entry_path: string | null;
+  attribution_campaign: string | null; attribution_click_ids: Record<string, string> | null;
+} {
+  const primarySession = (body.primarySession && typeof body.primarySession === 'object') ? body.primarySession as Record<string, unknown> : {};
+  const primaryId = str(pick(primarySession, ['sessionId', 'id']));
+  const sessions = Array.isArray(body.sessions) ? body.sessions as Record<string, unknown>[] : [];
+  const lastTouch = (body.lastTouch && typeof body.lastTouch === 'object') ? body.lastTouch as Record<string, unknown> : null;
+  const p = sessions.find((s) => str(pick(s, ['sessionId', 'id'])) === primaryId) || lastTouch || {};
+
+  // attributed_source = source/channel (lowercase); fallback summary
+  const source = str(pick(p, ['source', 'utmSource', 'trafficSource'])).toLowerCase();
+  const channel = str(pick(p, ['channel', 'medium', 'utmMedium'])).toLowerCase();
+  let attributed_source: string | null = null;
+  if (source && channel) attributed_source = `${source}/${channel}`;
+  else if (source || channel) attributed_source = source || channel;
+  else { const summary = str(pick(body, ['summary', 'attributedSource'])).toLowerCase(); attributed_source = summary || null; }
+
+  // entry path z landingPage (pełny URL z query); fallback ścieżka jeśli już relatywna
+  const landing = str(pick(p, ['landingPage', 'landing_page', 'entryPage', 'entry_page', 'entryUrl']));
+  let attribution_entry_path: string | null = null;
+  let query: URLSearchParams | null = null;
+  if (landing) {
+    try { const u = new URL(landing); attribution_entry_path = u.pathname || null; query = u.searchParams; }
+    catch { attribution_entry_path = landing.startsWith('/') ? landing.split('?')[0] : null; }
+  }
+
+  // campaign: pole utmCampaign sesji/lastTouch, fallback z query entry URL
+  let campaign = str(pick(p, ['utmCampaign', 'campaign', 'utm_campaign']));
+  if (!campaign && lastTouch) campaign = str(pick(lastTouch, ['utmCampaign', 'campaign']));
+  if (!campaign && query) campaign = query.get('utm_campaign') || '';
+
+  // click ids: obiekt clickIds (bez null-i) uzupełniony z query entry URL
+  const clickRaw = (body.clickIds && typeof body.clickIds === 'object') ? body.clickIds as Record<string, unknown> : {};
+  const click: Record<string, string> = {};
+  for (const k of ['gclid', 'fbclid', 'msclkid', 'ttclid', 'trvclid']) { const v = clickRaw[k]; if (v != null && v !== '') click[k] = str(v); }
+  if (query) for (const k of ['fbclid', 'gclid', 'ttclid']) { if (!click[k]) { const qv = query.get(k); if (qv) click[k] = qv; } }
+
+  return {
+    attributed_source,
+    attribution_entry_path,
+    attribution_campaign: campaign || null,
+    attribution_click_ids: Object.keys(click).length > 0 ? click : null,
+  };
 }
 
 // wywołanie adaptera platformy (jedyna droga do API Trevio)
@@ -146,7 +221,7 @@ async function syncProject(
   wf2: string,
   proj: { id: string; platform_shop_id: string; orders_synced_at: string | null },
   startedAt: number,
-): Promise<{ upserted: number; unmapped: number; timedOut: boolean; new_count: number; new_value: number }> {
+): Promise<{ upserted: number; unmapped: number; timedOut: boolean; new_count: number; new_value: number; new_paid_count: number; source_summary: string }> {
   const shopId = proj.platform_shop_id;
   const firstRun = !proj.orders_synced_at;
   // From = coalesce(orders_synced_at, now-30d) - 1d (overlap; dedup po id neutralizuje); To = now.
@@ -203,7 +278,9 @@ async function syncProject(
     return {
       id: m.id, project_id: proj.id, shop_id: shopId, number: m.number || null,
       order_date: m.order_date, value: m.value, delivery_cost: m.delivery_cost,
-      is_cod: m.is_cod, lines: m.lines, synced_at: nowIso,
+      is_cod: m.is_cod, payments: m.payments, is_paid: m.is_paid, paid_at: m.paid_at,
+      payment_method: m.payment_method, lines: m.lines, synced_at: nowIso,
+      // attribution_* NIE w upsercie — nowe wiersze dostają default 'pending', istniejące zachowują stan
     };
   });
 
@@ -216,6 +293,8 @@ async function syncProject(
   }
   const newRows = orderRows.filter((r) => !knownIds.has(r.id as string));
   const newValue = newRows.reduce((a, r) => a + (Number(r.value) || 0), 0);
+  const newPaidCount = newRows.filter((r) => r.is_paid === true).length;
+  const newIdSet = new Set(newRows.map((r) => r.id as string));   // do zliczenia źródeł ruchu (Slack)
 
   // 3) upsert wf2_orders (on conflict id → update; idempotentne, overlap bezpieczny)
   for (let i = 0; i < orderRows.length; i += UPSERT_CHUNK) {
@@ -233,23 +312,25 @@ async function syncProject(
     // czytamy pełne dni [minD 00:00Z, maxD+1 00:00Z) — kompletny zbiór do przeliczenia (nie tylko okno sync)
     const gte = `${minD}T00:00:00Z`;
     const lt = `${addDaysStr(maxD, 1)}T00:00:00Z`;
-    const allRows: { order_date: string; lines: MappedLine[] }[] = [];
+    const allRows: { order_date: string; lines: MappedLine[]; is_paid: boolean | null }[] = [];
     for (let from = 0; ; from += READ_PAGE) {
       const { data, error } = await supabase.from('wf2_orders')
-        .select('order_date, lines').eq('project_id', proj.id)
+        .select('order_date, lines, is_paid').eq('project_id', proj.id)
         .gte('order_date', gte).lt('order_date', lt)
         .order('id', { ascending: true }).range(from, from + READ_PAGE - 1);
       if (error) { console.error(`[wf2-orders-sync] read wf2_orders błąd (projekt ${proj.id})`, error.message); throw new Error('read_orders_failed'); }
-      allRows.push(...((data || []) as { order_date: string; lines: MappedLine[] }[]));
+      allRows.push(...((data || []) as { order_date: string; lines: MappedLine[]; is_paid: boolean | null }[]));
       if (!data || data.length < READ_PAGE) break;
     }
 
-    // agregacja: klucz = (product_id|null) × data; orders = liczba ZAMÓWIEŃ zawierających produkt, revenue = Σ price*qty
-    type Agg = { product_id: string | null; date: string; orders: number; revenue: number };
+    // agregacja: klucz = (product_id|null) × data; orders = liczba ZAMÓWIEŃ zawierających produkt, revenue = Σ price*qty.
+    // orders_paid/revenue_paid = to samo, ale WYŁĄCZNIE z zamówień is_paid=true (równoległa księga, nie zmienia orders/revenue).
+    type Agg = { product_id: string | null; date: string; orders: number; revenue: number; orders_paid: number; revenue_paid: number };
     const agg = new Map<string, Agg>();
     for (const row of allRows) {
       const dateStr = new Date(row.order_date).toISOString().slice(0, 10);
       if (!affectedDates.has(dateStr)) continue;   // liczymy tylko daty, które ten run zmienił
+      const isPaid = row.is_paid === true;
       const perProduct = new Map<string, number>();   // product_key → revenue w tym zamówieniu
       for (const line of (Array.isArray(row.lines) ? row.lines : [])) {
         const pid = line.product_id ?? null;
@@ -259,9 +340,10 @@ async function syncProject(
       for (const [pk, rev] of perProduct) {
         const pid = pk === '__null__' ? null : pk;
         const aggKey = `${pk}|${dateStr}`;
-        const cur = agg.get(aggKey) || { product_id: pid, date: dateStr, orders: 0, revenue: 0 };
+        const cur = agg.get(aggKey) || { product_id: pid, date: dateStr, orders: 0, revenue: 0, orders_paid: 0, revenue_paid: 0 };
         cur.orders += 1;              // +1 zamówienie zawierające ten produkt (nie sztuki)
         cur.revenue += rev;
+        if (isPaid) { cur.orders_paid += 1; cur.revenue_paid += rev; }
         agg.set(aggKey, cur);
       }
     }
@@ -271,7 +353,8 @@ async function syncProject(
       .eq('project_id', proj.id).eq('source', 'takedrop').in('date', dates);
     if (delErr) { console.error(`[wf2-orders-sync] delete wf2_sales błąd (projekt ${proj.id})`, delErr.message); throw new Error('delete_sales_failed'); }
     const salesRows = [...agg.values()].map((a) => ({
-      project_id: proj.id, product_id: a.product_id, date: a.date, source: 'takedrop', orders: a.orders, revenue: a.revenue,
+      project_id: proj.id, product_id: a.product_id, date: a.date, source: 'takedrop',
+      orders: a.orders, revenue: a.revenue, orders_paid: a.orders_paid, revenue_paid: a.revenue_paid,
     }));
     if (salesRows.length > 0) {
       const { error: insErr } = await supabase.from('wf2_sales').insert(salesRows);
@@ -290,7 +373,59 @@ async function syncProject(
       .eq('project_id', proj.id)
       .contains('lines', JSON.stringify([{ product_id: p.id }]));
     if (cntErr) { console.error(`[wf2-orders-sync] orders_paid count błąd (produkt ${p.id})`, cntErr.message); continue; }
-    await supabase.from('wf2_products').update({ orders_paid: count ?? 0 }).eq('id', p.id);
+    // orders_confirmed = ten sam count, ale tylko z zamówień is_paid=true (osobny count; orders_paid = proxy do 1000 BEZ ZMIAN)
+    const { count: confirmed, error: confErr } = await supabase.from('wf2_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', proj.id).eq('is_paid', true)
+      .contains('lines', JSON.stringify([{ product_id: p.id }]));
+    if (confErr) { console.error(`[wf2-orders-sync] orders_confirmed count błąd (produkt ${p.id})`, confErr.message); }
+    await supabase.from('wf2_products').update({ orders_paid: count ?? 0, orders_confirmed: confErr ? undefined : (confirmed ?? 0) }).eq('id', p.id);
+  }
+
+  // 4c) ATRYBUCJA — pobranie sesji dla świeżych zamówień bez atrybucji (LIMIT 20/projekt/run).
+  //     Osobny blok PO upsercie; deadline-check przed pętlą + per zamówienie; każdy GET w try/catch,
+  //     NIGDY nie wywraca synca. Rate-limit: max 20 GET-ów extra (adapter dławi do 120/min).
+  const sourceCounts = new Map<string, number>();   // źródła NOWYCH zamówień (tanie zliczenie do Slacka)
+  if (Date.now() - startedAt <= DEADLINE_MS) {
+    try {
+      const cutoff14 = new Date(Date.now() - 14 * 86400_000).toISOString();
+      const { data: attrCands } = await supabase.from('wf2_orders')
+        .select('id, order_date')
+        .eq('project_id', proj.id).eq('attribution_status', 'pending')
+        .gt('order_date', cutoff14)
+        .order('order_date', { ascending: false }).limit(20);
+      for (const cand of ((attrCands || []) as { id: string; order_date: string }[])) {
+        if (Date.now() - startedAt > DEADLINE_MS) break;
+        try {
+          const r = await platformCall(baseUrl, wf2, { action: 'order_attribution', shop_id: shopId, order_id: cand.id });
+          const checkedIso = new Date().toISOString();
+          if (r.status === 200 && r.data && typeof r.data === 'object') {
+            const bodyAttr = r.data as Record<string, unknown>;
+            // ⚠️ USUŃ identity przed zapisem — valueHashedOrId zawiera surowy email/telefon (PII, nie trzymamy)
+            if ('identity' in bodyAttr) delete bodyAttr.identity;
+            const ex = extractAttribution(bodyAttr);
+            await supabase.from('wf2_orders').update({
+              attribution: bodyAttr, attribution_status: 'ok', attribution_checked_at: checkedIso,
+              attributed_source: ex.attributed_source, attribution_entry_path: ex.attribution_entry_path,
+              attribution_campaign: ex.attribution_campaign, attribution_click_ids: ex.attribution_click_ids,
+            }).eq('id', cand.id);
+            if (ex.attributed_source && newIdSet.has(cand.id)) sourceCounts.set(ex.attributed_source, (sourceCounts.get(ex.attributed_source) || 0) + 1);
+          } else if (r.status === 404) {
+            // 404 = brak dopasowanej sesji. Starsze niż 24h → 'none'; młodsze zostaw pending (sesja może się dokleić).
+            const ageMs = Date.now() - Date.parse(cand.order_date);
+            if (Number.isFinite(ageMs) && ageMs > 86400_000) {
+              await supabase.from('wf2_orders').update({ attribution_status: 'none', attribution_checked_at: checkedIso }).eq('id', cand.id);
+            }
+          } else {
+            console.error(`[wf2-orders-sync] attribution ${r.status} (zamówienie ${cand.id}) — zostaje pending`);
+          }
+        } catch (e) {
+          console.error(`[wf2-orders-sync] attribution wyjątek (zamówienie ${cand.id}):`, e instanceof Error ? e.message : String(e));
+        }
+      }
+    } catch (e) {
+      console.error(`[wf2-orders-sync] blok atrybucji (projekt ${proj.id}):`, e instanceof Error ? e.message : String(e));
+    }
   }
 
   // wpis o niezmapowanych nazwach — raz na przebieg projektu
@@ -305,7 +440,10 @@ async function syncProject(
   // 5) znacznik: To (koniec okna) — kolejny run rusza od tego czasu (minus 1d overlap)
   await supabase.from('wf2_projects').update({ orders_synced_at: toIso }).eq('id', proj.id);
 
-  return { upserted: orderRows.length, unmapped: unmappedNames.size, timedOut, new_count: newRows.length, new_value: newValue };
+  // source_summary: top źródła NOWYCH zamówień, np. 'facebook/paid ×2' (bez extra wywołań)
+  const source_summary = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k} ×${n}`).join(', ');
+
+  return { upserted: orderRows.length, unmapped: unmappedNames.size, timedOut, new_count: newRows.length, new_value: newValue, new_paid_count: newPaidCount, source_summary };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -552,6 +690,7 @@ Deno.serve(async (req) => {
           await postSlackSparing('wf2_order', {
             project_id: proj.id, customer: proj.customer_name || '',
             count: r.new_count, total_value: r.new_value, shop_domain: proj.domain || '',
+            paid_count: r.new_paid_count, source_summary: r.source_summary,
           });
         }
       } catch (e) {

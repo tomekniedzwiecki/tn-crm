@@ -88,7 +88,8 @@ products{search} · ensure_product{name,price} (idempotentny po nazwie — brak 
 set_checkout_slug{product_id,variant_id,slug} (+odczyt checkoutUrl) · integrations ·
 set_integration{type,config} (PUT AUTO-WŁĄCZA) · toggle_integration · upload_logo/upload_favicon
 {base64,file_name} · domains · add_domain · activate_domain · orders{from,to,page} · delivery ·
-delivery_options · add_delivery{body} · set_cod_account{broker_id,nrb} · set_delivery_order{items}`.
+delivery_options · add_delivery{body} · set_cod_account{broker_id,nrb} · set_delivery_order{items} ·
+order_detail{order_id} · order_attribution{order_id} · set_price{product_id,variant_id,price}`.
 Retry na 429 (Retry-After) wbudowany. Cena na landingu: publiczny edge **`wf2-landing-api`**
 (GET ?product=<wf2_products.id> → {price, checkout_url}; cache 5 min; DB = źródło prawdy).
 
@@ -109,13 +110,52 @@ Sesje fabryki NIE wołają adaptera ręcznie — używają mostu (idempotentne k
 + weryfikacja 200/runtime + platform_page_url + link w Podglądach. Panel: picker sklepu
 i live-stan w kroku pl_sklep. Sekrety z `tn-crm/.env` (WF2_GEN_SECRET + service key).
 
+## Analityka zamówień (doszła w API ~20.07 — WDROŻONA w wf2 20.07, sonda E2E zamówieniem COD 95677872)
+
+**Nowe endpointy:** `GET /orders/{id}` (detal z payments), **`GET /orders/{id}/attribution`**
+(404 = brak sesji), `payments[]` w liście `/orders`, **`PUT /products/{pid}/variants/{vid}/price`**
+`{price}` (endpoint ceny z §3.4 CENNIK — JEST), plus produktowe: `variants` GET/PUT, `multi-variant`,
+`variants/{vid}/details`, `media` GET/PUT/DELETE (produkt i sklep) — nietestowane jeszcze.
+
+**payments[] (potwierdzone):** `{id, publicId, type, status, amount:{amount,currency},
+isCashOnDelivery, isBlik, provider, isSandbox, externalPaymentId, createdAt}`.
+COD po złożeniu = `status:"Pending"` → opłacone dopiero po odbiorze. Semantyka wf2:
+`is_paid` = którakolwiek płatność ze statusem success (paid/completed/…); NULL gdy payments puste.
+
+**attribution (potwierdzone, BOGATE):** `sessions[]` (landingPage z pełnym query, source/channel,
+utm_*, device, duration, pageViews, orderId), `firstTouch`/`lastTouch`, `clickIds{fbclid,gclid,ttclid,…}`,
+`journey[]` (PageView→AddToCart→AddShippingInfo→PaymentInitiated→Purchase z productId!),
+`primarySession{reason:'PurchaseMatch'}`. Sesja łapie UTM z wejścia na landing (ta sama domena
+landing↔checkout) — **konwencja: URL reklamy z `utm_campaign={nazwa kampanii Meta}` +
+`utm_content={nazwa kreacji}` daje przychód per kampania/kreacja BEZ pixela.**
+**⚠️ PII:** `identity.identities[].valueHashedOrId` zwraca SUROWY email/telefon mimo „no PII" —
+zgłosić Adrianowi; wf2 wycina pole `identity` przed zapisem do bazy.
+
+**Warstwa wf2 (migracja `20260720b_wf2_analityka`):** `wf2_orders` + payments/is_paid/paid_at/
+payment_method + attribution (jsonb bez identity) / attributed_source ('facebook/paid') /
+attribution_campaign / attribution_entry_path / attribution_click_ids / attribution_status
+(pending→ok|none, retry 24h, okno 14 dni, limit 20 GET/projekt/run); `wf2_sales` + orders_paid/
+revenue_paid (księga PAID obok całości); `wf2_products.orders_confirmed` (opłacone; `orders_paid`
+zostaje proxy-licznikiem do 1000). Wszystko liczy cron `wf2-orders-sync`.
+Nowe typed actions adaptera: `order_detail · order_attribution · set_price{product_id,variant_id,price}`.
+
+## Rozwiązane / otwarte luki
+
 1. ~~PUT html not implemented~~ **WDROŻONE i przetestowane 16.07 wieczór** (kontrakt `{isHtml, html}`; pilot: Uśmieszek na sklepie „test").
 2. ~~POST /pages = 502~~ **NAPRAWIONE 16.07 wieczór.**
-3. **Produkt = tylko name+price** → brak opisu, zdjęć, wariantów, GTIN/EAN (wymóg feedów GEO), brak endpointu zmiany CENY (potrzebny do test→scale) i brak DELETE.
+3. **Produkt = tylko name+price przy CREATE** → ~~brak endpointu zmiany ceny~~ **JEST
+   (`PUT variants/{vid}/price`, 20.07)**; doszły też `variants/details`, `media`, `multi-variant`
+   (nietestowane — do sprawdzenia czy pokrywają opis/zdjęcia/EAN). Nadal brak DELETE/ukrycia produktu.
 4. ~~`checkoutUrl` null po ustawieniu sluga~~ ROZWIĄZANE: materializuje się asynchronicznie
    (kilka minut); format `https://{activeDomain}/checkout?p={checkoutSlug}`. Przy publikacji
    landingu: polling do skutku albo składanie URL z domeny+sluga.
-5. Brak endpointów pixel/CAPI per sklep (wymagania trackingowe §6 SSOT) i metod płatności checkoutu (pytania płatnościowe §5: COD w checkoucie? lista metod Autopay? branding kasy?). Flaga `isCashOnDelivery` w delivery-methods sugeruje COD w modelu — potwierdzić w checkoucie.
+5. ~~Brak pixel/CAPI per sklep~~ integracje SĄ (17.07) + ~~brak statusu płatności~~ **payments[]
+   SĄ (20.07)**; ~~COD w checkoucie?~~ **POTWIERDZONE sondą E2E 20.07**: checkout przełącza się
+   na „Płatność przy odbiorze" przy metodzie COD, branding sklepu w kasie pełny. OTWARTE:
+   pytanie CAPI (czy platforma emituje Purchase server-side z event_id + fbclid/_fbp/_fbc)
+   i lista realnych metod płatności produkcyjnej bramki (sandbox pokazuje tylko symulator).
+5b. **⚠️ PII w /orders/{id}/attribution** (`identity.identities[].valueHashedOrId` = surowy
+   email/telefon mimo deklaracji „no personal data") — DO ZGŁOSZENIA Adrianowi (RODO).
 6. Brak robots.txt/sitemap/llms.txt endpointów (wymagania GEO §5b — po stronie platformy).
 7. **Brak meta/SEO po API dla stron renderowanych przez platformę** (zbadane 17.07: title
    i description = „Default" na home/products/product/{nr}; title produktu = „{nazwa} | Default").

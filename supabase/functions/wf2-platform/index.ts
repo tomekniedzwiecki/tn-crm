@@ -20,7 +20,10 @@
 //   domains           { shop_id }                               → domeny + rekordy DNS
 //   add_domain        { shop_id, domain }                       → dodaje domenę (+www), zwraca rekordy DNS
 //   activate_domain   { shop_id, domain_id }                    → promuje na aktywną
-//   orders            { shop_id, from?, to?, page?, page_size? }→ zamówienia (bez PII)
+//   orders            { shop_id, from?, to?, page?, page_size? }→ zamówienia (payments[] bez PII w liście)
+//   order_detail      { shop_id, order_id }                     → GET /orders/{oid} (detal zamówienia)
+//   order_attribution { shop_id, order_id }                     → GET /orders/{oid}/attribution (404 = brak sesji, przechodzi w kopercie)
+//   set_price         { shop_id, product_id, variant_id, price }→ PUT …/variants/{vid}/price {price} (CENNIK W2; price>0)
 //   delivery          { shop_id }                               → metody dostawy
 //   delivery_options  { shop_id }                               → brokerzy (COD-capability)
 //   add_delivery      { shop_id, body }                         → POST delivery-methods (pełny body wg API)
@@ -194,6 +197,16 @@ Deno.serve(async (req) => {
       case 'add_domain': needShop(); out = await pf('POST', `/stores/${shopId}/domains`, { body: { domain: s(body.domain) } }); break;
       case 'activate_domain': needShop(); out = await pf('POST', `/stores/${shopId}/domains/${s(body.domain_id)}/activate`); break;
       case 'orders': needShop(); out = await pf('GET', `/stores/${shopId}/orders`, { query: { From: s(body.from), To: s(body.to), Page: body.page as number | undefined, PageSize: (body.page_size as number | undefined) ?? 50 } }); break;
+      case 'order_detail': needShop(); out = await pf('GET', `/stores/${shopId}/orders/${s(body.order_id)}`); break;
+      // 404 = brak dopasowanej sesji; przechodzi w kopercie { status, data } jak każdy status (NIE błąd funkcji)
+      case 'order_attribution': needShop(); out = await pf('GET', `/stores/${shopId}/orders/${s(body.order_id)}/attribution`); break;
+      case 'set_price': {
+        needShop();
+        const price = Number(body.price);
+        if (!s(body.product_id) || !s(body.variant_id) || !(price > 0)) return J({ error: 'product_id_variant_id_price_required' }, 400);
+        out = await pf('PUT', `/stores/${shopId}/products/${s(body.product_id)}/variants/${s(body.variant_id)}/price`, { body: { price } });
+        break;
+      }
       case 'delivery': needShop(); out = await pf('GET', `/stores/${shopId}/delivery-methods`); break;
       case 'delivery_options': needShop(); out = await pf('GET', `/stores/${shopId}/delivery-methods/options`); break;
       case 'add_delivery': needShop(); out = await pf('POST', `/stores/${shopId}/delivery-methods`, { body: body.body }); break;
@@ -207,7 +220,7 @@ Deno.serve(async (req) => {
         break;
       }
       default:
-        return J({ error: 'nieznana_akcja', allowed: ['stores','pages','publish_landing','unpublish_landing','products','ensure_product','set_checkout_slug','integrations','set_integration','toggle_integration','upload_logo','upload_favicon','domains','add_domain','activate_domain','orders','delivery','delivery_options','add_delivery','set_cod_account','set_delivery_order','raw'] }, 400);
+        return J({ error: 'nieznana_akcja', allowed: ['stores','pages','publish_landing','unpublish_landing','products','ensure_product','set_checkout_slug','integrations','set_integration','toggle_integration','upload_logo','upload_favicon','domains','add_domain','activate_domain','orders','order_detail','order_attribution','set_price','delivery','delivery_options','add_delivery','set_cod_account','set_delivery_order','raw'] }, 400);
     }
     return J({ status: out.status, data: out.data });
   } catch (e) {

@@ -218,11 +218,14 @@ bez danych spend flaga NIE blokuje awansu TEST→SCALE), cooldown, świeże BERO
 brak oceny kampanii do zebrania nowych Purchase.
 
 ### 3.4 DO DEVELOPERA PLATFORMY (Adrian) — pakiet wymagań modułu
-1. **Endpoint zmiany ceny** — `PUT /stores/{sid}/products/{pid}/variants/{vid}/price`
-   `{price}` → 200; obowiązuje w kasie natychmiast. (Decyzja Tomka: będzie.)
-2. **`paymentStatus` (paid|pending|cancelled|refunded) + `paymentMethod`
-   (blik|card|cod|transfer|paybylink) + `paidAt` w GET /orders** (decyzja Tomka: będzie)
-   + bonus `productId` w liniach.
+1. ✅ **DOSTARCZONE 20.07: endpoint zmiany ceny** `PUT …/variants/{vid}/price` (adapter:
+   akcja `set_price` — silnik cen może wychodzić z TRYBU INTERIM §3.6 po teście na żywo).
+2. ✅ **DOSTARCZONE 20.07 (bogatsze niż spec): `payments[]` w /orders** — {status, isCashOnDelivery,
+   isBlik, provider, amount{amount}, createdAt}; COD po złożeniu = "Pending" → `orders_eff` z §2
+   zastąpione twardym `is_paid`/`orders_confirmed` (wf2-orders-sync liczy; §Analityka w SSOT).
+   BONUS: `GET /orders/{id}/attribution` (utm/clickIds/journey per zamówienie). `productId`
+   w liniach nadal BRAK (mapowanie po nazwie zostaje). ⚠️ atrybucja wycieka PII (identity) —
+   zgłosić.
 3. **Webhook „nowe zamówienie COD" → SMS-weryfikacja przed nadaniem** + status
    „potwierdzone" (dźwignia −40% nieodebranych, §2c).
 4. Konfigurowalna dopłata za pobranie + różnica ceny przedpłata/COD w kasie.

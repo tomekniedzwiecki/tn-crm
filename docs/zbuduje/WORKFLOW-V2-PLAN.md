@@ -308,6 +308,20 @@ Konsekwencje architektoniczne:
    mailowe etapu (wzorzec v1: ads_activated → partner_step_completed → ads_completed +
    budget_not_funded) = do F4.
 
+### Analityka platformy (20.07 — WDROŻONA; referencja: platforma-api/README.md §Analityka)
+
+API dostało payments[] (status/COD/BLIK/provider), atrybucję per zamówienie (sesje+utm+clickIds+
+journey lejka z productId) i endpoint ceny. Wdrożone w wf2 (migracja `20260720b_wf2_analityka`):
+`wf2_orders.is_paid/payment_method/attribution_*`, `wf2_sales.orders_paid/revenue_paid`,
+`wf2_products.orders_confirmed`; cron `wf2-orders-sync` dociąga atrybucję (limit 20/projekt/run,
+retry 404 24h, okno 14 dni, PII `identity` wycinane). **Kroki spięte (instructions_md w step_defs):**
+`ads_pixel` = pixel na sklep PRZEZ API (set_integration, PUT auto-włącza) + gate Purchase w Test
+Events; `ads_wyniki` = DWIE KSIĘGI (spend z Meta + przychód z platformy per utm_campaign/utm_content —
+**konwencja: URL reklamy z utm_campaign={kampania} i utm_content={kreacja}**, rozjazd >30% = nota);
+`sprzedaz_sync` = payments prawdą (COD Pending ≠ sprzedaż); `test_wynik` = werdykt z orders_confirmed.
+Sonda E2E 20.07: zamówienie COD 95677872 (sklep test) → is_paid=false/cod, attributed_source
+facebook/paid, campaign WF2-TEST-usmieszek, fbclid złapany, journey 9 eventów.
+
 ### Cennik dwufazowy (decyzja Tomka 15.07)
 
 > **18.07: pełny projekt modułu cen → `CENNIK-PLAN.md` v2.0** (silnik decyzji produktowych:
