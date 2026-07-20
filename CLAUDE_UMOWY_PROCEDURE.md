@@ -105,10 +105,10 @@ To **osobny mechanizm** od plików w `umowy/klienci/`. W panelu workflow (zakła
 | `{{data_rozpoczecia}}` | `started_at` lub dziś |
 | `{{kwota}}` / `{{cena}}` | suma rat lub `amount` |
 | `{{nazwa_oferty}}` | `offer_name` |
-| `{{warunki_platnosci}}` | wygenerowany blok rat (tylko admin) |
-| `{{nr_punkt_konto}}` | "3" lub "5" zależnie od rat (tylko admin) |
+| `{{warunki_platnosci}}` | wygenerowany blok rat (tabela z `payment_installments`) |
+| `{{nr_punkt_konto}}` | "3" lub "5" zależnie od rat |
 
-`{{warunki_platnosci}}` i `{{nr_punkt_konto}}` podstawia tylko panel admina, NIE strona klienta.
+Od 2026-07-20 `{{warunki_platnosci}}`, `{{nr_punkt_konto}}` i `{{kwota}}` = suma rat podstawiają OBIE strony: panel admina (`generateContract()`) i portal klienta (`prepareContractHtml()`). Wcześniej portal klienta ich nie znał — klient na ratach pobierał PDF z surowymi tokenami i kwotą pierwszej raty zamiast sumy (incydent: Sylwester Bednarz, workflow `1229f909`, rata 1/6 = 4000 zł zamiast 9400 zł).
 
 ### 🪤 PUŁAPKA: spieczone placeholdery (zdarzyło się u Pawła Wróblewskiego 2026-05-29)
 
