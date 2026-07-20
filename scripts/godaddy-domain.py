@@ -25,16 +25,18 @@ import argparse, datetime, json, os, sys, urllib.request, urllib.error
 API = "https://api.godaddy.com"
 DEFAULT_NS = ["ns1.vercel-dns.com", "ns2.vercel-dns.com"]
 
+# GOTCHA: wzorce kontaktów GoDaddy odrzucają polskie diakrytyki (ź/ł/ś poza ^[ -zÀ-ÿ]+$)
+# — dane kontaktu MUSZĄ być w transliteracji ASCII.
 CONTACT_DEFAULTS = {
     "nameFirst": "Tomasz",
-    "nameLast": "Niedźwiecki",
-    "organization": "Tomasz Niedźwiecki AI",
+    "nameLast": "Niedzwiecki",
+    "organization": "Tomasz Niedzwiecki AI",
     "email": os.environ.get("GODADDY_CONTACT_EMAIL", ""),
     "phone": os.environ.get("GODADDY_CONTACT_PHONE", ""),  # format +48.XXXXXXXXX
     "addressMailing": {
         "address1": "ul. Grawerska 30L",
-        "city": "Wrocław",
-        "state": "dolnośląskie",
+        "city": "Wroclaw",
+        "state": "dolnoslaskie",
         "postalCode": "51-180",
         "country": "PL",
     },
@@ -97,13 +99,19 @@ def build_contact(args):
         sys.exit("BRAK kontaktu: podaj --email i --phone (+48.XXXXXXXXX) albo env GODADDY_CONTACT_EMAIL/PHONE.")
     return c
 
-def cmd_buy(domain, args):
+def cmd_buy(domain, args, validate_only=False):
     tld = domain.split(".", 1)[1]
     code, avail = req("GET", f"/v1/domains/available?domain={domain}&checkType=FULL")
-    if code != 200 or not avail.get("available"):
+    if code == 403:
+        # Konto <50 domen: GoDaddy blokuje TYLKO availability API — purchase/validate działają.
+        # Dostępność potwierdzamy zewnętrznie (RDAP), cena = cennik konta GoDaddy (widoczna w orderze).
+        print("UWAGA: /available 403 (limit konta) — pomijam check ceny, dostępność potwierdź RDAP-em.")
+        price = "wg cennika konta GoDaddy (brak dostępu do availability API)"
+    elif code != 200 or not avail.get("available"):
         print(json.dumps(avail, ensure_ascii=False, indent=2))
         sys.exit(f"Domena {domain} niedostępna do zakupu (albo API odmówiło, kod {code}).")
-    price = fmt_price(avail.get("price"), avail.get("currency", "USD"))
+    else:
+        price = fmt_price(avail.get("price"), avail.get("currency", "USD"))
     code, ag = req("GET", f"/v1/domains/agreements?tlds={tld}&privacy=false")
     if code != 200:
         print(json.dumps(ag, ensure_ascii=False, indent=2)); sys.exit(f"Nie pobrano agreements ({code}).")
@@ -113,7 +121,7 @@ def cmd_buy(domain, args):
         "domain": domain,
         "period": 1,
         "renewAuto": True,
-        "privacy": False,
+        # bez "privacy" — schemat .pl go nie zna (422 INVALID_PROPERTY; NASK chroni dane z urzędu)
         "nameServers": args.ns.split(",") if args.ns else DEFAULT_NS,
         "consent": {
             "agreementKeys": keys,
@@ -124,6 +132,11 @@ def cmd_buy(domain, args):
         "contactTech": contact, "contactBilling": contact,
     }
     print(f"CENA: {price}  |  NS: {body['nameServers']}  |  agreements: {keys}")
+    if validate_only:
+        code, d = req("POST", "/v1/domains/purchase/validate", body)
+        print(f"VALIDATE HTTP {code}"); print(json.dumps(d, ensure_ascii=False, indent=2))
+        if code == 200: print("\nWalidacja OK — zakup przejdzie (nic nie kupiono).")
+        return code
     if not args.confirm:
         print("\nDRY-RUN (bez --confirm nie kupuję). Payload:")
         safe = json.loads(json.dumps(body)); safe["contactRegistrant"]["phone"] = "***"
@@ -142,7 +155,7 @@ def cmd_status(domain):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["check", "agreements", "buy", "status"])
+    ap.add_argument("cmd", choices=["check", "agreements", "buy", "validate", "status"])
     ap.add_argument("target")
     ap.add_argument("--confirm", action="store_true", help="wykonaj PRAWDZIWY zakup")
     ap.add_argument("--email", default=""); ap.add_argument("--phone", default="")
@@ -151,4 +164,5 @@ if __name__ == "__main__":
     if a.cmd == "check": sys.exit(0 if cmd_check(a.target) == 200 else 1)
     if a.cmd == "agreements": sys.exit(0 if cmd_agreements(a.target) == 200 else 1)
     if a.cmd == "buy": sys.exit(0 if cmd_buy(a.target, a) in (0, 200, 202) else 1)
+    if a.cmd == "validate": sys.exit(0 if cmd_buy(a.target, a, validate_only=True) in (0, 200, 202) else 1)
     if a.cmd == "status": sys.exit(0 if cmd_status(a.target) == 200 else 1)
