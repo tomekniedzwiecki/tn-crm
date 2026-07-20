@@ -3051,22 +3051,40 @@
         function renderWorkMap() {
             const wrap = document.getElementById('workmap-container');
             if (!wrap) return;
-            wrap.innerHTML = WORK_MAP.map(st => {
+            wrap.innerHTML = '<div class="space-y-4 mt-4">' + WORK_MAP.map((st, i) => {
+                const num = String(i + 1).padStart(2, '0');
+                const [, title] = st.t.split('— ');
                 const per = st.per
-                    ? '<span class="inline-block align-[2px] ml-2 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[10px] font-mono font-semibold whitespace-nowrap">× każdy produkt z portfela</span>'
+                    ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[10px] font-mono font-semibold whitespace-nowrap"><i class="ph-bold ph-repeat text-[10px]"></i> każdy produkt z portfela</span>'
                     : '';
                 const cnt = st.steps.length + ' ' + (st.steps.length < 5 ? 'kroki' : 'kroków');
-                const steps = st.steps.map(([name, desc, sub]) => `
-                    <div class="flex items-baseline gap-2.5 py-2 border-b border-white/5 ${sub ? 'pl-5' : ''}">
-                        <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full ${sub ? 'bg-amber-500/60' : 'bg-emerald-500/70'} translate-y-[-1px]"></span>
-                        <div class="text-sm"><strong class="text-white font-semibold">${name}</strong> <span class="text-zinc-400">— ${desc}</span></div>
+                const steps = st.steps.map(([name, desc, sub], j) => `
+                    <div class="flex items-start gap-3 px-4 sm:px-5 py-2.5 ${j > 0 ? 'border-t border-white/[0.04]' : ''} ${sub ? 'ml-8 sm:ml-9 border-l border-amber-500/20 pl-4 sm:pl-5' : ''}">
+                        <span class="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full ${sub ? 'bg-amber-500/10 border border-amber-500/25' : 'bg-emerald-500/10 border border-emerald-500/30'} flex items-center justify-center">
+                            <i class="ph-bold ph-check text-[10px] ${sub ? 'text-amber-400' : 'text-emerald-400'}"></i>
+                        </span>
+                        <div class="text-sm leading-snug min-w-0">
+                            <span class="text-white font-semibold">${name}</span>
+                            <span class="text-zinc-400"> — ${desc}</span>
+                        </div>
                     </div>`).join('');
                 return `
-                    <div class="flex items-baseline justify-between gap-3 mt-6 pb-2 border-b border-white/10">
-                        <div class="text-white font-bold text-[15px]">${st.t}${per}</div>
-                        <div class="flex-shrink-0 text-zinc-500 text-[10px] font-mono uppercase tracking-wider">${cnt}</div>
-                    </div>${steps}`;
-            }).join('');
+                    <div class="rounded-xl border border-white/10 bg-zinc-900/40 overflow-hidden">
+                        <div class="flex items-center gap-3.5 px-4 sm:px-5 py-4 bg-white/[0.03] border-b border-white/10">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center">
+                                <span class="font-mono font-bold text-emerald-400 text-sm">${num}</span>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-white font-bold text-[15px] leading-tight">${title}</div>
+                                <div class="flex flex-wrap items-center gap-2 mt-1">
+                                    <span class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider">${cnt}</span>
+                                    ${per}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="py-1">${steps}</div>
+                    </div>`;
+            }).join('') + '</div>';
         }
         document.addEventListener('DOMContentLoaded', renderWorkMap);
 
