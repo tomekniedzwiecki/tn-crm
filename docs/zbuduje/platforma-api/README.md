@@ -193,3 +193,21 @@ landing na domenie sklepu (isHtml) = sesja jest, zewnętrzny origin = sprawdzić
 bez captchy/klucza = wektor spamu zamówień COD — zgłosić Adrianowi (rate-limit/turnstile);
 (d) Adrian dopisuje do docs przewodniki narracyjne (flow+ciastka) — nasza empiria powyżej już to pokrywa,
 zweryfikować zgodność gdy wyjdą. Guides w docs: na razie 1 (`custom-html-pages`).
+
+### Przewodniki w docs (LIVE 20.07 późny wieczór): `visitor-identity` + `checkout-flow` (+custom-html-pages)
+
+Zgodne 1:1 z naszym flow empirycznym. Doprecyzowania z przewodników:
+1. **`clientId` MUSI być UUIDv7** (platforma używa v7 wszędzie) — nasz test przeszedł na v4,
+   ale standard fabryki = v7. Mintujemy go SAMI, raz per odwiedzający, reuse we wszystkich
+   wywołaniach; storefront trzyma go w ciastku **`trv_cid`** (2 lata).
+2. **⚠️ PUŁAPKA `trv_cid` na stronach isHtml:** nasze landingi na domenie sklepu dostają
+   window.trevio SDK, który MA JUŻ clientId w ciastku `trv_cid`. Własny checkout na landingu
+   MUSI użyć clientId Z TEGO CIASTKA (nie generować nowego!) — inaczej koszyk/zamówienie
+   będą na innym clientId niż sesja analityczna SDK i atrybucja zamówienia będzie PUSTA
+   (attribution wiąże się po sesjach analytics tego samego clientId).
+3. Ciastka atrybucji (standalone front musiałby prowadzić je sam; na isHtml robi to SDK):
+   `trv_attr` = last-touch UTM+referrer (30 dni), `trv_click` = click ids gclid/fbclid/msclkid/
+   ttclid/trvclid (90 dni).
+4. `deliveryMethodPriceGroupId` dobierać PO WALUCIE z price tiers metody dostawy (jedyny
+   nierozpisany wprost szczegół wg Adriana; dla PL sklepów = grupa PLN).
+5. Produkty cyfrowe omijają koszyk: `POST /order/digital/one-time-payment`.
