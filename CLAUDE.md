@@ -177,6 +177,19 @@ README platforma-api). Referencja API: `docs/zbuduje/platforma-api/README.md`.
   który ma już zapisany stan (nadpisz nowymi tekstami z faktycznym done) — inaczej panel pokaże sieroty:
   stare pozycje odhaczone + nowe puste (2× incydent 12.07 przy krokach `nazwa` i `repo_vercel`).
 
+### Sync panelu — `wfa-panel-sync.mjs`
+Sesja budowlana odnotowuje postęp w panelu **NATYCHMIAST** po zrobieniu rzeczy (zasada: ZROBIONE =
+od razu odhaczone — checklista + status + kronika, nie „na koniec z pamięci"). Zapis przez Supabase
+Management API (`database/query`, token `sbp_*` z Credential Managera „Supabase CLI:supabase" lub
+`--token`/env `SUPABASE_MGMT_TOKEN`); całe HTTP w Node/fetch = natywny UTF-8 (bez pułapki cp1250).
+- `node scripts/wfa-panel-sync.mjs steps --project <uuid|slug>` — lista kroków (status, X/Y checklisty).
+- `... step <key> --status in_progress|done|… [--check "1,3" | --check-all | --check-match "frag"] [--note "…"]`
+  — upsert `wfa_steps` (klucz `project_id,step_key`); checklista budowana **VERBATIM z WS** (patrz GOTCHA wyżej),
+  odhaczenia to UNIA z istniejącym stanem (nie gubi wcześniejszych `done`); nota → `data.note`.
+- `... activity --action <slug> --desc "…"` / `... note --kind uwaga|decyzja --text "…"` — kronika / uwagi.
+- Wspólne: `--dry-run` (pokaż SQL+JSON bez zapisu), `--json`. Po zapisie tool weryfikuje odczytem i wypisuje „stan po".
+- Metodyka: `docs/stworze/METODYKA-BUDOWY.md` §3.4.6.
+
 ### Moduł „Skrzynki" (`/tn-app/skrzynki`) — poczta przychodząca domen aplikacji
 Centralny odbiór maili WSZYSTKICH domen aplikacji: MX apeksu → **Resend Inbound** → webhook
 `wfa-inbox-webhook` (--no-verify-jwt; svix sekret `RESEND_WEBHOOK_SECRET_INBOX`) → tabela `wfa_inbox`
