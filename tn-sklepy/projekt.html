@@ -10,90 +10,15 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2.91.0"></script>
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.2/src/index.js" integrity="sha384-J7cw2fbG1T4C5MirTVUxsZGaMfw2m0XsCgOQEqUvB1OF9VIsHWuZF1GmyVRzs7eu" crossorigin="anonymous"></script>
     <script src="../components/shared-sidebar.js"></script>
+    <link rel="stylesheet" href="panel.css">
+    <script src="panel-core.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
     </script>
     <style>
-        body { background: #000; color: #e5e5e5; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::selection { background: white; color: black; }
-        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
-        .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
-        .animate-enter { animation: fadeIn .4s ease-out forwards; }
-        /* stepper etapów — segmenty w karcie procesu (klik = przełącz etap poniżej) */
-        .stage-seg { flex:0 0 auto; min-width:172px; display:flex; flex-direction:column; gap:7px; text-align:left;
-            background:transparent; border:none; border-right:1px solid #1f1f1f; padding:12px 14px;
-            cursor:pointer; transition:background .15s ease; font-family:inherit; color:inherit; }
-        .stage-seg:last-child { border-right:0; }
-        .stage-seg:hover { background:rgba(255,255,255,.03); }
-        .stage-seg.active { background:rgba(0,112,243,.07); box-shadow:inset 0 2px 0 #0070f3; }
-        .stage-seg.completed .stage-num { background:#45a557; color:#fff; }
-        .seg-label { font-size:12px; line-height:1.35; color:#a1a1aa; }
-        .stage-seg.active .seg-label { color:#fff; }
-        .seg-bar { height:3px; border-radius:2px; background:#1f1f1f; overflow:hidden; margin-top:auto; }
-        .seg-bar > div { height:100%; background:#0070f3; border-radius:2px; }
-        .stage-seg.completed .seg-bar > div { background:#45a557; }
-        /* desktop: segmenty dzielą szerokość karty po równo (liczba etapów = --stages z JS) */
-        @media (min-width:1024px){
-            #stage-pills { display:grid; grid-template-columns:repeat(var(--stages,7), minmax(0,1fr)); }
-            .stage-seg { min-width:0; }
-        }
-        .stage-num { width:20px; height:20px; border-radius:5px; background:#27272a; color:#a1a1aa;
-            display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; flex-shrink:0; }
-        .st-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid; border-radius:6px;
-            padding:5px 11px; font-size:11.5px; font-weight:500; cursor:pointer; transition:all .15s ease; }
-        .st-pending     { border-color:#333; background:#161616; color:#a1a1aa; }
-        .st-in_progress { border-color:rgba(245,166,35,.45);  background:rgba(245,166,35,.1); color:#f5b955; }
-        .st-done        { border-color:rgba(69,165,87,.45);  background:rgba(69,165,87,.1); color:#4cb782; }
-        .st-skipped     { border-color:#262626; background:transparent; color:#52525b; text-decoration:line-through; }
-        .st-blocked     { border-color:rgba(229,72,77,.45);   background:rgba(229,72,77,.1); color:#f26d78; }
-        .owner-tag { font-size:10px; padding:2px 7px; border-radius:6px; font-weight:600; letter-spacing:.02em; }
-        .owner-admin  { background:rgba(0,112,243,.12); color:#52a8ff; }
-        .owner-client { background:rgba(245,166,35,.12); color:#f5b955; }
-        .owner-auto   { background:rgba(69,165,87,.12); color:#4cb782; }
-        .mile-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:2px 7px; border-radius:6px;
-            background:rgba(69,165,87,.14); color:#4cb782; border:1px solid rgba(69,165,87,.35); font-weight:600; }
-        input[type="date"] { color-scheme: dark; }
-        .fld { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:6px;
-            padding:8px 10px; font-size:13px; color:#fff; }
-        .fld:focus { outline:none; border-color:rgba(0,112,243,.5); }
-        .ptab { background:none; border:none; border-bottom:2px solid transparent; color:#a1a1aa;
-            padding:9px 14px; font-size:13px; cursor:pointer; white-space:nowrap; transition:color .15s ease; }
-        .ptab:hover { color:#fff; }
-        .ptab.active { color:#fff; border-bottom-color:#0070f3; }
-        .ptab span { color:#52a8ff; font-size:11px; }
-        .md-body h2 { color:#fff; font-size:14px; font-weight:600; margin:14px 0 6px; }
-        .md-body p { margin:4px 0; }
-        .md-body ul { list-style:disc; padding-left:18px; margin:4px 0; }
-        .md-body li { margin:2px 0; }
-        .md-body b { color:#fff; }
-        /* macierz portfela */
-        .mx-cell { width:30px; height:30px; border-radius:6px; border:1px solid #2e2e2e;
-            display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .12s ease; margin:0 auto; }
-        .mx-cell:hover { transform:scale(1.12); }
-        .mx-pending     { background:#161616; color:#71717a; }
-        .mx-in_progress { background:rgba(245,166,35,.14); color:#f5b955; border-color:rgba(245,166,35,.45); }
-        .mx-done        { background:rgba(69,165,87,.14); color:#4cb782; border-color:rgba(69,165,87,.5); }
-        .mx-skipped     { background:transparent; color:#3f3f46; }
-        .mx-blocked     { background:rgba(229,72,77,.14); color:#f26d78; border-color:rgba(229,72,77,.5); }
-        /* mini-pasek postępu produktu */
-        .pp-bar { height:4px; border-radius:2px; background:#27272a; overflow:hidden; }
-        .pp-bar > div { height:100%; background:#0070f3; border-radius:2px; }
-        /* nagłówek kolumny macierzy (tooltip = globalny #tn-tooltip z shared-sidebar.js) */
-        .mx-head { display:flex; flex-direction:column; align-items:center; gap:2px; cursor:help; padding:2px 0; }
-        .mx-head:hover i { color:#52a8ff; }
-        /* kafle artefaktów w drawerze */
-        .art-tile { position:relative; display:block; border:1px solid #2a2a2a; border-radius:6px; overflow:hidden; background:#111; }
-        .art-tile img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
-        .art-tile .art-label { position:absolute; left:0; right:0; bottom:0; background:rgba(0,0,0,.72);
-            color:#d4d4d8; font-size:9.5px; padding:2px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        /* makiety mobile — kafle pionowe 9:16 (specyficzność .art-tile.art-mobile img > .art-tile img) */
-        .art-tile.art-mobile img { aspect-ratio:9/16; }
-        /* kreacje statyczne ads_grafiki — kafel 4:5 z badge kąta / „AI" / toggle akceptu */
+        /* Style wspolne panelu -> tn-sklepy/panel.css (jedno zrodlo dla admina i portalu).
+           Ponizej wylacznie style adminowe (kreacje ads_grafiki) — nie sa wspoldzielone z portalem. */
         .ads-cr { position:relative; border:1px solid #2a2a2a; border-radius:6px; overflow:hidden; background:#111; }
         .ads-cr img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; cursor:pointer; }
         .ads-cr-empty { aspect-ratio:4/5; display:flex; align-items:center; justify-content:center; color:#52525b; font-size:11px; }
@@ -102,29 +27,6 @@
         .ads-cr-ok { position:absolute; bottom:6px; right:6px; width:26px; height:26px; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.7); color:#a1a1aa; border:1px solid #333; border-radius:6px; cursor:pointer; transition:all .15s; }
         .ads-cr-ok:hover { color:#fff; border-color:#555; }
         .ads-cr-ok.is-ok { color:#45a557; border-color:#45a557; background:rgba(69,165,87,.16); }
-        /* nagłówek grupy artefaktów (Makiety desktop / mobile / Pozostałe) */
-        .art-group-head { display:flex; align-items:baseline; gap:8px; margin:0 0 8px; }
-        .agh-title { font-size:10px; font-family:ui-monospace,monospace; text-transform:uppercase; letter-spacing:.08em; color:#a1a1aa; }
-        .agh-count { font-size:10px; font-family:ui-monospace,monospace; color:#52a8ff; }
-        /* lightbox z nawigacją (styl Geist — ciemne #0a0a0a/#111, akcent #0070f3) */
-        .lb-nav { position:absolute; top:50%; transform:translateY(-50%); z-index:2;
-            width:44px; height:44px; border-radius:9999px; border:1px solid #333; background:#111;
-            color:#e4e4e7; display:flex; align-items:center; justify-content:center; cursor:pointer;
-            font-size:20px; transition:background .15s ease, border-color .15s ease, color .15s ease; }
-        .lb-nav:hover { background:#0070f3; border-color:#0070f3; color:#fff; }
-        .lb-nav.lb-prev { left:20px; }
-        .lb-nav.lb-next { right:20px; }
-        .lb-hud { position:absolute; top:18px; left:50%; transform:translateX(-50%); z-index:2;
-            background:#0a0a0a; border:1px solid #333; color:#a1a1aa; font:11px/1 ui-monospace,monospace;
-            padding:6px 12px; border-radius:9999px; }
-        .lb-cap { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); z-index:2; max-width:80vw;
-            background:#0a0a0a; border:1px solid #333; color:#d4d4d8; font-size:12px;
-            padding:6px 14px; border-radius:8px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .lb-close { position:absolute; top:16px; right:20px; z-index:2;
-            width:40px; height:40px; border-radius:9999px; border:1px solid #333; background:#0a0a0a;
-            color:#e4e4e7; display:flex; align-items:center; justify-content:center; cursor:pointer;
-            font-size:20px; transition:background .15s ease, border-color .15s ease, color .15s ease; }
-        .lb-close:hover { background:#e5484d; border-color:#e5484d; color:#fff; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -139,7 +41,10 @@
                 <span class="text-zinc-700">/</span>
                 <span id="hdr-name" class="text-zinc-300 text-xs font-mono truncate">…</span>
             </div>
-            <button onclick="openSettings()" class="p-2 text-zinc-400 hover:text-white" title="Ustawienia projektu"><i class="ph ph-gear text-lg"></i></button>
+            <div class="flex items-center gap-1">
+                <button onclick="previewAsClient()" class="p-2 text-zinc-400 hover:text-white" title="Podgląd oczami klienta"><i class="ph ph-eye text-lg"></i></button>
+                <button onclick="openSettings()" class="p-2 text-zinc-400 hover:text-white" title="Ustawienia projektu"><i class="ph ph-gear text-lg"></i></button>
+            </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-6 lg:p-10">
@@ -208,7 +113,7 @@
                 </div>
 
                 <!-- Kroki projektu (scope=project) -->
-                <div id="steps-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-7"></div>
+                <div id="steps-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-7"></div>
 
                 <!-- Portfel produktów: postęp per produkt + macierz kroków etapu -->
                 <div id="portfolio-box" class="hidden bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
@@ -363,6 +268,11 @@
         <div id="lb-cap" class="lb-cap hidden"></div>
     </div>
 
+    <!-- Lightbox produktu (współdzielony z panel-core.js): zdjęcie + aukcja + wideo TikTok -->
+    <div id="prodlb" class="hidden" onclick="if(event.target===this)closeProductLB()">
+        <div id="prodlb-panel"></div>
+    </div>
+
 
     <!-- Modal: dodawanie produktów — LOSOWANIE z zatwierdzonych albo ręczny wybór -->
     <div id="picker-modal" class="hidden fixed inset-0 z-[55] flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closePicker()">
@@ -512,6 +422,18 @@
                 <div><label class="text-xs text-zinc-500 block mb-1">Konto reklamowe (act_…)</label><input id="set-act" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Pixel ID</label><input id="set-pixel" class="fld"></div>
             </div>
+
+            <!-- Portal klienta: podgląd 1:1 + mail z dostępem (draft w Gmailu) -->
+            <div class="mt-5 pt-4 border-t border-[#1f1f1f]">
+                <div class="text-xs font-semibold text-white mb-2 flex items-center gap-2"><i class="ph ph-user-focus text-[#3291ff]"></i> Portal klienta</div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="previewAsClient()" class="px-3 py-2 text-xs font-semibold bg-[#111] border border-[#0070f3]/40 rounded-md text-[#52a8ff] hover:bg-[#0070f3]/10 flex-shrink-0"><i class="ph ph-eye"></i> Podejrzyj oczami klienta</button>
+                    <button onclick="accessMailDraft()" class="px-3 py-2 text-xs font-semibold bg-[#0070f3]/15 border border-[#0070f3]/40 rounded-md text-[#52a8ff] hover:bg-[#0070f3]/25 flex-shrink-0"><i class="ph ph-envelope-simple"></i> Mail z dostępem (draft w Gmailu)</button>
+                </div>
+                <div id="set-portal-status" class="text-[10.5px] text-zinc-600 mt-2 space-y-0.5"></div>
+                <div class="text-[10px] text-zinc-600 mt-1.5">Link: /twoj-biznes?t=&lt;token&gt; — klient widzi postęp, produkty i swoje zadania (przez edge wf2-portal). Hasło ustawia sam przy pierwszym wejściu.</div>
+            </div>
+
             <div class="flex justify-between items-center mt-5">
                 <button onclick="deleteProject()" class="px-3 py-2 text-xs text-[#f26d78] hover:text-[#ff8589]">Usuń projekt</button>
                 <div class="flex gap-2">
@@ -540,118 +462,42 @@
         let adStats = [];
         let costs = [];          // wf2_costs (koszty jednostkowe per etap/produkt)
         let ordersCount = 0;     // COUNT(*) z wf2_orders (dokładny licznik do 1000)
-        let activeStage = 1;
         let editingProductId = null;
-        let drawerCtx = null;    // {key, productId}
         let ttProducts = null;   // cache radaru /trendy (approved)
         let ttCardCache = {};    // tt_product_id -> pełny wiersz do karty produktu
         let pendingTT = null;
         let genMap = {};         // bud_session_id -> generacje z lejka /sklep
         let noteFilter = 'open';
 
-        const PROJECT_STATUSES = ['start','budowa','sklep','kampanie','testy','stery','monthly','zamkniety'];
-        const STATUS_LABELS = { start:'Start', budowa:'Budowa', sklep:'Sklep', kampanie:'Kampanie', testy:'Testy', stery:'Stery', monthly:'Monthly', zamkniety:'Zamknięty' };
         const PRODUCT_STATUSES = ['kandydat','zaakceptowany','w_budowie','gotowy','live','test','winner','kill','skala'];
-        const PRODUCT_STATUS_META = {
-            kandydat:     { label:'Kandydat',     cls:'bg-zinc-500/15 text-zinc-300' },
-            zaakceptowany:{ label:'Zaakceptowany',cls:'bg-[#0070f3]/10 text-[#52a8ff]' },
-            w_budowie:    { label:'W budowie',    cls:'bg-[#0070f3]/10 text-[#52a8ff]' },
-            gotowy:       { label:'Gotowy',       cls:'bg-[#0070f3]/10 text-[#52a8ff]' },
-            live:         { label:'LIVE',         cls:'bg-[#45a557]/10 text-[#62c073]' },
-            test:         { label:'W teście',     cls:'bg-[#f5a623]/10 text-[#f5b955]' },
-            winner:       { label:'WINNER',       cls:'bg-[#45a557]/20 text-[#62c073] font-semibold' },
-            kill:         { label:'KILL',         cls:'bg-[#e5484d]/10 text-[#f26d78]' },
-            skala:        { label:'Skala',        cls:'bg-[#0070f3]/10 text-[#52a8ff]' },
-        };
         const STEP_CYCLE = { pending:'in_progress', in_progress:'done', done:'pending', skipped:'pending', blocked:'in_progress' };
-        const STEP_LABELS = { pending:'Do zrobienia', in_progress:'W trakcie', done:'Ukończone', skipped:'Pominięte', blocked:'Zablokowane' };
-        const OWNER_LABEL = { admin:'Tomek', client:'Klient', auto:'Auto' };
         const NOTE_TAG_META = { uwaga:{l:'Uwaga',cls:'text-[#52a8ff] border-[#0070f3]/40'}, decyzja:{l:'Decyzja',cls:'text-[#62c073] border-[#45a557]/40'}, blokada:{l:'Blokada',cls:'text-[#f26d78] border-[#e5484d]/40'} };
         const TEST_MARGIN_PCT = 15; // marża testowa ~15% narzutu (decyzja Tomka 2026-07-04)
-        const PORTFOLIO_TARGET = 3; // domyślny rozmiar portfela (decyzja Tomka 2026-07-19: 3 zamiast 5 — mniej produkcji, ~165 zł testu/produkt)
 
-        function escapeHtml(str) {
-            if (str === null || str === undefined) return '';
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-        }
-        function moneyPL(n) { return (Number(n)||0).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' zł'; }
-        function relTime(iso) {
-            if (!iso) return '';
-            const d = new Date(iso); const mins = Math.round((Date.now()-d.getTime())/60000);
-            if (mins < 60) return mins + ' min temu';
-            if (mins < 1440) return Math.round(mins/60) + ' godz. temu';
-            return d.toLocaleDateString('pl-PL');
-        }
-        function showToast(message, type='info') {
-            const toast = document.createElement('div');
-            const bg = type==='success' ? '#45a557' : type==='error' ? '#ef4444' : '#3b82f6';
-            toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};color:#fff;padding:12px 20px;border-radius:6px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity .3s`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 2200);
-        }
         async function logActivity(action, description) {
             try { await supabaseClient.from('wf2_activities').insert({ project_id: projectId, actor:'admin', action, description }); } catch(_) {}
         }
-        function mdLite(md) {
-            let h = escapeHtml(md).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-            const lines = h.split(/\r?\n/); let out = '', inUl = false;
-            for (const ln of lines) {
-                if (/^\s*-\s+/.test(ln)) { if (!inUl) { out += '<ul class="list-disc pl-4 space-y-1">'; inUl = true; } out += '<li>' + ln.replace(/^\s*-\s+/, '') + '</li>'; }
-                else { if (inUl) { out += '</ul>'; inUl = false; } if (ln.trim()) out += '<p>' + ln + '</p>'; }
-            }
-            if (inUl) out += '</ul>';
-            return out;
+
+        // TikToki produktu do lightboxa (kształt {url,plays,mp4,poster}) — LUSTRO buildTiktoks z edge wf2-portal:
+        // origin link (tiktok_url) gwarantowany PIERWSZY, potem kuracja videos_curated.items (keep/PASS) wg kolejnosci; max 5.
+        function buildTiktoks(tt) {
+            const out = [];
+            const push = (url, plays, mp4, poster) => {
+                const u = String(url || ''); if (!/^https?:\/\//i.test(u)) return;
+                if (out.some(o => o.url === u)) return;
+                out.push({ url: u, plays: typeof plays === 'number' ? plays : null,
+                    mp4: (typeof mp4 === 'string' && /^https?:\/\//i.test(mp4)) ? mp4 : null,
+                    poster: (typeof poster === 'string' && /^https?:\/\//i.test(poster)) ? poster : null });
+            };
+            if (!tt) return out;
+            push(tt.tiktok_url, tt.total_plays ?? tt.max_plays, null, null);
+            const vc = tt.videos_curated;
+            const items = (vc && typeof vc === 'object' && Array.isArray(vc.items)) ? vc.items : [];
+            items.filter(it => it && (it.keep === true || ['KEEP','PASS'].includes(String(it.werdykt || '').toUpperCase())))
+                .sort((a, b) => (a.kolejnosc == null ? 999 : Number(a.kolejnosc)) - (b.kolejnosc == null ? 999 : Number(b.kolejnosc)))
+                .forEach(it => { if (out.length < 5) push(it.url, it.plays, it.mp4_hosted, it.poster_hosted); });
+            return out.slice(0, 5);
         }
-        // miniatura z render API Storage (?width) — pełny obraz w lightboxie
-        function thumbUrl(url, w) {
-            if (!url) return '';
-            // path bez query; ewentualny query źródła (?v=… — cache-buster z ad-forge po regeneracji) przenosimy
-            // do render-URL przez & (unikat na wersję dla transform-CDN). Bez tego „?v=…?width=" psuł parametry.
-            const m = url.match(/^(https:\/\/[^/]+)\/storage\/v1\/object\/public\/([^?]+)(?:\?(.*))?$/);
-            if (!m) return url;
-            const q = m[3] ? m[3] + '&' : '';
-            return `${m[1]}/storage/v1/render/image/public/${m[2]}?${q}width=${w || 360}&resize=contain`;
-        }
-        // Lightbox z nawigacją. Grupa zbierana z DOM przez data-lb-* (NIE interpolujemy URL-a
-        // w onclick('${…}') — apostrof w URL wybiłby string JS; recenzja 18.07, P1).
-        let lbItems = [];   // [{url, cap}]
-        let lbIdx = 0;
-        // BC: pojedynczy obraz (karta produktu cover+galeria, pojedyncze banery) — bez nawigacji
-        function openLightbox(url) { if (!url) return; lbItems = [{ url: url, cap: '' }]; lbIdx = 0; lbShow(); }
-        // grupa: klik na kaflu z data-lb-group — zbiera rodzeństwo z tej samej grupy (gid unikalny → CSS-safe)
-        function openLightboxG(el) {
-            const gid = el.getAttribute('data-lb-group');
-            const nodes = gid ? Array.from(document.querySelectorAll('[data-lb-group="' + gid + '"]')) : [el];
-            lbItems = nodes.map(n => ({ url: n.getAttribute('data-lb-url') || '', cap: n.getAttribute('data-lb-cap') || '' })).filter(it => it.url);
-            if (!lbItems.length) return;
-            lbIdx = Math.max(0, nodes.indexOf(el));
-            lbShow();
-        }
-        function lbShow() {
-            const it = lbItems[lbIdx]; if (!it) return;
-            document.getElementById('lightbox-img').src = it.url;
-            const multi = lbItems.length > 1;
-            document.getElementById('lb-prev').classList.toggle('hidden', !multi);
-            document.getElementById('lb-next').classList.toggle('hidden', !multi);
-            const hud = document.getElementById('lb-hud');
-            hud.textContent = (lbIdx + 1) + ' / ' + lbItems.length;
-            hud.classList.toggle('hidden', !multi);
-            const cap = document.getElementById('lb-cap');
-            cap.textContent = it.cap || '';
-            cap.classList.toggle('hidden', !it.cap);
-            document.getElementById('lightbox').classList.remove('hidden');
-        }
-        function lbStep(dir) { if (!lbItems.length) return; lbIdx = (lbIdx + dir + lbItems.length) % lbItems.length; lbShow(); }
-        function closeLightbox() { document.getElementById('lightbox').classList.add('hidden'); lbItems = []; }
-        // zamknij tylko klikiem w tło (nie w obraz/strzałki/przyciski — te mają własny onclick i bąbelkują)
-        function lbBgClose(e) { if (e.target === e.currentTarget) closeLightbox(); }
-        document.addEventListener('keydown', (e) => {
-            if (document.getElementById('lightbox').classList.contains('hidden')) return;
-            if (e.key === 'Escape') closeLightbox();
-            else if (e.key === 'ArrowLeft') lbStep(-1);
-            else if (e.key === 'ArrowRight') lbStep(1);
-        });
 
         // tooltip [data-tip-title] = globalny moduł w components/shared-sidebar.js (#tn-tooltip)
 
@@ -697,70 +543,50 @@
                     .select('id, brand, mockups, chosen_style, landing_url').in('id', genIds);
                 (gs || []).forEach(g => genMap[g.id] = g);
             }
-            renderHeader(); renderLinks(); renderPills(); renderNextStep(); renderStage();
+            // TikToki produktów → lightbox produktu (jak w portalu klienta, jedna ścieżka renderu w core)
+            const ttIds = [...new Set(products.map(p => p.tt_product_id).filter(Boolean))];
+            if (ttIds.length) {
+                const { data: tts } = await supabaseClient.from('bud_tt_products')
+                    .select('id, tiktok_url, videos_curated, max_plays, total_plays').in('id', ttIds);
+                const ttm = {}; (tts || []).forEach(t => ttm[t.id] = t);
+                products.forEach(p => { p.tiktoks = buildTiktoks(p.tt_product_id ? ttm[p.tt_product_id] : null); });
+            } else { products.forEach(p => { p.tiktoks = []; }); }
+            syncP(); renderHeader(); renderLinks(); renderPills(); renderNextStep(); renderStage();
             renderActivity(actQ.data||[]); renderNotes(); renderSales(); renderCosts(); renderFields();
         }
 
-        function stageNums() { return [...new Set(stepDefs.map(d=>d.stage))].sort((a,b)=>a-b); }
-        // sub_of: sub-kroki (np. avi_* fabryki wideo) NIE są kolumnami matrycy ani pigułek —
-        // renderują się jako timeline wewnątrz warsztatu kroku-rodzica (adsWideoBlock)
-        function defsForStage(n) { return stepDefs.filter(d=>d.stage===n && !d.sub_of); }
-        function subDefsFor(parentKey) { return stepDefs.filter(d=>d.sub_of===parentKey).sort((a,b)=>(a.sort||0)-(b.sort||0)); }
-        function defFor(key) { return stepDefs.find(d => d.key===key); }
-        function stepFor(key, productId) {
-            return steps.find(s => s.step_key===key && (productId ? s.product_id===productId : !s.product_id));
-        }
-        function stageProgress(n) {
-            const keys = defsForStage(n).map(d=>d.key);
-            const inst = steps.filter(s => keys.includes(s.step_key) && s.status!=='skipped');
-            const done = inst.filter(s=>s.status==='done').length;
-            return { done, total: inst.length, pct: inst.length ? Math.round(done/inst.length*100) : 0 };
-        }
-        // kamienie: project-scope = 1 instancja; product-scope = licznik per produkt
-        function milestones() {
-            let total = 0, done = 0;
-            stepDefs.filter(d => d.milestone_label).forEach(d => {
-                if (d.scope === 'project') {
-                    total += 1;
-                    const st = stepFor(d.key, null);
-                    if (st && st.status === 'done') done += 1;
-                } else {
-                    products.forEach(p => {
-                        total += 1;
-                        const st = stepFor(d.key, p.id);
-                        if (st && st.status === 'done') done += 1;
-                    });
-                }
-            });
-            return { done, total };
-        }
-        function stageHasMilestone(n) {
-            return defsForStage(n).some(d => d.milestone_label && (
-                d.scope === 'project'
-                    ? (stepFor(d.key, null)?.status === 'done')
-                    : products.some(p => stepFor(d.key, p.id)?.status === 'done')
-            ));
-        }
-        function artifactsFor(productId, stepKey) {
-            return artifacts.filter(a => (productId ? a.product_id === productId : !a.product_id) && (!stepKey || a.step_key === stepKey));
+        // most rdzenia widoku (panel-core.js): globalny stan P + hooki admina
+        function syncP() {
+            P.mode = 'admin';
+            P.projectId = projectId;
+            P.project = project;
+            P.stepDefs = stepDefs;
+            P.steps = steps;
+            P.products = products;
+            P.artifacts = artifacts;
+            P.notes = notes;
+            P.sales = sales;
+            P.adStats = adStats;
+            P.costs = costs;
+            P.genMap = genMap;
+            P.ordersCount = ordersCount;
+            P.WS = WS;
+            P.hooks = { renderDrawerBody: renderDrawerBody };
         }
 
-        // ============ RENDER ============
+        // nagłówek + karta postępu (admin) — zostaje tu (linki do lejka/sesji = treść adminowa)
         function renderHeader() {
             document.getElementById('hdr-name').textContent = project.customer_name || '(bez klienta)';
             document.getElementById('p-name').textContent = project.customer_name || '(bez klienta)';
-            // avatar = inicjał marki (zanim marka powstanie — inicjał klienta)
             document.getElementById('p-avatar').textContent = ((project.name || project.customer_name || '?').trim()[0] || '?').toUpperCase();
             const sel = document.getElementById('p-status');
             sel.innerHTML = PROJECT_STATUSES.map(s=>`<option value="${s}" ${project.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('');
-            // pod nazwiskiem — kontakt i powiązania klienta (drobne tło informacyjne)
             const meta = [];
             if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
             if (project.customer_phone) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-phone"></i>${escapeHtml(project.customer_phone)}</span>`);
             if (project.lead_id) meta.push(`<a href="/pipeline#lead-${project.lead_id}" target="_blank" class="text-zinc-400 hover:text-[#52a8ff] flex items-center gap-1"><i class="ph ph-kanban"></i>lead</a>`);
             if (project.bud_session_id) meta.push(`<a href="/tn-sklep/" target="_blank" class="text-zinc-400 hover:text-[#52a8ff] flex items-center gap-1"><i class="ph ph-chats-circle"></i>sesja /sklep</a>`);
             document.getElementById('p-meta').innerHTML = meta.join('<span class="text-zinc-700">·</span>');
-            // wiersz marki — tożsamość sklepu; przed nadaniem marki jasny placeholder zamiast pustki
             const brand = [];
             if (project.name) brand.push(`<span class="flex items-baseline gap-2 min-w-0" title="marka parasolowa"><span class="text-white text-[15px] font-semibold tracking-tight">${escapeHtml(project.name)}</span>${project.tagline ? `<span class="text-zinc-500 text-[12px] truncate">${escapeHtml(project.tagline)}</span>` : ''}</span>`);
             if (project.domain) brand.push(`<a href="https://${escapeHtml(project.domain)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff] text-[12.5px] flex items-center gap-1"><i class="ph ph-globe"></i>${escapeHtml(project.domain)}</a>`);
@@ -768,7 +594,6 @@
             document.getElementById('p-brand').innerHTML = brand.length
                 ? brand.join('<span class="text-zinc-700">·</span>')
                 : `<span class="text-zinc-600 text-[12px] flex items-center gap-1.5"><i class="ph ph-flag-banner"></i> marka sklepu w przygotowaniu — powstaje w Etapie 1</span>`;
-            // karta postępu: duży % + bar + front robót (pierwszy nieukończony etap)
             const all = steps.filter(s=>s.status!=='skipped');
             const done = all.filter(s=>s.status==='done').length;
             const pct = all.length ? Math.round(done/all.length*100) : 0;
@@ -785,18 +610,6 @@
             document.getElementById('p-notes').value = project.notes || '';
         }
 
-        // ── Pasek „Podglądy" (wf2_projects.links) — sesje same dopisują URL-e ──
-        function renderLinks() {
-            const wrap = document.getElementById('p-links');
-            const links = Array.isArray(project.links) ? project.links : [];
-            wrap.innerHTML = links.map((l, i) => `
-                <span class="inline-flex items-center bg-[#0a0a0a] border border-[#262626] rounded-md overflow-hidden">
-                    <a href="${escapeHtml(l.url)}" target="_blank" class="flex items-center gap-1.5 pl-2 pr-1.5 py-1 text-[11px] text-zinc-400 hover:text-white hover:bg-white/[.04]">
-                        <i class="ph ${escapeHtml(l.icon || 'ph-link')} text-[#52a8ff] text-[12px]"></i>${escapeHtml(l.label || l.url)}</a>
-                    <button onclick="removeLink(${i})" class="pl-0.5 pr-1.5 py-1 text-zinc-700 hover:text-[#f26d78]" data-tip-title="Usuń podgląd"><i class="ph ph-x text-[10px]"></i></button>
-                </span>`).join('')
-                + `<button onclick="addLink()" class="inline-flex items-center gap-1 border border-dashed border-[#2a2a2a] hover:border-[#0070f3]/50 rounded-md px-2 py-1 text-[11px] text-zinc-600 hover:text-zinc-300"><i class="ph ph-plus"></i> podgląd</button>`;
-        }
         async function saveLinks(arr) {
             const { error } = await supabaseClient.from('wf2_projects').update({ links: arr }).eq('id', projectId);
             if (error) { showToast('Błąd: '+error.message, 'error'); return; }
@@ -815,193 +628,6 @@
             arr.splice(i, 1); saveLinks(arr);
         }
 
-        function renderPills() {
-            const wrap = document.getElementById('stage-pills');
-            const nums = stageNums();
-            wrap.style.setProperty('--stages', nums.length);   // desktop: grid dzieli kartę na N równych segmentów
-            wrap.innerHTML = nums.map(n => {
-                const pr = stageProgress(n);
-                const label = defsForStage(n)[0]?.stage_label || ('Etap ' + n);
-                const complete = pr.total>0 && pr.done===pr.total;
-                const flag = stageHasMilestone(n) ? '<i class="ph ph-flag-checkered text-[#4cb782] text-[11px]" title="kamień milowy osiągnięty"></i>' : '';
-                return `<button type="button" class="stage-seg ${n===activeStage?'active':''} ${complete?'completed':''}" onclick="switchStage(${n})">
-                    <div class="flex items-center gap-2 w-full">
-                        <span class="stage-num">${complete ? '<i class="ph ph-check"></i>' : n}</span>
-                        ${flag}
-                        <span class="ml-auto text-[10px] font-mono text-zinc-500">${pr.done}/${pr.total}</span>
-                    </div>
-                    <span class="seg-label">${escapeHtml(label)}</span>
-                    <div class="seg-bar"><div style="width:${pr.pct}%"></div></div>
-                </button>`;
-            }).join('');
-        }
-        function switchStage(n) { activeStage = n; renderPills(); renderStage(); }
-
-        // „Następny krok" = pierwsza AKCJONOWALNA instancja wg kolejności etap→sort
-        // (pending/blocked, albo in_progress u admina); kroki WISZĄCE u klienta/auto
-        // ORAZ kroki z flagą waits_external (in_progress — czekamy na zewnętrzny świat:
-        // zakup domeny, propagacja DNS, wpłata) nie blokują wskaźnika — wracają dopiero,
-        // gdy nie ma nic innego do roboty.
-        // Sub-kroki (sub_of) nie sterują wskaźnikiem — żyją w warsztacie rodzica.
-        function nextStep() {
-            let waiting = null;
-            const probe = (d, p) => {
-                const st = stepFor(d.key, p ? p.id : null);
-                if (!st || st.status === 'done' || st.status === 'skipped') return null;
-                if (st.status === 'in_progress' && (d.owner !== 'admin' || d.waits_external)) { if (!waiting) waiting = { d, p, st }; return null; }
-                return { d, p, st };
-            };
-            for (const d of stepDefs) {
-                if (d.sub_of) continue;
-                if (d.scope === 'project') {
-                    const hit = probe(d, null);
-                    if (hit) return hit;
-                } else {
-                    for (const p of products) {
-                        const hit = probe(d, p);
-                        if (hit) return hit;
-                    }
-                }
-            }
-            return waiting;
-        }
-        function renderNextStep() {
-            // pasek żyje jako stopka karty procesu — bez własnej ramki/zaokrągleń
-            const el = document.getElementById('next-step');
-            const nx = nextStep();
-            if (!nx) { el.innerHTML = '<div class="bg-[#45a557]/[.06] px-4 py-3 text-[12.5px] text-[#62c073]"><i class="ph ph-flag-checkered"></i> Wszystkie kroki ukończone — projekt w trybie prowadzenia.</div>'; return; }
-            // pusty portfel: realną następną robotą jest DOBÓR produktów (marka rusza po wyborze)
-            if (!products.length && nx.d.stage === 1) {
-                el.innerHTML = `<div class="flex items-center gap-3 bg-[#0070f3]/[.05] px-4 py-3 flex-wrap">
-                    <span class="text-[10px] font-mono uppercase tracking-wider text-[#52a8ff] flex-shrink-0">Następny krok</span>
-                    <span class="text-[12.5px] text-white min-w-0 truncate"><i class="ph ph-shopping-bag-open text-[#52a8ff]"></i> Dobierz portfel produktów <span class="text-zinc-600">(cel ${PORTFOLIO_TARGET}; losowanie z /trendy albo ręczny wybór — marka sklepu rusza PO wyborze)</span></span>
-                    <button onclick="openPicker()" class="ml-auto inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors flex-shrink-0">＋ Produkty</button>
-                </div>`; return;
-            }
-            const { d, p, st } = nx;
-            el.innerHTML = `<div class="flex items-center gap-3 bg-[#0070f3]/[.05] px-4 py-3 flex-wrap">
-                <span class="text-[10px] font-mono uppercase tracking-wider text-[#52a8ff] flex-shrink-0">Następny krok</span>
-                <span class="text-[12.5px] text-white min-w-0 truncate"><i class="ph ${escapeHtml(d.icon)} text-[#52a8ff]"></i> ${escapeHtml(d.label)}${p ? ` — <span class="text-zinc-300">${escapeHtml(p.name)}</span>` : ''} <span class="text-zinc-600">(Etap ${d.stage}${st.status === 'in_progress' ? ' · w trakcie' : ''}${st.status === 'blocked' ? ' · ZABLOKOWANY' : ''})</span></span>
-                <button onclick="activeStage=${d.stage};renderPills();renderStage();openStep('${d.key}', ${p ? `'${p.id}'` : 'null'})" class="ml-auto inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors flex-shrink-0">Otwórz warsztat <i class="ph ph-arrow-right"></i></button>
-            </div>`;
-        }
-
-        // kroki klienckie „wiszące" — ile dni czekamy na klienta
-        function clientLagBadge(d, st) {
-            if (d.owner !== 'client' || st.status !== 'in_progress' || !st.updated_at) return '';
-            const days = Math.floor((Date.now() - new Date(st.updated_at).getTime()) / 86400000);
-            if (days < 1) return '';
-            const cls = days > 5 ? 'text-[#f26d78]' : days > 2 ? 'text-[#f5b955]' : 'text-zinc-500';
-            return `<span class="${cls}">u klienta od ${days} dni${days > 5 ? ' — followup!' : ''}</span>`;
-        }
-
-        function renderStage() {
-            const defs = defsForStage(activeStage);
-            const projDefs = defs.filter(d=>d.scope==='project');
-            const prodDefs = defs.filter(d=>d.scope==='product');
-
-            // karty kroków projektu (wzorzec tn-app: numer kolejności + kamień + notatka)
-            document.getElementById('steps-grid').innerHTML = projDefs.map((d, i) => {
-                const st = stepFor(d.key) || { status:'pending', data:{} };
-                const note = st.data && st.data.note ? st.data.note : '';
-                const isMile = d.milestone_label && st.status === 'done';
-                const wsDesc = (WS[d.key] && WS[d.key].desc) ? String(WS[d.key].desc) : '';
-                const descShort = wsDesc.length > 140 ? wsDesc.slice(0, 140).replace(/\s+\S*$/, '') + '…' : wsDesc;
-                return `<div class="bg-[#0a0a0a] border ${isMile?'border-[#45a557]/40':'border-[#1f1f1f]'} rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-[#0070f3]/40 transition-colors" onclick="openStep('${d.key}', null)">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="relative w-9 h-9 rounded-md bg-zinc-800/80 flex items-center justify-center flex-shrink-0" data-tip-title="${i+1}. ${escapeHtml(d.label)}${d.milestone_label ? ' 🏁' : ''}" data-tip-sub="${OWNER_LABEL[d.owner] || ''}${d.milestone_label ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}" data-tip-desc="${escapeHtml(descShort)}"><i class="ph ${escapeHtml(d.icon)} text-lg text-zinc-300"></i><span class="absolute -top-1.5 -left-1.5 min-w-[18px] px-0.5 rounded-full bg-[#0070f3] text-white text-[9px] font-mono font-bold flex items-center justify-center leading-none" style="height:18px">${i+1}</span></div>
-                            <div class="min-w-0">
-                                <div class="text-white font-medium text-[13px] truncate">${escapeHtml(d.label)}</div>
-                                <span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span>
-                            </div>
-                        </div>
-                        <i class="ph ph-caret-right text-zinc-700 mt-1"></i>
-                    </div>
-                    ${isMile ? `<div class="mile-badge"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</div>` : ''}
-                    ${note ? `<div class="text-zinc-600 text-[10px] flex items-center gap-1"><i class="ph ph-note"></i> notatka w warsztacie</div>` : ''}
-                    <div class="flex items-center justify-between mt-auto">
-                        <button class="st-btn st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}', null)" data-tip-title="Klik = przełącz status" data-tip-desc="do zrobienia → w trakcie → ukończone; pełna kontrola w warsztacie kroku">
-                            <i class="ph ${st.status==='done'?'ph-check-circle':st.status==='in_progress'?'ph-circle-half':st.status==='skipped'?'ph-minus-circle':'ph-circle'}"></i>
-                            ${STEP_LABELS[st.status]}
-                        </button>
-                        <span class="text-zinc-600 text-[10px]">${st.completed_at ? relTime(st.completed_at) : clientLagBadge(d, st)}</span>
-                    </div>
-                </div>`;
-            }).join('');
-
-            // portfel: pokazuj gdy etap ma kroki produktowe albo w Etapie 1 (dobór portfela)
-            const box = document.getElementById('portfolio-box');
-            const showMatrix = prodDefs.length > 0 || activeStage === 1;
-            box.classList.toggle('hidden', !showMatrix);
-            if (showMatrix) renderMatrix(prodDefs);
-        }
-
-        // postęp produktu w OBRĘBIE etapu + całościowy (wszystkie kroki product-scope)
-        function productProgress(pid, defsSubset) {
-            const keys = (defsSubset && defsSubset.length ? defsSubset : stepDefs.filter(d=>d.scope==='product')).map(d=>d.key);
-            const inst = steps.filter(s => s.product_id === pid && keys.includes(s.step_key) && s.status !== 'skipped');
-            const done = inst.filter(s => s.status === 'done').length;
-            return { done, total: inst.length, pct: inst.length ? Math.round(done/inst.length*100) : 0 };
-        }
-
-        function renderMatrix(prodDefs) {
-            document.getElementById('portfolio-count').textContent = products.length ? `(${products.length}/${PORTFOLIO_TARGET})` : '';
-            // nagłówki kroków: DUŻA ikona + numer kolejności; szczegóły (nazwa, właściciel,
-            // kamień, skrót opisu z WS) w tooltipie po najechaniu — 9px podpisy były nieczytelne
-            // (feedback Tomka 18.07)
-            const head = ['<th class="px-3 py-2.5">Produkt</th>', '<th class="px-3 py-2.5">Status</th>', '<th class="px-3 py-2.5 text-right">Zysk/szt.</th>', '<th class="px-3 py-2.5 min-w-[90px]">Postęp</th>']
-                .concat(prodDefs.map((d, i) => {
-                    const desc = (WS[d.key] && WS[d.key].desc) ? String(WS[d.key].desc) : '';
-                    const short = desc.length > 140 ? desc.slice(0, 140).replace(/\s+\S*$/, '') + '…' : desc;
-                    return `<th class="px-2 py-1.5 text-center"><div class="mx-head"
-                        data-tip-title="${i+1}. ${escapeHtml(d.label)}${d.milestone_label ? ' 🏁' : ''}"
-                        data-tip-sub="${OWNER_LABEL[d.owner] || ''}${d.milestone_label ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}"
-                        data-tip-desc="${escapeHtml(short)}">
-                        <i class="ph ${escapeHtml(d.icon)} text-xl text-zinc-300"></i>
-                        <span class="text-[9.5px] font-mono text-zinc-500">${i+1}</span>
-                    </div></th>`;
-                }))
-                .concat(['<th class="px-3 py-2.5"></th>']);
-            document.getElementById('matrix-head').innerHTML = head.join('');
-            document.getElementById('matrix-empty').classList.toggle('hidden', products.length > 0);
-
-            document.getElementById('matrix-body').innerHTML = products.map(p => {
-                const sm = PRODUCT_STATUS_META[p.status] || PRODUCT_STATUS_META.kandydat;
-                const profit = p.unit_profit;
-                const profitCls = profit === null || p.price === null ? 'text-zinc-600' : profit > 0 ? 'text-[#4cb782]' : 'text-[#f5b955]';
-                const pr = productProgress(p.id, prodDefs);
-                const prAll = productProgress(p.id, null);
-                const cells = prodDefs.map(d => {
-                    const st = stepFor(d.key, p.id) || { status:'pending' };
-                    const icon = st.status==='done' ? 'ph-check' : st.status==='in_progress' ? 'ph-circle-half' : st.status==='skipped' ? 'ph-minus' : st.status==='blocked' ? 'ph-x' : 'ph-circle';
-                    return `<td class="px-2 py-2"><div class="mx-cell mx-${st.status}"
-                        data-tip-title="${escapeHtml(d.label)}"
-                        data-tip-sub="${escapeHtml(p.name || '')} · ${STEP_LABELS[st.status]}"
-                        data-tip-desc="klik otwiera warsztat kroku"
-                        onclick="openStep('${d.key}', '${p.id}')"><i class="ph ${icon} text-[13px]"></i></div></td>`;
-                }).join('');
-                const cover = p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 cursor-pointer" onclick="openCard('${p.id}')" onerror="this.style.display='none'" title="Karta produktu">` : `<div class="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0 cursor-pointer" onclick="openCard('${p.id}')"><i class="ph ph-package text-zinc-600"></i></div>`;
-                return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.02]">
-                    <td class="px-3 py-2.5"><div class="flex items-center gap-2.5 min-w-[180px]">${cover}
-                        <div class="min-w-0">
-                            <div class="text-white text-[12.5px] font-medium truncate max-w-[220px] cursor-pointer hover:text-[#52a8ff]" onclick="openCard('${p.id}')">${p.gen_session_id ? '<i class="ph ph-sparkle text-[#52a8ff] text-[10px]" title="ma generacje z rozmowy /sklep"></i> ' : ''}${escapeHtml(p.name||'(bez nazwy)')}</div>
-                            <div class="flex items-center gap-1.5 text-[10px] text-zinc-600">${p.slug ? `<span class="font-mono">/${escapeHtml(p.slug)}</span>` : ''}${p.platform_page_url?`<a href="${escapeHtml(p.platform_page_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]" onclick="event.stopPropagation()">landing ↗</a>`:''}</div>
-                        </div></div></td>
-                    <td class="px-3 py-2.5"><span class="inline-block px-2 py-0.5 rounded-md text-[10.5px] ${sm.cls}">${sm.label}</span></td>
-                    <td class="px-3 py-2.5 text-right font-mono text-xs ${profitCls}">${p.price !== null && profit !== null ? moneyPL(profit) : '—'}</td>
-                    <td class="px-3 py-2.5">
-                        <div class="pp-bar" title="Etap: ${pr.done}/${pr.total} · Całość: ${prAll.done}/${prAll.total}"><div style="width:${pr.pct}%"></div></div>
-                        <div class="text-[9.5px] text-zinc-600 mt-1 font-mono">${pr.done}/${pr.total} · całość ${prAll.pct}%</div>
-                    </td>
-                    ${cells}
-                    <td class="px-3 py-2.5 text-right whitespace-nowrap">
-                        <button class="text-zinc-600 hover:text-[#52a8ff] p-1" onclick="openCard('${p.id}')" title="Karta produktu"><i class="ph ph-identification-card"></i></button>
-                        <button class="text-zinc-600 hover:text-white p-1" onclick="openProductModal('${p.id}')" title="Edycja"><i class="ph ph-pencil-simple"></i></button>
-                    </td>
-                </tr>`;
-            }).join('');
-        }
 
         function renderActivity(items) {
             document.getElementById('activity-list').innerHTML = (items||[]).map(a => `
@@ -1375,55 +1001,8 @@
             monthly: { fields:[{k:'log',l:'Notatki przeglądów miesięcznych',ta:true}] },
         };
 
-        function mergedChecklist(ws, st) {
-            const stored = (st.data && Array.isArray(st.data.checklist)) ? st.data.checklist.slice() : [];
-            const tpl = (ws && ws.check) || [];
-            tpl.forEach(t => { if (!stored.some(x => x.t === t)) stored.push({ t, done: false }); });
-            stored.sort((a, b) => { const ia = tpl.indexOf(a.t), ib = tpl.indexOf(b.t); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
-            return stored;
-        }
-        function drawerStep() { return drawerCtx ? stepFor(drawerCtx.key, drawerCtx.productId) : null; }
-        function drawerProduct() { return drawerCtx && drawerCtx.productId ? products.find(p => p.id === drawerCtx.productId) : null; }
 
-        function openStep(key, productId) {
-            drawerCtx = { key, productId: productId || null };
-            renderDrawer();
-            document.getElementById('step-drawer-wrap').classList.remove('hidden');
-            syncDeepLink();
-        }
-        function closeStep() { document.getElementById('step-drawer-wrap').classList.add('hidden'); drawerCtx = null; syncDeepLink(); }
-        // przełączanie produktu w otwartym drawerze (iteracja po portfelu bez zamykania)
-        function sdSwitchProduct(pid) { if (!drawerCtx) return; drawerCtx.productId = pid; renderDrawer(); syncDeepLink(); }
 
-        // ── deep-link do warsztatu kroku (?id=<projekt>&p=<produkt>&s=<step_key>) ──
-        // Tomek: „daj link, żebym wszedł DOKŁADNIE w to miejsce". URL trzyma otwarty
-        // produkt+krok; wejście z takim URL auto-otwiera drawer. history.replaceState =
-        // bez wpisu w historii wstecz (drawer to stan, nie nowa strona).
-        function syncDeepLink() {
-            const q = new URLSearchParams(location.search);
-            if (drawerCtx && drawerCtx.key) {
-                q.set('s', drawerCtx.key);
-                if (drawerCtx.productId) q.set('p', drawerCtx.productId); else q.delete('p');
-            } else { q.delete('s'); q.delete('p'); }
-            history.replaceState(null, '', location.pathname + '?' + q.toString());
-        }
-        function applyDeepLink() {
-            const q = new URLSearchParams(location.search);
-            const sk = q.get('s'), pid = q.get('p');
-            if (!sk) return;
-            const def = defFor(sk);
-            if (def && typeof def.stage === 'number') { activeStage = def.stage; renderPills(); renderStage(); }
-            openStep(sk, pid);
-            // dosuń galerię makiet do widoku, gdy krok ją ma (render drawera jest synchroniczny)
-            setTimeout(() => {
-                const g = document.querySelector('#step-drawer-wrap .art-group-head, #step-drawer-wrap .art-tile');
-                if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 150);
-        }
-
-        // galeria artefaktów kroku — makiety desktop / mobile / reszta, każda grupa z osobną
-        // nawigacją lightbox (Tomek chce wygodnie przeglądać makiety po powiększeniu).
-        let lbGroupSeq = 0;
         // doki fabryki (PRYWATNY bucket wf2-docs — koszty/marże w kartach): signed URL na klik.
         // Okno otwierane synchronnie (user gesture) → location po otrzymaniu URL (popup-blocker).
         async function openPrivateDoc(path) {
@@ -1466,84 +1045,9 @@
             }
         }
 
-        function artifactsGallery(list) {
-            if (!list.length) return '';
-            const KIND_ICON = { mockup:'ph-layout', makieta:'ph-layout', makieta_mobile:'ph-device-mobile', brand:'ph-palette', branding:'ph-palette', styl_master:'ph-paint-brush', proof:'ph-git-diff', dowod:'ph-git-diff', scena:'ph-image', gallery:'ph-images', ad_creative:'ph-megaphone', video:'ph-film-slate', doc:'ph-file-text', link:'ph-link', screenshot_final:'ph-monitor', gate_check:'ph-seal-check', landing_live:'ph-rocket-launch' };
-            // partycja: mobile ma pierwszeństwo (makieta+viewport=mobile nie trafia do obu grup)
-            const vp = a => (a.meta && a.meta.viewport) || '';
-            const isMobile  = a => a.kind === 'makieta_mobile' || vp(a) === 'mobile';
-            const isDesktop = a => !isMobile(a) && (a.kind === 'makieta' || vp(a) === 'desktop');
-            const mobile  = list.filter(isMobile);
-            const desktop = list.filter(isDesktop);
-            const rest    = list.filter(a => !isMobile(a) && !isDesktop(a));
 
-            const tile = (a, gid, mobileTile) => {
-                const webVisible = a.storage !== 'repo' && a.storage !== 'desktop';
-                const isVideo = webVisible && (/\.(mp4|webm|mov)(\?|$)/i.test(a.url || '') || a.kind === 'video' || a.kind === 'fal');
-                if (isVideo && a.url && /^https?:/.test(a.url)) {
-                    const poster = (a.meta && a.meta.poster) ? a.meta.poster : '';
-                    return `<a class="art-tile${mobileTile ? ' art-mobile' : ''}" href="${escapeHtml(a.url)}" target="_blank" rel="noopener"
-                        data-tip-title="${escapeHtml(a.label || a.kind)}" data-tip-sub="${escapeHtml(a.kind)}${a.meta && a.meta.section ? ' · ' + escapeHtml(a.meta.section) : ''}" data-tip-desc="klik = pełne wideo w nowej karcie">
-                        <video src="${escapeHtml(a.url)}"${poster ? ` poster="${escapeHtml(poster)}"` : ''} muted loop autoplay playsinline preload="metadata"
-                            style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.style.display='none'"></video>
-                        <span class="art-label">${escapeHtml(a.label || a.kind)}</span></a>`;
-                }
-                const isImg = webVisible && (/\.(png|jpe?g|webp|avif|gif)(\?|$)/i.test(a.url || '') || ['mockup','makieta','makieta_mobile','scena','dowod','proof','ad_creative','screenshot_final','styl_master','gallery','branding','brand'].includes(a.kind));
-                if (isImg && a.url && /^https?:/.test(a.url)) {
-                    const cap = (a.meta && a.meta.section) ? a.meta.section : (a.label || a.kind);
-                    return `<a class="art-tile${mobileTile ? ' art-mobile' : ''}" href="javascript:void(0)"
-                        data-lb-group="${gid}" data-lb-url="${escapeHtml(a.url)}" data-lb-cap="${escapeHtml(cap)}" onclick="openLightboxG(this)"
-                        data-tip-title="${escapeHtml(a.label || a.kind)}" data-tip-sub="${escapeHtml(a.kind)}${a.meta && a.meta.section ? ' · ' + escapeHtml(a.meta.section) : ''}" data-tip-desc="klik = pełny podgląd + nawigacja">
-                        <img src="${escapeHtml(thumbUrl(a.url, 360))}" loading="lazy" onerror="this.parentElement.style.display='none'">
-                        <span class="art-label">${escapeHtml(a.label || a.kind)}</span></a>`;
-                }
-                const icon = KIND_ICON[a.kind] || 'ph-file';
-                // doki fabryki w PRYWATNYM buckecie wf2-docs: url = 'wf2-docs/<slug>/<plik>' → signed URL on-click
-                const privDoc = a.url && /^wf2-docs\//.test(a.url);
-                const clickable = a.url && (/^https?:/.test(a.url) || privDoc);
-                // chipy (repo/desktop storage, dokumenty) — bez data-lb, poza nawigacją lightbox
-                const openAttr = privDoc ? `href="javascript:void(0)" onclick="openPrivateDoc('${escapeHtml(a.url)}')"`
-                    : (clickable ? `href="${escapeHtml(a.url)}" target="_blank"` : '');
-                return `<${clickable?'a':'div'} ${openAttr} class="art-tile flex items-center gap-2 p-2.5" style="aspect-ratio:auto">
-                    <i class="ph ${icon} text-[#52a8ff]"></i><span class="text-[11px] text-zinc-300 truncate">${escapeHtml(a.label || a.kind)}</span>
-                    ${!clickable ? `<span class="text-[9px] text-zinc-600 font-mono ml-auto">${escapeHtml(a.storage)}</span>` : ''}</${clickable?'a':'div'}>`;
-            };
-            const group = (items, title, gridCls, mobileTile) => {
-                if (!items.length) return '';
-                const gid = 'lbg-' + (++lbGroupSeq);
-                return `<div class="mb-3"><div class="art-group-head"><span class="agh-title">${escapeHtml(title)}</span><span class="agh-count">${items.length}</span></div>
-                    <div class="grid ${gridCls} gap-2">${items.map(a => tile(a, gid, mobileTile)).join('')}</div></div>`;
-            };
-
-            // brak makiet → jedna prosta sekcja „Artefakty" (bez regresji dla pozostałych kroków / karty produktu)
-            if (!desktop.length && !mobile.length) {
-                const gid = 'lbg-' + (++lbGroupSeq);
-                return `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Artefakty (${rest.length})</div>
-                    <div class="grid grid-cols-3 gap-2">${rest.map(a => tile(a, gid, false)).join('')}</div></div>`;
-            }
-            return `<div>${group(desktop, 'Makiety desktop', 'grid-cols-3', false)}${group(mobile, 'Makiety mobile', 'grid-cols-4 sm:grid-cols-5', true)}${group(rest, 'Pozostałe artefakty', 'grid-cols-3', false)}</div>`;
-        }
-
-        function renderDrawer() {
-            const st = drawerStep(); const d = defFor(drawerCtx.key);
-            if (!st || !d) { closeStep(); return; }
-            const p = drawerProduct();
+        function renderDrawerBody(st, d, p) {
             const ws = WS[d.key] || {};
-            document.getElementById('sd-title').innerHTML = `<i class="ph ${escapeHtml(d.icon)} text-[#3291ff]"></i> ${escapeHtml(d.label)}`;
-            document.getElementById('sd-sub').innerHTML = `<span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span> <span class="ml-1 text-zinc-600">Etap ${d.stage} · ${escapeHtml(d.stage_label)}</span>`
-                + (d.milestone_label ? ` <span class="mile-badge ml-1"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</span>` : '');
-            const prodEl = document.getElementById('sd-product');
-            prodEl.classList.toggle('hidden', !p);
-            prodEl.classList.toggle('flex', !!p);
-            if (p) {
-                const cov = p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" class="w-7 h-7 rounded object-cover">` : '<i class="ph ph-package text-zinc-500"></i>';
-                prodEl.innerHTML = `${cov}
-                    <select onchange="sdSwitchProduct(this.value)" class="bg-[#0a0a0a] border border-[#2e2e2e] rounded-md px-2 py-1 text-[11.5px] text-white focus:outline-none max-w-[220px]">
-                        ${products.map(x => `<option value="${x.id}" ${x.id===p.id?'selected':''}>${escapeHtml(x.name)}</option>`).join('')}
-                    </select>
-                    <button onclick="openCard('${p.id}')" class="text-[10.5px] text-[#52a8ff] hover:text-[#78b6ff]">karta produktu</button>`;
-            }
-
             // Krok „Wybór + kalkulacja": dedykowany warsztat cen
             if (d.key === 'wybor' && p) {
                 document.getElementById('sd-body').innerHTML = wyborBody(p);
@@ -1641,11 +1145,6 @@
             document.getElementById('sd-body').innerHTML = h;
             hydratePrivMedia(document.getElementById('sd-body'));
             renderDrawerFooter(st);
-        }
-        function renderDrawerFooter(st) {
-            document.getElementById('sd-skip').textContent = st.status === 'skipped' ? 'Przywróć krok' : 'Pomiń krok';
-            document.getElementById('sd-statusbtns').innerHTML = ['pending', 'in_progress', 'done'].map(s =>
-                `<button onclick="sdSetStatus('${s}')" class="st-btn ${st.status === s ? 'st-' + s : 'st-pending opacity-50 hover:opacity-100'}">${STEP_LABELS[s]}</button>`).join('');
         }
 
         // ── special-case: platforma e-commerce (Trevio) — picker sklepu + live-stan (krok pl_sklep) ──
@@ -2867,7 +2366,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             if (error) { showToast('Błąd: '+error.message,'error'); return; }
             project.notes = notesVal; showToast('Notatki zapisane','success');
         }
-        function openSettings() {
+        async function openSettings() {
             document.getElementById('set-customer').value = project.customer_name || '';
             document.getElementById('set-email').value = project.customer_email || '';
             document.getElementById('set-phone').value = project.customer_phone || '';
@@ -2877,8 +2376,69 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             document.getElementById('set-act').value = project.meta_ad_account_id || '';
             document.getElementById('set-pixel').value = project.pixel_id || '';
             document.getElementById('settings-modal').classList.remove('hidden');
+            renderPortalStatus();
+        }
+        async function renderPortalStatus() {
+            const box = document.getElementById('set-portal-status');
+            const lines = [];
+            if (project.access_mail_sent_at) {
+                const d = new Date(project.access_mail_sent_at);
+                lines.push(`<div class="text-[#62c073]"><i class="ph ph-envelope-simple-open"></i> Mail z dostępem: utworzono draft ${isNaN(d) ? '' : d.toLocaleDateString('pl-PL')}</div>`);
+            }
+            box.innerHTML = lines.join('') || '<div class="text-zinc-700">Mail z dostępem jeszcze nie wysłany.</div>';
+            // ostatnie wejście klienta do panelu (dedykowane zapytanie — portal_visit bywa poza 30 ostatnimi aktywnościami)
+            try {
+                const { data: pv } = await supabaseClient.from('wf2_activities')
+                    .select('created_at').eq('project_id', projectId).eq('actor', 'client').eq('action', 'portal_visit')
+                    .order('created_at', { ascending: false }).limit(1);
+                if (pv && pv.length) {
+                    box.insertAdjacentHTML('beforeend', `<div class="text-zinc-500"><i class="ph ph-sign-in"></i> Klient był w panelu: ${relTime(pv[0].created_at)}</div>`);
+                }
+            } catch (_) {}
         }
         function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+
+        // Podgląd portalu klienta 1:1 — okno otwierane SYNCHRONICZNIE (gest usera), JWT panelu w #hashu.
+        async function previewAsClient() {
+            if (!project || !project.unique_token) { showToast('Brak tokenu projektu', 'error'); return; }
+            const w = window.open('', '_blank');
+            if (!w) { showToast('Odblokuj wyskakujące okna, aby otworzyć podgląd', 'error'); return; }
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const jwt = session && session.access_token;
+                if (!jwt) { w.close(); showToast('Zaloguj się ponownie', 'error'); return; }
+                w.location = 'https://crm.tomekniedzwiecki.pl/twoj-biznes?t=' + project.unique_token +
+                    '&podglad=admin#admintok=' + encodeURIComponent(jwt);
+            } catch (e) { try { w.close(); } catch (_) {} showToast('Nie udało się otworzyć podglądu', 'error'); }
+        }
+
+        // Mail z dostępem do panelu — DRAFT w Gmailu (nic nie wychodzi automatycznie). Styl Tomka: krótko, po ludzku.
+        async function accessMailDraft() {
+            if (!project.customer_email) { showToast('Brak e-maila klienta — uzupełnij w ustawieniach', 'error'); return; }
+            if (!project.unique_token) { showToast('Brak tokenu projektu', 'error'); return; }
+            const link = 'https://crm.tomekniedzwiecki.pl/twoj-biznes?t=' + project.unique_token;
+            const first = (project.customer_name || '').trim().split(/\s+/)[0] || '';
+            const subject = 'Twój panel biznesu jest gotowy';
+            const body = `Cześć${first ? ' ' + first : ''},\n\n`
+                + `Przygotowałem panel Twojego biznesu — masz w nim na bieżąco podgląd na to, co robimy: postęp prac, produkty i pierwsze efekty.\n\n`
+                + `Jest tam też sekcja „Twoje zadania" — kilka rzeczy po Twojej stronie, które popychają sklep do przodu.\n\n`
+                + `Wchodzisz tutaj:\n${link}\n\n`
+                + `Przy pierwszym wejściu ustawiasz własne hasło i tym się później logujesz. Jakby coś było niejasne — po prostu odpisz na tego maila.\n\n`
+                + `Tomek`;
+            try {
+                const r = await fetch('https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/gmail-create-draft', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to: project.customer_email, subject, body }),
+                });
+                if (!r.ok) { showToast('Nie udało się utworzyć draftu', 'error'); return; }
+                showToast('Draft utworzony w Gmailu', 'success');
+                const now = new Date().toISOString();
+                await supabaseClient.from('wf2_projects').update({ access_mail_sent_at: now }).eq('id', projectId);
+                project.access_mail_sent_at = now;
+                logActivity('access_mail_draft', 'Draft maila z dostępem do panelu → ' + project.customer_email);
+                renderPortalStatus();
+            } catch (e) { showToast('Chwilowa przerwa techniczna — spróbuj ponownie', 'error'); }
+        }
         async function saveSettings() {
             const payload = {
                 customer_name: document.getElementById('set-customer').value.trim() || null,
