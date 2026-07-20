@@ -1,6 +1,11 @@
 // wf2-orders-sync — cron sync zamówień z platformy Trevio → wf2_orders → agregacja wf2_sales.
 // SSOT algorytmu: R3 sekcja „(d) SYNC ZAMÓWIEŃ" (dedup po id = dokładny licznik do 1000).
 //
+// ANALITYKA (2026-07-20): mapOrder deriwuje payments[]/is_paid/paid_at/payment_method (COD 'Pending' = is_paid=false),
+// wf2_sales prowadzi równoległą księgę PAID (orders_paid/revenue_paid — semantyka orders/revenue BEZ ZMIAN),
+// a osobny blok atrybucji (akcja 'order_attribution', LIMIT 20/projekt/run, budżet deadline) dociąga sesje/źródło
+// ruchu do kolumn attribution_* (pełny jsonb MINUS pole identity = PII). Każde zamówienie w try/catch — atrybucja NIGDY nie wywraca synca.
+//
 // Ścieżka: cron (pg_cron) → ta funkcja → wf2-platform (adapter, akcja 'orders') → API Trevio.
 // NIE woła platformy bezpośrednio kluczem API — zawsze PRZEZ wf2-platform (x-wf2-secret == WF2_GEN_SECRET),
 // który jest jedynym miejscem znającym X-Api-Key i obsługuje rate-limit 120/min (Retry-After).
