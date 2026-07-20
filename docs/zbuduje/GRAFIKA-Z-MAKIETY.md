@@ -31,6 +31,23 @@ krawędzi; fullbleed = ≥30% area + 2 krawędzie; ornament = fill<0.35), wynik 
 `graphic_regions[{bbox,typ,ma_overlay_tekstu,rekomendacja,confidence}]`, confidence<0.65 ⇒
 werdykt vision. Pseudokod: raport researchu 16.07 (transkrypt sesji fabryki).
 
+### TYP OSADZENIA SCENY (oś: gdzie leży COPY względem sceny) — decyduje o tym, czy scena ma fade
+Zanim wygenerujesz/wytniesz scenę, orzeknij **z makiety**, jak copy jest osadzone względem niej.
+To NIE to samo co „TYP grafiki" — to relacja **tekst↔scena**, i ona sama decyduje, czy scena
+potrzebuje strefy przejścia (fade), czy ma być pełnym kadrem:
+
+| Typ osadzenia | Co widać na makiecie | Czego wymaga scena |
+|---|---|---|
+| **A. full-bleed z copy NA scenie** | tekst/karta/CTA leżą NA obrazie (hero, sekcje pełnoekranowe z napisem na zdjęciu) | **strefa przejścia**: pole treści „fade seamlessly into flat solid #HEX", PŁYNNE, zintegrowane ze scenografią; kod kładzie tekst na tym polu |
+| **B. split / kadr-w-kolumnie** | scena w JEDNEJ kolumnie, copy w DRUGIEJ kolumnie na tle sekcji (obok, nie na obrazie) | **PEŁNY KADR** od krawędzi do krawędzi, ⛔ ZERO fade, ZERO pola na copy — kod przytnie `object-fit:cover` do swojej kolumny |
+| **C. slot / kafel** (galeria, „gdzie", karty demo) | zdjęcie w małym prostokącie/kaflu obok innych | **PEŁNY KADR** kafla, ⛔ ZERO fade; ewentualny margines robi kod, nie obraz |
+
+**Reguła twarda:** fade/negative-space robimy **wyłącznie dla typu A**. Dla B i C martwe pole
+koloru = defekt (twardy prostokąt bez sensu w kolumnie — incydent `prawda-d.webp` 20.07: ~40%
+kadru wylane na krem z ostrą pionową krawędzią, choć copy było w osobnej kolumnie). Przy
+wątpliwości „czy copy jest NA scenie, czy obok" — sprawdź, gdzie w makiecie stoją bboxy tekstu:
+wewnątrz regionu sceny = A; poza nim (inna kolumna/sekcja) = B/C.
+
 ## 2. DRZEWO DECYZYJNE EKSTRAKCJI (per element graficzny)
 
 ```
@@ -68,8 +85,14 @@ bezszwowe = mirror+blend końców. Eksport PNG (alfa jeśli feather) → upload 
 sylwetki — edit potrafi zmienić kształt) · **#2b gdy sekcja jest KOLEJNĄ sceną produktową:
 wymuś INNY kąt/kontekst niż już użyte pozy („avoid: same upright pose as hero") — inaczej
 „SAME placement" produkuje klony (incydent Loczek 17.07: hero=03=12 ta sama poza)** ·
-#3 strefy treści „fade seamlessly into flat solid
-#HEX" · #4 REMOVE all text/UI, leave empty negative space. **Dryf REKWIZYTÓW (obiekty
+#3/#4 **ZALEŻĄ OD TYPU OSADZENIA** (patrz „TYP OSADZENIA SCENY" niżej):
+— **full-bleed z copy NA scenie** → #3 strefa treści „fade seamlessly into flat solid #HEX",
+przejście PŁYNNE i zintegrowane ze scenografią (spokojne pole podłogi/światła), ⛔ NIGDY twardy
+prostokąt koloru z ostrą krawędzią; #4 REMOVE all text/UI, leave empty negative space.
+— **split / kadr-w-kolumnie** (copy OBOK, w osobnej kolumnie na tle sekcji) → ⛔ **ZERO negative
+space, ZERO fade** — PEŁNY KADR wypełniony sceną/produktem od krawędzi do krawędzi (kod przytnie
+`object-fit:cover` do kolumny); tylko #4 REMOVE text/UI. Dodanie pola na copy = martwy pas w
+kolumnie sceny (incydent `prawda` 20.07). **Dryf REKWIZYTÓW (obiekty
 NIE-produktowe: tło, dłoń, odłożone akcesoria scenografii) = cecha metody** (SSIM cap ~0.7) —
 oceniaj kierunkowo + werdykt vision. **⛔ To NIE dotyczy PRODUKTU: dryf którejkolwiek cechy
 z tabeli „Cechy dyskryminujące" paszportu = NIEZGODNA = powrót do pętli F3A (§4b), NIGDY

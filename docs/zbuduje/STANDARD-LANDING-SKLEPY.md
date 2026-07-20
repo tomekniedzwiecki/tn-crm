@@ -485,14 +485,24 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
     scena hero staje się pierwszą klatką pętli Kling image-to-video (first=last), więc MUSI mieć
     **NOŚNIK subtelnego, ZAPĘTLONEGO ruchu** — inaczej Kling nie ma czego animować (albo, gorzej,
     zaczyna morfować sam produkt). Podział sceny: **STREFA STATYCZNA = produkt** (ostry, niezmienny —
-    cechy wierności NIE mogą się ruszać) + **STREFA RUCHU = otoczenie** (min. jeden nośnik: światło
-    kierunkowe „oddychające" jasnością / miękka tkanina falująca i wracająca / kurz-pyłki w promieniu /
-    para / delikatny oddech osoby). Ruch **cykliczny** (domyka pętlę bez skoku), **subtelny/premium**
-    (nie gadżet), **NIGDY na produkcie**. ⛔ **martwy packshot na PŁASKIM polu koloru = najgorszy hero
-    do animacji** (martwa natura — Kling nic nie ruszy). Przy archetypie **D** (packshot centralny)
-    obowiązkowo: faktura + światło dnia (drewno/koc/len, długie cienie okna, roślina/firana na brzegu)
-    zamiast gładkiego tła — pole koloru zostaje, ale ożywione. To jest wymóg F2, nie F5.2: hero, który
-    tego nie ma, wraca do regeneracji, zanim ktokolwiek go zakoduje.
+    cechy wierności NIE mogą się ruszać) + **STREFA RUCHU = otoczenie**.
+    **⚠️ NOŚNIK MUSI BYĆ DOMINUJĄCYM, FIZYCZNYM OBIEKTEM, KTÓRY REALNIE SIĘ RUSZA (mata/Kłujek 20.07 —
+    twarda lekcja):** obowiązkowo ≥1 z: **firana/zasłona falująca w oknie · miękka tkanina/len/koc
+    unoszący się i wracający · liście/gałąź/roślina kołysząca się · para/dym znad kubka · woda/refleks ·
+    delikatny oddech/ruch osoby**. Musi być **wyraźnie widoczny w kadrze** i leżeć w OTOCZENIU, poza
+    strefą produktu. **⛔ Światło „oddychające" jasnością, pełznący cień i kurz-pyłki to TYLKO DODATEK —
+    NIGDY jedyny/główny nośnik.** Scena, w której jedyne, co może się ruszać, to światło i pyłki =
+    Kling animuje wyłącznie kurz → efekt „nic się nie dzieje" (dokładny incydent hero-d maty 20.07:
+    światło+cień+pyłki wypalone, zero fizycznego obiektu ruchu → martwy klip). Ruch **cykliczny**
+    (domyka pętlę bez skoku), **premium** (nie gadżet), **NIGDY na produkcie**.
+    ⛔ **martwy packshot na PŁASKIM polu koloru = najgorszy hero do animacji.** Przy archetypie **D**
+    (packshot centralny) pole koloru ZOSTAJE, ale scena MUSI wprowadzić na brzeg/tło dominujący nośnik
+    fizyczny (okno z falującą firaną + roślina) — nie sam „długi cień okna". To jest wymóg **F2**, nie
+    F5.2: hero, który nie ma dominującego fizycznego nośnika ruchu, wraca do regeneracji SCENY, zanim
+    ktokolwiek go zakoduje. **Gate F5.2 (obowiązkowy przy klipie):** wyciągnij ≥5 klatek rozłożonych po
+    całym klipie (0/25/50/75/100%) i ZOBACZ je — musi być OCZYWISTA, czytelna zmiana w strefie ruchu
+    (nie sam kurz); dodatkowo pomiar: frame-diff/optical-flow w regionie OTOCZENIA > próg, w regionie
+    PRODUKTU ≈ 0 (ostry, nieruchomy). Sam kurz/sub-progowy ruch = FAIL → regen (najpierw SCENY, nie klipu).
   - **✅ KRYTYK — CHECKLISTA STYLE-DNA (F2, przed akceptem; brak = regeneracja makiety):**
     (1) para fontów z REALNYM kontrastem (nie mono)? (2) akcent tylko CTA+swash+rating, WSZYSTKIE
     ikony funkcjonalne charcoal? (3) desktop↔mobile TEJ sekcji = ten sam bohater + jeden styl ikon?
@@ -506,9 +516,11 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
     regeneracja partytury (F2.5), nie kosmetyka makiety.** Odpowiedź „różni się kolorem produktu
     i zdjęciami" = NIE ZALICZONE (to nie są osie — to zawartość). Pytanie (7) = mobile-od-zera
     (F2.4), pytanie o POZĘ produktu = §2.
-    (+ 9) **🎬 ANIMOWALNOŚĆ HERO (tylko sekcja hero): czy scena ma nośnik subtelnego zapętlonego
-    ruchu w OTOCZENIU (światło/tkanina/kurz/oddech), przy produkcie w strefie statycznej?** Martwy
-    packshot na płaskim polu = hero nie da się zanimować przez Kling (F5.2) → regeneracja hero.
+    (+ 9) **🎬 ANIMOWALNOŚĆ HERO (tylko sekcja hero): czy scena ma DOMINUJĄCY, FIZYCZNY nośnik ruchu
+    w OTOCZENIU — realny obiekt, który się rusza (firana/tkanina/liście/para/woda/osoba), a NIE sam
+    „światło+cień+kurz"?** Wskaż go po nazwie. Jeśli jedyne, co mogłoby się ruszać, to światło i pyłki
+    → **NIE ZALICZONE** (Kling zanimuje tylko kurz = „nic się nie dzieje", incydent hero-d maty 20.07)
+    → regeneracja SCENY hero (dodać firanę/roślinę/tkankę ruchu), zanim ktokolwiek go zakoduje.
     (+ 10) **🩹 ANTI-BLEED (mata/Kłujek 20.07): makieta = DOKŁADNIE JEDNA sekcja i nic więcej.**
     gpt-image na „lekkich" sekcjach (pas CSS, demo, akordeon, chipy) zapełnia pustą kanwę
     HALUCYNUJĄC pełny blok hero+oferta+benefity — dokleja wordmark, cenę, ★rating, chipy-korzyści.
@@ -585,14 +597,26 @@ reguły [D-art] [pkt 4].)*
    close-up — part of the photographic collage, NOT a UI element; reproduce its position, size
    and frame from Image 1". Rozróżnienie tekst-UI (usuwać) vs foto-inset (zachować) MUSI być
    w prompcie explicite.
+   **⚠️ NAJPIERW ORZEKNIJ TYP OSADZENIA SCENY (GRAFIKA-Z-MAKIETY §1 „TYP OSADZENIA SCENY") —
+   on decyduje, czy scena ma w ogóle strefę fade (Tomek 20.07, incydent `prawda-d.webp`):**
+   - **Typ A — full-bleed, copy LEŻY NA scenie** (scena rozciąga się pod tekstem/kartą; hero
+     archetyp A/C, sekcje pełnoekranowe z napisem na zdjęciu) → obowiązuje strefa treści.
+   - **Typ B/C — split/kadr-w-kolumnie lub slot** (scena zamknięta w SWOJEJ kolumnie/kaflu, copy
+     w OSOBNEJ kolumnie na tle sekcji — archetyp B, sekcje `04-prawda`, `08-gdzie`, `14-final`,
+     kafle demo/galerii) → ⛔ **ŻADNEJ strefy fade, ŻADNEGO pola koloru na scenie**: PEŁNY KADR
+     od krawędzi do krawędzi, kod przytnie `object-fit:cover` do kolumny. Wygenerowanie kremowego
+     pola „na copy" = martwy prostokąt w kolumnie sceny (defekt `prawda`: ~40% kadru wylane na
+     krem z ostrą pionową krawędzią, choć copy siedziało w osobnej kolumnie).
    **Prompt sceny MUSI wymagać: (a) produkt w TEJ SAMEJ skali i pozycji co na makiecie
    („SAME size and position as in the reference" — bez tego wychodzi mniejszy; Uśmieszek 16.07),
-   (b) strefa treści WTAPIA SIĘ w jednolity kolor tła („fades seamlessly into flat solid #HEX")
-   — a kod dokłada dopasowany scrim-gradient nad sceną w strefie treści (Tomek 16.07: bez tego
-   makieta wygląda dobrze, finał gorzej).**
+   (b) TYLKO DLA TYPU A: strefa treści WTAPIA SIĘ w jednolity kolor tła („fades seamlessly into
+   flat solid #HEX") — a kod dokłada dopasowany scrim-gradient nad sceną w strefie treści (Tomek
+   16.07: bez tego makieta wygląda dobrze, finał gorzej). Dla typu B/C promptu (b) NIE dawać.**
    **⚠️ SCRIM = PLATEAU, NIE MIĘKKI FADE (Tomek 19.07 na masażerze — „tam gdzie miało być białe
-   miejsce na tekst, w ogóle tego nie ma"): gdy makieta ma SPLIT (solidny kremowy panel pod
-   treścią ~40-50% szerokości), scrim w kodzie MUSI odtworzyć plateau: solidny `var(--paper)`
+   miejsce na tekst, w ogóle tego nie ma") — DOTYCZY WYŁĄCZNIE TYPU A (scena full-bleed rozciąga
+   się POD panelem treści; NIE mylić z typem B, gdzie scena siedzi w osobnej kolumnie i panel
+   robi tło sekcji, nie scrim na scenie): gdy makieta ma full-bleed z kremowym panelem pod
+   treścią ~40-50% szerokości, scrim w kodzie MUSI odtworzyć plateau: solidny `var(--paper)`
    od krawędzi DO KRAWĘDZI BLOKU TREŚCI (~46-50%), dopiero potem fade do 0 (~62-70%). Miękki
    gradient od ~34% daje opacity ~0.4 przy krawędzi treści = scena prześwituje pod tekstem,
    mimo że PLIK sceny ma strefę czystą (F3 nie zawiodło — zawiódł most makieta→kod). Self-check
@@ -653,6 +677,20 @@ i werdyktu-1; rozjazd = NIEZGODNA); **FAIL cechy PRODUKTU = NIGDY waivable**; dr
 rekwizytu-nie-produktu tylko z notą LEDGER + zgodą obu par; pętla regen celowana w KONKRETNĄ
 cechę, max 3 rundy → eskalacja (ref / crop-first / scena bez produktu / nota Tomek). Egzekwuje
 `gate-check.py` (blok `wiernosc`; „brak wiersza / NIEZGODNA / ESKALACJA bez noty / rundy>3" = FAIL).
+
+**⚠️ F3A #2 — SENSOWNOŚĆ OSADZENIA (osobna oś od wierności produktu; Tomek 20.07, incydent
+`prawda-d.webp`).** Gate wierności ocenia, czy PRODUKT zgadza się z paszportem — i przepuści
+scenę z bezsensownym martwym panelem koloru, bo produkt jest OK (mata `prawda`: 15/15 ZGODNA,
+a mimo to ~40% kadru wylane na krem z ostrą pionową krawędzią). Dlatego **pass-2 (świeży Sonnet)
+orzeka DODATKOWO** dla każdej sceny: (1) jaki jest TYP OSADZENIA wg makiety (A full-bleed-copy-na-
+scenie / B split-kadr-w-kolumnie / C slot-kafel — patrz `GRAFIKA-Z-MAKIETY §1`); (2) czy plik sceny
+jest z nim zgodny: **typ B/C → kadr MUSI być pełny, od krawędzi do krawędzi; jakikolwiek płaski
+prostokąt/pas jednego koloru (pole „na copy") = FAIL „martwy panel" → regen `fullframe`**; typ A →
+przejście do strefy copy musi być MIĘKKIE i fotograficzne (twardy prostokąt koloru = też FAIL).
+Werdykt w `WIERNOSC.md` jako kolumna `osadzenie ∈ {OK, martwy-panel, twardy-scrim}`; „martwy-panel/
+twardy-scrim" blokuje F4 tak samo jak NIEZGODNA. Detekcja maszynowa (wspomaga vision): udział
+największego jednolitego prostokąta koloru tła przy krawędzi > ~18% pola sceny na scenie typu B/C
+= sygnał FAIL do werdyktu.
 
 **F4 — KOD (gpt-5.6-sol LUB agent autorsko — Z4).** Szkielet-kontrakt z najnowszego wzorca (head: canonical/OG/
 noindex `{{CANONICAL_URL}}`, JSON-LD @graph, JEDEN exec-script: pixel `{{PIXEL_ID}}`
@@ -1267,6 +1305,21 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   w pełni wystarczające — 25/25 PASS); `high` tylko małe generacje (favicon 1:1) i tylko
   gdy medium zawiedzie. `aspect_ratio` = format Gemini (`3:2`/`2:3`/`1:1`), NIE
   `1536x1024` (cichy fallback do 1:1!).
+- **⚡⚡ ORKIESTRACJA = WORKFLOW, nie sztafeta agentów (Tomek 20.07 — „trwa za długo"; jakość
+  ABSOLUTNIE nietykalna, koszt może rosnąć).** Cały przebieg fazy prowadzi JEDEN deterministyczny
+  skrypt `Workflow` (pipeline per-sekcja: makieta→krytyk→regen, scena→wierność→kod, dopasowanie —
+  BEZ bariery „czekaj na komplet"; wall-clock = najdłuższy łańcuch, nie suma). Rozwiązuje też klasę
+  „martwy agent twierdzi, że wróci" — skrypt trzyma stan. **Dźwignie (WSZYSTKIE bez dotknięcia
+  jakości):** (a) makiety/sceny `max_workers` 8-10 (arbitralny cap w kodzie, NIE limit OpenAI);
+  (b) fan-out niezależnych torów: F0 trójstrumieniowe (kuracja zdjęć ∥ wideo ∥ karta), branding ∥
+  styl-master, sceny per-sekcja; (c) **hero-video Kling startuje W TLE przy akcepcie sceny hero**
+  i renderuje podczas F4/F7 (wstrzykiwany po load); (d) PASZPORT+rezerwacja marki poza ścieżką
+  krytyczną; (e) prompt-caching SSOT + brief-bundle downstream. **⛔ NIE ruszać (bezpieczniki
+  jakości, nie koszt):** 2 pary oczu F3A · krytyk makiet · pętla dopasowania F7.1 „do wyczerpania" ·
+  komplet gate'ów. Gdzie WIĘCEJ par oczu podniesie jakość — DODAWAĆ. **Wgląd Tomka = PANEL admina,
+  NIE czat: `panel-sync` jest częścią KAŻDEGO kroku pipeline (nie tylko końca fazy)** — panel ma być
+  żywy na bieżąco (kroki lp_*, makiety, sceny, doki, koszty); wchodzę w czat tylko przy decyzji,
+  która jest Tomka. Szczegóły: `[[feedback-fabryka-workflow-orchestracja]]`.
 - **⚡ RÓWNOLEGŁOŚĆ FAZY KODU (17.07, quick-wins Tomka):** (1) pipeline WIDEO (yt-dlp/
   ffmpeg/rehost) startuje W TLE równolegle z F4 od pierwszej minuty; (2) najpierw SŁOWNIK
   KLAS + szkielet-kontrakt (1 krok), POTEM 3-4 chunki kodera gpt-5.6-sol RÓWNOLEGLE
