@@ -1779,24 +1779,43 @@
         function adsWideoBlock(p) {
             const subs = subDefsFor('ads_wideo');
             let h = '<div class="space-y-3">';
+            h += `<div class="flex items-center gap-2 text-[12.5px] text-zinc-200 font-medium"><i class="ph ph-film-slate text-[#52a8ff]"></i> Kreacja wideo 15 s <span class="text-[10.5px] text-zinc-500 font-normal">— fabryka AI-video (kref/FLF · bramki QA + wierności · LOOP CLOSE · −14 LUFS)</span></div>`;
+
+            // ── KREACJA: kafel jak w grafikach — player inline + badge AI + akcept ✓ Tomka ──
             if (p.video_url) {
-                h += `<div class="border border-[#45a557]/30 bg-[#45a557]/[.05] rounded-md px-4 py-3 text-[12px] text-[#62c073] flex items-center gap-2 flex-wrap">
-                    <i class="ph ph-film-slate"></i> Kreacja gotowa${p.video_ai_labeled ? ' · <span class="mile-badge">flaga AI (disclosure przy publikacji)</span>' : ' · <span class="text-[#f5b955]">⚠ brak flagi AI</span>'}
-                    ${p.video_cost_usd ? `<span class="text-zinc-500 font-mono">$${p.video_cost_usd}</span>` : ''}
-                    <a href="${escapeHtml(p.video_url)}" target="_blank" class="ml-auto underline">otwórz</a></div>`;
+                const approved = p.video_status === 'done';
+                h += `<div class="ads-cr" style="max-width:280px">
+                    <video src="${escapeHtml(p.video_url)}" controls preload="metadata" playsinline style="width:100%;aspect-ratio:9/16;background:#000;border-radius:6px"></video>
+                    <span class="ads-cr-angle">kreacja 15 s · 9:16</span>
+                    ${p.video_ai_labeled ? '<span class="ads-cr-ai" title="oznaczona jako AI (disclosure przy publikacji — Meta 2026)">AI</span>' : ''}
+                    <button onclick="wf2VideoToggleApprove()" class="ads-cr-ok ${approved ? 'is-ok' : ''}" style="bottom:auto;top:34px" title="${approved ? 'zaakceptowana — kliknij, by cofnąć' : 'AKCEPTUJ kreację (finał fabryki)'}"><i class="ph ${approved ? 'ph-check-circle' : 'ph-circle'}"></i></button>
+                </div>`;
+                if (!approved) h += `<div class="text-[10.5px] text-[#f5b955]">Czeka na Twój akcept (✓ na kaflu) — po akcepcie fabryka robi pack hooków (≤3 wersje) i kopiuje finał do ads/.</div>`;
             } else {
                 const vm = VIDEO_STATUS_META[p.video_status] || ['#a1a1aa', p.video_status || 'nie zaczęte'];
                 h += `<div class="text-[11.5px] text-zinc-500 bg-[#111] border border-[#232323] rounded-md px-3.5 py-2.5 flex items-center gap-2">Kreacja powstaje w fabryce wideo — etapy niżej. Status: <b style="color:${vm[0]}">${escapeHtml(vm[1])}</b>
                     <button onclick="wf2VideoRefresh()" class="ml-auto text-[10.5px] underline text-zinc-400 hover:text-white">sprawdź teraz</button></div>`;
             }
+
+            // koszt fabryki (fal) — jak w grafikach
             const vc = (costs || []).filter(c => c.product_id === p.id && c.kind === 'fal');
             const vcSum = vc.reduce((s, c) => s + (+c.amount || 0), 0);
-            if (vcSum > 0) h += `<div class="text-[10.5px] text-zinc-500 font-mono">koszt fabryki (fal): $${vcSum.toFixed(2)} · ${vc.length} poz. (szczegóły: zakładka Koszty)</div>`;
+            if (vcSum > 0) h += `<div class="text-[10.5px] text-zinc-500 font-mono">koszt fabryki wideo (fal): $${vcSum.toFixed(2)} · ${vc.length} poz. (szczegóły: zakładka Koszty)</div>`;
+
+            // ── MATERIAŁY FABRYKI: wszystkie artefakty avi_* jednym rzutem (wzorzec, KARTA,
+            //    blueprint, arkusz klatek, siatki QA, identity board, preview) ──
+            const allArts = subs.flatMap(d => artifactsFor(p.id, d.key));
+            if (allArts.length) {
+                h += `<div class="border border-[#1f1f1f] rounded-md px-3 py-2.5 bg-[#0d0d0d]">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Materiały fabryki (${allArts.length})</div>
+                    ${artifactsGallery(allArts)}</div>`;
+            }
+
+            // ── PRZEBIEG FABRYKI: timeline statusów z notami (artefakty już wyżej — bez dubli) ──
             if (subs.length) {
                 h += '<div class="space-y-2">' + subs.map((d, i) => {
                     const st = stepFor(d.key, p.id) || { status: 'pending' };
                     const note = st.data && st.data.note ? st.data.note : '';
-                    const arts = artifactsFor(p.id, d.key);
                     const icon = st.status==='done' ? 'ph-check-circle' : st.status==='in_progress' ? 'ph-circle-half' : st.status==='blocked' ? 'ph-x-circle' : st.status==='skipped' ? 'ph-minus-circle' : 'ph-circle';
                     const col = st.status==='done' ? '#45a557' : st.status==='in_progress' ? '#0070f3' : st.status==='blocked' ? '#e5484d' : '#3f3f46';
                     return `<div class="border border-[#1f1f1f] rounded-md px-3 py-2 bg-[#0d0d0d]">
@@ -1808,12 +1827,33 @@
                             <span class="ml-auto text-[10px] text-zinc-600">${STEP_LABELS[st.status] || st.status}</span>
                         </div>
                         ${note ? `<div class="text-[10.5px] text-zinc-500 mt-1.5 whitespace-pre-line">${escapeHtml(note)}</div>` : ''}
-                        ${arts.length ? `<div class="mt-2">${artifactsGallery(arts)}</div>` : ''}
                     </div>`;
                 }).join('') + '</div>';
             }
             h += '</div>';
             return h;
+        }
+        // Akcept finału wideo przez Tomka (odpowiednik ✓ per kreacja w grafikach):
+        // done ⇄ qa na wf2_products.video_status + avi_final done ⇄ in_progress + wpis osi czasu.
+        async function wf2VideoToggleApprove() {
+            const p = drawerProduct(); if (!p || !p.video_url) return;
+            const approve = p.video_status !== 'done';
+            p.video_status = approve ? 'done' : 'qa'; renderDrawer();   // optymistycznie
+            try {
+                const { error } = await supabaseClient.from('wf2_products').update({ video_status: p.video_status }).eq('id', p.id);
+                if (error) throw error;
+                const fin = stepFor('avi_final', p.id);
+                if (fin && fin.id) {
+                    const data = Object.assign({}, fin.data, { note: approve
+                        ? 'ZAAKCEPTOWANA przez Tomka w panelu ✓ — fabryka: pack hooków (≤3) + kopia do ads/.'
+                        : 'Akcept cofnięty w panelu — kreacja wraca do QA.' });
+                    fin.status = approve ? 'done' : 'in_progress'; fin.data = data;
+                    await supabaseClient.from('wf2_steps').update({ status: fin.status, data }).eq('id', fin.id);
+                }
+                await supabaseClient.from('wf2_activities').insert({ project_id: project.id, actor: 'admin', action: 'video_akcept',
+                    description: (approve ? '✅ Kreacja wideo ZAAKCEPTOWANA: ' : '↩️ Akcept wideo cofnięty: ') + (p.name || p.slug || '') });
+                showToast(approve ? 'Kreacja zaakceptowana ✓' : 'Akcept cofnięty');
+            } catch (e) { showToast('Nie zapisano akceptu: ' + (e.message || e), 'error'); }
         }
         async function wf2VideoRefresh() {
             // fabryka pracuje out-of-band (brak realtime) — celowy re-fetch produktu + jego steps/artifacts/costs
