@@ -179,6 +179,27 @@ zgodne. FAIL cechy produktu → regeneracja celowana (G2 force) max 3 rundy → 
 cech produktu jej nie dotyczy, warunek = 0 forbidden + rola = „przed" (nota „scena bez produktu").
 → dowód: `dowody/AD-<angle>.png` + werdykt w `dowody/WIERNOSC-ADS.md`.
 
+### G3a — BRAMKA ANATOMII (ludzie i zwierzęta) — v10.1
+**Cel:** żadna kreacja nie pokazuje uciętego/rozjeżdżonego ciała człowieka ani zwierzęcia. Luka
+systemowa ujawniona na **Macie akupresury 20.07** (leżąca kobieta miała UCIĘTY/niespójny TUŁÓW —
+ciało znikało nienaturalnie pod ręcznikiem): fabryka pilnowała produktu, liter, przekazu i USP-momentu,
+ale ŻADNA bramka nie sprawdzała ANATOMII postaci. Ta bramka jest teraz **odrębną pozycją checklisty QA**
+obok wierności produktu (G3 = produkt; G3a = ludzie/zwierzęta).
+**Metoda:** AGENT (vision) ogląda **KANDYDATÓW i FINAŁY** (nie tylko finał — kandydat z wadą odpada,
+zanim zostanie wybrany). Prewencja: brief KAŻDEGO kąta niesie zdanie „Any human or animal in the scene
+must be anatomically complete and natural; if partially covered, the silhouette underneath must remain
+coherent." (`ANATOMY_SENTENCE`/`FD_ANATOMY` w `build_fulldesign`, `SQUARE_RECOMPOSE`, overlay).
+**Bramka G3a (T/N, per kandydat i finał):**
+- [T] **(a) ciało kompletne w logice kadru** — nic nie znika/nie urywa się nienaturalnie; przykrycie
+  (ręcznik/mebel/produkt) zachowuje SPÓJNĄ sylwetkę pod spodem (żadnego uciętego/zlanego z meblem tułowia);
+- [T] **(b) liczba i budowa** kończyn / dłoni / palców / uszu poprawna (bez dodatkowych/brakujących, bez zrostów);
+- [T] **(c) naturalna poza i proporcje** (żadnych niemożliwych zgięć/skręceń/skali);
+- [T] **(d) twarz bez deformacji** (rysy spójne, oczy/usta naturalne).
+FAIL któregokolwiek = **kandydat odpada → drugi kandydat → regeneracja** (`--regen <kąt>`; nowy brief niesie
+już zdanie prewencyjne). Kąt/kadr bez ludzi i zwierząt (np. czysty packshot demo) = N/D (nota „brak postaci").
+→ dowód: werdykt w `ANATOMY.json` (`state.anatomy_verdicts`) + kompozyty `dowody/WIERNOSC-<kąt>.png`.
+**Emisja:** werdykty anatomii wchodzą do noty `agr_qa` (linia „… · anatomia: PASS/FAIL · …").
+
 ### G4 — BRAMKA TEKSTU / CZYTELNOŚCI
 **Cel:** żadnej połamanej polszczyzny; headline czytelny w kciuku.
 **Narzędzie:** `ad-gate.py` (miniatury @320px + pHash; overlay safe-zone TYLKO dla `*_916*` — dla
@@ -371,6 +392,9 @@ z modułu 19.07 — cały tor generacji przeszedł na ad-forge/fal.)*
 - [ ] 3 kreacje 4:5 (kanon 1080×1350; render wysokorozdzielczy **min. 1350×1688**, cel 1536×1920 —
       rev3), pliki `ad_<n>_<angle>.png`, ≤30 MB.
 - [ ] Wierność (G3): każda kreacja produktowa ZGODNA vs paszport, dwie pary oczu, dowód-plik.
+- [ ] Anatomia (G3a): każdy człowiek/zwierzę na kreacji (kandydaci i finały) — ciało kompletne,
+      spójna sylwetka pod przykryciem, poprawne kończyny/dłonie/palce/uszy, naturalna poza, twarz bez
+      deformacji; werdykt w `ANATOMY.json`.
 - [ ] Tekst (G4): zero scramble/pseudo-glifów, diakrytyki OK, @320px czytelny, safe-margin ≥8%.
 - [ ] Polityka (G5): zero personal attributes / before-after wellness / słów-triggerów / obcych
       logo; blocklista czysta; `proof` bez fałszywego testimonialu.
@@ -396,6 +420,41 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
 ---
 
 ## CHANGELOG DECYZJI (G8)
+
+- **2026-07-20 (v10.1) — BRAMKA ANATOMII (ludzie/zwierzęta) + AUDYT WSTECZ (feedback Tomka: „leżąca
+  kobieta na Macie ma UCIĘTY/niespójny TUŁÓW — ciało znika nienaturalnie pod ręcznikiem"):**
+  - **Lekcja G8 (klasa: LUKA BRAMKOWA — anatomia postaci).** Fabryka miała bramki produktu (G3),
+    ciągłości, tekstu (G4), polityki (G5) i USP-momentu — ale ŻADNA nie sprawdzała ANATOMII ludzi/zwierząt.
+    Model nano-banana-pro potrafi urwać/rozjechać tułów leżącej osoby (ciało wtapia się w ręcznik/matę),
+    a wszystkie inne bramki to przepuszczają, bo produkt i litery są OK. Root-cause: pilnowaliśmy produktu,
+    liter i przekazu, nie CIAŁ.
+  - **Fix FABRYKI (nie pliku):** (1) **zdanie prewencyjne** `ANATOMY_SENTENCE` („Any human or animal in
+    the scene must be anatomically complete and natural; if partially covered, the silhouette underneath
+    must remain coherent.") wstrzykiwane do briefu KAŻDEGO kąta: `FD_ANATOMY` w `build_fulldesign`
+    (i pochodne: `regen_fd_angle`/`gen_square_full`/`do_hookvariants`/`do_portfolio`), doklejone do
+    `SQUARE_RECOMPOSE` (kwadrat oszczędny) i do `full_prompt` (tor overlay — PAIN ma ludzi z definicji);
+    (2) **nowa BRAMKA G3a ANATOMII** — vision-checklista KANDYDATÓW i FINAŁÓW (`ANATOMY_GATE_QUESTIONS`,
+    `print_anatomy_gate`): (a) ciało kompletne / spójna sylwetka pod przykryciem, (b) liczba i budowa
+    kończyn/dłoni/palców/uszu, (c) naturalna poza/proporcje, (d) twarz bez deformacji; FAIL = kandydat
+    odpada → drugi kandydat → regeneracja; (3) werdykty agenta → `ANATOMY.json` → `state.anatomy_verdicts`
+    (CLI `--anatomia`), wchodzą do noty `agr_qa` (`_qa_lines`: „… · anatomia: PASS/FAIL · …"). Bramka
+    G3a to ODRĘBNA pozycja checklisty QA obok G3 (produkt) — patrz §1 fazy i §7.
+  - **AUDYT WSTECZ (vision, 3 produkty — 20.07):** obejrzano WSZYSTKIE opublikowane finały (demo/problem/
+    lifestyle × 4:5 + 1:1) oraz bazy wariantów hooków. **Drapek** (9e4b1df9…): PASS wszystkie — psy anatomicznie
+    naturalne (4 łapy, poprawne pozy/ogony, brak zrostów). **Masażer** (557ed2b0…): PASS wszystkie — zielona
+    „silikonowa dłoń" to PRODUKT (nie ludzka anatomia); dłonie/twarze/karki kobiet naturalne (lifestyle: realna
+    dłoń 4 palce+kciuk poprawna). **Mata** (9b377ae8…): **1 FAIL — demo 4:5 i demo 1:1** (leżąca twarzą w dół
+    kobieta miała UCIĘTY/niespójny TUŁÓW: tors kończył się w połowie pleców, pod ręcznikiem brak sylwetki bioder/nóg —
+    kryterium (a)); problem, lifestyle oraz WSZYSTKIE bazy hooków = PASS.
+  - **REGENERACJA FAIL-i:** mata demo zregenerowane best-of-2 z nowym briefem `FD_ANATOMY`. Oba kandydaty
+    naprawiły anatomię (kobieta leży na PLECACH jako jedna spójna sylwetka); wybrano c1 (c0 odrzucony — literówka
+    „CTA \|" przed przyciskiem = bramka liter FAIL). Kwadrat 1:1 przekomponowany z nowego 4:5 (litery + anatomia
+    czyste). `--finalize` MERGE po (kąt,format) — podmieniono TYLKO demo·45 i demo·11, problem/lifestyle nietknięte.
+    Koszt fal: **~$0.675** (2×0.225 regen 4:5 + 1×0.225 kwadrat; `wf2_costs` kind='fal', osobny wiersz). ad-gate PASS,
+    KOMPLET bramek (litery/wierność/ciągłość/**anatomia**/klik) na nowych finałach = PASS. Foldery czyste
+    (`MATA-BANERY-FINALNE`) zaktualizowane.
+  - Zasada: **każdy kadr z człowiekiem/zwierzęciem = kandydat na anatomiczny defekt; osoba leżąca/częściowo
+    zakryta (ręcznik/mata/mebel) to strefa ryzyka #1 — sylwetka pod przykryciem MUSI zostać spójna.**
 
 - **2026-07-19 (v10) — FORMAT 1:1 (KWADRAT) DODANY DO FABRYKI (dyrektywa Tomka „dodaj KWADRAT"):**
   ad-forge produkuje teraz DWA formaty per kąt: `45` (4:5 pion 1536×1920) **i** `11` (1:1 kwadrat

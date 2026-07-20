@@ -30,6 +30,12 @@ TRYB FULL-DESIGN (default dla nbpro, 2026-07-19 — feedback Tomka „chcę peł
   BRAMKA TEKSTU = agent (vision) porównuje litera-po-literze; literówka → drugi kandydat / chirurgiczny
   `nano-banana-pro/edit` fix / fallback overlay. `--mode overlay` = stary tor nakładek (fallback).
 
+BRAMKA ANATOMII (v10.1, 2026-07-20 — feedback Tomka „leżąca kobieta na Macie ma UCIĘTY tułów; żadna bramka
+  nie sprawdza ciał ludzi/zwierząt"): zdanie prewencyjne ANATOMY w briefie KAŻDEGO kąta (build_fulldesign,
+  SQUARE_RECOMPOSE, overlay) + osobna BRAMKA vision (kandydaci i finały): (a) ciało kompletne/sylwetka spójna
+  pod przykryciem, (b) liczba/budowa kończyn/dłoni/palców/uszu, (c) naturalna poza/proporcje, (d) twarz bez
+  deformacji. FAIL = kandydat odpada → drugi kandydat → regeneracja. Werdykty → ANATOMY.json → state.anatomy_verdicts.
+
 OPTYMALIZACJA v8 (2026-07-19, „czas/koszt/wartość" — Tomek):
   1. RÓWNOLEGŁOŚĆ PEŁNA: cały etap generacji przebiegu (wszystkie kąty × best-of-2 + bazy hooków +
      A/B) submitowany do kolejki fal NARAZ (jeden submit-all→poll-all, wzorzec gen_batch). Skrypt
@@ -631,10 +637,13 @@ def scenes_for_angle(angle):
 
 
 def full_prompt(scene_prompt, with_product, has_style):
+    # ANATOMY_SENTENCE (v10.1) doklejane do KAŻDEJ sceny overlay (ludzie/zwierzęta kompletne i spójne;
+    # PAIN ma ludzi z definicji, sceny z produktem też) — spójnie z briefem full-design.
+    anat = " " + ANATOMY_SENTENCE
     if with_product:
         pre = PRODUCT_PREFIX + (STYLE_NOTE if has_style else "")
-        return pre + "\n\n" + scene_prompt
-    return scene_prompt
+        return pre + "\n\n" + scene_prompt + anat
+    return scene_prompt + anat
 
 
 # ── prompt-lint (import; --expect-product-ref tylko dla scen z produktem) ──────
@@ -1805,6 +1814,35 @@ def print_click_gate(angles, klik=None):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# BRAMKA ANATOMII (v10.1, Tomek: „leżąca kobieta na Macie ma UCIĘTY tułów — żadna bramka nie sprawdza
+# ciał ludzi/zwierząt"). Vision-checklista KANDYDATÓW i FINAŁÓW: AGENT ogląda KAŻDY baner (i każdego
+# kandydata) i ocenia 4 kryteria. FAIL = kandydat odpada → drugi kandydat → regeneracja (nowy brief
+# niesie już zdanie prewencyjne ANATOMY). Werdykty agenta w ANATOMY.json → state.anatomy_verdicts (audyt).
+# ══════════════════════════════════════════════════════════════════════════════
+ANATOMY_GATE_QUESTIONS = [
+    "(a) CIAŁO KOMPLETNE w logice kadru — nic nie znika/nie urywa się nienaturalnie; przykrycie "
+    "(ręcznik/mebel/produkt) zachowuje SPÓJNĄ sylwetkę pod spodem (żadnego uciętego/rozjeżdżonego tułowia)?",
+    "(b) LICZBA i BUDOWA kończyn / dłoni / palców / uszu poprawna (bez dodatkowych/brakujących, bez zrostów)?",
+    "(c) NATURALNA poza i proporcje (żadnych niemożliwych zgięć, skręceń, skali)?",
+    "(d) TWARZ bez deformacji (rysy spójne, oczy/usta naturalne)?",
+]
+
+
+def print_anatomy_gate(angles, anatomy=None):
+    """Wypisuje bramkę ANATOMII jako OBOWIĄZKOWĄ checklistę kandydatów i finałów (ocenia AGENT z vision).
+    FAIL któregokolwiek kryterium = kandydat odpada → drugi kandydat → regeneracja (--regen)."""
+    print("BRAMKA ANATOMII (vision — obejrzyj KAŻDEGO kandydata i finał; ludzie/zwierzęta; "
+          "FAIL = drugi kandydat → regeneracja):")
+    for q in ANATOMY_GATE_QUESTIONS:
+        print("   %s" % q)
+    if anatomy and isinstance(anatomy.get("werdykty"), list):
+        for v in anatomy["werdykty"]:
+            print("  • %-10s anatomia=%-4s | ciało: %s | kończyny: %s | poza: %s | twarz: %s" %
+                  (str(v.get("kreacja", "?")), str(v.get("werdykt", "?")), v.get("cialo", "?"),
+                   v.get("konczyny", "?"), v.get("poza", "?"), v.get("twarz", "?")))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # QA + PUBLIKACJA.
 # ══════════════════════════════════════════════════════════════════════════════
 def run_ad_gate(out_dir):
@@ -1841,13 +1879,14 @@ def _hooks_line(state, angles):
 
 
 def _qa_lines(state, angles):
-    """Werdykty 4 bramek per kąt z state: litery (fd_gate) · wierność (fidelity_verdicts,
-    cechy twarde T/N) · klik (klik_verdicts). Brak danych = „—"."""
+    """Werdykty 5 bramek per kąt z state: litery (fd_gate) · wierność (fidelity_verdicts,
+    cechy twarde T/N) · anatomia (anatomy_verdicts) · klik (klik_verdicts). Brak danych = „—"."""
     fdg = state.get("fd_gate") or {}
     fv = state.get("fidelity_verdicts") or {}
     fv_hard = fv.get("cechy_twarde") or []
     fv_verd = fv.get("werdykty") or []
     kv = (state.get("klik_verdicts") or {}).get("werdykty") or []
+    av = (state.get("anatomy_verdicts") or {}).get("werdykty") or []
 
     def _match(lst, a):
         for e in lst:
@@ -1863,8 +1902,9 @@ def _qa_lines(state, angles):
             wr = "OK" if all(str(fe.get(k, "")).strip().upper().startswith("T") for k in fv_hard) else "UWAGA"
         else:
             wr = "—"
+        anat = str(_match(av, a).get("werdykt") or "—")
         klik = str(_match(kv, a).get("werdykt") or "—")
-        lines.append("• %s — litery: %s · wierność: %s · klik: %s" % (a, lit, wr, klik))
+        lines.append("• %s — litery: %s · wierność: %s · anatomia: %s · klik: %s" % (a, lit, wr, anat, klik))
     return lines
 
 
@@ -2282,6 +2322,21 @@ FD_USP_MOMENT = (
     "no action. A viewer must understand in HALF A SECOND what the product does and why it helps."
 )
 
+# ANATOMY (v10.1, product-agnostic — lekcja Mata akupresury 20.07: leżąca kobieta miała UCIĘTY/niespójny
+# TUŁÓW, ciało znikało nienaturalnie pod ręcznikiem; ŻADNA bramka nie sprawdzała anatomii ludzi/zwierząt).
+# Zdanie prewencyjne do briefu KAŻDEGO kąta (build_fulldesign i pochodne) + osobna BRAMKA anatomii (vision).
+ANATOMY_SENTENCE = (
+    "Any human or animal in the scene must be anatomically complete and natural; if partially covered, the "
+    "silhouette underneath must remain coherent."
+)
+FD_ANATOMY = (
+    "\n\nANATOMY (MANDATORY): " + ANATOMY_SENTENCE + " Never let a body, limb, hand or head vanish, get "
+    "unnaturally cut off, merge into furniture, a towel or the product, or bend the wrong way. Correct number "
+    "and structure of limbs, fingers and ears; natural pose and proportions; face free of distortion. Where a "
+    "person is lying down or partly hidden by a towel, blanket, mattress or the product, the rest of the body "
+    "must still read as one continuous, believable figure underneath."
+)
+
 # ── TRYB OSZCZĘDNY 1:1 (v10): przekompozycja gotowego finału 4:5 → kwadrat ────────────────────
 # Model dostaje FINALNY baner 4:5 jako ref[0] (jedyne źródło layoutu/copy/stylu) + refy produktu
 # (wierność). ZADANIE: ten sam baner przekomponowany do 1:1 — identyczny styl/copy/brand, układ
@@ -2297,8 +2352,8 @@ SQUARE_RECOMPOSE = (
     "photo and the text blocks so the composition breathes in 1:1 and NOTHING is cropped, cut off "
     "or pushed off-canvas (use the wider/shorter square proportions sensibly — headline, pills and "
     "CTA fully inside safe margins). The remaining reference images show the REAL product — keep it "
-    "1:1 faithful (same shape, colors, materials, on-product branding). Output a single finished, "
-    "polished 1:1 square banner, feed-ready, maximum sharpness."
+    "1:1 faithful (same shape, colors, materials, on-product branding). " + ANATOMY_SENTENCE + " Output a "
+    "single finished, polished 1:1 square banner, feed-ready, maximum sharpness."
 )
 
 
@@ -2355,6 +2410,7 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
     art = art.replace("{LOGO}", (", and the small brand logo" if has_logo else ""))   # bez logo = brak wzmianki
     parts.append("\n\n" + art)
     parts.append(FD_USP_MOMENT)                                    # mechanizm/efekt W AKCJI (product-agnostic)
+    parts.append(FD_ANATOMY)                                       # v10.1: ciała ludzi/zwierząt kompletne i spójne
 
     intended, lines = [], []
 
@@ -2845,6 +2901,9 @@ def do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, log
     klik = _load_json_file(args.klik or os.path.join(out_dir, "KLIK.json"))
     if klik:
         state["klik_verdicts"] = klik
+    anatomy = _load_json_file(args.anatomia or os.path.join(out_dir, "ANATOMY.json"))
+    if anatomy:
+        state["anatomy_verdicts"] = anatomy
 
     # przebuduj wszystkie dowody (finały + kandydaci + ciągłość)
     comp = build_all_composites(out_dir, refsd, angles)
@@ -2872,6 +2931,8 @@ def do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, log
             elif os.path.isfile(b11):
                 print("  • %-10s ad_%s_11.png (bez kompozytu)" % (a, a))
 
+    print("-" * 88)
+    print_anatomy_gate(angles, state.get("anatomy_verdicts"))
     print("-" * 88)
     print_click_gate(angles, state.get("klik_verdicts"))
     if state.get("karta"):
@@ -3616,6 +3677,8 @@ def run(args):
         if "_ciaglosc" in comp:
             print("  • CIĄGŁOŚĆ   %s" % comp["_ciaglosc"])
         print("-" * 88)
+        print_anatomy_gate(angles)
+        print("-" * 88)
         print_click_gate(angles)
         print("Po weryfikacji: --fix ANGLE='opis cechy' / --regen ANGLE / --pick ANGLE=cN, na końcu --finalize.")
         print("out=%s" % out_dir)
@@ -3806,6 +3869,7 @@ def build_argparser():
     ap.add_argument("--karta", default="", help="ścieżka KARTA.json (domyślnie out/KARTA.json)")
     ap.add_argument("--verdicts", default="", help="ścieżka VERDICTS.json (domyślnie out/VERDICTS.json)")
     ap.add_argument("--klik", default="", help="ścieżka KLIK.json — werdykty bramki powodu kliknięcia (domyślnie out/KLIK.json)")
+    ap.add_argument("--anatomia", default="", help="ścieżka ANATOMY.json — werdykty bramki anatomii ludzi/zwierząt (domyślnie out/ANATOMY.json)")
     # ── FORMATY (v10): 4:5 + kwadrat 1:1 ──
     ap.add_argument("--formats", default="45,11",
                     help="formaty do publikacji po przecinku (45=4:5, 11=1:1 kwadrat). Default '45,11'")
