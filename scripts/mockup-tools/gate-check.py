@@ -1243,56 +1243,10 @@ def check_copy(res, M, ctx):
         res.add("copy", "tagi kotwic [KONKRET-SKU]/[SPEC]", "WARN",
                 "karta bez tagow — kotwiczenie po calej karcie (slabsze); dodaj tagi wg F7")
 
-# ================================================================== F1 MARZA (task#4): ekonomia polki + landed COD
-def check_f1_marza(res, M, ctx):
-    """Marza z wf2_products (price/cost_purchase). <prog% polki = FAIL. landed>prog_zl przy COD bez
-       noty-waivera w LEDGER = FAIL (incydent Zwijek). Brak projektu panelu -> SKIP. Host CRM z manifestu."""
-    m = M.get("f1_marza")
-    if not m:
-        res.add("f1_marza", "(config)", "SKIP", "brak f1_marza w manifescie")
-        return
-    sev = m["severity"]; env = ctx["env"]
-    if ctx["no_net"] or not env.get(M["supabase"]["key_env"]):
-        res.add("f1_marza", "(marza + landed)", "SKIP", "brak SUPABASE_SERVICE_KEY / --no-net")
-        return
-    kp = m.get("kol_price", "price"); kc = m.get("kol_cost", "cost_purchase")
-    rows = _pg_crm(M, env, m.get("tabela", "wf2_products"),
-                   {m.get("slug_kolumna", "slug"): "eq." + ctx["slug"], "select": "%s,%s" % (kp, kc)},
-                   ctx["timeout"])
-    if rows is None:
-        res.add("f1_marza", "(marza + landed)", "SKIP", "brak dostepu do bazy CRM")
-        return
-    if not rows:
-        res.add("f1_marza", "projekt panelu", "SKIP",
-                "landing bez projektu panelu (wf2_products slug=%s)" % ctx["slug"])
-        return
-    P = rows[0]
-    try:
-        price = float(P.get(kp)) if P.get(kp) not in (None, "") else None
-        cost = float(P.get(kc)) if P.get(kc) not in (None, "") else None
-    except Exception:
-        price = cost = None
-    if not price or price <= 0 or cost is None:
-        res.add("f1_marza", "marza polki", "WARN",
-                "brak price/cost_purchase (price=%s cost=%s)" % (P.get(kp), P.get(kc)))
-        return
-    prog = m.get("prog_marza_pct", 40)
-    margin = (price - cost) / price
-    res.add("f1_marza", "marza polki >= %d%%" % prog, status_for(margin >= prog / 100.0, sev),
-            "marza %.0f%% (cena %.2f, koszt %.2f)" % (margin * 100, price, cost))
-    prog_landed = m.get("landed_prog_zl", 150)
-    if cost > prog_landed:
-        waiver = bool(re.search(m.get("waiver_regex", r"(?!x)x"), ctx["ledger"] or "", re.I))
-        cod = bool(re.search(m.get("cod_regex", r"za pobraniem|\bCOD\b"), ctx["html"] or "", re.I))
-        lab = "landed <= %d zl (ryzyko COD)" % prog_landed
-        if waiver:
-            res.add("f1_marza", lab, "PASS", "landed %.2f > %d ALE nota-waiver w LEDGER" % (cost, prog_landed))
-        elif cod:
-            res.add("f1_marza", lab, status_for(False, sev),
-                    "landed %.2f zl > %d + COD na stronie, BRAK noty-waivera (incydent Zwijek)" % (cost, prog_landed))
-        else:
-            res.add("f1_marza", lab, "WARN",
-                    "landed %.2f zl > %d (COD niewykryty) — zweryfikuj model platnosci" % (cost, prog_landed))
+# USUNIETE 20.07 (dyrektywa Tomka): check_f1_marza — ekonomia polki + landed COD.
+# Fabryka landingow NIE ocenia oplacalnosci produktu: gdy produkt trafia do budowy, decyzja
+# zakupowa juz zapadla (Etap 1 / radar). Marza, polka cenowa i werdykty GO/NO-GO nie naleza
+# do gate'a strony. Patrz STANDARD-LANDING-SKLEPY.md sekcja "F-1 — INWENTARZ MATERIALU".
 
 # ================================================================== GO-LIVE (task#3): --published <url>
 def _fetch_published(url, timeout):
@@ -1443,7 +1397,6 @@ CHECK_ORDER = [
     ("wagi", check_wagi),
     ("phash", check_phash),
     ("baza", check_baza),
-    ("f1_marza", check_f1_marza),
     ("wideo_kafle", check_wideo_kafle),
     ("makiety_mobile", check_makiety_mobile),
     ("og_image", check_og_image),

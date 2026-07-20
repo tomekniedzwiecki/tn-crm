@@ -76,7 +76,7 @@ w karcie = CUT; brak pola = „brak danych", nigdy zmyślanie.
 Twarde gate'y (gate-check.py · sekcja-diff SSIM+LAYOUT · rubryka 5×T/N · PASS 0-5 · moduły
 kanoniczne) są SIATKĄ BEZPIECZEŃSTWA model-agnostyczną → subagent może być tańszy, bo gate łapie
 spadek jakości PRZED publikacją. DOMYŚLNY model subagenta fazy = **Sonnet**; **Haiku** dla czystych
-skryptów/REST (F-1 arytmetyka, source-gate, detail-lint/gate-check/sekcja-diff, panel-sync, backfill,
+skryptów/REST (F-1 inwentarz materiału, source-gate, detail-lint/gate-check/sekcja-diff, panel-sync, backfill,
 selektor @32px, F6); **Opus** TYLKO tam, gdzie osąd otwarty i BRAK gate'u za nim:
 F1.7 przewodnik graficzny · KRYTYK makiet (art director) · kod sekcji nietypowych/TOR-I flagowej ·
 rozwój fabryki (gate'y/most/architektura). gpt-5.6-sol (plan F1 / koder F4 [LUB agent autorsko — Z4] /
@@ -166,24 +166,23 @@ ZAKAZ. Domyślnie POMIJAMY; opcjonalnie (≥1000) JEDNA nieprzypisana fraza bez 
 („sprawdzony produkt, tysiące zamówień na świecie"), nigdy licznik/pilność. Główna rola:
 wewnętrzny gate doboru. `shop{name,url}` 🚫 NIGDY na stronie (white label) + grep gate w F6.
 
-**F-1 — GATE WYKONALNOŚCI (PRZED F0, przy WYBORZE produktu; incydent „Zwijek" 18.07: wąż
-ogrodowy przeszedł do fazy 1, gdzie dopiero wyszło, że koszt lądowany 292-319 zł zabija marżę
-COD).** Zanim produkt wejdzie w budowę, policz z snapshotu: koszt lądowany = koszt FAKTYCZNIE
-SPRZEDAWANEJ konfiguracji × kurs NBP (⚠️ NIE „MAX kosztu SKU" gdy drogiego wariantu NIE
-oferujemy — landing sprzedaje JEDNĄ konfigurację, licz od NIEJ; MAX-SKU to bezpiecznik tylko
-gdy klient wybiera wariant. Deska pazurów 18.07: MAX $34 „ze stojakiem" mylił, realny bazowy
-$17,5 = zdrowa marża); realna półka PL kategorii; marża = półka − lądowany − (~30% półki
-na reklamę+COD+zwroty+cło). **Marża brutto < ~40% półki LUB koszt lądowany > ~150 zł przy
-COD = FLAGA: produkt słaby do płatnego ruchu → inny produkt albo świadoma zgoda Tomka.**
-**EGZEKWUJE `gate-check.py` blok `f1_marza`** (dane z `wf2_products`; kanon
-`gate-manifest.json`): `marża=(price−cost_purchase)/price < 40%` = FAIL; `landed
-(cost_purchase) > 150 zł` przy COD na stronie **BEZ noty-waivera w `LEDGER.md`** = FAIL
-(incydent Zwijek: drogi landed + COD = strata na odmowach odbioru); `landed>150` bez COD =
-WARN; brak wiersza `wf2_products slug=…` = SKIP. Świadoma zgoda Tomka = jawna nota-waiver
-w LEDGER (`landed-waiver: …` / „COD ryzyko akcept"), NIE ustna.
-Sprawdź też: galeria po odsiewie ma ≥2 czyste packshoty (inaczej ciężka faza graficzna),
-≥150 ocen (wiarygodny dowód), ≥6 wideo (sekcja multi). Tanie liczenie z samego snapshotu —
-NIE marnować brandingu/kuracji na produkt, który odpadnie na marży.
+**F-1 — INWENTARZ MATERIAŁU (PRZED F0).** ⛔ **NIE JEST BRAMKĄ PRODUKTU.** Dyrektywa Tomka
+(20.07): *„nie chciałbym abyś w etapie budowy landinga decydował o tym. To jest za późno,
+produkt jest wybrany. Twoją robotą powinno być zrobienie landinga a nie dyskutowanie o tym,
+czy się sprzeda."* Gdy produkt trafia do fabryki landingów, decyzja zakupowa **już zapadła**
+— wybór produktu, cena, marża, opłacalność i ryzyko rynkowe należą do Etapu 1 (radar/decyzja
+Tomka), NIE do budowy strony. Fabryka landingów **nie liczy marży, nie bada półki cenowej,
+nie wydaje werdyktów GO/NO-GO i nie proponuje zmiany produktu.** Jeśli w trakcie budowy
+zauważysz coś niepokojącego ekonomicznie — **zgłoś to Tomkowi jedną linijką i buduj dalej**;
+nie zatrzymuj pracy i nie otwieraj dyskusji o sprzedawalności.
+
+Co F-1 robi naprawdę: **liczy MATERIAŁ, żeby zaplanować robotę graficzną.** Ze snapshotu:
+ile realnych kadrów produktowych po odsiewie (≥2 czyste packshoty = lekka faza graficzna;
+mniej = planuj CROP-y/regeneracje i doliczy czas), ile opinii z treścią i zdjęciami (materiał
+do sekcji opinii), ile klipów wideo (≥6 = sekcja multi-wideo; mniej = pojedynczy klip albo
+sekcja odpada), jakie specs są PUSTE (→ zero zmyślonych cm/kg w copy). To jest kosztorys
+pracy, nie ocena biznesu. Wynik F-1 nigdy nie brzmi „produkt odpada", tylko „ta strona
+wymaga X regeneracji i nie dostanie sekcji wideo".
 
 **F0 — DANE + VISION-GATE.** Snapshot z `bud_tt_products.ali_snapshot` (tytuł, opinie
 z text_pl, review_stats, sku_prices; PUSTE specs = tylko komunikaty jakościowe, zero
@@ -1340,8 +1339,8 @@ Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/rep
   animacji, która jest F5.0.2 w CHOREOGRAFIA-ANIMACJI.md); jawne kotwice F3.0–F3.5 i F2.4; górny
   zakres sekcji opisany „02..ostatnia" (aliasy manifest 01→12, doki „do ostatniej"). Egzekucja
   gate'ów udokumentowana: `finalny_pass` (detail-lint P0/P1=blok), `copy` (tagowanie liczb +
-  jedna `data-price`), `published` (go-live: 0 `{{`, brak noindex), `f1_marza` (≥40% + waiver
-  landed>150+COD). Wdrożenie wierności: koder wkleja `ir.root.css` + `scale_px_norm` 1:1 (zakaz
+  jedna `data-price`), `published` (go-live: 0 `{{`, brak noindex). *(blok `f1_marza` USUNIĘTY
+  20.07 — fabryka landingów nie ocenia opłacalności produktu.)* Wdrożenie wierności: koder wkleja `ir.root.css` + `scale_px_norm` 1:1 (zakaz
   re-aproksymacji), pętla DELT (`sekcja-diff.py` → sekcja „DELTY POMIAROWE" w DOPASOWANIE.md).
   Martwe odwołania narzędzi naprawione (zrzuty do kompozytów = `capture-lint.py`, nie stara
   nazwa bez `-lint`; `input_fidelity` wykreślony z drzewa GRAFIKA §2; `render-diff.py` +selektor). `scripts/verify-docs.sh` skanuje teraz
