@@ -460,7 +460,23 @@ Deno.serve(async (req) => {
         .limit(300)
       if (khErr) console.error('[spar-project] knowhow digest fetch error:', khErr)
       else {
-        const items = (khItems || []) as KhRow[]
+        const rawItems = (khItems || []) as KhRow[]
+        // Dedupe wierszy: ekstrakcja per-wymiana potrafi zapisać ten sam fakt kilkukrotnie
+        // (np. powtórzony upload załącznika) — klient widział „tę samą linijkę 3×".
+        // Klucz = kind + znormalizowana treść; zostawiamy PIERWSZE (najstarsze — order
+        // created_at ASC). Jeśli duplikat ma scope, a zachowany nie ma — przenosimy scope.
+        const seen = new Map<string, KhRow>()
+        const items: KhRow[] = []
+        for (const it of rawItems) {
+          const key = it.kind + '|' + (it.content || '').trim().toLowerCase().replace(/\s+/g, ' ')
+          const kept = seen.get(key)
+          if (kept) {
+            if (!kept.scope && it.scope) kept.scope = it.scope
+            continue
+          }
+          seen.set(key, it)
+          items.push(it)
+        }
         const counts: Record<string, number> = {}
         for (const it of items) counts[it.kind] = (counts[it.kind] || 0) + 1
         knowhowDigest = { counts, items }
