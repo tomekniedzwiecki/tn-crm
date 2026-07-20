@@ -162,3 +162,34 @@ Nowe typed actions adaptera: `order_detail · order_attribution · set_price{pro
    Nasz HTML (isHtml) ma meta pod kontrolą — luka dotyczy auto-stron: potrzebne ustawienia
    SEO sklepu (nazwa do szablonu title, description, OG-image) + meta per produkt. Auto-strony
    produktów będą się indeksować z „Default" równolegle z landingami.
+
+## PUBLIC STOREFRONT API (odkryte 20.07 wieczór — WŁASNY CHECKOUT MOŻLIWY)
+
+`GET /docs` (partner) ma sekcję **`publicStorefront`**: 59 publicznych endpointów `https://api.trevio.pl/storefront/*`
+— to samo API, którym działa storefront (katalog, koszyk, checkout, zamówienia, płatności, kody rabatowe,
+zwroty, opinie, feedy Google/FB/Ceneo, lookup NIP w GUS). **BEZ klucza API**; sklep identyfikowany po
+`websiteId` lub `domain`. (Osobne `gateway.trevio.pl/front/v1` = 401 — NIE jest nam potrzebne.)
+
+**FLOW WŁASNEGO CHECKOUTU — POTWIERDZONY EMPIRYCZNIE 20.07 (zamówienie 17998771, sklep test, COD):**
+1. `clientId` = UUID generowany PRZEZ NAS (localStorage landinga; zero ciastek platformy — koszyk
+   żyje serwerowo pod kluczem clientId+websiteId).
+2. `POST /storefront/cart/item` `{clientId, websiteId, productVariantId, quantity}` → 200.
+3. `POST /storefront/cart/checkout-details` `{clientId, websiteId, fullName, street, houseNumber,
+   postCode, city, countryCode, phoneNumber, email, invoice:false, deliveryMethodId, …}` → 200.
+   (deliveryMethodId z `GET /storefront/delivery-method`; paczkomaty: `pickupPoint*` + broker-config.)
+4. `POST /storefront/order/cart` `{clientId, websiteId, websitePaymentProviderId|null, languageCode:'PL',
+   deliveryMethodId, deliveryMethodPriceGroupId, blikCode|null, isCashOnDelivery}` →
+   `{orderId, orderNumber, paymentId, redirectUrl, orderValue}`.
+5. Płatność online: `GET /storefront/payment-provider` → provider; **BLIK inline**: kod w `order/cart`
+   albo `POST /storefront/payment/{paymentId}/initiate {websitePaymentProviderId, blikCode}`;
+   polling `GET /storefront/payment/{paymentId}/status`; fallback redirect na `redirectUrl`.
+Ceny/warianty: `GET /storefront/product/resolve-checkout-slug` (slug→produkt+wariant) — spina się
+z naszymi checkout-slugami z partner API.
+
+Konsekwencje: (a) checkout 1-click COD NA LANDINGU = wykonalny (formularz + 3 requesty; dane klienta
+NIE przechodzą przez nasz backend — browser→api.trevio.pl bezpośrednio, RODO zostaje po stronie platformy);
+(b) atrybucja: zamówienie złożone po API MA sesję storefrontu tylko gdy klient wszedł na domenę sklepu —
+landing na domenie sklepu (isHtml) = sesja jest, zewnętrzny origin = sprawdzić; (c) ⚠️ endpoint `order/cart`
+bez captchy/klucza = wektor spamu zamówień COD — zgłosić Adrianowi (rate-limit/turnstile);
+(d) Adrian dopisuje do docs przewodniki narracyjne (flow+ciastka) — nasza empiria powyżej już to pokrywa,
+zweryfikować zgodność gdy wyjdą. Guides w docs: na razie 1 (`custom-html-pages`).
