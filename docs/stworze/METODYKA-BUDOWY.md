@@ -94,6 +94,44 @@ przepuści tylko dobry wynik. Zasady (lekcja incydentu 0024: najdroższy czas = 
    `retro_fabryki` porównuje tempo między apkami i wskazuje, który krok zjada czas (tak znaleźliśmy
    pętlę audytową). Optymalizacje tempa = te same żniwa lekcji, typ `[PROCEDURA]`/`[NARZĘDZIE]`.
 
+## 2b. Budowa RÓWNOLEGŁA — tory zamiast sztafety etapów (STANDARD fabryki, decyzja Tomka 20.07)
+
+**Zasada nadrzędna: etapy panelu = porządek ZALICZANIA (bramki, kamienie dla klienta), NIE kolejność
+budowania.** Aplikacja powstaje „od razu", torami równoległymi — sekwencyjne zostaje tylko to, co
+sekwencyjne być MUSI. Walidacja wzorca: Sygno 20.07 (3 tory naraz po kręgosłupie).
+
+**KRĘGOSŁUP (sekwencyjny, szybki — zawsze przed fan-outem):**
+scaffold+pipeline (S1) → schemat DB + **GATE A/rls-matrix zielony** → auth (auth-e2e zielony) →
+**KONTRAKTY NA PIŚMIE**: nazwa eventu aha · paywall (gate 402 na których akcjach) · kanony nazw/statusów
+(z DECYZJI) · tokeny stylu marki (kolory/typograf) · granty kolumn (co wolno frontowi). Bez spisanych
+kontraktów fan-out = tory zgadują interfejsy = konflikty i poprawki (drożej niż sekwencja).
+
+**TORY RÓWNOLEGŁE (po kręgosłupie) — kanoniczny podział:**
+- **R — RDZEŃ** (krytyczna ścieżka; moduły funkcji głównej S4a→n sekwencyjnie WEWNĄTRZ toru):
+  własność: `app.html`, `js/app.js`, `base.css`, migracje, edge rdzenia, `account` (RODO niszy), `tests/core*`.
+- **L — LANDING**: własność: `index.html`, `css/landing.css` (nowy), `img/` (nowe), `tests/landing*`.
+- **PA — OBRZEŻE** (admin + płatności smoke + treści maili): własność: `admin.html`, `js/admin.js`,
+  `_shared/mail-templates.ts`, sekrety/env edge.
+- (opcjonalnie) **T — NARZĘDZIA/legal drafty** — gdy jest praca bez kolizji plików.
+
+**REGUŁY TWARDE równoległości (to one chronią jakość):**
+1. **Macierz własności plików** — każdy tor dostaje listę plików na wyłączność; plik poza listą =
+   zgłoszenie do orkiestratora, nie edycja. Wspólne pliki (base.css, app.html) mają JEDNEGO właściciela (R).
+2. **Izolacja worktree**: `git -C <repo> worktree add c:\tmp\<app>-tor-<x> -b tor-<x>`; commity lokalne
+   na branchu toru, ⛔ tory NIE pushują i NIE piszą BUILDLOG (wpisy scala orkiestrator przy merge).
+3. **Baza/edge = wspólne LIVE, zmiany addytywne**: migracje numeruje TYLKO tor R; deploy edge = każdy
+   tor swoje funkcje; zmiana `_shared/` = redeploy-all + check-deploy (funkcja nieobecna w cudzym
+   worktree ≠ FAIL — odnotować).
+4. **Scalanie SEKWENCYJNE przez orkiestratora** (kolejność ukończenia): merge toru → `audit-static` →
+   `preflight`/smoke → (przy zmianie schematu) `rls-matrix` → mini-krytyk toru (Sonnet; Opus gdy
+   powierzchnia wrażliwa) → wpis BUILDLOG toru → następny merge. Push main dopiero po zielonym merge.
+5. **Front testowany lokalnie przed merge** (serwer statyczny + ŻYWY backend — cors dopuszcza localhost);
+   weryfikacja na prawdziwej domenie po pushu main.
+6. **Twardo sekwencyjne (NIE zrównoleglać):** onboarding S8b (projektuje się na REALNYM aha rdzenia) →
+   przegląd E5 (holistyczny — patrzy na CAŁOŚĆ, więc po scaleniu wszystkich torów) → demo klienta →
+   start. Również: moduły rdzenia między sobą (S4a→S4b→…) i wszystko, co dotyka płatności realnych.
+7. **Tor = pełny rytuał §3 poza BUILDLOG-iem/pushem** (dowody, commity per faza, czas ścienny w zwrocie).
+
 ## 3. Rytuał każdej sesji budowlanej
 
 1. Przeczytaj `BUILDLOG.md` + swoją sekcję z `08-PLAN-SESJI.md` + odpowiednie pliki paczki.

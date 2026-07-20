@@ -34,6 +34,7 @@
 | L-016 | 2026-07-20 | wzór fabryki landingów Z8 | PROCEDURA | Modele per typ kroku (Sonnet default, Haiku mechaniczne, Opus tylko audyt/architektura/krytyk wrażliwy) — gate'y ubezpieczają tańszy model; jawny model przy każdym spawnie | WDROŻONA | METODYKA §2a pkt 3 |
 | L-017 | 2026-07-20 | Sygno GATE A | PROCEDURA | Podwójny niezależny audyt TYLKO dla izolacji danych/płatności (przy 0024 komplementarne znaleziska); reszta = 1 audyt + tani krytyk; audyt w TLE, sesja kontynuuje kroki niezależne | WDROŻONA | METODYKA §2a pkt 4-5 |
 | L-018 | 2026-07-20 | optymalizacja tempa | PROCEDURA | BUILDLOG notuje czas ścienny sesji (1 linia) → retro_fabryki porównuje tempo między apkami i wskazuje kroki-pożeracze | WDROŻONA | METODYKA §2a pkt 7 |
+| L-019 | 2026-07-20 | decyzja Tomka (tempo) | PROCEDURA | Etapy = porządek ZALICZANIA, nie budowania: po kręgosłupie (schemat+GATE A → auth → kontrakty na piśmie) budowa idzie TORAMI równoległymi (R rdzeń / L landing / PA obrzeże) z macierzą własności plików, worktree per tor, scalanie sekwencyjne z gate'ami; twardo sekwencyjne: onboarding→przegląd→demo | WDROŻONA | METODYKA §2b; szablon 08-PLAN-SESJI startera; walidacja: Sygno 3 tory 20.07 |
 
 ## Jak czytać statusy
 - **ZGŁOSZONA** — czeka na decyzję/budowę (retro_fabryki przegląda WSZYSTKIE przy każdym projekcie).
