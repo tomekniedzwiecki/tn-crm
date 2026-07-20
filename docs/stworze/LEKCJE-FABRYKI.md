@@ -42,6 +42,9 @@
 | L-024 | 2026-07-20 | Sygno (weryfikacja live) | PROCEDURA | Polling produkcji Vercel curl-em (co 5 s) wyzwala Security Checkpoint (bot-challenge 403 dla curl, mylące „padł deploy") — weryfikacja live realną przeglądarką (visual-verify); curl tylko jednorazowo | WDROŻONA | sygno BUILDLOG TOR R lekcje; §2b pkt 5 praktyka |
 | L-025 | 2026-07-20 | decyzja Tomka (panel) | NARZĘDZIE | „Zrobione = NATYCHMIAST odnotowane w panelu" — sync /tn-app pomijany, bo ręczny REST + gotcha VERBATIM WS = tarcie; fabryka sklepów ma panel-sync.py, TN App nie miała odpowiednika → `wfa-panel-sync.mjs` (steps/step z checklistą VERBATIM z WS/activity/note, dry-run, unia odhaczeń) + rytuał §3.4.6 (in_progress na starcie, done zaraz po domknięciu) | WDROŻONA | tn-crm `scripts/wfa-panel-sync.mjs` (commit b82df52d) + CLAUDE.md; walidacja live na Sygno |
 
+| L-026 | 2026-07-20 | Sygno tor D | NARZĘDZIE | audit-static bez inline-whitelisty dla ŚWIADOMYCH wyjątków (USING(true) na publicznym katalogu, runtime-placeholdery {{link}} w seedach, siatka onboard.js) → pre-push chodzi na --no-verify do końca budowy i gate słabnie; potrzebny marker `audit-ok: <powód>` w linii | ZGŁOSZONA | sygno BUILDLOG TOR D; zmiana w starterze audit-static |
+| L-027 | 2026-07-20 | Sygno tor D | PROCEDURA | Klucz główny Resend odzyskiwalny tylko przez runtime tn-crm (temp echo-fn, od razu usuwana) — działa, ale kruche i zostawia ślad deployu; kandydat: sekret w Windows CredMan jak token mgmt | ZGŁOSZONA | sygno BUILDLOG TOR D |
+
 ## Jak czytać statusy
 - **ZGŁOSZONA** — czeka na decyzję/budowę (retro_fabryki przegląda WSZYSTKIE przy każdym projekcie).
 - **W TOKU** — sesja pracuje nad wdrożeniem (wpis wskazuje którą).
