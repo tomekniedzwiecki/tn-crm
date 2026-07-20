@@ -959,11 +959,19 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown, bez komentarzy):
   "nieczytelne_fragmenty": "opcjonalnie: co było nieczytelne, ucięte lub niepewne",
   "items": [ {"kind": "wymaganie|wniosek|link|uwaga|cytat|intel_cenowy|luka|decyzja|sprzecznosc|zalozenie", "scope": "v1|pozniej|poza|nieznane", "content": "konkret 1-2 zdania", "url": "tylko dla kind=link"} ]
 }
-"czytelny": false ustaw TYLKO gdy naprawdę nie widzisz treści (pusty/uszkodzony plik, nieczytelny skan) - wtedy wypełnij "powod". W "items" wyciągnij 3-15 najważniejszych elementów wiedzy dla zespołu budującego aplikację (wymagania i reguły biznesowe -> wymaganie, cenniki/stawki -> intel_cenowy, otwarte pytania -> luka, sprzeczności z wcześniejszymi ustaleniami -> sprzecznosc). "pewnosc" oceń uczciwie: "wysoka" tylko gdy odczytałeś wszystko bez zgadywania.`
+"czytelny": false ustaw TYLKO gdy naprawdę nie widzisz treści (pusty/uszkodzony plik, nieczytelny skan) - wtedy wypełnij "powod". W "items" wyciągnij 3-15 najważniejszych elementów wiedzy dla zespołu budującego aplikację (wymagania i reguły biznesowe -> wymaganie, cenniki/stawki -> intel_cenowy, otwarte pytania -> luka, sprzeczności z wcześniejszymi ustaleniami -> sprzecznosc). "pewnosc" oceń uczciwie: "wysoka" tylko gdy odczytałeś wszystko bez zgadywania.
+
+WYRÓŻNIENIA = NAJWYŻSZY PRIORYTET: fragmenty wyróżnione przez klienta KOLOREM (zwłaszcza czerwonym), boldem, podkreśleniem, highlightem lub dopiskiem to celowe sygnały — często instrukcje skierowane wprost do Ciebie/systemu. W "tresc" odwzoruj je DOSŁOWNIE i oznacz prefiksem [WYRÓŻNIONE — kolor/bold]: …. KAŻDE wyróżnienie musi też trafić do "items" jako osobna pozycja (kind: wymaganie, jeśli brzmi jak polecenie/reguła; inaczej uwaga) z contentem zaczynającym się od „KLIENT WYRÓŻNIŁ: ". Pominięcie wyróżnionego fragmentu = błąd krytyczny odczytu.`
 function knowhowInstruction(ideaSource: string): string {
   const src = ideaSource === 'ai' ? KH.src_ai : ideaSource === 'wspolny' ? KH.src_wspolny : KH.src_wlasny
   return `${KH.base}\n${src}`
 
+}
+
+// Syntetyczny wyzwalacz tury AI po dodaniu pliku (attachAck). JEDNO źródło tekstu —
+// używane i w głównym flow (stream), i w serwerowym fallbacku ack (knowhow_attach_done).
+function attachAckTrigger(name: string): string {
+  return `[SYSTEM: Klient właśnie dodał plik „${name}". Jego odczytana treść jest w historii rozmowy jako ostatnia wiadomość klienta (blok [ZAŁĄCZNIK: …]). Potwierdź krótko przyjęcie pliku i pokaż, że znasz jego treść: odnieś się KONKRETNIE do 2-3 najważniejszych elementów z pliku (nazwy, liczby, reguły — nie ogólniki). Potem pociągnij rozmowę dalej: zadaj jedno najważniejsze pytanie o lukę lub niejasność wynikającą z tej treści. NIE przepisuj całego pliku, NIE dziękuj przesadnie.]`
 }
 
 // Wywołanie bramki spar-assess (server-to-server). Zwraca obiekt oceny lub null.
@@ -1476,11 +1484,14 @@ Deno.serve(async (req) => {
       // — od tej chwili każda tura spowiednika ma treść pliku w kontekście, a front
       // renderuje blok [ZAŁĄCZNIK: …] jako kafelek pliku (nie ścianę tekstu).
       const attachMsg = `[ZAŁĄCZNIK: ${filename}]\n${opis}\n\n=== ODCZYTANA TREŚĆ PLIKU (automatycznie) ===\n${trescCut}`
-      const { error: amErr } = await sb.from('spar_messages').insert({ session_id: sessionId, role: 'user', content: attachMsg, channel: 'sparing' })
+      const { data: attachRow, error: amErr } = await sb.from('spar_messages')
+        .insert({ session_id: sessionId, role: 'user', content: attachMsg, channel: 'sparing' })
+        .select('id').maybeSingle()
       if (amErr) {
         console.error('[spar-chat] attach message insert error:', amErr)
         return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
       }
+      const attachMsgId = (attachRow?.id as number | string | null) ?? null
 
       // (2) Baza wiedzy: karta załącznika (plik + pełny ekstrakt w meta dla panelu)
       const itemRows: Array<Record<string, unknown>> = [{
@@ -1514,6 +1525,87 @@ Deno.serve(async (req) => {
         await stampKnowhowError(sb, sessionId, leadId, 'extract_error', `załącznik ${filename}: insert ${itemsErr.message || '?'}`)
       }
       await refreshKnowhowSummary(sb, sessionId, leadId, (sess.idea_source as string | null) || 'wlasny')
+
+      // ── FALLBACK ACK w tle (incydent magm5 2026-07-19) ─────────────────────
+      // Po sukcesie front woła turę AI attachAck (stream: „przeczytałem plik, oto
+      // konkrety") — to ona KOTWICZY plik w rozmowie. Gdy klient zamknie/odświeży
+      // kartę zaraz po uploadzie (albo render kafelka rzuci wyjątek), ta tura NIGDY
+      // nie zajdzie i model później ignoruje treść pliku. Dlatego: po ~90 s dajemy
+      // frontowi szansę na normalny stream; jeśli po wiadomości [ZAŁĄCZNIK…] wciąż
+      // NIE ma odpowiedzi asystenta — generujemy ack NON-STREAM sami. Wzorzec jak
+      // knowhow_close (EdgeRuntime.waitUntil). Podwójny RACE-GUARD (przed generacją
+      // i tuż przed zapisem). Każdy błąd = tylko log, zero wpływu na odpowiedź.
+      const ackIdeaSource = (sess.idea_source as string | null) || 'wlasny'
+      const ackFilename = filename
+      // true = jakaś tura asystenta już padła PO wiadomości [ZAŁĄCZNIK…] (front zdążył
+      // ze streamem lub doszła kolejna wymiana) → nie dubluj acka. Gdy nie znamy id
+      // wstawionej wiadomości, degradujemy do „ostatnia wiadomość sesji = assistant".
+      const ackAlreadyPresent = async (): Promise<boolean> => {
+        if (attachMsgId == null) {
+          const { data: last } = await sb.from('spar_messages')
+            .select('role').eq('session_id', sessionId).eq('channel', 'sparing')
+            .order('id', { ascending: false }).limit(1).maybeSingle()
+          return !!last && last.role === 'assistant'
+        }
+        const { data: after } = await sb.from('spar_messages')
+          .select('id').eq('session_id', sessionId).eq('channel', 'sparing')
+          .eq('role', 'assistant').gt('id', attachMsgId).limit(1).maybeSingle()
+        return !!after
+      }
+      const attachAckFallback = (async () => {
+        await new Promise((r) => setTimeout(r, 90_000))
+        if (await ackAlreadyPresent()) return // front zdążył — nic nie robimy
+        await ensureKnowhowPrompts(sb)
+        const ackSysPrompt = await getSystemPrompt(sb, PROMPT_KEYS.sparing)
+        if (!ackSysPrompt) { console.error('[spar-chat] attach_ack_fallback: brak system promptu'); return }
+        const { data: ackHist } = await sb.from('spar_messages')
+          .select('role, content').eq('session_id', sessionId).eq('channel', 'sparing')
+          .order('id', { ascending: true })
+        const ackMsgs = ((ackHist || []) as Array<{ role: string; content: string }>)
+          .map((m) => ({ role: m.role, content: m.content }))
+        const ackRes = await openaiFetchRetry({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}` },
+          body: JSON.stringify({
+            model: OPENAI_MODEL,
+            max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
+            reasoning_effort: 'low', // fallback — tańsza tura niż główny 'medium'
+            messages: [
+              { role: 'system', content: `${ackSysPrompt}\n\n${knowhowInstruction(ackIdeaSource)}` },
+              ...ackMsgs,
+              { role: 'user', content: attachAckTrigger(ackFilename) },
+            ],
+          }),
+        }, 'attach-ack-fallback')
+        if (!ackRes.ok) { console.error('[spar-chat] attach_ack_fallback http', ackRes.status); return }
+        const ackData = await ackRes.json().catch(() => null) as
+          { choices?: Array<{ message?: { content?: string } }>; usage?: StreamUsage } | null
+        const ackText = (ackData?.choices?.[0]?.message?.content || '').trim()
+        if (!ackText) { console.error('[spar-chat] attach_ack_fallback: pusta odpowiedź modelu'); return }
+        // RACE-GUARD 2: w trakcie generacji mógł dojść normalny attachAck frontu.
+        if (await ackAlreadyPresent()) return
+        const { error: ackMsgErr } = await sb.from('spar_messages')
+          .insert({ session_id: sessionId, role: 'assistant', content: ackText, channel: 'sparing' })
+        if (ackMsgErr) { console.error('[spar-chat] attach_ack_fallback insert msg:', ackMsgErr); return }
+        const au = ackData?.usage || null
+        const inTok = au?.prompt_tokens || 0
+        const cachedTok = au?.prompt_tokens_details?.cached_tokens || 0
+        const outTok = au?.completion_tokens || 0
+        const { error: ackUsageErr } = await sb.from('spar_usage').insert({
+          session_id: sessionId, kind: 'chat', model: OPENAI_MODEL,
+          input_tokens: inTok, cached_tokens: cachedTok, output_tokens: outTok,
+          cost_usd: chatCostUsd(OPENAI_MODEL, inTok, cachedTok, outTok),
+          meta: { channel: 'sparing', attach_ack_fallback: true },
+        })
+        if (ackUsageErr) console.error('[spar-chat] attach_ack_fallback usage insert:', ackUsageErr)
+        const { data: sRow } = await sb.from('spar_sessions').select('turns').eq('id', sessionId).maybeSingle()
+        const { error: ackSessErr } = await sb.from('spar_sessions')
+          .update({ turns: (Number(sRow?.turns) || 0) + 1, updated_at: new Date().toISOString() })
+          .eq('id', sessionId)
+        if (ackSessErr) console.error('[spar-chat] attach_ack_fallback session update:', ackSessErr)
+      })().catch((e) => console.error('[spar-chat] attach_ack_fallback error:', e))
+      const erAck = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
+      if (erAck && typeof erAck.waitUntil === 'function') erAck.waitUntil(attachAckFallback)
 
       // `content` = ta sama treść co zapisana do historii (attachMsg) — front renderuje
       // kafelek live IDENTYCZNIE jak po przeładowaniu (blok „Zobacz, co system odczytał"
@@ -1739,13 +1831,31 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'limit_wiadomosci' }, 429, corsHeaders)
     }
 
-    // ── Historia rozmowy (przed dopisaniem nowej wiadomości; per kanał) ──────
-    const { data: history, error: historyError } = await supabase
-      .from('spar_messages')
-      .select('role, content')
-      .eq('session_id', sessionId)
-      .eq('channel', mode)
-      .order('id', { ascending: true })
+    // ── Historia rozmowy + (know-how) lista załączników sesji ────────────────
+    // Załączniki dociągamy RÓWNOLEGLE z historią (Promise.all), nie sekwencyjnie —
+    // ta ścieżka nie miała wspólnego Promise.all dla danych sesji. Poza trybem
+    // know-how zapytanie się nie odpala (pusty wynik = zero zmian w sessionContext).
+    const [
+      { data: history, error: historyError },
+      { data: knowhowAttachRaw },
+    ] = await Promise.all([
+      supabase
+        .from('spar_messages')
+        .select('role, content')
+        .eq('session_id', sessionId)
+        .eq('channel', mode)
+        .order('id', { ascending: true }),
+      isKnowHowMode
+        ? supabase
+            .from('spar_knowhow_items')
+            .select('content, created_at')
+            .eq('session_id', sessionId)
+            .eq('kind', 'zalacznik')
+            .not('file_path', 'is', null)
+            .order('created_at', { ascending: true })
+            .limit(20)
+        : Promise.resolve({ data: [] as Array<{ content: string; created_at: string }> }),
+    ])
 
     if (historyError) {
       console.error('[spar-chat] history fetch error:', historyError)
@@ -1827,7 +1937,7 @@ Deno.serve(async (req) => {
     }
 
     const RESUME_TRIGGER = '[SYSTEM: Rozmówca wrócił do rozmowy i czeka — zagadnij go zgodnie z instrukcją POWRÓT DO ROZMOWY.]'
-    const ATTACH_ACK_TRIGGER = `[SYSTEM: Klient właśnie dodał plik „${attachAckName}". Jego odczytana treść jest w historii rozmowy jako ostatnia wiadomość klienta (blok [ZAŁĄCZNIK: …]). Potwierdź krótko przyjęcie pliku i pokaż, że znasz jego treść: odnieś się KONKRETNIE do 2-3 najważniejszych elementów z pliku (nazwy, liczby, reguły — nie ogólniki). Potem pociągnij rozmowę dalej: zadaj jedno najważniejsze pytanie o lukę lub niejasność wynikającą z tej treści. NIE przepisuj całego pliku, NIE dziękuj przesadnie.]`
+    const ATTACH_ACK_TRIGGER = attachAckTrigger(attachAckName)
     // Przy ponowieniu (retryReply/dedup) ostatnia wiadomość historii JEST turą usera —
     // messages = historia bez zmian; model po prostu odpowiada (żadnego syntetycznego
     // dopisku). W pozostałych przypadkach doklejamy turę usera (realną albo wyzwalacz).
@@ -1876,6 +1986,17 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // którego nie było (incydent magm5 2026-07-19: „kliknij spinacz / przeciągnij
         // PDF" gdy UI nie miał żadnego uploadu — klientka utknęła z plikiem).
         if (!knowhowClosed) sessionContext += `\n\n[ZAŁĄCZNIKI OD KLIENTA — MECHANIKA] Klient może dodać plik (PDF, PNG lub JPG, do 20 MB) przyciskiem SPINACZA po lewej stronie pola wiadomości; na komputerze zadziała też przeciągnięcie pliku na okno rozmowy. System automatycznie odczytuje każdy plik i wstawia jego treść do rozmowy jako wiadomość klienta w bloku [ZAŁĄCZNIK: nazwa] — traktuj ją jak pełnoprawny wsad klienta i AKTYWNIE korzystaj z tej wiedzy w dalszej rozmowie (odwołuj się do konkretów z pliku). NIGDY nie mów, że nie możesz otworzyć/odczytać pliku, skoro jego treść jest w rozmowie. Gdy klient pyta, jak przesłać plik — wskaż spinacz przy polu wiadomości. Gdy spinacz nie działa — poproś o odświeżenie strony; NIE wymyślaj innych kanałów (mail, wklejanie zrzutów po stronach itp.). Inne formaty niż PDF/PNG/JPG: poproś o zapis do PDF albo zrzut ekranu (PNG/JPG).`
+        // Spowiednik PAMIĘTA załączniki: lista plików dodanych w tej sesji + twarde
+        // przypomnienie, żeby NIE pytać o rzeczy, które klient już przysłał w pliku
+        // (feedback klientki 2026-07-20: „model pytał, jakby nie zczytał czerwonych
+        // fragmentów PDF"). Dane z równoległego SELECT-a przy historii; pusta lista =
+        // zero zmian w kontekście.
+        const khAttachList = ((knowhowAttachRaw || []) as Array<{ content: string; created_at: string }>)
+          .map((a) => `- ${String(a.content || '').trim()} (${String(a.created_at || '').slice(0, 10)})`)
+          .filter((l) => l.length > 4)
+        if (khAttachList.length) {
+          sessionContext += `\n\n[PLIKI DODANE PRZEZ KLIENTA — ZNASZ ICH TREŚĆ] Klient dodał pliki:\n${khAttachList.join('\n')}\nIch PEŁNA odczytana treść jest w historii rozmowy w blokach [ZAŁĄCZNIK: …]. ZANIM zadasz jakiekolwiek pytanie: sprawdź, czy odpowiedź nie jest już w tych blokach — jeśli jest, POTWIERDŹ ją i buduj na niej, zamiast pytać ponownie (klient słusznie się irytuje, gdy pytasz o rzeczy, które przysłał w pliku). Fragmenty oznaczone [WYRÓŻNIONE…] to celowe wskazówki klienta najwyższej wagi — traktuj je jak twarde wymagania.`
+        }
         // Powrót do rozmowy („wróć do rozmowy") — proaktywna zaczepka zamiast reakcji na turę.
         if (knowhowResume) sessionContext += `\n\n${KH.resume}`
       } else if (existingSession?.verdict === 'zielony') {
