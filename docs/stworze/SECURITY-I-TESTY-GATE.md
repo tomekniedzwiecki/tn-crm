@@ -18,6 +18,14 @@
 **Kiedy się uruchamia:** sesja dotknęła którejkolwiek pozycji z listy WRAŻLIWEJ POWIERZCHNI (niżej).
 **Co wymusza:** ZAKRESOWY, adwersarski audyt bezpieczeństwa TEJ zmiany (świeży subagent na diffie,
 próbuje ZŁAMAĆ — nie potwierdzić) PRZED pushem/deployem. Znaleziska naprawione przed domknięciem.
+
+**MODEL AUDYTU (decyzja Tomka 20.07.2026): KAŻDY audyt bezpieczeństwa (GATE A, SEC-CHECK, krok
+`audyt`, security-review) wykonuje subagent na `model: opus` (Opus 4.8 lub wyższy Opus/następca,
+gdy wyjdzie) — NIGDY Fable 5.** Powód: polityka Anthropic nakłada na Fable 5 (klasa Mythos)
+dodatkowe środki bezpieczeństwa dual-use, które ograniczają rozumowanie ofensywne („złam ten kod")
+— rdzeń adwersarskiego audytu; Fable może audyt spłycić lub odmówić. Fable-orkiestrator robi TYLKO
+to, na co pozwala jego polityka: spawnuje opus-audytora z briefem, odbiera werdykt, egzekwuje
+naprawy. Reguła obowiązuje, dopóki Anthropic nie zmieni zasad dla klasy Mythos.
 Nie zastępuje pełnego audytu etapu Przegląd — uzupełnia go na bieżąco (system żyje).
 
 **WRAŻLIWA POWIERZCHNIA (dotknięcie któregokolwiek = GATE A obowiązkowy):**
