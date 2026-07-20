@@ -247,9 +247,14 @@ właściwego playbooka. To jest cała racja bytu pętli wyników.
 
 ## 2. FORMATY
 
-**Standard (decyzja Tomka 19.07): ŁĄCZNIE 3 KREACJE = 3 kąty × 1 format 4:5 (1080×1350) w JEDNYM
-przebiegu ad-forge.** Pliki `ad_<n>_<angle>.png` (back-compat 1:1 parsera). 4:5 = domyślny feed Meta
-2026 (FB+IG Feed, Threads, Explore) — więcej pionu = wyższy dwell/CTR na mobile niż 1:1.
+**Standard (decyzja Tomka 19.07 + v10 „dodaj KWADRAT"): 3 kąty × DWA formaty = `45` (4:5 pion
+1080×1350; render 1536×1920) **i** `11` (1:1 kwadrat 1080×1080; render 1536×1536).** Flaga
+`--formats` (default **`45,11`**). Pliki `ad_<angle>_45.png` + `ad_<angle>_11.png`. 4:5 = główny feed
+Meta 2026 (FB+IG Feed, Threads, Explore); 1:1 = kwadratowe placementy feedu + placement-asset-
+customization (Meta samo skaluje z kwadratu bez brzydkiego auto-cropu). **Kwadrat = PRZEKOMPOZYCJA
+finału 4:5** (tryb oszczędny, 1 kandydat, seed 4:5 + refy produktu; patrz CHANGELOG v10), nie osobna
+reklama — te same copy/hook/brand, tylko układ dopasowany do 1:1. Litery przechodzą bramkę NA NOWO
+(przekompozycja przerysowuje układ).
 
 **9:16 (1080×1920) = ROZSZERZENIE NA PRZYSZŁOŚĆ, nie generowane domyślnie.** Parametr `formats`
 w edge zostaje (default `['45']`); jawne `formats:['916']` da `ad_<n>_<angle>_916.png` z safe-zonami
@@ -391,6 +396,43 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
 ---
 
 ## CHANGELOG DECYZJI (G8)
+
+- **2026-07-19 (v10) — FORMAT 1:1 (KWADRAT) DODANY DO FABRYKI (dyrektywa Tomka „dodaj KWADRAT"):**
+  ad-forge produkuje teraz DWA formaty per kąt: `45` (4:5 pion 1536×1920) **i** `11` (1:1 kwadrat
+  1536×1536, kanon 1080×1080). Flaga `--formats` (default **`45,11`**). **TRYB OSZCZĘDNY 1:1
+  (root-decyzja):** kwadrat rodzi się z GOTOWEGO finału 4:5 (przekompozycja przez `nano-banana-pro/edit`
+  — finał 4:5 jako `image_urls[0]` = jedyne źródło layoutu/copy/stylu + do 2 refów produktu dla
+  wierności; prompt `SQUARE_RECOMPOSE`), **1 kandydat/format** (bez best-of-2 — koszt ~$0.225/kwadrat
+  zamiast pełnej generacji). Bramka LITER **litera-po-literze** (przekompozycja PRZERYSOWUJE układ —
+  litery są ryzykiem #1) + szybka wierność = AGENT (vision) na kompozycie `dowody/KWADRAT-<kąt>.png`
+  (4:5 źródło | 1:1 | packshot); FAIL → `--gen-11 <kąt>` (retry oszczędny) → `--regen-11 <kąt>`
+  (pełna generacja kwadratu, aspect 1:1, bez seeda). Kwadraty powstają na `--finalize` z ustalonych
+  finałów 4:5 (albo osobno `--gen-11 all` bez `--finalize` do rewizji przed publikacją).
+  **Publikacja (rozbudowa, nie przebudowa):** pliki `ad_<kąt>_11.png` → `bud-assets/<slug>/ads/`;
+  blob `ads_creatives` = elementy `{angle,format:'11'}` OBOK `{format:'45'}` (MERGE po `(kąt,format)`,
+  legacy bez `format` = `'45'`); `wf2_creatives` slug `<slug>-ad-<kąt>-11` (format='11'); artefakty
+  `AD <kąt> 11`; koszt kwadratów = OSOBNY wiersz `wf2_costs` (`kind='fal'`, note „kwadraty 1:1") — baza
+  4:5 idempotentna po note, więc dogenerowanie 1:1 do istniejącego produktu NIE re-loguje 4:5.
+  **Panel `adsGrafikiBlock`:** badge formatu `4:5`/`1:1`/`9:16` (fix: `11`→`1:1`), copy per KĄT
+  (dedup — te same copy dla obu formatów), galeria pokazuje oba formaty per kąt. `sync_finalne`
+  dokłada `*-1x1.png` do czystego folderu. Lekcja: **kwadrat to przekompozycja, nie nowa reklama —
+  seed 4:5 trzyma spójność (message-match ZG1), refy produktu trzymają wierność (ZG2), a że model
+  PRZERYSOWUJE układ, litery MUSZĄ przejść bramkę na nowo (nie dziedziczą się z 4:5).**
+  Walidacja E2E v10 (3 produkty, ~$4.05): Drapek (`9e4b1df9…`) + Masażer (`557ed2b0…`) — po 3 kwadraty 1:1
+  z istniejących finałów 4:5, tryb oszczędny, PIERWSZY przebieg bez poprawek (litery 100% verbatim,
+  wierność OK). Mata akupresury (`9b377ae8…`) — pełny przebieg od zera (4:5 best-of-2 + 3 kwadraty +
+  9 wariantów hooków), też czysto za pierwszym razem.
+  - **Lekcja G8 (klasa: GENERALIZACJA BEZ-BRANDU — ujawniona na Macie akupresury `9b377ae8…`, produkt
+    bez marki/logo/styl-mastera).** ART-DIRECTION lifestyle i baza `no_hook` HARDKODOWAŁY „the small brand
+    logo" / „Put the brand LOGO in a corner" — dla produktu bez logo model WYMYŚLIŁBY fałszywy wordmark
+    (łamie white-label + uczciwość). **Fix FABRYKI (nie pliku):** logo w briefie jest teraz WARUNKOWE od
+    `has_logo` — `{LOGO}` placeholder w `FD_ART["lifestyle"]` (pusty gdy brak logo), gałąź `no_hook` mówi
+    „this product has NO brand logo — do NOT add any logo or wordmark", a `brand_line` przy braku logo dokłada
+    twarde „do NOT invent, draw or place any logo/wordmark". Efekt: Mata wyszła CZYSTA i bezmarkowa (zero
+    wymyślonego znaku) w 4:5, 1:1 i wariantach hooków — pierwszy przebieg, bez ani jednego obejścia. Zasada:
+    **brak logo = brak logo (nie wymyślaj); slug brak → użyj istniejącego albo wygeneruj i zapisz przez
+    panel-sync. Wellness (akupresura): framing relaks/rytuał/napięcie przez regułę `build_copy_prompt` (v9) —
+    zero claimów medycznych, kontrast NASTROJU nie ciała.**
 
 - **2026-07-19 (v9) — GENERALIZACJA FABRYKI = DRUGI PRODUKT (Masażer „Odprężek", `557ed2b0…`, ~$2.03 /
   8.1 zł, 3 finały + 9 wariantów hooków):** pierwszy przebieg po Drapku ujawnił, że fabryka była

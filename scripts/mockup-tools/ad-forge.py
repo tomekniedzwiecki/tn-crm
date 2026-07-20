@@ -94,11 +94,24 @@ FONTS_DIR = os.path.join(HERE, "fonts")
 FALLBACK_FONT = os.path.join(FONTS_DIR, "Montserrat-Black.ttf")
 
 FINAL_W, FINAL_H = 1536, 1920            # docelowy 4:5 (ostry pod kampanie płatne)
+SQ_W, SQ_H = 1536, 1536                   # docelowy 1:1 (kanon 1080×1080; render wysokorozdzielczy)
 GEN_SIZE = "1024x1536"                    # natywne gpt-image-2 (2:3) → smart-crop do 4:5
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 DEFAULT_ANGLES = ["demo", "problem", "lifestyle"]
 ALLOWED_ANGLES = ["demo", "problem", "lifestyle"]
+
+# ── FORMATY BANERA (v10, 2026-07-19 — dyrektywa Tomka „dodaj KWADRAT do fabryki") ──────────────
+# '45' = 4:5 pion 1536×1920 (feed Meta, default kanału); '11' = 1:1 kwadrat 1536×1536 (kanon
+# 1080×1080; kwadratowe placementy feedu). '916' = rozszerzenie na przyszłość (nie generowane).
+# TRYB OSZCZĘDNY 1:1: kwadrat rodzi się z GOTOWEGO finału 4:5 (przekompozycja przez nbpro/edit —
+# finał 4:5 jako ref[0] + refy produktu), 1 kandydat/format; bramka LITER (litera-po-literze,
+# przekompozycja przerysowuje układ) + szybka wierność robi AGENT na kompozycie KWADRAT-<kąt>.png.
+DEFAULT_FORMATS = ["45", "11"]
+ALLOWED_FORMATS = ["45", "11"]
+FORMAT_LABEL = {"45": "4:5", "11": "1:1", "916": "9:16"}
+FORMAT_AR = {"45": "4:5", "11": "1:1", "916": "9:16"}
+FORMAT_DIMS = {"45": (FINAL_W, FINAL_H), "11": (SQ_W, SQ_H)}
 
 # ── KONTRAKT VERBATIM: checklista kroku „Banery reklamowe" (ads_grafiki) ──────
 # MUSI być ZNAK-W-ZNAK identyczna z WS.ads_grafiki.check w tn-sklepy/projekt.html —
@@ -784,11 +797,11 @@ def gen_nbpro_batch(jobs, out_candidates_dir):
     return out
 
 
-def gen_nbpro_one(prompt, image_urls, tag):
-    """Pojedyncza generacja nbpro (finisher / fallback). Zwraca bytes PNG."""
+def gen_nbpro_one(prompt, image_urls, tag, aspect_ratio="4:5"):
+    """Pojedyncza generacja nbpro (finisher / fallback / kwadrat 1:1). Zwraca bytes PNG."""
     fal = _fal()
     model = NBPRO_EDIT if image_urls else NBPRO_T2I
-    payload = {"prompt": prompt, "aspect_ratio": "4:5", "resolution": "2K", "num_images": 1}
+    payload = {"prompt": prompt, "aspect_ratio": aspect_ratio, "resolution": "2K", "num_images": 1}
     if image_urls:
         payload["image_urls"] = image_urls
     res = fal.gen(model, payload, tag=tag)
@@ -857,6 +870,17 @@ def to_45(img, top_bias=0.30):
     excess = h - nh
     y0 = int(round(excess * top_bias))
     return img.crop((0, y0, w, y0 + nh))
+
+
+def to_11(img):
+    """Smart-crop do 1:1 (kwadrat centralny) → resize SQ_W×SQ_H. Model generuje natywny 1:1
+    (aspect_ratio '1:1'), więc crop jest zwykle no-op — defensywny na drobne odchyłki AR."""
+    Image, _, _, _, _ = _pil()
+    w, h = img.size
+    s = min(w, h)
+    x0, y0 = (w - s) // 2, (h - s) // 2
+    sq = img.crop((x0, y0, x0 + s, y0 + s))
+    return sq.resize((SQ_W, SQ_H), Image.LANCZOS)
 
 
 def cover_fit(img, box_w, box_h):
@@ -1865,6 +1889,10 @@ def _upload_proofs(ps, project, product_id, out_dir, slug, angles):
         wf = os.path.join(dowody, "WIERNOSC-%s.png" % a)
         if os.path.isfile(wf):
             plan.append((wf, "Wierność %s (packshot | kreacja)" % a))
+    for a in angles:
+        kp = os.path.join(dowody, "KWADRAT-%s.png" % a)
+        if os.path.isfile(kp):
+            plan.append((kp, "Kwadrat 1:1 %s (4:5 źródło | 1:1)" % a))
     n = 0
     for src, label in plan:
         try:
@@ -1879,17 +1907,21 @@ def _upload_proofs(ps, project, product_id, out_dir, slug, angles):
     return n
 
 
-def emit_full_panel(bundle, engine, out_dir, slug, creatives, total_usd, state, finalize=True):
+def emit_full_panel(bundle, engine, out_dir, slug, creatives, total_usd, state, finalize=True, formats=None):
     """Pełna emisja do panelu. finalize=True: agr_brief/generacja/qa/final → done + krok
     główny ads_grafiki → done (checklista wg faktów, grafiki_url) + activity. finalize=False
     (po samej generacji): brief/generacja/qa done + ads_grafiki → in_progress, agr_final zostaje
-    pending — Tomek widzi przebieg zanim uruchomisz --finalize."""
+    pending — Tomek widzi przebieg zanim uruchomisz --finalize.
+    formats: lista opublikowanych formatów ('45'/'11') do not (liczba formatów)."""
     ps = _load_module("panel_sync", "panel-sync.py")
     p = bundle["product"]
     project = p["project_id"]
     product_id = p["id"]
     state = state or {}
     angles = [c["angle"] for c in creatives]
+    formats = [f for f in (formats or ["45"]) if f in ALLOWED_FORMATS] or ["45"]
+    fmt_txt = " + ".join(FORMAT_LABEL.get(f, f) for f in formats)
+    n_fmt = len(formats)
     copy = state.get("copy") or {}
     karta = state.get("karta") or {}
     n_cech = len(karta.get("cechy") or []) if isinstance(karta, dict) else 0
@@ -1911,9 +1943,10 @@ def emit_full_panel(bundle, engine, out_dir, slug, creatives, total_usd, state, 
         brief_note += "\nHooki: " + hl
     ps.step_update(project, product_id, "agr_brief", status="done", note=brief_note)
 
-    # ── agr_generacja: silnik · joby · czas ściany · koszt ──
+    # ── agr_generacja: silnik · joby · formaty · czas ściany · koszt ──
     gen_note = ("Silnik: fal-ai/nano-banana-pro (full-design, best-of-%d) · joby: %d · regeneracje: %d · "
-                "koszt fal: ~$%.2f (~%.2f zł)." % (BEST_OF, n_jobs, n_regen, total_usd, total_usd * 4.0))
+                "formaty: %s (%d) · koszt fal: ~$%.2f (~%.2f zł)." %
+                (BEST_OF, n_jobs, n_regen, fmt_txt, n_fmt, total_usd, total_usd * 4.0))
     if wall > 0:
         gen_note += " Czas ściany generacji: %.0fs." % wall
     ps.step_update(project, product_id, "agr_generacja", status="done", note=gen_note)
@@ -1944,51 +1977,74 @@ def emit_full_panel(bundle, engine, out_dir, slug, creatives, total_usd, state, 
     variants_txt = (" + %d wariantów hooków" % n_variants) if n_variants else ""
 
     if finalize:
-        # ── agr_final: publikacja + warianty + public URL-e ──
-        final_note = "Opublikowano %d banerów (%s)%s." % (len(creatives), "/".join(angles), variants_txt)
+        # ── agr_final: publikacja + warianty + public URL-e (wszystkie formaty) ──
+        final_note = "Opublikowano %d kątów × %d formatów [%s] (%s)%s." % (
+            len(creatives), n_fmt, fmt_txt, "/".join(angles), variants_txt)
         for c in creatives:
-            if c.get("image_url"):
-                final_note += "\n%s → %s" % (c["angle"], c["image_url"])
+            urls = c.get("urls") or ({"45": c["image_url"]} if c.get("image_url") else {})
+            for f in formats:
+                if urls.get(f):
+                    final_note += "\n%s · %s → %s" % (c["angle"], FORMAT_LABEL.get(f, f), urls[f])
         ps.step_update(project, product_id, "agr_final", status="done", note=final_note)
 
-        main_note = ("Fabryka ad-forge v8 (full-design nano-banana-pro): %d banery%s opublikowane · "
-                     "4 bramki z dowodami · koszt ~$%.2f (~%.2f zł). Akcept kreacji = bramka Tomka "
-                     "(toggle ✓ przy każdym banerze)." % (len(creatives), variants_txt, total_usd, total_usd * 4.0))
+        main_note = ("Fabryka ad-forge v10 (full-design nano-banana-pro): %d kątów × %d formatów [%s]%s "
+                     "opublikowane · 4 bramki z dowodami · koszt ~$%.2f (~%.2f zł). Akcept kreacji = "
+                     "bramka Tomka (toggle ✓ przy każdym banerze)." %
+                     (len(creatives), n_fmt, fmt_txt, variants_txt, total_usd, total_usd * 4.0))
         ps.step_update(project, product_id, "ads_grafiki", status="done", note=main_note,
                        fields={"grafiki_url": folder_url}, checklist=checklist)
         ps.activity_add(project, "ads_grafiki",
-                        "Banery reklamowe (ad-forge v8): %d banery [%s]%s → panel · 4 bramki z dowodami · "
-                        "koszt ~$%.2f (~%.2f zł)" % (len(creatives), engine, variants_txt, total_usd, total_usd * 4.0))
+                        "Banery reklamowe (ad-forge v10): %d kątów × %d formatów [%s]%s → panel · "
+                        "4 bramki z dowodami · koszt ~$%.2f (~%.2f zł)" %
+                        (len(creatives), n_fmt, fmt_txt, variants_txt, total_usd, total_usd * 4.0))
     else:
-        main_note = ("Generacja gotowa (full-design nano-banana-pro): %d banery%s · dowody bramek w panelu. "
-                     "Po weryfikacji uruchom ad-forge --finalize (publikacja + rejestr)." % (len(creatives), variants_txt))
+        main_note = ("Generacja gotowa (full-design nano-banana-pro): %d kątów × %d formatów [%s]%s · "
+                     "dowody bramek w panelu. Po weryfikacji uruchom ad-forge --finalize "
+                     "(publikacja + rejestr)." % (len(creatives), n_fmt, fmt_txt, variants_txt))
         ps.step_update(project, product_id, "ads_grafiki", status="in_progress", note=main_note,
                        fields={"grafiki_url": folder_url}, checklist=checklist)
     log("PANEL: emisja %s → ads_grafiki + agr_brief/generacja/qa%s"
         % ("FINALIZE" if finalize else "GENERACJA", "/final" if finalize else ""))
 
 
-def publish(bundle, engine, out_dir, creatives, total_usd, state=None):
+def publish(bundle, engine, out_dir, creatives, total_usd, state=None, formats=None, square_usd=0.0):
     """Rejestracja przez import panel-sync: storage → product_meta → creative_upsert →
     artifact_add → cost_add, a na końcu PEŁNA emisja przebiegu (emit_full_panel): sub-kroki
-    agr_* + krok główny ads_grafiki (checklista/grafiki_url) + oś czasu."""
+    agr_* + krok główny ads_grafiki (checklista/grafiki_url) + oś czasu.
+    formats: lista formatów do publikacji ('45'/'11'); dla każdego (kąt×format) z istniejącym
+    plikiem ad_<kąt>_<fmt>.png = storage + wiersz wf2_creatives + artefakt + element blobu."""
     ps = _load_module("panel_sync", "panel-sync.py")
     p = bundle["product"]
     project = p["project_id"]
     product_id = p["id"]
     slug = str(p.get("slug") or product_id)
+    formats = [f for f in (formats or ["45"]) if f in ALLOWED_FORMATS]
 
-    new_by_angle = {}
+    # ── storage + elementy blobu: klucz = (kąt, format) ──
+    new_by_key, rows = {}, []      # rows = [(angle, fmt, url, cr)]
     for cr in creatives:
-        dest = "bud-assets/%s/ads/ad_%s_45.png" % (slug, cr["angle"])
-        pub = ps.storage_upload(cr["path"], dest, bucket="attachments", upsert=True)
-        cr["image_url"] = pub
-        new_by_angle[cr["angle"]] = {
-            "angle": cr["angle"], "format": "45", "headline": cr["headline"],
-            "primary_text": cr["primary_text"], "badge": "", "image_url": pub, "approved": False,
-        }
-    # MERGE po angle: NIE nadpisuj całego blobu przy pojedynczym kącie — podmień przetworzone
-    # kąty, zachowaj pozostałe (świeży GET, żeby nie zgubić równoległych zmian panelu).
+        cr.setdefault("urls", {})
+        for fmt in formats:
+            fpath = os.path.join(out_dir, "ad_%s_%s.png" % (cr["angle"], fmt))
+            if not os.path.isfile(fpath):
+                if fmt == "45":
+                    fpath = cr.get("path") or fpath          # 45 = ścieżka z creatives (back-compat)
+                if not os.path.isfile(fpath):
+                    continue
+            dest = "bud-assets/%s/ads/ad_%s_%s.png" % (slug, cr["angle"], fmt)
+            pub = ps.storage_upload(fpath, dest, bucket="attachments", upsert=True)
+            cr["urls"][fmt] = pub
+            new_by_key[(cr["angle"], fmt)] = {
+                "angle": cr["angle"], "format": fmt, "headline": cr["headline"],
+                "primary_text": cr["primary_text"], "badge": "", "image_url": pub, "approved": False,
+            }
+            rows.append((cr["angle"], fmt, pub, cr))
+        cr["image_url"] = cr["urls"].get("45") or (next(iter(cr["urls"].values()), None))
+
+    # MERGE po (kąt,format): NIE nadpisuj całego blobu — podmień przetworzone pary, zachowaj resztę
+    # (świeży GET, żeby nie zgubić równoległych zmian panelu; legacy element bez 'format' = '45').
+    def _key(el):
+        return (el.get("angle"), str(el.get("format") or "45")) if isinstance(el, dict) else None
     try:
         cur = rest_get("wf2_products", {"id": "eq." + product_id, "select": "ads_creatives"})
         existing = (cur[0].get("ads_creatives") if cur else None) or []
@@ -1997,34 +2053,44 @@ def publish(bundle, engine, out_dir, creatives, total_usd, state=None):
     except Exception:
         existing = []
     merged, seen = [], set()
-    for a in existing:
-        ang = a.get("angle") if isinstance(a, dict) else None
-        if ang in new_by_angle:
-            merged.append(new_by_angle[ang]); seen.add(ang)
-        elif isinstance(a, dict):
-            merged.append(a)
-    for ang, item in new_by_angle.items():
-        if ang not in seen:
+    for el in existing:
+        k = _key(el)
+        if k in new_by_key:
+            merged.append(new_by_key[k]); seen.add(k)
+        elif isinstance(el, dict):
+            merged.append(el)
+    for k, item in new_by_key.items():
+        if k not in seen:
             merged.append(item)
     ps.product_meta(product_id, {"ads_creatives": merged})
-    log("ads_creatives MERGE: podmieniono %s, blob ma teraz %d kątów (%s)" %
-        (sorted(new_by_angle), len(merged), ", ".join(x.get("angle", "?") for x in merged)))
+    log("ads_creatives MERGE: podmieniono %s, blob ma teraz %d elementów (%s)" %
+        (sorted("%s/%s" % k for k in new_by_key), len(merged),
+         ", ".join("%s·%s" % (x.get("angle", "?"), x.get("format", "?")) for x in merged)))
 
-    per_cost = round(total_usd / max(1, len(creatives)), 4)
-    for cr in creatives:
-        cslug = "%s-ad-%s-45" % (slug, cr["angle"])
+    per_cost = round(total_usd / max(1, len(rows)), 4)
+    for angle, fmt, url, cr in rows:
+        cslug = "%s-ad-%s-%s" % (slug, angle, fmt)
         ps.creative_upsert(cslug, project_id=project, product_id=product_id, media_type="image",
-                           angle=cr["angle"], format="45", ai_labeled=True, status="ready",
-                           public_url=cr["image_url"], cost_usd=per_cost,
-                           meta={"engine": "adforge-" + engine, "headline": cr["headline"]})
-        ps.artifact_add(project, product_id, "agr_generacja", "ad_creative", cr["image_url"],
-                        label="AD %s 45" % cr["angle"], meta={"angle": cr["angle"], "format": "45"})
-    if total_usd > 0:                                              # recompose ($0) nie dokłada wierszy kosztu
+                           angle=angle, format=fmt, ai_labeled=True, status="ready",
+                           public_url=url, cost_usd=per_cost,
+                           meta={"engine": "adforge-" + engine, "headline": cr["headline"], "format": fmt})
+        ps.artifact_add(project, product_id, "agr_generacja", "ad_creative", url,
+                        label="AD %s %s" % (angle, fmt), meta={"angle": angle, "format": fmt})
+    # KOSZT: kwadraty 1:1 = OSOBNY wiersz, kwota WYPROWADZONA z liczby opublikowanych plików '11'
+    # (idempotencja po note — dogenerowanie 1:1 mogło paść w osobnym przebiegu --gen-11 --no-register,
+    # więc NIE polegamy na przekazanym square_usd). Baza (4:5 + fixy) = total minus koszt kwadratów.
+    n_sq = sum(1 for r in rows if r[1] == "11")
+    sq_cost = round(NBPRO_USD * n_sq, 4)
+    base_usd = round(max(0.0, total_usd - sq_cost), 4)
+    if base_usd > 0:                                              # recompose ($0) nie dokłada wierszy kosztu
         cost_kind = "fal" if engine == "nbpro" else "gpt-image"     # nbpro → fal (nie gpt-image)
-        ps.cost_add(project, product_id, round(total_usd, 4), kind=cost_kind, step="agr_generacja",
+        ps.cost_add(project, product_id, base_usd, kind=cost_kind, step="agr_generacja",
                     stage=5, note="ad-forge %d kreacji (%s)" % (len(creatives), engine))
+    if n_sq > 0:
+        ps.cost_add(project, product_id, sq_cost, kind="fal", step="agr_generacja",
+                    stage=5, note="ad-forge kwadraty 1:1 (%d kątów)" % n_sq)
     # PEŁNA emisja przebiegu do panelu (agr_* + krok główny + oś czasu). Publikacja = finalize.
-    emit_full_panel(bundle, engine, out_dir, slug, creatives, total_usd, state, finalize=True)
+    emit_full_panel(bundle, engine, out_dir, slug, creatives, total_usd, state, finalize=True, formats=formats)
     return merged
 
 
@@ -2062,7 +2128,7 @@ def compose_all(angles, copy, scene_imgs, out_dir, brand_name, logo_img, palette
 
 
 def finish(args, bundle, engine, out_dir, creatives, total_usd, mode="gen",
-           regions_by_angle=None, state=None, run_finisher_pass=False):
+           regions_by_angle=None, state=None, run_finisher_pass=False, formats=None, square_usd=0.0):
     slug = str(bundle["product"].get("slug") or bundle["product"]["id"])
     finisher_verdicts = []
     if run_finisher_pass and not getattr(args, "no_finisher", False):
@@ -2086,10 +2152,12 @@ def finish(args, bundle, engine, out_dir, creatives, total_usd, mode="gen",
     else:
         print("-" * 88)
         log("Publikacja do panelu (panel-sync)…")
-        publish(bundle, engine, out_dir, creatives, total_usd, state=state)
+        publish(bundle, engine, out_dir, creatives, total_usd, state=state,
+                formats=formats, square_usd=square_usd)
     print("=" * 88)
-    print("GOTOWE (%s) — %d kreacji (%s), koszt płatny ~$%.2f (~%.2f zł)" %
-          (mode, len(creatives), engine, total_usd, total_usd * 4.0))
+    fmt_pub = " · formaty: %s" % (" + ".join(FORMAT_LABEL.get(f, f) for f in (formats or ["45"]))) if formats else ""
+    print("GOTOWE (%s) — %d kątów (%s)%s, koszt płatny ~$%.2f (~%.2f zł)" %
+          (mode, len(creatives), engine, fmt_pub, total_usd, total_usd * 4.0))
     for cr in creatives:
         print("  • %-10s %s  | headline: %s" % (cr["angle"], cr["path"], cr["headline"]))
     if finisher_verdicts:
@@ -2198,7 +2266,7 @@ FD_ART = {
         "describes. It must look like a real customer's candid social post, NOT a studio ad: phone-style "
         "framing, slight imperfection, no stocky perfection. Minimal graphics: ONE small slightly-rotated "
         "hand-written sticker note with a curved arrow pointing at the product doing its job, {MINI}a small "
-        "rounded 'za pobraniem' capsule in a corner, and the small brand logo. No banner bars, no big pills."
+        "rounded 'za pobraniem' capsule in a corner{LOGO}. No banner bars, no big pills."
         "\nSCENE (compose exactly this): {SCENE}"
     ),
 }
@@ -2212,6 +2280,25 @@ FD_USP_MOMENT = (
     "the decisive moment of real use, so the payoff is unmistakable. BANNED: the product sitting unused as a "
     "passive prop, still in packaging, held up to the camera like a catalog shot, or a staged studio pose with "
     "no action. A viewer must understand in HALF A SECOND what the product does and why it helps."
+)
+
+# ── TRYB OSZCZĘDNY 1:1 (v10): przekompozycja gotowego finału 4:5 → kwadrat ────────────────────
+# Model dostaje FINALNY baner 4:5 jako ref[0] (jedyne źródło layoutu/copy/stylu) + refy produktu
+# (wierność). ZADANIE: ten sam baner przekomponowany do 1:1 — identyczny styl/copy/brand, układ
+# dopasowany do kwadratu (nic nie ucięte). Napisy VERBATIM (diakrytyki w wersalikach).
+SQUARE_RECOMPOSE = (
+    "The FIRST reference image is a FINISHED 4:5 vertical advertising banner. RE-COMPOSE THE SAME "
+    "ad into a 1:1 SQUARE canvas for a square feed placement. It must stay the SAME advertisement: "
+    "identical art-direction, photography style, colors, brand identity, logo, product, pills, "
+    "callouts/connector lines, CTA and — CRITICAL — the EXACT SAME Polish text, VERBATIM, "
+    "character-for-character, with Polish diacritics PRESERVED EVEN IN UPPERCASE (Ó Ń Ś Ż Ź Ą Ę Ł "
+    "Ć — never flatten). Do NOT translate, paraphrase, reorder, add or drop any word, letter, "
+    "number or graphic element. Only ADAPT THE LAYOUT to the square: re-balance and re-flow the "
+    "photo and the text blocks so the composition breathes in 1:1 and NOTHING is cropped, cut off "
+    "or pushed off-canvas (use the wider/shorter square proportions sensibly — headline, pills and "
+    "CTA fully inside safe margins). The remaining reference images show the REAL product — keep it "
+    "1:1 faithful (same shape, colors, materials, on-product branding). Output a single finished, "
+    "polished 1:1 square banner, feed-ready, maximum sharpness."
 )
 
 
@@ -2230,18 +2317,23 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
     hook = _fd_txt(ca.get("hook_baner") or ca.get("headline") or "").upper()
     parts = [FD_HEADER, _fd_product_para(n_product)]
     if no_hook:
+        # logo tylko gdy marka MA logo — inaczej NIE wymuszaj (produkt bez brandu = bez wymyślonego znaku)
+        logo_line = (" Put the brand LOGO in a BOTTOM corner (never at the top — the top band must stay empty)."
+                     if has_logo else " Keep the top band empty; this product has NO brand logo — do NOT add any logo or wordmark.")
         parts.append(
             "\n\nHEADLINE ZONE EMPTY (variant base): leave the top ~22% headline band as CLEAN, EMPTY "
             "negative space with ABSOLUTELY NO headline text or sticker note there — a headline will be "
-            "composited on top later. Put the brand LOGO in a BOTTOM corner (never at the top — the top "
-            "band must stay empty). Keep ALL OTHER elements exactly as described (callouts, trust pill, "
-            "CTA button, price, PRZED/PO tags, connector lines, product and photography).")
+            "composited on top later." + logo_line + " Keep ALL OTHER elements exactly as described "
+            "(callouts, trust pill, CTA button, price, PRZED/PO tags, connector lines, product and photography).")
 
     logo_ref = ("The reference image right after the %d product photos" % n_product) if n_product > 1 else "The SECOND reference image"
     brand_line = "\n\nBRAND: %s." % (brand or "(no name — neutral, consistent branding; do NOT invent a name)")
     if has_logo:
         brand_line += (" %s is the brand LOGO — place it 1:1 (do NOT redraw its shape, "
                        "letters or colors) in ONE corner at 8-12%% of frame height, never centered." % logo_ref)
+    else:
+        # produkt bez brandu (np. mata akupresury): NIE wymyślaj logo/wordmarku — czysty, bezmarkowy layout
+        brand_line += " This product has NO brand logo — do NOT invent, draw or place any logo, wordmark or brand mark anywhere."
     if has_styl:
         brand_line += " The LAST reference image is the brand's visual STYLE-MASTER — keep mood and palette consistent with it."
     if paleta:
@@ -2260,6 +2352,7 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
     mini_hint = ("PLUS a second tiny hand-written annotation with a short arrow pointing at a key product detail, "
                  if (angle == "lifestyle" and mini_v) else "")
     art = art.replace("{MINI}", mini_hint)
+    art = art.replace("{LOGO}", (", and the small brand logo" if has_logo else ""))   # bez logo = brak wzmianki
     parts.append("\n\n" + art)
     parts.append(FD_USP_MOMENT)                                    # mechanizm/efekt W AKCJI (product-agnostic)
 
@@ -2502,6 +2595,96 @@ def regen_fd_angle(out_dir, slug, angle, ca, b, palette, cena, refsd, state):
     return NBPRO_USD * len(cand)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# FORMAT 1:1 (KWADRAT) — tryb OSZCZĘDNY: przekompozycja gotowego finału 4:5 → 1:1.
+# Model dostaje ad_<kąt>_45.png jako ref[0] (layout/copy/styl) + refy produktu (wierność) i
+# przekomponowuje TEN SAM design do kwadratu (1 kandydat). Bramkę LITER (litera-po-literze) +
+# szybką wierność robi AGENT na kompozycie KWADRAT-<kąt>.png. FAIL → --gen-11 (retry oszczędny)
+# albo --regen-11 (pełna generacja kwadratu build_fulldesign z aspect 1:1).
+# ══════════════════════════════════════════════════════════════════════════════
+def _square_final(blob):
+    """Bytes → RGB SQ_W×SQ_H (defensywny crop 1:1 + resize)."""
+    Image = _pil()[0]
+    return to_11(Image.open(io.BytesIO(blob)).convert("RGB"))
+
+
+def gen_square_economy(out_dir, slug, angle, refsd, state, attempt=0):
+    """OSZCZĘDNY 1:1: finał 4:5 jako ref[0] + do 2 refów produktu → przekompozycja do kwadratu
+    (1 kandydat). Zapisuje ad_<kąt>_11.png. Zwraca koszt (NBPRO_USD)."""
+    b45 = os.path.join(out_dir, "ad_%s_45.png" % angle)
+    if not os.path.isfile(b45):
+        raise SystemExit("kwadrat %s: brak finału 4:5 %s (wygeneruj/finalizuj 4:5 najpierw)" % (angle, b45))
+    seed_url = _fal().store(b45, "adforge/%s/sq_seed_%s_%d.png" % (slug, angle, attempt))
+    image_urls = [seed_url] + list(refsd.get("product_fal") or [])[:2]
+    tag = "%s__sq_%s%s" % (slug, angle, ("_r%d" % attempt) if attempt else "")   # slug-namespace (ledger)
+    blob = gen_nbpro_one(SQUARE_RECOMPOSE, image_urls, tag, aspect_ratio="1:1")
+    _square_final(blob).save(os.path.join(out_dir, "ad_%s_11.png" % angle), "PNG")
+    state.setdefault("squares", {})[angle] = {"mode": "economy", "attempt": attempt}
+    log("KWADRAT [%s] oszczędny (przekompozycja 4:5 → 1:1, próba %d) → ad_%s_11.png" % (angle, attempt, angle))
+    return NBPRO_USD
+
+
+def _square_prompt_full(p):
+    """Zamienia zamknięcie briefu full-design 4:5 na 1:1 (fallback pełnej generacji kwadratu)."""
+    p = p.replace("4:5 vertical ad banner", "1:1 square ad banner")
+    p = p.replace("aspect 4:5", "aspect 1:1 (square)")
+    return p
+
+
+def gen_square_full(out_dir, slug, angle, ca, b, palette, cena, refsd, state):
+    """FALLBACK 1:1: pełna generacja kwadratu (build_fulldesign, aspect 1:1) — bez seeda 4:5,
+    gdy oszczędny psuje litery/układ. 1 kandydat. Zapisuje ad_<kąt>_11.png. Zwraca koszt."""
+    image_urls = _fd_image_urls(refsd)
+    n_prod = len(refsd["product_fal"])
+    prompt, _intended = build_fulldesign(angle, ca, b, palette, cena, bool(refsd["logo_fal"]),
+                                         bool(refsd["styl_fal"]), n_prod)
+    blob = gen_nbpro_one(_square_prompt_full(prompt), image_urls, "%s__sqfull_%s" % (slug, angle), aspect_ratio="1:1")
+    _square_final(blob).save(os.path.join(out_dir, "ad_%s_11.png" % angle), "PNG")
+    state.setdefault("squares", {})[angle] = {"mode": "full"}
+    log("KWADRAT [%s] PEŁNA generacja (aspect 1:1) → ad_%s_11.png" % (angle, angle))
+    return NBPRO_USD
+
+
+def build_square_composite(out_dir, refsd, angle):
+    """DOWÓD KWADRATU: finał 4:5 | finał 1:1 (+ realny packshot) — agent porównuje litery/układ/wierność."""
+    Image = _pil()[0]
+    dowody = os.path.join(out_dir, "dowody"); os.makedirs(dowody, exist_ok=True)
+    b45 = os.path.join(out_dir, "ad_%s_45.png" % angle)
+    b11 = os.path.join(out_dir, "ad_%s_11.png" % angle)
+    if not (os.path.isfile(b45) and os.path.isfile(b11)):
+        return None
+    cells = [(Image.open(b45), "4:5 (źródło) %s" % angle), (Image.open(b11), "1:1 (kwadrat) %s" % angle)]
+    plocal = (refsd or {}).get("product_local") or []
+    if plocal and os.path.isfile(plocal[0]):
+        cells.append((Image.open(plocal[0]), "REALNY produkt"))
+    out_path = os.path.join(dowody, "KWADRAT-%s.png" % angle)
+    return _montage(cells, out_path, cell_w=560)
+
+
+def ensure_squares(out_dir, slug, angles, formats, gen_list, full_list, copy, b, palette, cena, refsd, state):
+    """Dogeneruj kwadraty 1:1 dla kątów wg formatów. Reguła: --regen-11 = pełna generacja;
+    --gen-11 lub brak pliku ad_<kąt>_11.png = oszczędny (przekompozycja 4:5). Buduje kompozyty
+    KWADRAT-<kąt>.png do oceny agenta. Zwraca (added_usd, sq_angles)."""
+    if "11" not in formats:
+        return 0.0, []
+    added, done = 0.0, []
+    for a in angles:
+        sq_path = os.path.join(out_dir, "ad_%s_11.png" % a)
+        ca = copy.get(a) or {}
+        if a in full_list:
+            added += gen_square_full(out_dir, slug, a, ca, b, palette, cena, refsd, state)
+            done.append(a)
+        elif a in gen_list or not os.path.isfile(sq_path):
+            added += gen_square_economy(out_dir, slug, a, refsd, state)
+            done.append(a)
+        try:
+            build_square_composite(out_dir, refsd, a)
+        except Exception as e:
+            log("kwadrat %s: kompozyt nieudany: %s" % (a, e))
+    _save_state(out_dir, state)
+    return added, done
+
+
 def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, logo_url, styl_url, refs_dir, state):
     """ETAP FULL-DESIGN (multi-ref): rehost 2-4 kadrów produktu + logo + styl → best-of-2 per kąt →
     provizoryczny wybór (ostrość; BRAMKĘ WIERNOŚCI robi agent na kompozytach) → dowody + state.
@@ -2569,6 +2752,26 @@ def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, logo_ur
     return creatives, total_usd, refsd
 
 
+def _parse_formats(s):
+    """'45,11' → ['45','11'] (whitelist, kolejność zachowana); puste → DEFAULT_FORMATS."""
+    out = []
+    for f in str(s or "").split(","):
+        f = f.strip()
+        if f in ALLOWED_FORMATS and f not in out:
+            out.append(f)
+    return out or list(DEFAULT_FORMATS)
+
+
+def _parse_angle_list(s, allowed):
+    """'demo,problem' / 'all' → lista kątów (przecięcie z allowed); puste → []."""
+    s = str(s or "").strip().lower()
+    if not s:
+        return []
+    if s == "all":
+        return list(allowed)
+    return [a.strip() for a in s.split(",") if a.strip() in allowed]
+
+
 def do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, logo_url, styl_url, refs_dir):
     """BRAMKA WIERNOŚCI po generacji: --pick / --regen / --fix / --finalize (publikacja MERGE).
     Wznawia ze stanu (adforge-state.json); refy rehostowane RAZ (cache) → operacje ~$0 poza generacją."""
@@ -2617,6 +2820,18 @@ def do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, log
         _p, cost = fidelity_surgical_fix(out_dir, slug, a, cecha, refsd["product_fal"], state)
         added += cost
 
+    # 4) FORMAT 1:1 (KWADRAT) — dogeneruj z gotowych finałów 4:5 (tryb oszczędny; pełny = --regen-11)
+    formats = _parse_formats(args.formats)
+    gen11 = _parse_angle_list(args.gen_11, angles)
+    full11 = _parse_angle_list(args.regen_11, angles)
+    square_usd = 0.0
+    if "11" in formats:
+        square_usd, sq_done = ensure_squares(out_dir, slug, angles, formats, gen11, full11,
+                                             copy, b, palette, cena, refsd, state)
+        added += square_usd
+        if sq_done:
+            log("KWADRATY 1:1 dogenerowane dla: %s" % ", ".join(sq_done))
+
     total_usd = round(state.get("total_usd", 0.0) + added, 4)
     state["total_usd"] = total_usd
 
@@ -2642,24 +2857,46 @@ def do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, log
             print("  • %-10s %s" % (a, comp[a]))
     if "_ciaglosc" in comp:
         print("  • CIĄGŁOŚĆ   %s" % comp["_ciaglosc"])
+    # DOWODY KWADRATU (4:5 | 1:1) — bramka LITER/wierności robi agent (litera-po-literze)
+    if "11" in formats:
+        print("-" * 88)
+        print("BRAMKA KWADRATU 1:1 — DOWODY (4:5 źródło | 1:1 kwadrat; sprawdź litery i układ):")
+        for a in angles:
+            kp = os.path.join(out_dir, "dowody", "KWADRAT-%s.png" % a)
+            b11 = os.path.join(out_dir, "ad_%s_11.png" % a)
+            if os.path.isfile(kp):
+                intended = (state.get("fd_intended") or {}).get(a) or []
+                print("  • %-10s %s" % (a, kp))
+                if intended:
+                    print("      napisy VERBATIM do sprawdzenia: %s" % intended)
+            elif os.path.isfile(b11):
+                print("  • %-10s ad_%s_11.png (bez kompozytu)" % (a, a))
+
     print("-" * 88)
     print_click_gate(angles, state.get("klik_verdicts"))
     if state.get("karta"):
         print("KARTA PRODUKTU (%s): %d cech" % (state["karta"].get("produkt", "?"), len(state["karta"].get("cechy", []))))
     if added > 0:
-        print("Koszt operacji tej rundy: ~$%.2f (fixy/regeny)" % added)
+        print("Koszt operacji tej rundy: ~$%.2f (fixy/regeny/kwadraty)" % added)
 
     if not args.finalize:
         print("-" * 88)
-        print("[--finalize pominięte] Nie publikuję. Po weryfikacji uruchom z --finalize.")
+        print("[--finalize pominięte] Nie publikuję. Po weryfikacji (litery+wierność kwadratu) uruchom z --finalize.")
         print("out=%s" % out_dir)
         return 0
 
     creatives = [{"angle": a, "path": os.path.join(out_dir, "ad_%s_45.png" % a),
                   "headline": ((copy.get(a) or {}).get("hook_baner") or (copy.get(a) or {}).get("headline") or ""),
                   "primary_text": (copy.get(a) or {}).get("primary_text") or ""} for a in angles]
-    return finish(args, bundle, "nbpro", out_dir, creatives, total_usd, mode="fulldesign-finalize",
-                  regions_by_angle={}, state=state, run_finisher_pass=False)
+    rc = finish(args, bundle, "nbpro", out_dir, creatives, total_usd, mode="fulldesign-finalize",
+                regions_by_angle={}, state=state, run_finisher_pass=False,
+                formats=formats, square_usd=square_usd)
+    if args.finalne_dir:
+        try:
+            sync_finalne(out_dir, args.finalne_dir, angles, {}, None)
+        except Exception as e:
+            log("czysty folder (finalne) sync nieudany: %s" % e)
+    return rc
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2898,6 +3135,9 @@ def sync_finalne(out_dir, finalne_dir, angles, hook_files, ab_path):
         fin = os.path.join(out_dir, "ad_%s_45.png" % a)
         if os.path.isfile(fin):
             shutil.copyfile(fin, os.path.join(finalne_dir, "%s.png" % names.get(a, a)))
+        sq = os.path.join(out_dir, "ad_%s_11.png" % a)                 # KWADRAT 1:1 (v10)
+        if os.path.isfile(sq):
+            shutil.copyfile(sq, os.path.join(finalne_dir, "%s-1x1.png" % names.get(a, a)))
     cont = os.path.join(out_dir, "dowody", "WIERNOSC-CIAGLOSC.png")
     if os.path.isfile(cont):
         shutil.copyfile(cont, os.path.join(finalne_dir, "0-DOWOD-WIERNOSCI.png"))
@@ -3307,9 +3547,9 @@ def run(args):
         return do_hookvariants(args, bundle, out_dir, slug, b, palette, logo_img, angles,
                                logo_url, styl_url, refs_dir, resolve_font_path_glob)
 
-    # ── BRAMKA WIERNOŚCI (post-generacja): --finalize / --fix / --regen / --pick ──
-    # Wznawia ze stanu; publikacja PO przejściu checklisty wierności + ciągłości (agent na kompozytach).
-    if args.finalize or args.fix or args.regen or args.pick:
+    # ── BRAMKA WIERNOŚCI (post-generacja): --finalize / --fix / --regen / --pick / --gen-11 / --regen-11 ──
+    # Wznawia ze stanu; publikacja PO przejściu checklisty wierności + ciągłości + kwadratu (agent na kompozytach).
+    if args.finalize or args.fix or args.regen or args.pick or args.gen_11 or args.regen_11:
         return do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, logo_url, styl_url, refs_dir)
 
     # ── RECOMPOSE: z zapisanych scen, bez copy-calla i bez płatnej generacji ──
@@ -3566,6 +3806,13 @@ def build_argparser():
     ap.add_argument("--karta", default="", help="ścieżka KARTA.json (domyślnie out/KARTA.json)")
     ap.add_argument("--verdicts", default="", help="ścieżka VERDICTS.json (domyślnie out/VERDICTS.json)")
     ap.add_argument("--klik", default="", help="ścieżka KLIK.json — werdykty bramki powodu kliknięcia (domyślnie out/KLIK.json)")
+    # ── FORMATY (v10): 4:5 + kwadrat 1:1 ──
+    ap.add_argument("--formats", default="45,11",
+                    help="formaty do publikacji po przecinku (45=4:5, 11=1:1 kwadrat). Default '45,11'")
+    ap.add_argument("--gen-11", dest="gen_11", default="",
+                    help="(re)generuj kwadrat 1:1 OSZCZĘDNIE (przekompozycja finału 4:5) dla kątów po przecinku lub 'all'")
+    ap.add_argument("--regen-11", dest="regen_11", default="",
+                    help="pełna generacja kwadratu 1:1 (aspect 1:1, bez seeda 4:5) dla kątów po przecinku lub 'all' — fallback gdy oszczędny psuje litery")
     # ── v8: hook-warianty / A/B silników / portfel / budżet / czysty folder ──
     ap.add_argument("--hook-variants", type=int, default=0, metavar="N",
                     help="N wariantow naglowka na bazie sceny bez naglowka (nakladka kodem, font marki); publikacja jako dodatkowe artefakty")
