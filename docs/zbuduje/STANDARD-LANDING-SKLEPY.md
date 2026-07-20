@@ -860,6 +860,21 @@ mechanizm/efekt działania (pompka → ściśnięte worki; budzik → światło 
 proponujący „no product" na scenach kluczowych = nadpisać. Gate całości: z samych grafik
 widać, CO produkt robi i po co go kupić.
 
+**🖐️ POZA PRODUKTU = CECHA WIERNOŚCI, NIE TYLKO OBECNOŚĆ CECH (Tomek 20.07 — scena mid-CTA
+masażera: silikonowa dłoń ROZCZAPIERZONA JAK SZPON/PAJĄK, palce sterczące w górę+boki,
+urządzenie na łopatce zamiast na karku = „zielone stworzenie wczepione w ramię", nie masażer.
+Gate F3A dał 8/8 ZGODNA — bo policzył CECHY OBECNE [4 palce+kciuk, zieleń, panel], a poza
+była zła. Zła poza była już NA MAKIECIE — krytyk F2 ją przepuścił).** Dwie domknięcia:
+- **F3A / Paszport:** wiersz „Cechy dyskryminujące" o elemencie ruchomym (dłoń/głowica/ostrze)
+  ocenia go W POPRAWNEJ POZIE UŻYCIA, nie tylko „obecny". Dla masażera: „dłoń UGNIATA — palce
+  ZAGIĘTE/wtulone w mięsień; ⛔ FAIL: palce rozczapierzone/sterczące = archetyp-szpon".
+  „4 palce obecne" ≠ PASS, jeśli poza to szpon. Sekcja „CZEGO NIE MA" wymienia archetyp-stwór.
+- **KRYTYK F2 (checklista, nowe pyt.):** „czy POZA produktu jest apetyczna i intencjonalna
+  (produkt robi to, do czego służy, ładnie), czy to archetyp-dryf (szpon/pająk/stwór, produkt
+  odłożony bez sensu, dziwna skala)?" — archetyp-poza na makiecie = REGENERACJA makiety PRZED
+  akceptem (bo scene-from-mockup wiernie skopiuje złą pozę). Obecność cech to gate F3A;
+  URODA POZY to krytyk — oba muszą przejść.
+
 **PRODUKT W SCENACH — anty-monotonia (feedback Tomka do Loczka 17.07: „wszędzie jest tylko
 to jedno zdjęcie, to słabo wygląda").** Produkt jest bohaterem — każda sekcja produktowa MA
 WŁASNE ujęcie. Ten sam kadr produktu **max 1×** (jedyny wyjątek: packshot oferta+sticky).
