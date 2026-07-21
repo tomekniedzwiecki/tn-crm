@@ -60,6 +60,20 @@ UGC tylko WPLECIONE (nigdy główny slajd). **Fallback przy ubogiej galerii po o
 jako lifestyle (ale NIGDY jako „dowód produktu"); (c) 2-4 UGC z opinii (rehost, podpis
 „zdjęcia od kupujących"). NIGDY nie łatać infografiką z obcym tekstem ani sceną-fantazją.
 
+**⚙️ SEKCJA GALERII = MODUŁ `galeria@1` (3 twarde reguły, incydent mata 21.07):**
+1. **Zawsze moduł `moduly/galeria@1.html`** (jak każda sekcja z odpowiednikiem — ZASADA UŻYCIA
+   MODULY.md); DESIGN sekcji wolno zmieniać (tokeny/kolumny/eyebrow), MECHANIKA nietykalna.
+2. **⛔ ASPEKT KAFLA = PROPORCJE ZDJĘĆ, KTÓRE MAMY (nie „na oko").** Zmierz realne pliki `keep*`
+   (naturalWidth/Height) i ustaw `--gal-aspect` na DOMINUJĄCĄ proporcję. Zdjęcia Ali są zwykle
+   KWADRATOWE → `1/1`. ⛔ NIGDY wysoki prostokąt (3/4.75) + `object-fit:cover` na kwadratach =
+   przycięte boki (dokładnie ten defekt na macie: keep1–3 kwadrat wciśnięty w pion). Bardzo
+   szeroki pojedynczy kadr → `.gal-card--wide` (span 2) albo osobny kadr, nie przycinaj w słupek.
+3. **⛔ PODPIS/`alt_pl` = CO KADR NAPRAWDĘ POKAZUJE (anti-drift), zweryfikowane OCZAMI wobec
+   piksela.** Podpis „z planu" niepasujący do zdjęcia = defekt (na macie: „Wałek pod kark" wisiał
+   na makro kolców, „Zestaw w pokrowcu" na płaskiej macie — podpisy pomieszane). Przy kuracji (§1)
+   `alt_pl` piszesz PATRZĄC na kadr, nie z listy planowanych ujęć. Kontrakt lightbox: `.gitem` +
+   `data-full` (podgląd DZIAŁA); ⛔ `<a href>` bez `preventDefault` = klik nawiguje do gołego pliku.
+
 ## 5. ANTY-MISMATCH landing↔aukcja (FILTR PLANU w F1)
 Tabela CLAIM→ŹRÓDŁO dla KAŻDEGO claimu planu (funkcje, zasilanie, elementy, wymiary,
 materiał): źródło ∈ {tytuł detail, **specs**, galeria detail, opinie, **opis-FAKTY po

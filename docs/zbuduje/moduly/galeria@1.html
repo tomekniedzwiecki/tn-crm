@@ -1,0 +1,122 @@
+<!--
+============================================================================
+MODUŁ KANONICZNY: galeria@1
+ŹRÓDŁO:   masazer/index.html + mata/index.html (#galeria) — po fixie 21.07
+          (kafel kwadratowy, kontrakt lightbox@1, podpisy zgodne z realem).
+ROLA:     GALERIA produktowa: siatka kadrów kuracji + podgląd (lightbox) + podpisy.
+          Sekcja KODOWA. Podgląd = moduł lightbox@1 (ten moduł daje TYLKO markup
+          zgodny z jego kontraktem: .gitem + data-full — NIE duplikuje JS lightboxa).
+
+────────────────────────────────────────────────────────────────────────────
+⛔⛔ REGUŁA NADRZĘDNA (powód powstania modułu — incydent mata 21.07):
+  KAFEL MUSI PASOWAĆ DO PROPORCJI ZDJĘĆ, KTÓRE FAKTYCZNIE MAMY.
+  Zdjęcia produktowe z Ali są zwykle KWADRATOWE (1:1) → domyślny `--gal-aspect:1/1`.
+  ⛔ NIGDY nie zaszywaj wysokiego prostokąta (np. 3/4.75) na kwadratowych zdjęciach —
+  `object-fit:cover` przytnie je po bokach = brzydko (dokładnie ten defekt na macie).
+  Koder ZMIERZY realne proporcje kuracji (naturalWidth/Height plików keep*) i ustawi
+  `--gal-aspect` na DOMINUJĄCĄ proporcję zbioru (1/1 dla kwadratów, 4/3 dla poziomych
+  lifestyle, itd.). Zbiór mieszany → 1/1 (kwadrat mieści kwadraty idealnie, pion/poziom
+  przytnie do środka akceptowalnie); pojedynczy bardzo szeroki kadr → rozważ span 2 kolumn
+  (klasa `.gal-card--wide`) albo osobny kadr.
+
+────────────────────────────────────────────────────────────────────────────
+WYMAGANE TOKENY (skórka landingu MUSI definiować):
+  kolory:  --paper --card --ink --body --line --cta
+           --radius-lg --shadow-sm
+  fonty:   --font-display (nagłówek)   --font-text (eyebrow, podpisy)
+  rytm:    --s2 --sect-pad-d --content-w --h2-d
+  lokalny: --gal-aspect (DOMYŚLNIE 1/1; ustawiany przez kodera wg zmierzonych zdjęć)
+           --gal-cols   (DOMYŚLNIE 5; ile kolumn na desktopie — dobór do liczby kadrów)
+  globalne: .wrap/.galeria-inner · .eyebrow · .h2 — z bazy landingu (lub własne jak niżej).
+
+WYMAGANE HOOKI RUNTIME (moduł lightbox@1 — globalny skrypt landingu, NIE część tego modułu):
+  • każdy kafel = element z klasą .gitem + atrybutem data-full="<URL pełnego zdjęcia>".
+    Delegacja klików lightbox@1 czyta .gitem→data-full i robi e.preventDefault().
+  • ⛔ NIE opierać podglądu na <a href> BEZ preventDefault (klik nawiguje do gołego
+    pliku .webp = „dziwne działanie"; incydent mata). href WOLNO zostawić jako fallback
+    no-JS, ale data-full + lightbox@1 są ścieżką właściwą.
+
+KONTRAKT SKÓROWANIA (co WOLNO zmienić — DESIGN sekcji może być inny):
+  • tokeny/kolory/promienie/cienie, eyebrow + nagłówek (treść),
+  • `--gal-aspect` (wg zdjęć!), `--gal-cols`, gap, styl badge zoom, obecność/miejsce podpisów,
+  • liczba kadrów (3–6), object-position per kadr (dostrojenie kadrowania cover).
+
+CO JEST NIETYKALNE (mechanika + zasady jakości — NIE RUSZAĆ):
+  • kontrakt lightbox: .gitem + data-full (podgląd DZIAŁA, nie nawiguje),
+  • object-fit:cover + jeden --gal-aspect dla WSZYSTKICH kafli (spójna siatka),
+  • ⛔ aspekt NIGDY nie zaszyty „na oko" — pochodzi z REALNYCH proporcji zdjęć,
+  • PODPIS = opis tego, co kadr NAPRAWDĘ pokazuje (anti-drift; ⛔ podpis „z planu"
+    niepasujący do zdjęcia — incydent mata: „Wałek pod kark" wisiał na makro kolców),
+  • responsywność: desktop --gal-cols → 2 kolumny (≤900) → 1 kolumna (≤620),
+  • a11y: focus-visible outline --cta, alt = treść kadru.
+
+⛔ ANTY-WZORZEC:
+  • wysoki prostokąt na kwadratach (3/4.75 cover) = przycięte boki,
+  • <a href> bez preventDefault = nawigacja do pliku,
+  • data-lightbox="..." (martwy atrybut spoza kontraktu lightbox@1),
+  • podpisy generyczne/z planu niezgodne ze zdjęciem, upscaling malutkich plików (<~300px w duży kafel).
+============================================================================
+-->
+<section id="galeria" aria-labelledby="galeria-title">
+  <div class="galeria-inner">
+    <header class="galeria-head">
+      <p class="galeria-eyebrow">{{EYEBROW}}</p>
+      <h2 class="galeria-title" id="galeria-title">{{TYTUŁ}} <span class="hi">{{AKCENT}}</span></h2>
+    </header>
+    <div class="galeria-grid">
+      <!-- POWTÓRZ figure dla każdego kadru (3–6). data-full = URL pełnego zdjęcia. -->
+      <figure class="galeria-card">
+        <a class="gitem galeria-item" href="{{URL_KADRU}}" data-full="{{URL_KADRU}}">
+          <img src="{{URL_KADRU}}" alt="{{OPIS = CO KADR NAPRAWDĘ POKAZUJE}}" loading="lazy">
+          <span class="galeria-zoom" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><circle cx="14" cy="14" r="8"></circle><path d="m20 20 7 7"></path></svg>
+          </span>
+        </a>
+        <figcaption class="galeria-caption">{{PODPIS = CO KADR NAPRAWDĘ POKAZUJE}}</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<style>
+#galeria{
+  /* --gal-aspect: koder USTAWIA wg zmierzonych zdjęć (1/1 dla kwadratów). NIE zaszywać prostokąta. */
+  --gal-aspect:1/1;
+  --gal-cols:5;
+  background:var(--paper);
+  color:var(--ink);
+  padding:var(--sect-pad-d) var(--s3, 20px);
+  font-family:var(--font-text);
+}
+#galeria .galeria-inner{ width:min(100%,var(--content-w)); margin-inline:auto; }
+#galeria .galeria-head{ margin:0 0 clamp(28px,3.5vw,48px); }
+#galeria .galeria-eyebrow{ margin:0 0 var(--s2); font-size:14px; font-weight:700; letter-spacing:.16em; color:var(--ink); }
+#galeria .galeria-title{ margin:0; font-family:var(--font-display); font-size:var(--h2-d); font-weight:600; line-height:1.06; letter-spacing:-.02em; color:var(--ink); }
+#galeria .galeria-grid{ display:grid; grid-template-columns:repeat(var(--gal-cols),minmax(0,1fr)); gap:18px; align-items:start; }
+#galeria .galeria-card{ margin:0; min-width:0; }
+#galeria .galeria-card--wide{ grid-column:span 2; }           /* opcjonalnie: bardzo szeroki kadr */
+#galeria .galeria-item{
+  position:relative; display:block; overflow:hidden;
+  aspect-ratio:var(--gal-aspect);                              /* ⛔ NIGDY zaszyty prostokąt */
+  border:1px solid var(--line); border-radius:var(--radius-lg);
+  background:var(--card); box-shadow:var(--shadow-sm);
+  color:var(--ink); text-decoration:none;
+}
+#galeria .galeria-item img{ display:block; width:100%; height:100%; object-fit:cover; object-position:50% 50%; transition:transform .3s ease; }
+#galeria .galeria-zoom{
+  position:absolute; right:var(--s2); bottom:var(--s2);
+  display:grid; place-items:center; width:52px; height:52px;
+  border:1.75px solid currentColor; border-radius:50%;
+  background:color-mix(in srgb, var(--card) 90%, transparent); color:var(--ink);
+  transition:background-color .2s ease,color .2s ease;
+}
+#galeria .galeria-zoom svg{ width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
+#galeria .galeria-caption{ margin:var(--s2) 0 0; color:var(--body); font-size:16px; line-height:1.35; text-align:center; }
+#galeria .galeria-item:focus-visible{ outline:3px solid var(--cta); outline-offset:4px; }
+#galeria .galeria-item:hover img{ transform:scale(1.025); }
+#galeria .galeria-item:hover .galeria-zoom,
+#galeria .galeria-item:focus-visible .galeria-zoom{ background:var(--ink); color:var(--card); }
+@media (prefers-reduced-motion:reduce){ #galeria .galeria-item img,#galeria .galeria-zoom{ transition:none; } }
+@media (max-width:900px){ #galeria .galeria-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:620px){ #galeria .galeria-grid{ grid-template-columns:1fr; } #galeria .galeria-card--wide{ grid-column:auto; } }
+</style>
