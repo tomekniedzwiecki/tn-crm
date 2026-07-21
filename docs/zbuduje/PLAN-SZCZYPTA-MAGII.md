@@ -10,7 +10,7 @@
 
 ## 0. Guardraile Lejka V2 — NIE łamać
 
-- **[V2.1, 2026-07-10] CENA BUDOWY JAWNA: 9400 zł, jedna i stała** (500 zł zwrotne wliczone), podawana proaktywnie w turze domknięcia z kotwicą wartości (u agencji 25–40 tys./rok). Zero symulacji zysków.
+- **[V2.1, 2026-07-10; obniżka 2026-07-21] CENA BUDOWY JAWNA: 4900 zł (wcześniej 9400), jedna i stała** (500 zł zwrotne wliczone), podawana proaktywnie w turze domknięcia z kotwicą wartości (u agencji 25–40 tys./rok). Zero symulacji zysków.
 - **Zero „10% / udziału %" w rozmowie** → „udział ustalany indywidualnie po rezerwacji".
 - **Zero kwalifikacji przed sklepem** (budżet, czas, doświadczenie, etat, „czego się boisz"). Pytania przedrezerwacyjne = tylko personalizacja (produkt/marka/styl).
 - **[V2.1] Budżet reklamowy WYŁĄCZNIE reaktywnie:** „~1000 zł łącznie na start, skalujemy z dochodów". Karta „kwoty inwestycji" i bramka 2000 zł WYCOFANE. Nie rozbijać kwoty usera na towar/reklamy. Raty reaktywnie (formy ustala Tomek po rezerwacji).

@@ -7,7 +7,7 @@
 //   qualified  → „Oferta"          — rozmowa o warunkach współpracy
 //   proposal   → „Zakwalifikowany" — blisko rezerwacji (kliknął „zapłać rezerwację")
 //   negotiation→ „Rezerwacja"      — rezerwacja 500 zł OPŁACONA
-//   won        → „Wygrany"         — pełna budowa (9400 zł) opłacona
+//   won        → „Wygrany"         — pełna budowa (4900 zł) opłacona
 //
 // Zasady:
 //  • Bump TYLKO do przodu (monotonicznie) — nigdy nie cofa, nigdy nie rusza „Wygranego" w dół.

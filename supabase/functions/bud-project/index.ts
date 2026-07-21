@@ -515,7 +515,7 @@ Deno.serve(async (req) => {
       // FIX (audyt 2026-06-30): „Oferta"/qualified czytało kanał 'wspolpraca' z bud_messages,
       // który został usunięty 2026-06-16 (rozmowa idzie na 'sparing') → bump NIGDY nie odpalał.
       // Sygnał „rozmowa o warunkach współpracy" = ZIELONE ŚWIATŁO (verdict): pada w fazie
-      // współpracy, gdy oferta + model 9400/20% są na stole. Czyste, dostępne w sesji.
+      // współpracy, gdy oferta + model (jawna cena budowy) są na stole. Czyste, dostępne w sesji.
       const offerOnTable = (session.verdict as string | null) === 'zielony'
       // „Zakwalifikowany" (proposal) — KONKRETNE KRYTERIA (req Tomka 2026-06-30):
       // lead z ZIELONYM światłem (Oferta na stole), który wykazał TWARDY sygnał gotowości,

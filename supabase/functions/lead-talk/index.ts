@@ -131,7 +131,7 @@ function leadContext(lead: any): string {
 
 // ── Oferta z rozmowy (marker <rezerwacja> = wystaw ofertę i pokaż jej kartę) ─
 // Wzorzec: client_offers jak oferty ręczne Tomka; offer_id z settings
-// 'rozmowa_offer_id' (fallback: „Budowa sklepu pełen pakiet" 9400 zł).
+// 'rozmowa_offer_id' (fallback: „Budowa sklepu pełen pakiet" — cena z offers.price, od 21.07 4900 zł).
 const DEFAULT_OFFER_ID = '30bf199b-8bc1-4810-8716-43dbffeb9113'
 const OFFER_VALID_DAYS = 7
 function genOfferToken(): string {

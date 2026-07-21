@@ -90,8 +90,9 @@ D. Karta rezerwacji: miniatura ICH sklepu + „Rezerwuję miejsce w kolejce — 
 > ukrywanie kwot w /sklep = 0 rezerwacji, 10 porzuconych kas) + rynkowa kotwica
 > (software house / agencja liczy 25–40 tys. zł za analogiczny zakres w 1. roku).
 
-1. **CENA BUDOWY JEST JAWNA: 9400 zł, jedna i stała** (500 zł zwrotnej rezerwacji
-   wliczone → przy umowie zostaje 8900 zł). Bot podaje ją PROAKTYWNIE w turze
+1. **CENA BUDOWY JEST JAWNA: 4900 zł, jedna i stała** (500 zł zwrotnej rezerwacji
+   wliczone → przy umowie zostaje 4400 zł; ⚠️ OBNIŻKA 2026-07-21 decyzją Tomka —
+   wcześniej 9400/8900). Bot podaje ją PROAKTYWNIE w turze
    domknięcia (po <zielone>) i na każde pytanie o koszt — ZAWSZE z kotwicą wartości
    (portfel 10 produktów, budowa, kampanie Tomka do ~1000 zamówień, wdrożenie;
    u agencji rynkowo 25–40 tys. zł w pierwszym roku).

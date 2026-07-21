@@ -10,7 +10,7 @@ MODEL BIZNESOWY „ZBUDUJĘ CI BIZNES ONLINE" (oferta AWE — fakty; jedyne źr�
 - KONWERSJA AI = wyłącznie rezerwacja 500 zł. AI prowadzi DO rezerwacji; po niej przejmuje Tomek osobiście.
 
 === DO POTWIERDZENIA PRZEZ TOMKA (NIE wpisane na sztywno — placeholdery; AI ich NIE podaje jako twardych faktów) ===
-- CENA BUDOWY SKLEPU: **POTWIERDZONA 2026-07-10 (V2.1): 9400 zł, JEDNA i stała, JAWNA w rozmowie** (podawana w turze domknięcia z kotwicą wartości; budżet reklamowy tylko reaktywnie: ~1000 zł łącznie na start, dalej z dochodów). Rezerwacja 500 zł wliczona (przy umowie zostaje 8900 zł). UWAGA: ten plik to mirror — żywy SSOT w `settings.budowanie_model_biznesowy`.
+- CENA BUDOWY SKLEPU: **OBNIŻONA 2026-07-21 decyzją Tomka: 4900 zł (wcześniej 9400), JEDNA i stała, JAWNA w rozmowie** (podawana w turze domknięcia z kotwicą wartości; budżet reklamowy tylko reaktywnie: ~1000 zł łącznie na start, dalej z dochodów). Rezerwacja 500 zł wliczona (przy umowie zostaje 4400 zł). UWAGA: ten plik to mirror — żywy SSOT w `settings.budowanie_model_biznesowy`.
 - UDZIAŁ TOMKA W RISK-SHARING: [DO POTWIERDZENIA]% — model (procent od przychodu/zysku vs udziały/equity) [DO POTWIERDZENIA]; horyzont (bezterminowo vs do określonego progu) [DO POTWIERDZENIA]. UWAGA: equity z risk-sharingu RZADKO się materializuje — nie obiecywać złotych gór; mówić ostrożnie.
 - CO DOKŁADNIE W CENIE: zakres budowy sklepu (sklep TakeDrop, branding, produkt/dostawca, kampania startowa, COD, regulaminy/RODO, hosting na start) — [DO POTWIERDZENIA] który element wchodzi, który osobno.
 - HOSTING/INFRASTRUKTURA po starcie: [DO POTWIERDZENIA] (czy podział kosztów jak w Aplikacji 12 mies. Tomek -> 90/10, czy inaczej dla TakeDrop).
