@@ -1942,7 +1942,8 @@
   .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-num{background:var(--zc-ok);color:#fff}
   .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked .zc-step-body,
   .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-body{display:none}
-  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-summary{display:block}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-summary{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    white-space:normal;word-break:break-word}
   .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-edit{display:inline}
 
   /* stany maszyny — pokazywanie paneli */
@@ -2350,7 +2351,7 @@
     var dateTxt = deliveryDateText();
     // domyślnie zaznaczamy NAJTAŃSZĄ metodę (nie pierwszą) — E2E 21.07
     var defIdx = 0;
-    list.forEach(function (m, i) { if (num(m.price) < num(list[defIdx].price)) defIdx = i; });
+    list.forEach(function (m, i) { if ((m.price || 0) < (list[defIdx].price || 0)) defIdx = i; });
     list.forEach(function (m, idx) {
       var priceTxt = m.price > 0 ? fmtPln(m.price) : 'gratis';
       var id = 'zc-del-' + idx;
@@ -2610,7 +2611,7 @@
     identified[key] = true;
     try {
       // primary = {type, value} — beacon platformy ma pola identityType/identityValue (E2E 21.07)
-      window.trevio.identify({ type: type, value: value });
+      window.trevio.identify({ type: type, value: value, identityType: type, identityValue: value });
     } catch (e) {
       try { var o = {}; o[type] = value; window.trevio.identify(o); } catch (e2) {}
     }
@@ -3018,7 +3019,7 @@
       btn.type = 'button';
       btn.className = 'zc-step-next';
       btn.textContent = 'Dalej';
-      btn.addEventListener('click', function () { if (stepComplete('delivery')) advanceFrom('delivery'); });
+      btn.addEventListener('click', function () { if (stepComplete('delivery')) advanceFrom('delivery'); else showFieldNote('delivery', 'Wybierz sposób dostawy.'); });
       el.querySelector('.zc-step-body').appendChild(btn);
     })();
 
