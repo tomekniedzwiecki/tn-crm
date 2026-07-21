@@ -19,6 +19,7 @@ const APPS = [
     { id: 'sklepy', name: 'Sklepy workflow', sub: 'Prowadzenie sklepów', group: 'sklepy', icon: 'ph-factory', color: 'bg-[#0891b2] text-white', defaultPage: 'index', shortcut: 4 },
     { id: 'aplikacje', name: 'Aplikacje', sub: 'Leady — lejek AI', group: 'aplikacje', icon: 'ph-rocket-launch', color: 'bg-[#8b5cf6] text-white', defaultPage: 'index', shortcut: 5 },
     { id: 'app', name: 'Aplikacje workflow', sub: 'Budowa aplikacji SaaS', group: 'aplikacje', icon: 'ph-app-window', color: 'bg-[#c026d3] text-white', defaultPage: 'index', shortcut: 6 },
+    { id: 'trendy', name: 'Trendy', sub: 'Radar produktów TikTok', group: 'sklepy', icon: 'ph-radar', color: 'bg-[#45a557] text-white', defaultPage: 'trendy', shortcut: 8 },
     { id: 'workflow', name: 'Workflow', sub: 'Stary system — do wygaszenia', group: 'stare', icon: 'ph-path', color: 'bg-emerald-600 text-white', defaultPage: 'workflows', legacy: true, shortcut: 7 }
 ];
 
@@ -29,7 +30,9 @@ const APP_BASES = {
     aplikacje: '/tn-aplikacje',
     sklep: '/tn-sklep',
     sklepy: '/tn-sklepy',
-    app: '/tn-app'
+    app: '/tn-app',
+    // Radar produktów mieszka w roocie (trendy.html), jak panele CRM — stąd pusty base.
+    trendy: ''
 };
 
 const APP_AVATAR_COLORS = {
@@ -39,7 +42,8 @@ const APP_AVATAR_COLORS = {
     aplikacje: 'from-violet-500 to-violet-700',
     sklep: 'from-[#0070f3] to-[#0761d1]',
     sklepy: 'from-[#0891b2] to-[#0e7490]',
-    app: 'from-[#c026d3] to-[#a21caf]'
+    app: 'from-[#c026d3] to-[#a21caf]',
+    trendy: 'from-[#45a557] to-[#3a8f4a]'
 };
 
 // Nagłówki i kolejność grup w boxie przełącznika
@@ -388,7 +392,10 @@ const APP_RESTRICTIONS = {
     // Panele lejków (lead pipeline, kasa, prompty) — tylko Tomek + Maciej.
     // Maciej loguje się przez Google (kanczewski.maciej@gmail.com) lub maila firmowego.
     aplikacje: ['tomekniedzwiecki@gmail.com', 'kanczewski.maciej@gmail.com', 'maciej@tomekniedzwiecki.pl'],
-    sklep: ['tomekniedzwiecki@gmail.com', 'kanczewski.maciej@gmail.com', 'maciej@tomekniedzwiecki.pl']
+    sklep: ['tomekniedzwiecki@gmail.com', 'kanczewski.maciej@gmail.com', 'maciej@tomekniedzwiecki.pl'],
+    // Lustro bramki w trendy.html (ALLOW = uid Maćka i Tomka) — przełącznik nie może
+    // pokazywać kafelka komuś, kto po kliknięciu zobaczy „Brak dostępu".
+    trendy: ['tomekniedzwiecki@gmail.com', 'kanczewski.maciej@gmail.com', 'maciej@tomekniedzwiecki.pl']
 };
 
 function canAccessApp(appId, userEmail) {
@@ -596,6 +603,8 @@ function detectCurrentApp() {
     // UWAGA: '/tn-sklepy' PRZED '/tn-sklep' — includes() złapałby prefiks
     if (path.includes('/tn-sklepy')) return 'sklepy';
     if (path.includes('/tn-sklep')) return 'sklep';
+    // Radar siedzi w roocie obok paneli CRM — musi być sprawdzony PRZED fallbackiem 'crm'.
+    if (path.includes('/trendy')) return 'trendy';
     return 'crm';
 }
 
@@ -788,7 +797,7 @@ function setupAppSwitcher() {
 // ============================================
 // GLOBALNE SKRÓTY KLAWISZOWE
 // ============================================
-// Alt+1..7 → nawigacja do apki o danym shortcut (respektuje dostępy).
+// Alt+1..8 → nawigacja do apki o danym shortcut (respektuje dostępy).
 // Ctrl+K / Cmd+K → toggle boxu przełącznika. Escape zamyka (obsługa lokalna).
 // AltGr (polski układ) ustawia ctrlKey+altKey — wykluczamy przez !e.ctrlKey.
 function toggleSwitcherDropdown() {
@@ -865,12 +874,12 @@ function registerSwitcherKeys() {
             if (e.key === 'ArrowDown') { e.preventDefault(); moveSwitcherHighlight(openDd, 1); return; }
             if (e.key === 'ArrowUp') { e.preventDefault(); moveSwitcherHighlight(openDd, -1); return; }
             if (e.key === 'Enter') { e.preventDefault(); activateSwitcherHighlight(openDd); return; }
-            const dm = e.code && e.code.match(/^Digit([1-7])$/);
+            const dm = e.code && e.code.match(/^Digit([1-8])$/);
             if (dm) { if (navToShortcut(parseInt(dm[1], 10))) e.preventDefault(); return; }
         }
-        // Alt+1..7 → skok do aplikacji globalnie (bez AltGr: ten ustawia ctrlKey+altKey)
+        // Alt+1..8 → skok do aplikacji globalnie (bez AltGr: ten ustawia ctrlKey+altKey)
         if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-            const m = e.code && e.code.match(/^Digit([1-7])$/);
+            const m = e.code && e.code.match(/^Digit([1-8])$/);
             if (!m) return;
             if (isTypingTarget()) return;
             if (navToShortcut(parseInt(m[1], 10))) e.preventDefault();
