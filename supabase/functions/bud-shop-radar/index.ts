@@ -20,6 +20,8 @@
 //   {op:'probe', queries:['car gadgets']}              → surowa odpowiedź /shop/search (diagnoza kształtu)
 //   {op:'probe_products', sellerId, shopName?|storeUrl?} → surowa odpowiedź /shop/products (diagnoza URL/kształtu)
 //   {op:'scan',  queries:[...], ...}                   → pełny flow sold-first (patrz KONTRAKT niżej)
+//   {op:'match_existing', limit?, keys?, dryRun?, detail?, minScore?} → dopasuj Shop do ZATWIERDZONYCH
+//        rekordów bez tt_shop (po kolumnie `query`). Ślad: tt_shop.auto_match.is_auto=true → wycofywalne.
 //   {op:'seed_sellers'}                                → zasiej bud_radar_sellers ze sprawdzonych hitów → {seeded}
 //   {op:'mine_sellers', limit?:5, perSeller?:2}        → mine katalogów sprzedawców → pending (origin='seller_mine')
 import { adminGate } from '../_shared/bud-owner.ts'
@@ -190,6 +192,18 @@ function parseSearchItem(p: any): any {
   const searchVideo = (uid && aid) ? `https://www.tiktok.com/@${uid}/video/${aid}` : (String(v.share_url || '').split('?')[0] || '')
   const cat = Array.isArray(p.category_breadcrumb) ? p.category_breadcrumb.map((c: any) => c?.category_name || c?.name).filter(Boolean).join(' > ') : ''
   return { pid, title, sold, priceSale, priceOrig, rating, reviews, currency, currencySymbol, seoUrl, images, seller, searchVideo, category_raw: cat }
+}
+
+// Zgodność tytułu produktu z zapytaniem: udział słów zapytania obecnych w tytule (0..1).
+// Świadomie prymitywna i JAWNA — ma być czytelną, sprawdzalną heurystyką, a nie ukrytym
+// „osądem AI", którego nikt nie umie potem odtworzyć. Wynik trafia do tt_shop.auto_match.score.
+function titleScore(query: string, title: string): number {
+  const norm = (s: string) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ')
+    .split(/\s+/).filter((w) => w.length > 2)
+  const q = norm(query)
+  if (!q.length) return 0
+  const t = new Set(norm(title))
+  return q.filter((w) => t.has(w)).length / q.length
 }
 
 // Szczegóły produktu /v1/tiktok/product (pola w ROOT, jak w bud-tt-shop). Zwraca overlay do tt_shop.
@@ -530,6 +544,115 @@ Deno.serve(async (req) => {
       first_item_raw: arr[0] ?? null,
       parsed_sample: arr.slice(0, 3).map(parseSearchItem),
     })
+  }
+
+  // ── MATCH_EXISTING: dopasuj TikTok Shop do JUŻ ZATWIERDZONYCH rekordów, które go nie mają ──
+  // Wypełnia tt_shop AUTOMATEM po kolumnie `query` — tym samym zapytaniem, którym produkt znaleziono.
+  // ⚠️ To NIE jest potwierdzony dowód sprzedaży: podstawą jest zgodność tytułu z zapytaniem, nie
+  // oględziny produktu. Dlatego KAŻDE wypełnienie nosi ślad `tt_shop.auto_match.is_auto = true`
+  // (zwykłe pole jsonb, odpytywalne w SQL), a wycofanie to jeden UPDATE — patrz
+  // docs/zbuduje/AUTO-MATCH-SHOP.md. Odrzuceni kandydaci zostają w `auto_match.candidates`,
+  // więc wybór da się ocenić i poprawić BEZ ponownego palenia kredytów.
+  //   {op:'match_existing', limit?:20, keys?:[...], dryRun?:false, detail?:true, minScore?:0.5}
+  if (op === 'match_existing') {
+    const limit = Math.min(Math.max(Number(body.limit ?? 20), 1), 100)
+    const dryRun = !!body.dryRun
+    const withDetail = body.detail !== false
+    const minScore = Number(body.minScore ?? 0.5)
+    const keys: string[] | null = Array.isArray(body.keys) && body.keys.length ? body.keys : null
+
+    let sel = supabase.from('bud_tt_products')
+      .select('id,key,pl_name,query,shop_url,cover')
+      .eq('status', 'approved').is('tt_shop', null).not('query', 'is', null)
+    if (keys) sel = sel.in('key', keys)
+    const { data: targets, error: tErr } = await sel.order('key').limit(limit)
+    if (tErr) return J({ error: 'db_read_targets', detail: String(tErr.message).slice(0, 200) }, 500)
+
+    const nowIso = new Date().toISOString()
+    const results: any[] = []
+    let filled = 0, skipped = 0
+
+    for (const t of (targets || [])) {
+      const query = String(t.query || '').trim()
+      const { status, data } = await scGet(
+        `${B}/v1/tiktok/shop/search?query=${encodeURIComponent(query)}&region=${encodeURIComponent(region)}`,
+      )
+      const parsed = extractSearchProducts(data).map(parseSearchItem).filter((p: any) => p && p.seoUrl)
+      if (!parsed.length) { results.push({ key: t.key, skip: 'brak_wynikow', http: status }); skipped++; continue }
+
+      // Ranking: najpierw zgodność tytułu z zapytaniem, przy remisie wyższa sprzedaż.
+      const scored = parsed.map((p: any) => ({ p, s: titleScore(query, p.title) }))
+        .sort((a, b) => (b.s - a.s) || ((Number(b.p.sold) || 0) - (Number(a.p.sold) || 0)))
+      const top = scored[0]
+      // Próg: lepiej ZOSTAWIĆ puste niż wpisać cudzy produkt. Powód zapisujemy jawnie.
+      if (top.s < minScore) {
+        results.push({ key: t.key, skip: 'slabe_dopasowanie', score: Number(top.s.toFixed(2)), best: String(top.p.title).slice(0, 80) })
+        skipped++; continue
+      }
+
+      const it = top.p
+      let d: any = null
+      if (withDetail) {
+        const det = await scGet(`${B}/v1/tiktok/product?url=${encodeURIComponent(it.seoUrl)}&region=${encodeURIComponent(region)}`)
+        d = parseProductDetail(det.data, it.seoUrl)
+      }
+
+      const tt_shop: any = {
+        product_id: d?.product_id || it.pid || null,
+        title: d?.title || it.title,
+        sold_count: d?.sold_count ?? it.sold ?? null,
+        price_real: d?.price_real ?? it.priceSale ?? null,
+        price_max: d?.price_max ?? null,
+        price_original: d?.price_original ?? it.priceOrig ?? null,
+        price_display: d?.price_display || (it.priceSale != null ? `$${it.priceSale}` : ''),
+        currency: d?.currency ?? it.currency ?? 'USD',
+        currency_symbol: d?.currency_symbol ?? it.currencySymbol ?? '$',
+        stock: d?.stock ?? null,
+        rating: d?.rating ?? it.rating ?? null,
+        review_count: d?.review_count ?? it.reviews ?? null,
+        images: (d?.images?.length ? d.images : it.images) || [],
+        videos: d?.videos || [],
+        video_count: d?.video_count ?? 0,
+        shop: d?.shop || it.seller || null,
+        source: 'auto_match',
+        fetched_at: nowIso,
+        // ── ŚLAD AUTOMATU (podstawa wycofania) ──
+        auto_match: {
+          is_auto: true,
+          at: nowIso,
+          by: 'bud-shop-radar/match_existing',
+          query,
+          score: Number(top.s.toFixed(2)),
+          picked_title: String(it.title).slice(0, 160),
+          picked_seo_url: it.seoUrl,
+          set_shop_url: !t.shop_url,   // czy shop_url wpisaliśmy MY (rollback nie ruszy cudzego)
+          note: 'Wypelnione AUTOMATEM po kolumnie query — zgodnosc TYTULU, nie potwierdzony dowod sprzedazy.',
+          candidates: scored.slice(1, 6).map((c) => ({
+            title: String(c.p.title).slice(0, 120), score: Number(c.s.toFixed(2)),
+            sold: c.p.sold, price: c.p.priceSale, seo_url: c.p.seoUrl,
+          })),
+        },
+      }
+
+      if (dryRun) {
+        results.push({ key: t.key, dry: true, score: tt_shop.auto_match.score, title: tt_shop.title, sold: tt_shop.sold_count, alt: tt_shop.auto_match.candidates.length })
+        continue
+      }
+
+      // Packshoty na trwałe (URL-e TikToka są podpisane i wygasają) — jak w backfillu shop_images.
+      const hosted = await rehostShopImages(supabase, t.key, tt_shop.images || [], 8)
+      if (hosted.length) tt_shop.images_hosted = hosted
+
+      const patch: any = { tt_shop: deepSanitize(tt_shop) }
+      if (!t.shop_url) patch.shop_url = it.seoUrl
+      if (!t.cover && hosted.length) patch.cover = hosted[0]
+      const { error: uErr } = await supabase.from('bud_tt_products').update(patch).eq('id', t.id)
+      if (uErr) { results.push({ key: t.key, err: String(uErr.message).slice(0, 120) }); continue }
+      filled++
+      results.push({ key: t.key, ok: true, score: tt_shop.auto_match.score, title: String(tt_shop.title).slice(0, 70), sold: tt_shop.sold_count, packshots: hosted.length })
+    }
+
+    return J({ op: 'match_existing', targets: (targets || []).length, filled, skipped, dryRun, results })
   }
 
   // ── MINE_SELLERS: weź `limit` najdawniej minowanych sprzedawców → pobierz ich katalogi → pipeline ──

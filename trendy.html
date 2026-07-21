@@ -191,6 +191,12 @@
   .vtile .vbadge.odrz{background:#2a2a30;color:var(--dim)}
   .vtile.prop{outline:1px solid rgba(245,166,35,.35);outline-offset:-1px}
   .vtile.odrz{opacity:.55}
+  /* Pasek ostrzegawczy nad metrykami, gdy tt_shop wypełnił automat (auto_match.is_auto). */
+  .autoWarn{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px;padding:7px 10px;
+    border:1px solid rgba(245,166,35,.35);background:rgba(245,166,35,.07);border-radius:8px;
+    font-size:11px;color:#f5a623;cursor:help}
+  .autoWarn b{font-size:10px;letter-spacing:.05em}
+  .autoWarn span{color:var(--dim);font-size:10.5px}
   .vtile .vthph svg{width:15px;height:15px}
   .vtile .vcap{font-size:8.5px;color:var(--dim);padding:3px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
   .detImgCol{display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -1063,7 +1069,15 @@ function metricsHtml(x){
   if(rating)items.push(`<div class="mtr">${I.star}<b>${esc(String(rating))}</b><span>ocena</span></div>`);
   // Badge sezonu przeniesiony do edytora sezonu (seasonEditHtml) — bez duplikatu w metrykach.
   items.push(`<div class="mtr" id="detDeltaWrap" style="${dw!=null&&dw>0?'':'display:none'}">${I.trend}<b class="up" id="detDelta">${dw!=null&&dw>0?'+'+fmt(dw):''}</b><span>/tydz.</span></div>`);
-  return `<div class="detMetrics">${items.join('')}</div>`;
+  // Ostrzeżenie przy AUTO-dopasowanym sklepie. Te liczby wyglądają jak potwierdzony dowód
+  // sprzedaży, a powstały z dopasowania TYTUŁU do zapytania — nikt tego produktu nie oglądał.
+  // Wycofanie i zatwierdzanie: docs/zbuduje/AUTO-MATCH-SHOP.md
+  const am=shop&&shop.auto_match;
+  const autoBar=(am&&am.is_auto)?`<div class="autoWarn" title="${esc('zapytanie: '+(am.query||'')+'\ndopasowany tytuł: '+(am.picked_title||'')+'\n'+((am.candidates||[]).length)+' innych kandydatów w danych')}">
+    ${I.warn||'⚠'} <b>SKLEP DOPASOWANY AUTOMATEM</b>
+    <span>zgodność tytułu ${am.score!=null?Math.round(am.score*100)+'%':'—'} · niepotwierdzone · dane sprzedaży traktuj ostrożnie</span>
+  </div>`:'';
+  return `${autoBar}<div class="detMetrics">${items.join('')}</div>`;
 }
 function mediaHtml(x,vid){
   const vids=_detailVideos(x,vid);
