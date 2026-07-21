@@ -1155,6 +1155,7 @@ function closeMobileSidebar() {
             padding:9px 11px; font-size:11.5px; line-height:1.45; color:#e5e5e5; max-width:280px;
             pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.55); display:none;
             font-family:Inter,sans-serif; text-transform:none; letter-spacing:normal; white-space:normal; }
+        #tn-tooltip .tt-img { max-width:220px; max-height:220px; border-radius:8px; display:block; margin-bottom:6px; object-fit:cover; }
         #tn-tooltip .tt-title { color:#fff; font-weight:600; font-size:12px; }
         #tn-tooltip .tt-sub { color:#52a8ff; font-size:10px; margin-top:2px; }
         #tn-tooltip .tt-desc { color:#a1a1aa; margin-top:3px; font-size:11px; }`;
@@ -1170,8 +1171,9 @@ function closeMobileSidebar() {
         const el = ev.target && ev.target.closest ? ev.target.closest('[data-tip-title]') : null;
         if (!el) return;
         const b = ensureBox();
-        const sub = el.dataset.tipSub || '', desc = el.dataset.tipDesc || '';
-        b.innerHTML = `<div class="tt-title">${esc(el.dataset.tipTitle)}</div>`
+        const sub = el.dataset.tipSub || '', desc = el.dataset.tipDesc || '', img = el.dataset.tipImg || '';
+        b.innerHTML = (img ? `<img class="tt-img" src="${esc(img)}" alt="" onerror="this.style.display='none'">` : '')
+            + `<div class="tt-title">${esc(el.dataset.tipTitle)}</div>`
             + (sub ? `<div class="tt-sub">${esc(sub)}</div>` : '')
             + (desc ? `<div class="tt-desc">${esc(desc)}</div>` : '');
         b.style.display = 'block';

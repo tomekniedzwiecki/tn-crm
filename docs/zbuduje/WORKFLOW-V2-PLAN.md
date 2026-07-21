@@ -3,6 +3,28 @@
 **Status: F1 WDROŻONE + iteracje z odbioru (2026-07-03). Ten dokument = plan bazowy;
 poniższa sekcja „STAN WDROŻENIA" nadpisuje szczegóły, które zmieniły się przy odbiorze.**
 
+## 0a-quinquies. KROK `wybor` PROJEKTOWY + LOSOWANIE PORTFELA (2026-07-21 wieczór)
+
+Krok `wybor` przebudowany z **per-produkt** na **project-scope** (migracja
+`20260721c_wf2_wybor_project_scope.sql`, WDROŻONA). Decyzja Tomka 21.07: „Wybór produktu" per
+produkt był bez sensu — produkt w portfelu = wybór z definicji dokonany (chip zawsze done, krok
+bez roboty). Teraz to krok **DO ZREALIZOWANIA** na poziomie projektu: fabryka SAMA losuje produkty
+z całej puli approved (/trendy) i od razu dodaje je do portfela.
+- **def:** `scope=project`, `label='Wybór produktów'`, `milestone_label='Portfel skompletowany —
+  produkty wylosowane z całej puli'` (stage/sort/owner bez zmian: Etap 1, sort 5, admin).
+- **migracja:** usunęła 38 osieroconych instancji per-produkt `wybor`, dosiała 9 projektowych,
+  backfill → `done` dla 9 projektów mających ≥1 produkt (portfel istnieje = wybór zrealizowany).
+- **komenda:** `panel-sync.py wybor <projekt> [--count N] [--dry-run]` — cel = dopełnienie do **3**
+  produktów (decyzja 19.07); pula = `bud_tt_products status='approved'` MINUS id już użyte w
+  `wf2_products` (paginacja — cała pula, bo równe szanse); losowanie `SystemRandom.shuffle` z
+  filtrem różnorodności kategorii, druga runda bez filtra gdy brakuje do celu; **ZERO scoringu**
+  (żaden heat/plays/daty — decyzja 17.07). Domyka krok `done` + checklista VERBATIM + fields
+  `{Wylosowano, Kategorie}` + activity.
+- **`link_product`:** przestał auto-domykać `wybor` per produkt; ustawia projektowy `wybor` na
+  `in_progress` (portfel w budowie), `done` stawia komenda `wybor` (albo Tomek).
+- ⚠️ **Do dokończenia poza tą zmianą:** `WS['wybor']` w `tn-sklepy/projekt.html` (desc + `check`)
+  nadal ma STARE teksty per-produkt — wymaga aktualizacji na 3 nowe (klucz deduplikacji panelu).
+
 ## 0a-ter. PRZEBUDOWA PANELU POD FABRYKĘ (2026-07-18 noc — NADPISUJE strukturę etapów!)
 
 Panel `tn-sklepy/projekt.html` przebudowany OD ZERA na wzór `tn-app/projekt.html`
@@ -24,12 +46,15 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   weryfikacja w Meta BM to najdłuższa ścieżka projektu, MUSI biec równolegle do landingów.
   **PRZEBUDOWA 2026-07-21 (decyzja Tomka):** koniec modelu „Tomek kupuje w LH.pl + ręczne
   wklejanie rekordów". Domenę kupuje FABRYKA (owner 'client' → 'admin') przez edge `wfa-domain`
-  (GoDaddy Domains API; bramka wydatku = akcept Tomka, `confirm:true`; koszt auto → biznes_costs
+  (GoDaddy Domains API; **zakup AUTONOMICZNY — BEZ bramki zgody** (korekta decyzji Tomka 21.07
+  wieczór: `confirm:true` ustawia sesja sama, po zakupie wpisuje notę INFORMACYJNĄ retro
+  `tag='info'` z domeną i kwotą `amount_pln` zamiast pytania przed); koszt auto → biznes_costs
   + wf2_costs + activity), rekordy DNS wpisuje automat przez GoDaddy DNS API (nowe akcje
   `dns_get`/`dns_set`/`dns_delete`). **NS zostają na GoDaddy** (default nsXX.domaincontrol.com) —
   ZAKAZ `set_ns`/Vercel (ODWROTNIE niż w tn-app); sklep hostuje platforma Trevio. Podłączenie =
   `wf2-platform add_domain`, aktywacja = strażnik `wf2-orders-sync` (oba bez zmian; migracja
-  `20260721b_wf2_pl_domena_godaddy`))
+  `20260721b_wf2_pl_domena_godaddy`). Wykonane na żywo 21.07: `trafionek.pl` (GoDaddy order
+  4143108542, 30,27 zł) — `add_domain` wstrzymany do czasu właściwego konta merchanta.)
   · **2 Landing** (lp_dane → lp_plan → lp_styl_marka → lp_makiety 🏁 → lp_grafiki → lp_kod →
   lp_dopasowanie → lp_zycie → lp_finisz 🏁 — proces fabryki F0→F8 1:1, scope=product)
   · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →

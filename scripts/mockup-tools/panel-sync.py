@@ -44,6 +44,7 @@ import os
 import sys
 import json
 import math
+import random
 import argparse
 import mimetypes
 from datetime import datetime, timezone
@@ -208,19 +209,17 @@ def link_product(project, tt, name, slug=None, sort=None, cover=None, supplier=N
     log(f"link_product: INSERT tt={tt} name={name!r} sort={sort} status={row['status']} → {pid}")
     _rpc("wf2_ensure_steps", {"p_project": project})
     log(f"link_product: wf2_ensure_steps({project}) → dosiane kroki produktu")
-    # Etap 1: produkt trafia do portfela WYŁĄCZNIE w wyniku dokonanego wyboru → krok 'wybor' = done.
-    # NIE nadpisuj, jeśli krok ma już status inny niż pending (świadoma decyzja Tomka w panelu).
+    # Krok 'wybor' jest PROJEKTOWY (project-scope od migracji 20260721c): fabryka losuje
+    # portfel z całej puli approved komendą `panel-sync.py wybor`. Dodanie produktu = wybór
+    # W TOKU; status 'done' stawia komenda (albo Tomek w panelu) po skompletowaniu portfela.
     try:
         wrows = _get("wf2_steps", _scope_param(
-            {"project_id": f"eq.{project}", "step_key": "eq.wybor", "select": "id,status"}, pid))
-        cur = wrows[0]["status"] if wrows else None
-        if cur in (None, "pending"):
-            step_update(project, pid, "wybor", status="done")
-            log("link_product: krok 'wybor' → done (wybór dokonany = produkt w portfelu)")
-        else:
-            log(f"link_product: krok 'wybor' status={cur} — nie nadpisuję")
+            {"project_id": f"eq.{project}", "step_key": "eq.wybor", "select": "id,status"}, None))
+        if wrows and wrows[0].get("status") == "pending":
+            step_update(project, None, "wybor", status="in_progress")
+            log("link_product: projektowy krok 'wybor' pending → in_progress (portfel w budowie)")
     except Exception as e:
-        log(f"link_product: nie ustawiono 'wybor' done ({e})")
+        log(f"link_product: nie ustawiono 'wybor' in_progress ({e})")
     return pid
 
 
@@ -657,6 +656,148 @@ def kalkulacja(project, product, margin_min=10.0, margin_max=15.0, cost_usd=None
     return plan
 
 
+# ── 4c. wybor — krok PROJEKTOWY Etapu 1: fabryka LOSUJE portfel z całej puli approved ──
+# Krok „Wybór produktów" (project-scope od 20260721c) = DO ZREALIZOWANIA: fabryka sama
+# losuje produkty z CAŁEJ puli approved (/trendy) i od razu dodaje je do projektu. Cel
+# portfela = 3 produkty (decyzja 19.07). Dobór = PRAWDZIWE losowanie (decyzja 17.07): ZERO
+# scoringu/ważenia (żadnego heat, plays, dat) — RÓWNE SZANSE. Jedyne kryterium struktury to
+# różnorodność kategorii (szerokie testy): pula losowana w całości (SystemRandom.shuffle),
+# a przy przechodzeniu bierzemy produkt, którego kategoria nie jest jeszcze w portfelu; gdy
+# to nie wystarczy do celu — druga runda bez filtra kategorii (dopuszczamy duplikat kategorii
+# zamiast zawężać bazę). checklista VERBATIM z WS['wybor'] w tn-sklepy/projekt.html.
+PORTFEL_CEL = 3
+WYBOR_CHECKLIST = [
+    {"t": "Pula approved z /trendy pobrana (cała baza, równe szanse)", "done": True},
+    {"t": "Produkty wylosowane bez preferencji (różnorodność kategorii)", "done": True},
+    {"t": "Portfel skompletowany — produkty dodane do projektu", "done": True},
+]
+
+
+def _get_all(table, params, page=1000):
+    """GET z paginacją (PostgREST tnie do 1000 wierszy — L feedback-postgrest-1000-row-default).
+    Losowanie z RÓWNYMI SZANSAMI wymaga PEŁNEJ puli, więc dociągamy wszystkie strony."""
+    out, off = [], 0
+    while True:
+        rows = _get(table, {**params, "limit": page, "offset": off})
+        out.extend(rows)
+        if len(rows) < page:
+            break
+        off += page
+    return out
+
+
+def _approved_pool(project):
+    """CAŁA pula bud_tt_products status='approved' NIE użytych w wf2_products (JAKIKOLWIEK
+    projekt — jeden produkt = jeden sklep). Zwraca listę {id, pl_name, category, cover, supplier}."""
+    used = {r["tt_product_id"] for r in
+            _get_all("wf2_products", {"select": "tt_product_id", "tt_product_id": "not.is.null"})
+            if r.get("tt_product_id")}
+    rows = _get_all("bud_tt_products", {
+        "status": "eq.approved",
+        "select": "id,pl_name,category,curated_image,chosen_link,ali_main:ali_snapshot->>main_image"})
+    pool = []
+    for r in rows:
+        if r["id"] in used:
+            continue
+        pool.append({"id": r["id"], "pl_name": r.get("pl_name"), "category": r.get("category"),
+                     "cover": r.get("curated_image") or r.get("ali_main"),
+                     "supplier": r.get("chosen_link")})
+    return pool
+
+
+def wybor_portfel(project, count=None, dry_run=False):
+    """Krok projektowy 'wybor' — fabryka losuje portfel z całej puli approved RÓWNYMI SZANSAMI.
+    count = ile wylosować; domyślnie dopełnij portfel do PORTFEL_CEL (3). count==0 → tylko
+    domknij krok (portfel już skompletowany). --dry-run = zero zapisów (podgląd puli + wylosowanych)."""
+    existing = _get("wf2_products", {"project_id": f"eq.{project}", "select": "id,tt_product_id,name"})
+    have_cats = set()
+    tt_ids = [e["tt_product_id"] for e in existing if e.get("tt_product_id")]
+    if tt_ids:
+        catrows = _get("bud_tt_products", {"id": f"in.({','.join(tt_ids)})", "select": "category"})
+        have_cats = {c.get("category") for c in catrows if c.get("category")}
+
+    target = max(0, int(count)) if count is not None else max(0, PORTFEL_CEL - len(existing))
+
+    pool = _approved_pool(project)
+    M = len(pool)
+
+    # ── losowanie: shuffle CAŁEJ puli (równe szanse), potem dobór z filtrem kategorii ──
+    picked, second_round = [], False
+    if target > 0:
+        rng = random.SystemRandom()
+        rng.shuffle(pool)
+        picked_cats = set(have_cats)
+        for p in pool:                                  # runda 1: kategoria nie w portfelu
+            if len(picked) >= target:
+                break
+            cat = p.get("category")
+            if cat and cat in picked_cats:
+                continue
+            picked.append(p)
+            if cat:
+                picked_cats.add(cat)
+        if len(picked) < target:                        # runda 2: bez filtra kategorii
+            second_round = True
+            chosen = {p["id"] for p in picked}
+            for p in pool:
+                if len(picked) >= target:
+                    break
+                if p["id"] in chosen:
+                    continue
+                picked.append(p)
+                chosen.add(p["id"])
+
+    picked_cats_list = sorted({p["category"] for p in picked if p.get("category")})
+    cats_field = ", ".join(picked_cats_list) if picked_cats_list else "—"
+
+    # ── DRY-RUN: pokaż pulę + wylosowane, ZERO zapisów ──
+    if dry_run:
+        log("wybor: DRY-RUN (zero zapisów)")
+        log(f"wybor: portfel {len(existing)}/{PORTFEL_CEL} · cel do wylosowania: {target} · "
+            f"pula wolnych approved: M={M} · kategorie w portfelu: {sorted(have_cats) or '—'}")
+        if target == 0:
+            log("wybor: portfel skompletowany — nic do losowania (komenda domknęłaby tylko krok).")
+        for i, p in enumerate(picked, 1):
+            log(f"wybor:   [{i}] {p['id']} · {p['pl_name']!r} · kat={p.get('category') or '—'}")
+        if second_round:
+            log("wybor: (druga runda BEZ filtra kategorii — dopuszczono duplikat kategorii)")
+        if target > 0 and len(picked) < target:
+            log(f"wybor: UWAGA — pula wyczerpana, wylosowano {len(picked)}/{target}")
+        return {"target": target, "pool": M, "picked": picked, "second_round": second_round}
+
+    # ── ZAPIS: dodaj wylosowane, potem domknij krok ──
+    for p in picked:
+        link_product(project, p["id"], p["pl_name"], cover=p.get("cover"), supplier=p.get("supplier"))
+
+    if target > 0 and not picked:
+        log(f"wybor: pula wolnych approved pusta (M={M}) — nic nie dodano, krok NIE domknięty.")
+        return {"target": target, "pool": M, "picked": [], "second_round": False}
+
+    n_total = len(existing) + len(picked)
+    note_parts = []
+    if second_round:
+        note_parts.append("druga runda bez filtra kategorii — dopuszczono duplikat kategorii "
+                          "(pula wyczerpana dla nowych kategorii)")
+    if target > 0 and len(picked) < target:
+        note_parts.append(f"pula wyczerpana — wylosowano {len(picked)}/{target}")
+    if not note_parts:
+        note_parts.append("portfel wylosowany z całej puli approved — równe szanse, bez scoringu"
+                          if picked else "portfel już skompletowany — 0 do wylosowania")
+    note = " · ".join(note_parts)
+
+    fields = {"Wylosowano": f"{len(picked)} z puli {M}", "Kategorie": cats_field}
+    sid = step_update(project, None, "wybor", status="done",
+                      note=note, fields=fields, checklist=WYBOR_CHECKLIST)
+    try:
+        activity_add(project, "portfel_wylosowany",
+                     "Wybór: wylosowano %d z puli %d (portfel %d/%d; kategorie: %s) — równe szanse, bez scoringu"
+                     % (len(picked), M, n_total, PORTFEL_CEL, cats_field))
+    except Exception as e:
+        log(f"wybor: activity_add pominięte ({e})")
+    log(f"wybor: krok 'wybor' done → {sid} · dodano {len(picked)} (portfel {n_total}/{PORTFEL_CEL}) · {note}")
+    return {"target": target, "pool": M, "picked": picked, "second_round": second_round}
+
+
 # ── 4b. Fabryka wideo: koszty / oś czasu / rejestr kreacji ──
 def cost_add(project, product, amount, kind="fal", currency="USD", step=None, stage=5,
              note=None, created_by="auto"):
@@ -856,6 +997,14 @@ def main(argv=None):
                    help="pełna rekalkulacja + nowy akcept mimo zaakceptowanej drabinki (NIE omija GATE source)")
     p.add_argument("--dry-run", action="store_true", help="pokaż wyliczenia (JSON), ZERO zapisów")
 
+    p = sub.add_parser("wybor",
+                       help="krok projektowy Etapu 1: fabryka LOSUJE portfel z całej puli approved "
+                            "(równe szanse, bez scoringu; różnorodność kategorii; cel 3 produkty)")
+    p.add_argument("project", help="uuid projektu (wf2_projects.id)")
+    p.add_argument("--count", type=int,
+                   help="ile produktów wylosować (domyślnie dopełnij portfel do 3)")
+    p.add_argument("--dry-run", action="store_true", help="pokaż pulę + wylosowane, ZERO zapisów")
+
     a = ap.parse_args(argv)
     if a.cmd == "link":
         print(link_product(a.project, a.tt, a.name, slug=a.slug, sort=a.sort,
@@ -883,6 +1032,8 @@ def main(argv=None):
     elif a.cmd == "kalkulacja":
         kalkulacja(a.project, a.product, margin_min=a.margin_min, margin_max=a.margin_max,
                    cost_usd=a.cost_usd, refresh=a.refresh, force=a.force, dry_run=a.dry_run)
+    elif a.cmd == "wybor":
+        wybor_portfel(a.project, count=a.count, dry_run=a.dry_run)
 
 
 if __name__ == "__main__":

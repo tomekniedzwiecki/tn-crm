@@ -579,8 +579,8 @@ function renderMatrix(prodDefs) {
         }).join('');
         // miniatura zdjęcia → lightbox produktu (oba tryby: szybka ocena bez wchodzenia w kartę)
         const cover = p.cover_url
-            ? `<img src="${escapeHtml(p.cover_url)}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 cursor-pointer" onclick="event.stopPropagation();openProductLB('${p.id}')" onerror="this.style.display='none'" title="Podgląd produktu">`
-            : `<div class="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0 cursor-pointer" onclick="event.stopPropagation();openProductLB('${p.id}')"><i class="ph ph-package text-zinc-600"></i></div>`;
+            ? `<img src="${escapeHtml(p.cover_url)}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 cursor-pointer" onclick="event.stopPropagation();openProductLB('${p.id}')" onerror="this.style.display='none'" data-tip-title="${escapeHtml(p.name || 'Produkt')}" data-tip-sub="Klik otwiera podgląd" data-tip-img="${escapeHtml(p.cover_url)}">`
+            : `<div class="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0 cursor-pointer" onclick="event.stopPropagation();openProductLB('${p.id}')" title="Podgląd produktu"><i class="ph ph-package text-zinc-600"></i></div>`;
         // ikonki wiersza: koszyk (aukcja) + wideo (lightbox produktu) — subtelne, gdy dane istnieją
         const hasVid = Array.isArray(p.tiktoks) && p.tiktoks.length > 0;
         const rowIcons = (p.supplier_url || hasVid) ? `<span class="mx-rowics">${
@@ -608,6 +608,7 @@ function renderMatrix(prodDefs) {
             ${admin ? `<td class="px-3 py-2.5 text-right whitespace-nowrap">
                 <button class="text-zinc-600 hover:text-[#52a8ff] p-1" onclick="openCard('${p.id}')" title="Karta produktu"><i class="ph ph-identification-card"></i></button>
                 <button class="text-zinc-600 hover:text-white p-1" onclick="openProductModal('${p.id}')" title="Edycja"><i class="ph ph-pencil-simple"></i></button>
+                <button class="text-zinc-600 hover:text-[#e5484d] p-1" onclick="event.stopPropagation();deleteProduct('${p.id}')" title="Usuń produkt"><i class="ph ph-trash"></i></button>
             </td>` : ''}
         </tr>`;
     }).join('');
@@ -663,6 +664,7 @@ function renderMatrixCards(prodDefs) {
             ? `<div class="mxc-actions">
                 <button class="mxc-act" onclick="openCard('${p.id}')" title="Karta produktu"><i class="ph ph-identification-card"></i></button>
                 <button class="mxc-act" onclick="openProductModal('${p.id}')" title="Edycja"><i class="ph ph-pencil-simple"></i></button>
+                <button class="mxc-act mxc-act-del" onclick="event.stopPropagation();deleteProduct('${p.id}')" title="Usuń produkt"><i class="ph ph-trash"></i></button>
             </div>` : '';
         const circles = prodDefs.map(d => {
             const st = stepFor(d.key, p.id) || { status: 'pending' };

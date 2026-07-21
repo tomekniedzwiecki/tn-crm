@@ -58,7 +58,7 @@ i `import panel_sync as ps`. Każda funkcja loguje `insert/update/skip + id`.
 | `cost_add` | `(project, product, amount, kind='fal', currency='USD', step=None, stage=5, note=None) → id` | Koszt do `wf2_costs` (tabela BEZ uniku). Dedup po `(project, product, step, kind, note)` — **bez `note` NIE deduplikuje** (świadomie: kolejne pozycje). `step` = kolumna `step_key`. ⚠ Fabryka banerów: koszt fal loguje `ad-forge --finalize` sam (`kind='fal'`, `step='agr_generacja'`) — operator NIE woła własnego `cost_add` (noty się różnią → dublet w nagłówku bloku). Manus usunięty z modułu (19.07). |
 | `activity_add` | `(project, action, description, actor='auto') → id` | Wpis na oś czasu `wf2_activities` (log fabryki, kropka zielona `actor='auto'`). Bez dedup — każde wołanie = nowy wiersz. |
 
-**CLI:** `panel-sync.py {link|step|artifact|meta|projlink|upload|kalkulacja} …` (`-h` po szczegóły).
+**CLI:** `panel-sync.py {link|step|artifact|meta|projlink|upload|doc|kalkulacja|wybor} …` (`-h` po szczegóły).
 `step`/`artifact`: `product='-'`/`projekt` = krok projektu. `--fields/--checklist/--meta/patch` = JSON.
 `--checklist` przyjmuje listę stringów (owija w `{t,done:true}`) lub gotowe `{t,done}`.
 ⚠️ Polskie znaki przez CLI na Windows = ryzyko cp1250 — do backfillu z PL tekstem **importuj w Pythonie**.
@@ -86,8 +86,36 @@ Kolumny (`product_meta`): `price, cost_purchase, cost_shipping, fees_pct, margin
 - `Drabinka cenowa zaakceptowana (TEST→SCALE→OPT)`
 
 **Blokada kolejności:** `kalkulacja` poprzedza `lp_dane` — F0 fabryki NIE zamknie się bez
-`kalkulacja=done` z odhaczoną checklistą (§Blokada kolejności faz). `link_product` (krok `wybor`)
-AUTO-DOMYKA krok `wybor`, więc pierwsza realna robota per produkt to `kalkulacja`.
+`kalkulacja=done` z odhaczoną checklistą (§Blokada kolejności faz). `link_product` ustawia
+PROJEKTOWY krok `wybor` na `in_progress` (portfel w budowie); status `done` stawia komenda
+`wybor` (albo Tomek w panelu) po skompletowaniu portfela — pierwsza realna robota per produkt
+to `kalkulacja`.
+
+## Komenda fabryki `wybor` (Etap 1 — losowanie portfela; project-scope od 21.07)
+`panel-sync.py wybor <projekt> [--count N] [--dry-run]` — krok `wybor` („Wybór produktów",
+Etap 1 „Fundament sklepu", **project-scope**, sort 5) **WYKONUJE FABRYKA**: sama losuje
+produkty z całej puli approved (/trendy) i od razu dodaje je do projektu (`link_product`).
+Zastąpił dawny krok per-produkt „chip zawsze done" (decyzja Tomka 21.07: produkt w portfelu =
+wybór z definicji dokonany, krok bez roboty). Przebieg JEDNEJ komendy:
+1. **Cel:** `--count N` albo domyślnie dopełnienie portfela do **3** (decyzja 19.07). `N=0`
+   (portfel pełny) → komenda tylko domyka krok.
+2. **Pula:** `bud_tt_products status='approved'` z WYKLUCZENIEM id już użytych w
+   `wf2_products.tt_product_id` (JAKIKOLWIEK projekt — jeden produkt = jeden sklep). Pobierana
+   z PAGINACJĄ (PostgREST tnie do 1000) — losowanie równych szans wymaga PEŁNEJ puli.
+3. **Losowanie:** `SystemRandom.shuffle` całej puli, dobór po kolei z filtrem różnorodności
+   kategorii (bierz produkt, którego kategoria nie jest jeszcze w portfelu); gdy to nie dopełni
+   celu → druga runda BEZ filtra kategorii (duplikat kategorii zamiast zawężania bazy).
+   **ZERO scoringu/ważenia** (żaden heat, plays, daty — decyzja 17.07): równe szanse.
+4. Każdy wylosowany → `link_product(cover = curated_image ‖ ali_snapshot.main_image, supplier = chosen_link)`.
+5. Krok `wybor` → `done` z checklistą (VERBATIM — trzy pozycje niżej) + fields
+   `{Wylosowano:'N z puli M', Kategorie}` + nota (odnotowuje drugą rundę / wyczerpanie puli) +
+   wpis `wf2_activities`.
+
+`--dry-run` = pokaż liczność puli + wylosowane (id/nazwa/kategoria), ZERO zapisów.
+**Checklista VERBATIM** (z `WS['wybor'].check` w `projekt.html`):
+- `Pula approved z /trendy pobrana (cała baza, równe szanse)`
+- `Produkty wylosowane bez preferencji (różnorodność kategorii)`
+- `Portfel skompletowany — produkty dodane do projektu`
 
 ## Jak panel renderuje (co warunkuje efekt)
 - **Krok**: kafel etapu czyta `status` + `data.fields` (mapowane na pola z `WS[step_key].fields`)
@@ -116,7 +144,7 @@ Egzekwuje `gate-check.py` blok `panel_sync` (severity FAIL) — kolumna „Gate"
 
 | Etap / artefakt fabryki | Krok panelu | kind artefaktu | Co w `data.fields` / kolumnach | Gate (`panel_sync`) |
 |---|---|---|---|---|
-| wybór produktu (`wybor`) *(auto-domknięty przez `link_product`)* | *(wiersz produktu)* | — | KOLUMNY `slug, cover_url, sort, repo_path, cost_purchase` (wstępny koszt) | `karta_kolumny_wymagane` |
+| **wybór produktów (`wybor`)** *(project-scope od 21.07 — fabryka LOSUJE portfel: `panel-sync.py wybor`)* | krok `wybor` (projektowy, `product_id IS NULL`) | — | checklist 3 poz. VERBATIM · fields `{Wylosowano, Kategorie}`; wylosowane produkty → KOLUMNY `name, cover_url, supplier_url, tt_product_id, sort` | *(komenda `wybor`; milestone „Portfel skompletowany")* |
 | **kalkulacja ceny (`kalkulacja`)** *(nowe 21.07 — wykonuje fabryka: `panel-sync.py kalkulacja`)* | krok `kalkulacja` | checklist 3 poz. VERBATIM · fields `{cena_zakupu, kurs_nbp, cena_pl, narzut_pct}` | KOLUMNY `price, cost_purchase (potw.), cost_shipping, fees_pct, margin_mode, status` + `price_ladder{accepted_by:'fabryka'}` | `karta_kolumny_wymagane` + blokada kolejności (przed `lp_dane`) |
 | F0 kadry keep (galeria ref) | `lp_dane` | `gallery` | `{source_ok, cena_pl, koszt_landed, marza, ocena, zdjecia_keep, wideo_keep}` | `kroki_done[lp_dane]` |
 | F0 KARTA-PRAWDY.md / PASZPORT.md / GALERIA.md / WIDEO.md / LEDGER.md | `lp_dane` | `doc` (**`panel-sync doc` → wf2-docs, klikalny chip**) | `{karta_url, paszport_url}` (url = `wf2-docs/<slug>/…`) | `kroki_done[lp_dane]` |
