@@ -64,6 +64,13 @@ Deno.serve(async (req) => {
   const t0 = Date.now();
   const out = { campaigns: 0, rows_campaign: 0, rows_ad: 0, alerts: 0, proposals: 0, skipped_excluded: 0, errors: [] as string[] };
 
+  // Okno trailing kończy się WCZORAJ — „dziś" to niedomknięty dzień (Meta liczy w toku), a jego
+  // częściowe liczby zaniżałyby P&L/agregaty. Explicit time_range zamiast date_preset=last_7d
+  // (który obejmuje dziś). 7 dni inclusive: (dziś-7)…(wczoraj).
+  const uYesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const uSince7 = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  const TIME_RANGE = encodeURIComponent(JSON.stringify({ since: uSince7, until: uYesterday }));
+
   const { data: products } = await sb.from("wf2_products")
     .select("id, project_id, name, campaign_id, price").not("campaign_id", "is", null).neq("campaign_id", "");
   const { data: projects } = await sb.from("wf2_projects").select("id, meta_ad_account_id");
@@ -87,7 +94,7 @@ Deno.serve(async (req) => {
     }
     try {
       // ── campaign-level (P&L) ──
-      const base = `${GRAPH}/${prod.campaign_id}/insights?time_increment=1&date_preset=last_7d&access_token=${token}`;
+      const base = `${GRAPH}/${prod.campaign_id}/insights?time_increment=1&time_range=${TIME_RANGE}&access_token=${token}`;
       const cRows = await graphPaged(`${base}&fields=spend,impressions,clicks,inline_link_clicks,reach,frequency,actions,action_values`);
       for (const r of cRows) {
         const purchases = act(r.actions as never, "omni_purchase", "purchase", "offsite_conversion.fb_pixel_purchase");
@@ -145,7 +152,7 @@ Deno.serve(async (req) => {
     const prodIds = (products ?? []).map((p) => p.id);
     if (prodIds.length) {
       const { data: stats } = await sb.from("wf2_ad_stats")
-        .select("product_id, level, date, spend, impressions, link_clicks, atc, purchases, frequency, creative_id")
+        .select("product_id, level, date, spend, impressions, clicks, link_clicks, atc, purchases, frequency, creative_id")
         .in("product_id", prodIds).gte("date", since);
       // klucz tygodnia ISO — dedup: max 1 karta danego typu na produkt/kreację na tydzień
       const wk = (() => {
@@ -187,8 +194,14 @@ Deno.serve(async (req) => {
           const impR = recent.reduce((s, r) => s + int(r.impressions), 0);
           const impP = prior.reduce((s, r) => s + int(r.impressions), 0);
           if (impR < 1500 || impP < 1500) continue;
-          const ctrR = recent.reduce((s, r) => s + int(r.link_clicks), 0) / impR;
-          const ctrP = prior.reduce((s, r) => s + int(r.link_clicks), 0) / impP;
+          const lcR = recent.reduce((s, r) => s + int(r.link_clicks), 0);
+          const lcP = prior.reduce((s, r) => s + int(r.link_clicks), 0);
+          const clkR = recent.reduce((s, r) => s + int(r.clicks), 0);
+          const clkP = prior.reduce((s, r) => s + int(r.clicks), 0);
+          // GUARD: inline/link_clicks > clicks = anomalia atrybucji Meta → CTR niewiarygodny, nie flaguj
+          if (lcR > clkR || lcP > clkP) continue;
+          const ctrR = lcR / impR;
+          const ctrP = lcP / impP;
           if (ctrP <= 0) continue;
           const drop = 1 - ctrR / ctrP;
           if ((drop >= 0.25 && freqLast > 3) || drop >= 0.5) {

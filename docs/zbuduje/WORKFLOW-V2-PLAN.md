@@ -551,6 +551,15 @@ Ból v1, którego v2 NIE dziedziczy:
 | `ads_pixel` | Pixel 🏁 | admin (automat + 30 s token) | automat: pixel na koncie klienta (`POST /adspixels`), weryfikacja domen (TXT `wfa-domain`), `set_integration` → **CAPI emituje platforma Trevio**; ręczne 30 s: token CAPI w Events Managerze (**wąski per-pixel, NIGDY master**); GATE: Purchase testowy + dedup po `event_id` |
 | `ads_preflight` | Pre-flight 🏁 | admin (auto-checki po tokenie) | warunek wejścia: Leadsie konto+strona Connected + `WF2_META_TOKEN` aktywny. Automaty po tokenie: mikro-wydatek schodzi, Account Quality, limit konta. Ręcznie: blocklista komentarzy PL, naming/UTM z ID, plan struktury (1 kampania=1 produkt=1 ad set ABO) |
 
+**Weryfikator środowiska `wf2-ads-verify`** (Graph API, partner access BM; SSOT
+`docs/zbuduje/ADS-ONBOARDING-LEADSIE.md` §9): odczytuje to, czego Leadsie NIE potwierdza —
+waluta PLN + strefa Europe/Warsaw, metoda płatności, przypięcie strony, pixel — i **ustawia**
+`spend_cap` 150000 (1500 zł) na koncie PLN. Auto-odhacza VERBATIM: `ads_konto` (waluta/strefa),
+`ads_budzet` (środki + limit), `ads_strona` (strona przypięta); rozjazd waluty/strefy = nota
+`blokada` „konto DO WYMIANY". ⛔ GUARD `EXCLUDED_ACCOUNTS=['act_1537659320657091']` (marka Tomka).
+Bez `WF2_META_TOKEN` → `{skipped:'no_token'}`. Panel: przycisk „Weryfikuj środowisko (API)" w
+warsztacie `ads_konto`. Cron `wf2-ads-verify` 06:40 PL (migracja `20260722i_wf2_ads_verify_cron.sql`).
+
 ### ETAP 5 — Materiały i kampania (scope: product)
 | Krok | Label | Owner | Uwagi |
 |---|---|---|---|

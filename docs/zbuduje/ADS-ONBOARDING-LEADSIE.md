@@ -166,3 +166,44 @@ to `ads_pixel`/`ads_preflight` lub ręczna weryfikacja, nigdy na podstawie webho
 Token CAPI generujemy **per pixel** w Events Managerze — wąski zakres, do jednego zbioru zdarzeń.
 Do Trevio oddajemy **TYLKO** ten token, **NIGDY** master/system-user tokenu. Wyciek wąskiego tokenu =
 szkoda ograniczona do jednego pixela; master token = klucz do całego BM. Bez wyjątków.
+
+---
+
+## 9. WERYFIKATOR `wf2-ads-verify` (środowisko, którego Leadsie NIE potwierdza)
+
+Leadsie odhacza tylko **partner access + konto + strona** (webhook, §2–3). Reszta środowiska —
+**waluta/strefa, metoda płatności, środki, limit wydatków, przypięcie strony do konta, pixel** —
+wymaga odczytu przez **Graph API** (partner access do BM klientów). Robi to edge **`wf2-ads-verify`**
+(Graph v23.0), auto-odhaczając w checklistcie **VERBATIM** to, czego webhook nie widzi.
+
+- **Kontrakt (POST):** `{action:'verify', project_id}` (1 projekt) · `{action:'sweep'}` (wszystkie projekty
+  z `meta_ad_account_id NOT NULL`; wołany cronem).
+- **Gate:** team JWT (`team_members`) **LUB** `x-wf2-secret == WF2_GEN_SECRET` (wzorzec `wf2-platform`);
+  bez auth → 403. Deploy `--no-verify-jwt` (`npm run deploy:wf2-ads-verify`).
+- **⛔ TWARDY GUARD:** `EXCLUDED_ACCOUNTS = ['act_1537659320657091']` (konto marki osobistej Tomka) —
+  konto z listy jest pomijane, **NIGDY** nie odpytywane ani modyfikowane (to samo konto wykluczone w
+  `wf2-ads-sync`).
+- **Fail-closed:** bez `WF2_META_TOKEN` → 200 `{skipped:'no_token'}` (nic nie sfabrykuje; token jeszcze
+  nie istnieje w Supabase).
+- **Co czyta i USTAWIA (per konto = `wf2_projects.meta_ad_account_id`):**
+  1. `GET /{act}?fields=currency,timezone_name,account_status,funding_source_details,spend_cap` →
+     waluta==PLN + strefa==Europe/Warsaw? metoda płatności jest? `account_status==1`?
+  2. `GET /{act}/promote_pages` (fallback `assigned_pages`) → strona przypięta do konta.
+  3. `GET /{act}/adspixels` → pixel istnieje (zapis `pixel_id` na projekt gdy kolumna pusta).
+  4. `spend_cap` brak/0 → `POST /{act} {spend_cap:150000}` (**1500 zł**, jednostka = grosze/minor-units;
+     bufor nad budżetem 1000 zł). Ustawiane **tylko** na koncie PLN/Warsaw (rozjazd = konto DO WYMIANY).
+- **Co odhacza (unia, VERBATIM — jak webhook; nigdy nie odznacza):**
+  `ads_konto` → „Waluta PLN + strefa Europe/Warsaw zweryfikowane w Business Settings" (gdy oba OK);
+  `ads_budzet` → „Środki WIDOCZNE w Ads Managerze (nie tylko deklaracja)" (przy aktywnej metodzie
+  płatności — saldo prepaid nie jest czytelne wprost przez Graph, dopisane w `data.ads_verify`) +
+  „Limit wydatków konta ustawiony (fabryka, po WF2_META_TOKEN)" (po ustawieniu/potwierdzeniu spend_cap);
+  `ads_strona` → „Strona przypisana do konta reklamowego (wymóg create_ad)" (gdy strona przypięta).
+- **Rozjazd waluty/strefy** = nota `blokada` „⚠️ AUTOMAT: środowisko — konto {act} ma walutę X/strefę Y
+  (wymagane PLN/Europe-Warsaw) — konto DO WYMIANY (nieodwracalne)" (dedup po otwartej nocie) + **BEZ**
+  odhaczenia. Pełny wynik → `wf2_steps(ads_konto).data.ads_verify = {at, wyniki}`; `wf2_activities(ads_verify)`.
+- **Cron:** `wf2-ads-verify` (migracja `20260722i_wf2_ads_verify_cron.sql`, apply
+  `node scripts/apply-wf2-ads-verify-cron.mjs`) — `40 4 * * *` (**06:40 PL**, 20 min po `wf2-ads-sync`);
+  `action:'sweep'`, `timeout_milliseconds:350000` (obejście 5 s pg_net), sekret z Vault `wf2_gen_secret`.
+- **Panel** (`projekt.html`, warsztat `ads_konto`): przycisk „Weryfikuj środowisko (API)" (`adsVerifyEnv`)
+  → `functions.invoke('wf2-ads-verify')` + sekcja `adsVerifyBlock` (staty checków, timestamp, styl Geist).
+  Odpowiedź `{skipped:'no_token'}` → toast „WF2_META_TOKEN nie ustawiony — weryfikacja uśpiona".

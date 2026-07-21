@@ -128,7 +128,13 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   waluty/2FA/karty (to `ads_pixel`/`ads_preflight`). **Checklisty i opisy 5 kroków `ads_*` przebudowane
   pod Leadsie 21.07** (migracja `20260722h_wf2_etap4_leadsie_teksty`): CAPI emituje platforma Trevio po
   podaniu wąskiego tokenu per-pixel (generujemy MY w Events Managerze, NIGDY master), limit wydatków
-  ustawia fabryka po `WF2_META_TOKEN`.
+  ustawia fabryka po `WF2_META_TOKEN`. **Weryfikator środowiska = edge `wf2-ads-verify`** (Graph API,
+  partner access BM; cron `wf2-ads-verify` 06:40 PL, migracja `20260722i_wf2_ads_verify_cron`): odczytuje
+  to, czego Leadsie NIE potwierdza (waluta PLN/strefa Europe-Warsaw, metoda płatności, przypięcie strony,
+  pixel), USTAWIA `spend_cap` 150000 (1500 zł), auto-odhacza VERBATIM `ads_konto`/`ads_budzet`/`ads_strona`,
+  rozjazd waluty/strefy = nota „konto DO WYMIANY". ⛔ GUARD `EXCLUDED_ACCOUNTS=['act_1537659320657091']`
+  (marka Tomka); bez `WF2_META_TOKEN` → `{skipped:'no_token'}`; przycisk „Weryfikuj środowisko (API)" w
+  warsztacie `ads_konto`.
 - Auto-create projektu: tpay-webhook przy PEŁNEJ płatności za budowę (amt ≥ 1000; decyzja
   Tomka 21.07.2026 — sama rezerwacja 500 zł NIE tworzy projektu; blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).

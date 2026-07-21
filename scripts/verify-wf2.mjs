@@ -321,5 +321,94 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   cr.status < 300 ? ok('wf2_projects: kolumny work_consent_*/customer_nip/customer_company (migracja zaaplikowana)') : bad('wf2_projects kolumny zgody', `status ${cr.status} — migracja 20260722c zaaplikowana?`);
 }
 
+// ── 13. Weryfikator środowiska reklamowego (wf2-ads-verify) — guard, gate, VERBATIM, cron ──
+// Etap 4: czyta konto reklamowe przez Graph API (partner access BM) i auto-odhacza to, czego
+// Leadsie NIE potwierdza. Fail-closed bez WF2_META_TOKEN. SSOT: ADS-ONBOARDING-LEADSIE.md.
+{
+  const vPath = join(ROOT, 'supabase', 'functions', 'wf2-ads-verify', 'index.ts');
+  const v = existsSync(vPath) ? readFileSync(vPath, 'utf8') : '';
+  v ? ok('wf2-ads-verify/index.ts istnieje (weryfikator środowiska)') : bad('wf2-ads-verify', 'brak supabase/functions/wf2-ads-verify/index.ts');
+
+  // TWARDY GUARD: EXCLUDED_ACCOUNTS z kontem marki Tomka w verify ORAZ to samo konto wykluczone
+  // w wf2-ads-sync (sync iteruje konta w health-scan) — inaczej ryzyko odpytania/mutacji konta Tomka.
+  (v.includes('EXCLUDED_ACCOUNTS') && v.includes('act_1537659320657091'))
+    ? ok('wf2-ads-verify: EXCLUDED_ACCOUNTS = [act_1537659320657091] (guard marki Tomka)')
+    : bad('wf2-ads-verify guard', 'brak EXCLUDED_ACCOUNTS / act_1537659320657091');
+  const syncSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-sync', 'index.ts'), 'utf8');
+  syncSrc.includes('1537659320657091')
+    ? ok('wf2-ads-sync: to samo konto Tomka wykluczone (sync iteruje konta)')
+    : bad('wf2-ads-sync guard', 'brak wykluczenia konta 1537659320657091');
+
+  // fail-closed: bez WF2_META_TOKEN funkcja zwraca {skipped:'no_token'} (nic nie sfabrykuje)
+  v.includes('no_token') ? ok('wf2-ads-verify: fail-closed {skipped:no_token} bez WF2_META_TOKEN') : bad('wf2-ads-verify no_token', 'brak gałęzi no_token');
+
+  // gate: POST bez auth → 401/403 (NIGDY 200)
+  const st = await edge('wf2-ads-verify', { action: 'verify', project_id: 'x' });
+  (st === 401 || st === 403) ? ok(`wf2-ads-verify bez auth → ${st}`) : bad('wf2-ads-verify gate', `status ${st} (oczekiwane 401/403)`);
+
+  // jawne kolumny (bez .select('*') na service-role)
+  (!v.includes(".select('*')") && !v.includes('.select("*")')) ? ok('wf2-ads-verify: jawna lista kolumn (bez .select(*))') : bad('wf2-ads-verify', '.select(*) na service-role');
+
+  // VERBATIM auto-odhaczeń: stałe verify == WS panelu == CHECKLIST_MAP (rozjazd = „duch" checklisty)
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+  for (const cst of ['CHECK_ADS_KONTO_WALUTA', 'CHECK_ADS_BUDZET_SRODKI', 'CHECK_ADS_BUDZET_LIMIT', 'CHECK_ADS_STRONA_PRZYPISANA']) {
+    const m = v.match(new RegExp(`const ${cst} = "([^"]+)"`));
+    const verbatim = m ? m[1] : null;
+    (verbatim && panelSrc.includes(verbatim) && mapSrc.includes(verbatim))
+      ? ok(`wf2-ads-verify ${cst} VERBATIM (verify ↔ WS ↔ CHECKLIST_MAP)`)
+      : bad(`wf2-ads-verify ${cst}`, verbatim ? 'VERBATIM rozjazd między verify, WS i mapą' : `brak ${cst} w verify`);
+  }
+
+  // panel: przycisk + sekcja weryfikatora (adsVerifyBlock/adsVerifyEnv) wpięte w krok ads_konto
+  (panelSrc.includes('adsVerifyBlock') && panelSrc.includes('adsVerifyEnv') && panelSrc.includes('wf2-ads-verify'))
+    ? ok('projekt.html: przycisk „Weryfikuj środowisko (API)" (adsVerifyBlock/adsVerifyEnv)')
+    : bad('projekt.html ads-verify', 'brak adsVerifyBlock/adsVerifyEnv/wywołania wf2-ads-verify');
+
+  // deploy + migracja cron
+  const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
+  /"deploy:wf2-ads-verify"\s*:/.test(pkg) ? ok('package.json ma deploy:wf2-ads-verify') : bad('package.json', 'brak deploy:wf2-ads-verify');
+  existsSync(join(ROOT, 'supabase', 'migrations', '20260722i_wf2_ads_verify_cron.sql'))
+    ? ok('migracja 20260722i_wf2_ads_verify_cron.sql obecna') : bad('migracja cron ads-verify', 'brak pliku migracji');
+}
+
+// ── 14. Nowe teksty checklist E5/E6 (backlog audytów v1) — WS panelu + spójność WS↔CHECKLIST_MAP ──
+{
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+
+  // nowe pozycje muszą istnieć VERBATIM w WS (klucz deduplikacji ze stanem)
+  const newChecks = [
+    'DSA: beneficjent i płatnik ustawieni na każdej grupie (wymóg EU)',
+    'Wideo wgrane do biblioteki konta (ręcznie — MCP nie ma uploadu)',
+    'Pule retargetingu (custom audiences) utworzone od dnia 1',
+    'Próbny ads_create_creative przeszedł (wykrywa brak dostępu IG — error 100)',
+    'Po każdej edycji encji: ads_activate_entity (edycja wymusza PAUSED)',
+    'Cotygodniowy smoke-test pomiaru: klik→kasa→Purchase w Events Managerze',
+    'Feedback score strony sprawdzony (<3 interwencja, <2 kara delivery, <1 zakaz)',
+  ];
+  const missPanel = newChecks.filter((t) => !panelSrc.includes(t));
+  missPanel.length ? bad('E5/E6 nowe checklisty w WS', 'brak: ' + missPanel.join(' | ')) : ok(`E5/E6: ${newChecks.length} nowych pozycji checklist obecnych w WS`);
+
+  // spójność: każdy klucz CHECKLIST_MAP kroków, które edytowałem, istnieje VERBATIM w WS (bez sierot)
+  const mapKeysForStep = (step) => {
+    const start = mapSrc.indexOf(`  ${step}: {`);
+    if (start < 0) return [];
+    const end = mapSrc.indexOf('\n  },', start);
+    const block = mapSrc.slice(start, end < 0 ? undefined : end);
+    return [...block.matchAll(/^\s+"([^"]+)":\s*$/gm)].map((m) => m[1]);
+  };
+  let orphans = [];
+  for (const step of ['ads_kampanie', 'ads_preflight', 'ads_start', 'ads_opieka']) {
+    for (const k of mapKeysForStep(step)) if (!panelSrc.includes(k)) orphans.push(`${step}: ${k}`);
+  }
+  orphans.length ? bad('WS↔CHECKLIST_MAP (E5/E6)', 'klucze mapy bez odpowiednika w WS: ' + orphans.join(' | ')) : ok('WS↔CHECKLIST_MAP: klucze map ads_kampanie/preflight/start/opieka spójne z WS');
+
+  // ads_budzet: instructions_md rekomenduje KARTĘ jako pierwszą metodę (audyt płatności)
+  const kr = await rest("wf2_step_defs?select=instructions_md&key=eq.ads_budzet", SK);
+  const im = Array.isArray(kr.data) && kr.data[0] ? String(kr.data[0].instructions_md || '') : '';
+  /ZALECAMY KART/i.test(im) ? ok('wf2_step_defs.ads_budzet.instructions_md: rekomendacja KARTY (klient)') : bad('ads_budzet instructions_md', 'brak rekomendacji KARTY (PATCH zaaplikowany?)');
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

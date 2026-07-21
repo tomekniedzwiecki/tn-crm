@@ -1082,14 +1082,14 @@
                 check:['Konto reklamowe istnieje i połączone (Leadsie — automat)','Partner access do BM Tomka — nadany przez Leadsie (automat)','Waluta PLN + strefa Europe/Warsaw zweryfikowane w Business Settings','Metoda płatności dodana + telefon/2FA (klient)','Dokumenty firmy przygotowane (NIP/CEIDG — na wypadek weryfikacji)'] },
             ads_strona: { desc:'Strona FB powstaje w przebiegu Leadsie (kreator prowadzi klienta — stron NIE DA SIĘ tworzyć przez API) i jest od razu udostępniana do BM Tomka. Wiarygodność przed startem: pusta strona = czerwona flaga dla Meta i cold traffic (ludzie z reklam wchodzą sprawdzić, czy marka istnieje). Materiały (logo, cover, propozycje postów) dostarcza fabryka z brandingu parasola — klient publikuje. Instagram OPCJONALNY na start (reklamy w placementach IG idą z tożsamości strony FB; IG dokładamy, gdy marka żyje). Feedback score strony (<2 = kara delivery, <1 = zakaz reklam) — dbać od pierwszego dnia.',
                 check:['Strona FB istnieje i udostępniona do BM Tomka (Leadsie — automat)','Logo, cover, sekcja Informacje (dane firmy + link do sklepu)','3–6 postów na stronie (materiały z fabryki)','Strona przypisana do konta reklamowego (wymóg create_ad)','Instagram podpięty (opcjonalnie na start)'] },
-            ads_budzet: { desc:'Najpierw kasa: klient zasila SWOJE konto reklamowe (prepaid BLIK/przelew/PayU — wybór płatności ręcznych jest możliwy TYLKO przy zakładaniu konta; przy karcie: główna + zapasowa). Budżet 1000 zł = 500 test 3 produktów + 500 skalowanie winnerów. Środki muszą być WIDOCZNE w Ads Managerze — nie sama deklaracja. Limit wydatków konta (bezpiecznik) ustawia FABRYKA przez API po WF2_META_TOKEN — nie klient. Świeże konto ma niski limit dzienny rosnący z historią płatności — spokojny start to feature (skoki wydatków = fraud-trigger).',
+            ads_budzet: { desc:'Najpierw kasa: klient zasila SWOJE konto reklamowe (prepaid BLIK/przelew/PayU — wybór płatności ręcznych jest możliwy TYLKO przy zakładaniu konta; przy karcie: główna + zapasowa). Budżet 1000 zł = 500 test 3 produktów + 500 skalowanie winnerów. Środki muszą być WIDOCZNE w Ads Managerze — nie sama deklaracja. Limit wydatków konta (bezpiecznik) ustawia FABRYKA przez API po WF2_META_TOKEN — nie klient. Świeże konto ma niski limit dzienny rosnący z historią płatności — spokojny start to feature (skoki wydatków = fraud-trigger). REKOMENDACJA: KARTA jako PIERWSZA metoda płatności — wpłata PRZELEWEM ląduje na DOMYŚLNYM koncie rozliczeniowym profilu, nie na koncie kampanii (incydent: 1000 zł utknęło tydzień); ratunek = przypisanie środków w billing_hub/payment_settings/?asset_id=<ID konta>. Prepaid (BLIK/przelew/PayU) zostaje wyłącznie jako opcja wybierana przy zakładaniu konta.',
                 fields:[{k:'kwota',l:'Budżet projektu (zł)'}],
                 check:['Budżet 1000 zł zadeklarowany (500 test / 500 skala)','Środki WIDOCZNE w Ads Managerze (nie tylko deklaracja)','Limit wydatków konta ustawiony (fabryka, po WF2_META_TOKEN)','Zapasowa metoda płatności dodana (przy płatnościach kartą)'] },
             ads_pixel: { desc:'Pixel + CAPI wg ustaleń 21.07 (SSOT: ADS-ONBOARDING-LEADSIE.md): (1) AUTOMAT tworzy pixel na koncie klienta (POST /act_*/adspixels po WF2_META_TOKEN; pixel w BM KLIENTA — ten sam co konto, inny BM = WCA nie działają); (2) domeny landing+checkout: TXT przez wfa-domain dns_set + weryfikacja w BM; (3) RĘCZNE 30 s: „Generate access token" w Events Managerze przy pixelu — Meta nie ma API do tokenu CAPI; generujemy MY przez partner access; do Trevio ZAWSZE wąski token per-pixel, NIGDY master; (4) AUTOMAT set_integration {pixelId, apiKey=token CAPI} — platforma EMITUJE Purchase server-side (potwierdzone 21.07); (5) Purchase testowy + dedup po event_id w Events Managerze = GATE. COD daje email+telefon z formularza → EMQ 8+ realnie osiągalne.',
                 fields:[{k:'pixel',l:'Pixel ID', col:'project.pixel_id'}],
                 check:['Pixel utworzony na koncie klienta (automat, WF2_META_TOKEN)','Domeny zweryfikowane w BM (TXT przez wfa-domain)','Token CAPI wygenerowany w Events Managerze (wąski per-pixel — NIE master)','Pixel + token CAPI ustawione na platformie (set_integration)','Purchase testowy w Events Managerze + dedup po event_id (1 zdarzenie, nie 2)','EMQ ≥ 6 (cel 8+): email/telefon/fbp/fbc w zdarzeniach CAPI'], prompt:'ads_pixel' },
             ads_preflight: { desc:'Bramka zamykająca środowisko — kampanie NIE powstają, dopóki tu nie jest 0 braków. Sprawdza to, czego nie widać z pojedynczych kroków: płatność realnie schodzi (spokojny mikro-start bez skoków), Account Quality czyste, konwencje nazw i UTM ustalone RAZ (rename psuje raporty — dlatego utm_id z ID, nie z nazw), blocklista komentarzy wgrana ZANIM poleci pierwszy ad. Od 21.07: połączenia Leadsie (konto+strona Connected) i WF2_META_TOKEN aktywny = warunki wejścia — bez tokenu nie działa sync wyników ani strażnik kampanii.',
-                check:['WF2_META_TOKEN aktywny (sync wyników + strażnik gotowe)','Płatność realnie zeszła (mikro-wydatek 5–15 zł/d przez 2–3 dni, bez skoków)','Account Quality czyste (brak restrykcji na koncie/BM/stronie)','Naming ustalony: [WF2:klient] produkt · lowercase/underscore','UTM z ID: utm_id={{ad.id}} · source=facebook/instagram · medium=paid_social','Blocklista komentarzy PL wgrana na stronę (scam/oszust*/chińsk*/nie doszło…)','Plan struktury: 1 kampania = 1 produkt = 1 ad set (ABO), broad, Advantage+'], prompt:'ads_preflight' },
+                check:['WF2_META_TOKEN aktywny (sync wyników + strażnik gotowe)','Płatność realnie zeszła (mikro-wydatek 5–15 zł/d przez 2–3 dni, bez skoków)','Account Quality czyste (brak restrykcji na koncie/BM/stronie)','Naming ustalony: [WF2:klient] produkt · lowercase/underscore','UTM z ID: utm_id={{ad.id}} · source=facebook/instagram · medium=paid_social','Blocklista komentarzy PL wgrana na stronę (scam/oszust*/chińsk*/nie doszło…)','Plan struktury: 1 kampania = 1 produkt = 1 ad set (ABO), broad, Advantage+','Próbny ads_create_creative przeszedł (wykrywa brak dostępu IG — error 100)'], prompt:'ads_preflight' },
 
             // ── ETAP 5: MATERIAŁY I KAMPANIA (product-scope; fabryka kreacji → kampania → start) ──
             ads_grafiki: { desc:'BANERY REKLAMOWE — fabryka ad-forge v8 (scripts/mockup-tools/ad-forge.py). Silnik fal-ai/nano-banana-pro w trybie FULL-DESIGN: model komponuje CAŁY baner (foto + typografia + pigułki + linie + logo zintegrowane, nie „naklejki"), best-of-2 na kąt, kąty demo/problem/lifestyle 4:5 1536×1920. 4 BRAMKI z DOWODAMI: litery PL (verbatim, diakrytyki w wersalikach) · wierność produktu (multi-ref side-by-side vs packshot) · ciągłość (ten sam obiekt między scenami) · powód kliknięcia (vision: co widz rozumie w 0,5 s). WARIANTY HOOKÓW (~$0): baza „bez nagłówka" + N nagłówków nakładanych kodem (font marki) = A/B hooka bez re-generacji; opcjonalne A/B silników (nano-banana-2). Koszt ~$0.45/baner (best-of-2). Publikacja: ad-forge --finalize → panel-sync (storage/creatives/dowody/koszty + sub-kroki agr_* wypełniane z FAKTÓW przebiegu). SSOT: docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md. ⚡ RÓWNOLEGLE: po kroku Styl-master + mini-marka (potrzebuje logo, nie landinga).',
@@ -1101,12 +1101,12 @@
             ads_zestaw: { desc:'Kompletacja zestawu reklam per produkt: docelowo 6 adów w 1 ad secie (3 hooki wideo 9:16 + 3 statyki 4:5 — każdy koncepcyjnie inny „byt"). Copy PL pod COD: hook w pierwszych 125 znakach primary textu, headline ≤27 znaków (wartość, nie powtórka), 5 RÓŻNYCH tekstów (nie parafrazy), risk-reversal („płacisz przy odbiorze" + zwrot 14 dni) + social proof z KONKRETNĄ liczbą. Audyt polityki: Meta czyta copy+landing RAZEM (semantic intent) — sprawdzaj parę. Flaga AI: self-certification obowiązkowa (brak = odrzucenie ada); awatar AI wyłącznie PREZENTER — nigdy „zadowolony klient" z testimonialem (deceptive practices).',
                 fields:[{k:'ads_count',l:'Liczba adów w zestawie'},{k:'hooks_map',l:'Mapa message-match (kreacja → landing ?h=N)',ta:true}],
                 check:['Zestaw skompletowany: 3 hooki wideo + 3 statyki (6 adów)','Copy PL: primary (hook ≤125 znaków) + headline ≤27 + 5 różnych tekstów','Risk-reversal COD + social proof z liczbami (zero fałszywej pilności)','Audyt polityki Meta: copy + landing RAZEM (semantic intent)','Flaga AI ustalona per kreacja (self-certification przy publikacji)','Mapa message-match: kreacja N → landing ?h=N','Rejestr wf2_creatives kompletny (slug/archetyp/warianty/koszt)'], prompt:'ads_zestaw' },
-            ads_kampanie: { desc:'Kampania 1:1 dla produktu wg WORKFLOW-V2-TESTY §1: OUTCOME_SALES/Purchase + CAPI, ABO ~17-25 zł/d, broad (zero stackowania zainteresowań), Advantage+ placements, CAŁY zestaw z kroku „Zestaw reklam" (6 adów, wideo first), jedno bidowanie (highest volume). Nazwa: [WF2:klient] produkt; UTM z ID na każdym adzie. Start ZAWSZE PAUSED — publikacja = krok „Start" (bramka Tomka, pon.–wt. rano).',
+            ads_kampanie: { desc:'Kampania 1:1 dla produktu wg WORKFLOW-V2-TESTY §1: OUTCOME_SALES/Purchase + CAPI, ABO ~17-25 zł/d, broad (zero stackowania zainteresowań), Advantage+ placements, CAŁY zestaw z kroku „Zestaw reklam" (6 adów, wideo first), jedno bidowanie (highest volume). Nazwa: [WF2:klient] produkt; UTM z ID na każdym adzie. Start ZAWSZE PAUSED — publikacja = krok „Start" (bramka Tomka, pon.–wt. rano). Miny API: location_types JAWNIE ["home","recent"] (inaczej błąd #1870194); zdarzenia optymalizacji NIE zmienisz po utworzeniu ad setu (→ nowy ad set); enum INITIATED_CHECKOUT (literówka = INTERNAL).',
                 fields:[{k:'campaign_id',l:'Meta campaign ID', col:'product.campaign_id'},{k:'daily',l:'Budżet dzienny (zł)'}],
-                check:['GATE: pre-flight środowiska done + ali_src=detail + zestaw kreacji done','Kampania utworzona (PAUSED): 1 kampania = 1 produkt = 1 ad set','ABO + broad + Advantage+ placements (jedno bidowanie)','6 adów podpiętych (3 hooki wideo 9:16 + 3 statyki 4:5) + flaga AI','UTM na adach (utm_id={{ad.id}}) + budżet dzienny wg Bramki A (~17–25 zł)','campaign_id zapisany (sync → wf2_ad_stats)'], prompt:'ads_kampanie' },
-            ads_start: { desc:'Start = decyzja Tomka (pon.–wt., publikacja rano). Po odpauzowaniu pierwsza doba to obserwacja, ZERO decyzji optymalizacyjnych (dni 1–2 = zbieranie; Andromeda potrzebuje ~72 h na szczyt kreacji, edycja = reset learning). Sprawdź review adów (odrzucony = poprawka kreacji/copy pod wskazany kod polityki, nie apelacja w ciemno) i komentarze od pierwszych godzin.',
+                check:['GATE: pre-flight środowiska done + ali_src=detail + zestaw kreacji done','Kampania utworzona (PAUSED): 1 kampania = 1 produkt = 1 ad set','ABO + broad + Advantage+ placements (jedno bidowanie)','6 adów podpiętych (3 hooki wideo 9:16 + 3 statyki 4:5) + flaga AI','DSA: beneficjent i płatnik ustawieni na każdej grupie (wymóg EU)','Wideo wgrane do biblioteki konta (ręcznie — MCP nie ma uploadu)','Pule retargetingu (custom audiences) utworzone od dnia 1','UTM na adach (utm_id={{ad.id}}) + budżet dzienny wg Bramki A (~17–25 zł)','campaign_id zapisany (sync → wf2_ad_stats)'], prompt:'ads_kampanie' },
+            ads_start: { desc:'Start = decyzja Tomka (pon.–wt., publikacja rano). Po odpauzowaniu pierwsza doba to obserwacja, ZERO decyzji optymalizacyjnych (dni 1–2 = zbieranie; Andromeda potrzebuje ~72 h na szczyt kreacji, edycja = reset learning). Sprawdź review adów (odrzucony = poprawka kreacji/copy pod wskazany kod polityki, nie apelacja w ciemno) i komentarze od pierwszych godzin. Aktywacja SEKWENCYJNA (grupa→reklamy, retry pojedynczo przy INTERNAL); każda edycja (np. budżetu) wymusza status PAUSED → zawsze reaktywuj.',
                 fields:[{k:'started_at',l:'Data startu'},{k:'meta_ad_ids',l:'Ad IDs po publikacji (pętla wyników)',ta:true}],
-                check:['Start zatwierdzony przez Tomka (pon.–wt. rano)','Wszystkie ady przeszły review Meta (0 odrzuconych)','Disclosure AI włączone na kreacjach AI','meta_ad_ids dopisane do wf2_creatives (pętla wyników)','Komentarze dnia 1 obsłużone (ukrywanie + odpowiedzi)','Spend ruszył, zdarzenia wpadają (pixel + CAPI, dedup 1 zdarzenie)'], prompt:'ads_start' },
+                check:['Start zatwierdzony przez Tomka (pon.–wt. rano)','Wszystkie ady przeszły review Meta (0 odrzuconych)','Disclosure AI włączone na kreacjach AI','meta_ad_ids dopisane do wf2_creatives (pętla wyników)','Komentarze dnia 1 obsłużone (ukrywanie + odpowiedzi)','Po każdej edycji encji: ads_activate_entity (edycja wymusza PAUSED)','Spend ruszył, zdarzenia wpadają (pixel + CAPI, dedup 1 zdarzenie)'], prompt:'ads_start' },
 
             // ── ETAP 6: TESTY I SKALOWANIE ──
             ads_wyniki: { desc:'Automat: cron wf2-ads-sync (6:20) → Graph API insights → wf2_ad_stats (dzienny campaign-level = P&L; ad-level z metrykami video przy checkpointach). Widoki wf2_creative_perf (thumbstop/hold_50/p100/CTR per kreacja) i wf2_pattern_perf (per archetyp) = pętla uczenia fabryki. ⚠️ Wymaga sekretu WF2_META_TOKEN — bez niego sync zwraca skipped, a analiza jest ślepa. Anty-podwójne liczenie: P&L WYŁĄCZNIE level=campaign.',
@@ -1114,7 +1114,7 @@
             test_wynik: { desc:'Checkpointy SPEND-BASED: CP1 @50 zł (hook: link CTR) → CP2 @100 zł (intencja: ATC) → CP3 (zakupy, survivorzy Bramki B). Progi i drzewo decyzyjne: WORKFLOW-V2-TESTY.md. Decyzja na liczbach. Diagnostyka per kreacja (thumbstop → hold → CTR → CPA): krok „Pomiar wyników".', stats:true, decision:true },
             ads_opieka: { desc:'Krok ŻYJE przez cały test i skalowanie. Rytm: CODZIENNIE 5 min higieny — komentarze (ukrywaj wg blocklisty, nie usuwaj; negatywy potrafią zdusić CTR i podbić CPM), odrzucone reklamy, spend bez ATC, CPM spike. CO 3–4 DNI — fatigue per kreacja (hook-rate spada PRZED CTR; frequency >3 prospecting / CTR −25% od baseline / CPM +35%). STRAŻNIK (wf2-ads-sync) sam tworzy karty decyzyjne KILL/refresh przy triggerach — sekcja „Karty do decyzji" niżej; ręcznie dokładasz to, czego automat nie widzi (komentarze, jakość, konteksty). TYGODNIOWO — feedback score strony (<3 = interwencja obsługowa ZANIM Meta karze delivery). Decyzje kill/scale NIE tu — należą do „Wyniku testu".',
                 fields:[{k:'log',l:'Log opieki (data — co zrobiono)',ta:true}],
-                check:['Rytm ustawiony: codziennie higiena, co 3–4 dni przegląd metryk','Moderacja komentarzy działa (blocklista + ukrywanie + odpowiedzi)','Alerty: odrzucone reklamy / spend bez ATC / CPM spike','Feedback score strony sprawdzany co tydzień (próg interwencji <3)','Triggery refreshu znane (frequency >3 · CTR −25% · CPM +35%)'], prompt:'ads_opieka' },
+                check:['Rytm ustawiony: codziennie higiena, co 3–4 dni przegląd metryk','Moderacja komentarzy działa (blocklista + ukrywanie + odpowiedzi)','Alerty: odrzucone reklamy / spend bez ATC / CPM spike','Feedback score strony sprawdzany co tydzień (próg interwencji <3)','Triggery refreshu znane (frequency >3 · CTR −25% · CPM +35%)','Cotygodniowy smoke-test pomiaru: klik→kasa→Purchase w Events Managerze','Feedback score strony sprawdzony (<3 interwencja, <2 kara delivery, <1 zakaz)'], prompt:'ads_opieka' },
             skalowanie: { desc:'Skalowanie winnera: NAJPIERW cena scale (propozycja AI — bramka Tomka), POTEM budżet +20% (vertical, odstęp min. 48 h — skok >30% resetuje learning; bez duplikacji). Świeże kreacje gdy frequency > 2,0; winner → 4–6 świeżych wariantów zwycięskiego konceptu (nie kopie). Przy 10+ zróżnicowanych kreacjach rozważ przeniesienie winnera do ASC.',
                 fields:[{k:'plan',l:'Plan skalowania',ta:true}], productBtn:true,
                 check:['Cena scale ustawiona (tryb SKALA)','Budżet podnoszony +20% (odstęp ≥48 h, bez resetu learning)','Świeże kreacje w kolejce (4–6 wariantów winnera)','Plan marki spisany'] },
@@ -1231,6 +1231,8 @@
             if (['pl_produkt', 'pl_landing'].includes(d.key) && p) h += platformProductInfo(p);
             // special-case: połączenia Leadsie (webhook wf2-ads-connect zapisuje st.data.leadsie) — Etap 4
             if (d.key === 'ads_konto' || d.key === 'ads_strona') h += adsKontoLeadsieBlock(st);
+            // weryfikator środowiska (Graph API przez wf2-ads-verify) — tylko krok ads_konto
+            if (d.key === 'ads_konto') h += adsVerifyBlock(st);
 
             const fields = ws.fields || [];
             if (fields.length) {
@@ -1427,6 +1429,62 @@
             if (foots.length) h += `<div style="margin-top:10px;font-size:10.5px;color:#6a6a6a">${foots.join(' · ')}</div>`;
             h += '</div>';
             return h;
+        }
+
+        // ── special-case: weryfikacja środowiska reklamowego (Etap 4) — przycisk „Weryfikuj środowisko
+        //    (API)" + wynik st.data.ads_verify (Graph API przez edge wf2-ads-verify, partner access BM).
+        //    Sprawdza to, czego Leadsie nie potwierdza: waluta/strefa, metoda płatności, strona, pixel,
+        //    limit wydatków. Wymaga WF2_META_TOKEN — bez niego edge zwraca {skipped:'no_token'}. ──
+        function adsVerifyBlock(st) {
+            const v = st && st.data && st.data.ads_verify;
+            const okChip = (ok, label) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:${ok ? '#45a557' : '#e5484d'}"><i class="ph ${ok ? 'ph-check-circle' : 'ph-x-circle'}"></i>${escapeHtml(label)}</span>`;
+            const neutralChip = (label, val) => `<span style="font-size:11.5px;color:#8a8a8a">${escapeHtml(label)}: <span style="color:#d4d4d4">${escapeHtml(val)}</span></span>`;
+            let h = `<div style="background:#0a0a0a;border:1px solid #1f1f1f;border-radius:8px;padding:14px;margin-top:10px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+                    <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#ededed"><i class="ph ph-shield-check" style="color:#52a8ff"></i> Weryfikacja środowiska (API)</div>
+                    <button id="ads-verify-btn" onclick="adsVerifyEnv()" style="display:inline-flex;align-items:center;gap:6px;background:#0070f31a;border:1px solid #0070f366;color:#52a8ff;border-radius:6px;padding:6px 11px;font-size:11.5px;font-weight:500;cursor:pointer"><i class="ph ph-arrows-clockwise"></i> Weryfikuj środowisko (API)</button>
+                </div>`;
+            if (!v || typeof v !== 'object') {
+                h += `<div style="font-size:11.5px;color:#6a6a6a">Sprawdza to, czego Leadsie nie potwierdza: waluta PLN + strefa Europe/Warsaw, metoda płatności, przypięcie strony, pixel i limit wydatków konta (ustawia fabryka). Wymaga WF2_META_TOKEN — bez tokenu weryfikacja uśpiona.</div>`;
+                return h + '</div>';
+            }
+            const c = v.wyniki || {};
+            const capTxt = c.spend_cap ? (Number(c.spend_cap) / 100).toFixed(0) + ' zł' : 'brak';
+            const rows = [
+                okChip(!!(c.currency_ok && c.tz_ok), `Waluta/strefa: ${c.currency || '?'} / ${c.timezone_name || '?'}`),
+                okChip(!!c.active, `Konto aktywne (status ${c.account_status ?? '?'})`),
+                okChip(!!c.payment_method, 'Metoda płatności dodana'),
+                okChip(!!c.page_attached, 'Strona przypięta do konta'),
+                c.pixel_id ? okChip(true, 'Pixel: ' + c.pixel_id) : neutralChip('Pixel', 'brak (powstaje w kroku Pixel)'),
+                okChip(!!(c.spend_cap > 0), 'Limit wydatków: ' + capTxt + (String(c.spend_cap_action || '').indexOf('set_150000') === 0 ? ' (ustawiony teraz)' : '')),
+            ];
+            h += '<div style="display:flex;flex-direction:column;gap:6px">' + rows.map(r => `<div style="background:#111;border:1px solid #1f1f1f;border-radius:6px;padding:7px 10px">${r}</div>`).join('') + '</div>';
+            if (!c.currency_ok || !c.tz_ok) h += `<div style="margin-top:9px;font-size:11px;color:#f2787f"><i class="ph ph-warning-octagon"></i> Waluta/strefa niezgodna (wymagane PLN/Europe-Warsaw) — konto DO WYMIANY (nieodwracalne). Nota „blokada" w panelu.</div>`;
+            else if (c.payment_method) h += `<div style="margin-top:7px;font-size:10.5px;color:#6a6a6a">Saldo prepaid nie jest czytelne wprost przez Graph API — potwierdzono aktywną metodę płatności.</div>`;
+            if (v.at) h += `<div style="margin-top:9px;font-size:10.5px;color:#6a6a6a">zweryfikowano ${new Date(v.at).toLocaleString('pl-PL')}${c.pages_edge && c.pages_edge !== 'promote_pages' ? ' · pages: ' + escapeHtml(c.pages_edge) : ''}</div>`;
+            return h + '</div>';
+        }
+        async function adsVerifyEnv() {
+            const btn = document.getElementById('ads-verify-btn');
+            if (btn) { btn.disabled = true; btn.style.opacity = '.6'; btn.innerHTML = '<i class="ph ph-circle-notch"></i> Weryfikuję…'; }
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('wf2-ads-verify', { body: { action: 'verify', project_id: projectId } });
+                if (error) throw new Error(error.message || 'edge error');
+                if (data && data.skipped === 'no_token') { showToast('WF2_META_TOKEN nie ustawiony — weryfikacja uśpiona', 'info'); return; }
+                if (!data || !data.ok) throw new Error((data && (data.error || JSON.stringify(data))) || 'brak odpowiedzi');
+                // verify dotyka ads_konto/ads_budzet/ads_strona → przeładuj kroki i odśwież widok
+                const { data: fresh } = await supabaseClient.from('wf2_steps').select('*').eq('project_id', projectId).range(0, 2999);
+                if (Array.isArray(fresh)) { steps.length = 0; fresh.forEach(s => steps.push(s)); if (window.P) P.steps = steps; }
+                const v = data.verify || {}; const c = v.wyniki || v.checks || {};
+                if (v.skipped) showToast('Pominięto: ' + (v.note || v.skipped), 'info');
+                else if (c.currency_ok && c.tz_ok) showToast('Środowisko zweryfikowane — waluta PLN + strefa Warsaw', 'success');
+                else showToast('⚠️ Konto ' + (v.act || '') + ': waluta/strefa niezgodna — patrz nota', 'error');
+                renderPills(); renderStage(); renderHeader(); renderDrawer();
+            } catch (e) {
+                showToast('Błąd weryfikacji: ' + (e && e.message || e), 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+            }
         }
 
         // ── special-case: fabryka statycznych banerów (silnik = ad-forge/fal, nano-banana-pro/nb2) ──
