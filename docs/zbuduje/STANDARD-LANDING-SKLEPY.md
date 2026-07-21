@@ -13,6 +13,15 @@ lęk #1 = scam), checkout na osobnej domenie platformy (CTA → checkout_url), C
 
 ## 0. ZASADY NADRZĘDNE (rozstrzygają każdy konflikt niżej)
 
+> **📚 KAPITALIZACJA / REUSE (wdrożone 21.07) — runbook `KAPITALIZACJA-OPS.md`.** Fabryka nie startuje
+> od zera: **przed F1** sięgnij po `EXEMPLARY-INDEX.md` (2–5 najbliższych dobrych wzorców — trafność
+> **i** różnorodność), reużyj skeletonów `moduly/{porownanie-tabela,opinie,offer-box}@1` (headless,
+> przez `TOKEN-KONTRAKT.md`), złóż briefing **prefix-first** ze statycznych `PARTIALE-PROMPTY.md`
+> (auto prompt-cache), przejdź **preflight** (KAPITALIZACJA-OPS §3), a po F8 zdeponuj kapitał (wiersz
+> indexu + lekcja w `LEKCJE-LANDINGI.md`). ⛔ **Reuse = rzemiosło (kod/rytm/mechanika), NIGDY wizja/
+> copy** — te zostają partyturą per produkt (poziom C), a `cross_landing` pilnuje anty-klonu. RAG copy/
+> warianty = `FAZA2-COPY-WARIANTY.md`, **wyłączone** do akceptu Tomka.
+
 **Z1 — MESSAGE MATCH.** Landing kontynuuje rozmowę z kreacji: hero = echo hooka (ta sama
 obietnica + motyw wizualny; case'y +34…66% CR). Mapa `HOOKS={1..3}` w skrypcie, `?h=N`
 podmienia h1+sub; kreacja N linkuje `?h=N`. Nie budujemy osobnych landingów per kreacja.
@@ -1422,7 +1431,9 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   (b) fan-out niezależnych torów: F0 trójstrumieniowe (kuracja zdjęć ∥ wideo ∥ karta), branding ∥
   styl-master, sceny per-sekcja; (c) **hero-video Kling startuje W TLE przy akcepcie sceny hero**
   i renderuje podczas F4/F7 (wstrzykiwany po load); (d) PASZPORT+rezerwacja marki poza ścieżką
-  krytyczną; (e) prompt-caching SSOT + brief-bundle downstream. **⛔ NIE ruszać (bezpieczniki
+  krytyczną; (e) prompt-caching SSOT + brief-bundle downstream — **realizacja: `PARTIALE-PROMPTY.md` = statyczny
+  prefiks briefingu, składany PREFIX-FIRST (auto prompt-cache Responses API; `KAPITALIZACJA-OPS §2`)**.
+  **⛔ NIE ruszać (bezpieczniki
   jakości, nie koszt):** 2 pary oczu F3A · krytyk makiet · pętla dopasowania F7.1 „do wyczerpania" ·
   komplet gate'ów. Gdzie WIĘCEJ par oczu podniesie jakość — DODAWAĆ. **Wgląd Tomka = PANEL admina,
   NIE czat: `panel-sync` jest częścią KAŻDEGO kroku pipeline (nie tylko końca fazy)** — panel ma być

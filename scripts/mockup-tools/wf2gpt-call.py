@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 # Call wf2-gpt (Responses API proxy) z briefingiem + obrazami. UTF-8 end-to-end.
 # Uzycie: python wf2gpt-call.py <briefing.md> <out.md> [img_url1 img_url2 ...]
+#
+# PROMPT-CACHE (KAPITALIZACJA-OPS §2): OpenAI Responses API cache'uje IDENTYCZNY prefix >=1024 tok
+# AUTOMATYCZNIE. Skladaj <briefing.md> PREFIX-FIRST: statyczne partiale (PARTIALE-PROMPTY.md verbatim)
+# NA GORZE, zmienne (PASZPORT/ICP/PLAN/tokeny/sekcja) NA DOLE. Jakosc identyczna (ten sam tekst),
+# tylko szybciej/taniej. Zero zmian w payloadzie — nie dokladamy pol (ryzyko odrzucenia przez proxy).
 import sys, json, io, os, urllib.request, re
 
 BASE = "https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-gpt"

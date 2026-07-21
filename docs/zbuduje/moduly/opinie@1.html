@@ -1,0 +1,119 @@
+<!--
+============================================================================
+MODUŁ KANONICZNY: opinie@1
+ŹRÓDŁO:   masazer/index.html (#opinie, 2026-07-20) — nagłówek z pudełkiem oceny
+          zbiorczej + siatka kart ze zdjęciem, zsyntetyzowany z drapek/index.html
+          (#opinie — gwiazdki per karta „★★★★☆"). „gwiazdki + cytaty + zdjęcia".
+ROLA:     DOWÓD SPOŁECZNY: (1) ocena zbiorcza (ułamkowa nakładka ★ + liczba +
+          liczność + % pozytywnych), (2) siatka kart „zdjęcie od kupującego +
+          cytat + gwiazdki", (3) stopka-etykieta „zdjęcia od kupujących". Sekcja
+          KODOWA (layout), ZERO JS.
+
+────────────────────────────────────────────────────────────────────────────
+WYMAGANE TOKENY (skórka landingu MUSI je definiować):
+  kolory:  --paper --paper-3 --card --ink --body --line --star --radius-lg --shadow-sm
+  fonty:   --font-display (glify ★ nakładki + nagłówek)   [tekst dziedziczy --font-text]
+           --font-text    (pogrubione liczby oceny/liczności)
+  layout:  .wrap — globalny; .eyebrow + .h2 — globalna typografia.
+
+KONTRAKT SKÓROWANIA (co WOLNO zmienić):
+  • TYLKO tokeny/kolory/promienie/cienie (paleta landingu),
+  • TREŚĆ: eyebrow, nagłówek, wartość oceny + liczność + % (w tekście I w
+    aria-label), cytaty, zdjęcia, etykieta stopki — WSZYSTKO placeholdery {{...}},
+  • liczba kart: dowolna (dodawaj <article.ocard>); zalecane 3–4 (siatka),
+  • wypełnienie gwiazdek: ułamek przez inline `style="width:{{PROC}}%"` na .rstars b
+    (ocena zbiorcza) oraz liczba pełnych ★ + <span.off>★</span> na .stars (karta),
+  • tło sekcji (domyślnie var(--paper)).
+
+CO JEST NIETYKALNE (mechanika i proporcje — NIE RUSZAĆ):
+  • NAKŁADKA UŁAMKOWA .rstars: warstwa pełna <i> w kolorze --line + warstwa
+    <b> (kolor --star) przycięta overflow:hidden do width:PROC% → wierne 4,7/5.
+    aria-label na .rstars NIESIE realną ocenę (dostępność) — nie usuwaj,
+  • siatka .op-grid: repeat(4,1fr) → 1fr 1fr (≤900) → 1fr (≤520),
+  • .ophoto aspect-ratio 1/1 + object-fit:cover (zdjęcie kupującego nie deformuje),
+  • .oquote::before = ozdobny cudzysłów (typograficzny sygnał cytatu),
+  • ocena zbiorcza jako osobne pudełko w nagłówku (flex space-between, wrap).
+
+⛔ ANTY-WZORZEC:
+  • karuzela/slider JS na opinie (zbędna — siatka jest lżejsza i dostępna),
+  • gwiazdki bez aria-label / szerokość nakładki niezgodna z podaną oceną
+    (wizualne kłamstwo),
+  • wymyślone cytaty/oceny — treść MUSI pochodzić z realnych opinii (Z7 karta
+    prawdy); placeholdery zostają placeholderami do czasu wstawienia realnych.
+============================================================================
+-->
+<section id="opinie" class="sect-pad" aria-labelledby="op-h">
+  <style>
+    #opinie{background:var(--paper);color:var(--ink)}
+
+    /* NAKŁADKA UŁAMKOWA ★ (nietykalna mechanika oceny) — tokeny, zero hex */
+    #opinie .rstars{position:relative;display:inline-block;line-height:1;letter-spacing:2px;
+      font-family:var(--font-display)}
+    #opinie .rstars i{font-style:normal;color:var(--line)}
+    #opinie .rstars b{position:absolute;left:0;top:0;overflow:hidden;color:var(--star);
+      white-space:nowrap;font-weight:400}
+
+    #opinie .op-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
+      flex-wrap:wrap;margin-bottom:clamp(24px,3vw,38px)}
+    #opinie .op-head-copy{min-width:0}
+    #opinie .op-head-copy .eyebrow{margin:0 0 12px}
+    #opinie .op-head-copy .h2{margin:0;max-width:640px}
+
+    /* Ocena zbiorcza — osobne pudełko */
+    #opinie .op-rate{position:relative;background:var(--card);border:1px solid var(--line);
+      border-radius:var(--radius-lg);padding:22px 26px;box-shadow:var(--shadow-sm);min-width:280px}
+    #opinie .op-rate .rstars{font-size:26px}
+    #opinie .op-rate .op-rnum{margin:12px 0 0;font-size:14.5px;color:var(--body)}
+    #opinie .op-rate .op-rnum b{font-family:var(--font-text);font-weight:800;color:var(--ink)}
+
+    /* Siatka kart: repeat(4,1fr) → 2 → 1 (NIE RUSZAĆ progów 900/520) */
+    #opinie .op-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(12px,1.6vw,18px)}
+    #opinie .ocard{position:relative;border:1px solid var(--line);border-radius:var(--radius-lg);
+      overflow:hidden;background:var(--card);box-shadow:var(--shadow-sm)}
+    #opinie .ocard .ophoto{aspect-ratio:1/1;background:var(--paper-3);overflow:hidden}
+    #opinie .ocard .ophoto img{width:100%;height:100%;object-fit:cover;filter:saturate(1.02) contrast(1.02)}
+    #opinie .ocard .obody{padding:16px 18px 20px;display:grid;gap:10px}
+    #opinie .ocard .oquote{margin:0;font-size:15px;color:var(--ink);line-height:1.5;font-weight:600}
+    #opinie .ocard .oquote::before{content:"\201C";font-family:var(--font-display);font-size:26px;
+      color:var(--ink);line-height:0;margin-right:2px;vertical-align:-6px}
+    #opinie .ocard .stars{font-size:15px;letter-spacing:2px;color:var(--star);line-height:1;font-family:var(--font-display)}
+    #opinie .ocard .stars .off{color:var(--line)}
+
+    #opinie .op-foot{margin-top:clamp(22px,2.6vw,32px);display:flex;align-items:center;gap:14px}
+    #opinie .op-foot .lbl{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:700;color:var(--body)}
+    #opinie .op-foot .lbl svg{width:18px;height:18px;flex:0 0 auto;color:var(--ink)}
+
+    @media(max-width:900px){#opinie .op-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:520px){#opinie .op-grid{grid-template-columns:1fr}#opinie .op-rate{min-width:0;width:100%}}
+  </style>
+
+  <div class="wrap">
+    <header class="op-head">
+      <div class="op-head-copy">
+        <p class="eyebrow">{{EYEBROW}}</p>
+        <h2 id="op-h" class="h2">{{TYTUL}}</h2>
+      </div>
+      <!-- Ocena zbiorcza: PROC = wypełnienie ★ (np. 4,7/5 → width:94%) -->
+      <div class="op-rate">
+        <span class="rstars" aria-label="Ocena {{OCENA}} na 5"><i>★★★★★</i><b style="width:{{PROC}}%">★★★★★</b></span>
+        <p class="op-rnum">ocena <b>{{OCENA}}/5</b> · {{LICZNOSC}} ocen · {{PROC_POZYT}}% pozytywnych</p>
+      </div>
+    </header>
+
+    <!-- N kart: zdjęcie kupującego + cytat + gwiazdki -->
+    <div class="op-grid">
+      <article class="ocard">
+        <div class="ophoto"><img src="{{FOTO_1}}" width="560" height="560" loading="lazy" decoding="async" alt="{{ALT_1}}"></div>
+        <div class="obody">
+          <p class="oquote">{{CYTAT_1}}</p>
+          <span class="stars" aria-label="{{GWIAZDKI_1}} na 5">★★★★<span class="off">★</span></span>
+        </div>
+      </article>
+      <!-- ...powtórz <article.ocard> dla każdej opinii (2..N)... -->
+    </div>
+
+    <div class="op-foot">
+      <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg> {{ETYKIETA_STOPKI}}</span>
+    </div>
+  </div>
+</section>

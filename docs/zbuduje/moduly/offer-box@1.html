@@ -1,0 +1,150 @@
+<!--
+============================================================================
+MODUŁ KANONICZNY: offer-box@1
+ŹRÓDŁO:   masazer/index.html (#zamow, 2026-07-20) — najpełniejsza karta oferty;
+          zsyntetyzowana z drapek/index.html (#zamow — off-hr + tarcza gwarancji).
+ROLA:     KARTA OFERTY w sekcji #zamow: packshot + karta z kontraktem konwersji =
+          „Co dostajesz" (lista) · CENA · CTA · risk-reversal · pay-badges + zwrot ·
+          ocena. To domknięcie ścieżki — obniża obiekcję #1 lejka /sklep (scam).
+          Sekcja KODOWA (layout), ZERO JS własnego (korzysta z globalnych hooków).
+
+────────────────────────────────────────────────────────────────────────────
+WYMAGANE TOKENY (skórka landingu MUSI je definiować):
+  kolory:  --paper-2 --paper --card --ink --body --line --plus --star
+           --radius-lg --shadow-md --shadow-lg
+  fonty:   --font-display (nagłówki + glify ★)   --font-text (liczby ceny/oceny)
+  globalne:.wrap · .eyebrow · .h2 · .btn.cta (przycisk) · .pay-badges .pb (kanon
+           metod) · .ret-badge (badge zwrotu) — z bazy landingu.
+
+WYMAGANE HOOKI RUNTIME (globalne skrypty landingu — NIE część modułu):
+  • data-checkout="{{SLUG}}" na CTA → globalny dekorator checkoutu dokleja
+    fbclid/_fbp/clientId do linku. Bez tego atrybutu = zerwana atrybucja,
+  • data-price na cenie → runtime synchronizuje kwotę z konfiguracją (wf2-landing-api).
+
+KONTRAKT SKÓROWANIA (co WOLNO zmienić):
+  • TYLKO tokeny/kolory/promienie/cienie (paleta landingu),
+  • TREŚĆ: eyebrow, nagłówek, etykieta „Co dostajesz", punkty listy, cena, etykieta
+    CTA, risk-reversal, microcopy, ocena + liczność — placeholdery {{...}},
+  • obraz packshotu; liczba pozycji „Co dostajesz" (dodawaj <li>),
+  • dekoracyjne „+" w rogach (opcjonalne); tło sekcji (domyślnie var(--paper-2)).
+
+CO JEST NIETYKALNE (mechanika, proporcje i KONTRAKT KONWERSJI — NIE RUSZAĆ):
+  • .off-grid = .95fr 1.05fr (packshot : karta) + bp 820px → 1 kolumna z
+    packshotem NAD kartą (order:-1) — obraz najpierw, decyzja pod nim,
+  • KOMPLET elementów karty (usunięcie któregokolwiek = ODSTĘPSTWO w LEDGER):
+      1) „Co dostajesz" + lista z ptaszkami,
+      2) CENA (data-price),
+      3) CTA .btn.cta (data-checkout),
+      4) risk-reversal .off-reassure („płacisz przy odbiorze / 14 dni na zwrot"),
+      5) .off-pay = pay-badges KANONICZNE (blik·visa·mc·cod) + .ret-badge (zwrot),
+      6) ocena .off-rate (nakładka ułamkowa ★ + liczność),
+  • data-checkout / data-price = punkty zaczepienia globalnego JS (patrz wyżej),
+  • nakładka ułamkowa .rstars (warstwa --line + przycięta warstwa --star).
+
+⛔ ANTY-WZORZEC:
+  • karta oferty BEZ risk-reversal lub BEZ pay-badges — dla odbiorcy COD (lęk #1 =
+    scam) to zabójcze; „za pobraniem" + „14 dni" MUSZĄ być widoczne przy cenie,
+  • CTA jako zwykły <a href> bez data-checkout (zrywa atrybucję Meta/trevio),
+  • ukrycie/pominięcie metody „za pobraniem" (COD),
+  • cena bez data-price (rozjazd z konfiguracją po zmianie kwoty),
+  • packshot POD kartą na mobile (order != -1) — traci się „najpierw obraz".
+============================================================================
+-->
+<section id="zamow" class="sect-pad" aria-labelledby="off-h">
+  <style>
+    #zamow{background:var(--paper-2);color:var(--ink);overflow:hidden}
+
+    /* MECHANIKA siatki: packshot .95fr | karta 1.05fr; bp 820 → 1 kol, packshot NAD */
+    #zamow .off-grid{display:grid;grid-template-columns:.95fr 1.05fr;gap:clamp(26px,4vw,52px);align-items:center}
+    #zamow .off-packshot{position:relative;aspect-ratio:1/1;border-radius:var(--radius-lg);overflow:hidden;
+      background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow-md)}
+    #zamow .off-packshot img{width:100%;height:100%;object-fit:contain}
+
+    #zamow .off-card{position:relative;background:var(--card);border:1px solid var(--line);
+      border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:clamp(26px,3.2vw,42px)}
+    #zamow .off-card .plus{color:var(--plus)}
+    #zamow .off-card .p1{top:16px;left:18px}#zamow .off-card .p2{top:16px;right:18px}
+    #zamow .off-card .p3{bottom:16px;left:18px}#zamow .off-card .p4{bottom:16px;right:18px}
+    #zamow .off-card .eyebrow{margin-bottom:12px}
+    #zamow .off-card .h2{font-size:clamp(26px,3vw,40px);margin-bottom:22px}
+
+    #zamow .off-h{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--ink);margin-bottom:14px}
+    #zamow .off-list{list-style:none;margin:0 0 24px;padding:0;display:grid;gap:12px}
+    #zamow .off-list li{display:flex;align-items:center;gap:12px;font-size:16px;color:var(--ink)}
+    #zamow .off-list svg{width:22px;height:22px;flex:0 0 auto;color:var(--ink)}
+
+    #zamow .off-price{font-family:var(--font-text);font-weight:800;font-size:clamp(36px,4vw,48px);
+      color:var(--ink);line-height:1;margin-bottom:18px}
+
+    #zamow .off-reassure{margin:14px 0 18px;font-size:13.5px;color:var(--body);line-height:1.5}
+    #zamow .off-reassure b{color:var(--ink)}
+
+    /* pay-badges + zwrot */
+    #zamow .off-pay{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+    #zamow .off-hr{height:1px;background:var(--line);margin:20px 0 16px;border:0}
+
+    /* ocena — nakładka ułamkowa ★ (tokeny, zero hex) */
+    #zamow .rstars{position:relative;display:inline-block;line-height:1;letter-spacing:2px;font-family:var(--font-display)}
+    #zamow .rstars i{font-style:normal;color:var(--line)}
+    #zamow .rstars b{position:absolute;left:0;top:0;overflow:hidden;color:var(--star);white-space:nowrap;font-weight:400}
+    #zamow .off-rate{display:flex;align-items:center;gap:12px}
+    #zamow .off-rate .rstars{font-size:17px}
+    #zamow .off-rate small{font-size:13.5px;color:var(--body)}
+    #zamow .off-rate small b{font-family:var(--font-text);font-weight:800;color:var(--ink)}
+
+    @media(max-width:820px){
+      #zamow .off-grid{grid-template-columns:1fr;gap:24px}
+      #zamow .off-packshot{aspect-ratio:16/11;max-height:48vh;order:-1}  /* packshot NAD kartą */
+    }
+  </style>
+
+  <div class="wrap">
+    <div class="off-grid">
+      <div class="off-packshot">
+        <img src="{{PACKSHOT_URL}}" width="1024" height="1024" loading="lazy" decoding="async" alt="{{PACKSHOT_ALT}}">
+      </div>
+
+      <div class="off-card">
+        <span class="plus p1" aria-hidden="true">+</span><span class="plus p2" aria-hidden="true">+</span><span class="plus p3" aria-hidden="true">+</span><span class="plus p4" aria-hidden="true">+</span>
+
+        <p class="eyebrow">{{EYEBROW}}</p>
+        <h2 id="off-h" class="h2">{{TYTUL}}</h2>
+
+        <!-- 1) CO DOSTAJESZ -->
+        <p class="off-h">{{DOSTAJESZ_ETYKIETA}}</p>
+        <ul class="off-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{POZYCJA_1}}</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{POZYCJA_2}}</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{POZYCJA_3}}</li>
+          <!-- ...dodaj <li> wg zestawu... -->
+        </ul>
+
+        <!-- 2) CENA (data-price = hook runtime) -->
+        <div class="off-price" data-price>{{CENA}}</div>
+
+        <!-- 3) CTA (data-checkout = hook atrybucji) -->
+        <a class="btn cta big block" data-checkout="{{SLUG}}" href="#zamow">{{CTA_LABEL}} <span class="arr" aria-hidden="true">&rarr;</span></a>
+
+        <!-- 4) RISK-REVERSAL -->
+        <p class="off-reassure"><b>{{RISK_MOCNE}}</b> — {{RISK_TRESC}}</p>
+
+        <!-- 5) pay-badges KANONICZNE + zwrot -->
+        <div class="off-pay">
+          <div class="pay-badges" aria-label="Dostępne metody płatności"><!-- wklej kanoniczny blok: blik · visa · mc · cod (ten sam co hero/footer; id gradientu BLIK unikalny per wystąpienie) --></div>
+          <span class="ret-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>{{ZWROT_BADGE}}</span>
+        </div>
+
+        <p class="microcopy after-cta">{{MICROCOPY}}</p>
+
+        <div class="off-hr" aria-hidden="true"></div>
+
+        <!-- 6) OCENA (PROC = wypełnienie ★) -->
+        <div class="off-rate">
+          <span class="rstars" aria-label="Ocena {{OCENA}} na 5"><i>★★★★★</i><b style="width:{{PROC}}%">★★★★★</b></span>
+          <small>ocena <b>{{OCENA}}/5</b> · {{LICZNOSC}} ocen</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

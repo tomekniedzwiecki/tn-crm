@@ -1,0 +1,129 @@
+<!--
+============================================================================
+MODUŁ KANONICZNY: porownanie-tabela@1
+ŹRÓDŁO:   masazer/index.html (#porownanie, 2026-07-20) — zsyntetyzowany wzorzec
+          „uczciwego porównania" my↔inni + honest-minus z drapek (#porownanie).
+          Oba landingi: dwukolumnowe zestawienie (NIE <table>) + nota uczciwości.
+ROLA:     PORÓWNANIE „my vs zwykły produkt" jako dwie kolumny z pionową hairline
+          i ZAWSZE domkniętą notą uczciwości (cmp-minus = radykalna szczerość =
+          budowa zaufania). Sekcja KODOWA (layout), ZERO JS.
+
+  Uwaga do nazwy: „tabela" = zestawienie porównawcze, realizowane sprawdzonym
+  wzorcem DWÓCH KOLUMN kart (produkt A / hairline / produkt B), a NIE elementem
+  <table> — bo to jest przetestowana mechanika obu dobrych landingów. Nie
+  przepisuj na <table> ani na macierz 15 wierszy cech (przytłacza).
+
+────────────────────────────────────────────────────────────────────────────
+WYMAGANE TOKENY (skórka landingu MUSI je definiować):
+  kolory:  --paper-2 --card --ink --body --line --plus --star --radius-lg --shadow-sm
+  fonty:   --font-display (nagłówki/nazwy)   [tekst dziedziczy --font-text z body]
+  layout:  .wrap (max-width + padding) — globalny; .eyebrow + .h2 — globalna typografia.
+
+KONTRAKT SKÓROWANIA (co WOLNO zmienić — Z6 „design per projekt" = WYGLĄD):
+  • TYLKO tokeny/kolory/promienie/cienie (paleta landingu),
+  • TREŚĆ: eyebrow, nagłówek, nazwy kolumn, punkty list, obraz produktu, nota
+    uczciwości — WSZYSTKO przez placeholdery {{...}},
+  • liczba punktów w każdej liście (dodawaj <li>); ikona „check" = dowolny glif
+    z currentColor,
+  • tło sekcji (domyślnie var(--paper-2)) — do skórki.
+
+CO JEST NIETYKALNE (mechanika i proporcje — NIE RUSZAĆ):
+  • grid .cmp-grid = 1fr 1px 1fr (kolumna MY · hairline · kolumna INNI) + bp 760px,
+  • .cmp-div rozciąga się na wysokość (align-self:stretch), a na mobile staje się
+    poziomą hairline (width:auto;height:1px) — NIE usuwaj rozdzielenia,
+  • kolumna „inni" = .muted (przygaszona) — kontrast bez agresji (ZERO czerwonych
+    „X"/przekreśleń konkurencji),
+  • .cmp-minus = OBOWIĄZKOWA nota uczciwości (jeden realny minus produktu) — to
+    jest mechanizm zaufania sekcji; jej brak = ODSTĘPSTWO,
+  • proporcja .cmp-fig aspect-ratio 5/4 (desktop) → 16/11 (mobile).
+
+⛔ ANTY-WZORZEC:
+  • usunięcie .cmp-minus i zamiana na puffery („robi wszystko", „najlepszy we
+    wszystkim") — sekcja traci funkcję (uczciwość = konwersja),
+  • przepisanie na <table>/macierz 15 wierszy cech (przytłoczenie),
+  • agresywne czerwone „✗"/przekreślenia kolumny konkurencji (ton lejka /sklep =
+    spokój, nie atak),
+  • zwinięcie do jednej kolumny bez hairline (znika sens „vs").
+============================================================================
+-->
+<section id="porownanie" class="sect-pad" aria-labelledby="cmp-h">
+  <style>
+    #porownanie{background:var(--paper-2);color:var(--ink);overflow:hidden}
+    #porownanie .cmp-head{margin-bottom:clamp(26px,3.4vw,44px)}
+    #porownanie .cmp-head .eyebrow{margin:0 0 12px}
+    #porownanie .cmp-head .h2{margin:0}
+
+    /* MECHANIKA: 1fr | 1px hairline | 1fr — NIE RUSZAĆ proporcji ani bp 760 */
+    #porownanie .cmp-grid{display:grid;grid-template-columns:1fr 1px 1fr;
+      gap:clamp(20px,3vw,44px);align-items:start}
+    #porownanie .cmp-div{background:var(--line);width:1px;align-self:stretch}
+    #porownanie .cmp-col{display:flex;flex-direction:column;gap:18px}
+
+    #porownanie .cmp-fig{aspect-ratio:5/4;border-radius:var(--radius-lg);overflow:hidden;
+      background:var(--paper);border:1px solid var(--line)}
+    #porownanie .cmp-fig img{width:100%;height:100%;object-fit:contain;object-position:center}
+
+    #porownanie .cmp-name{font-family:var(--font-display);font-weight:700;font-size:19px;color:var(--ink)}
+    #porownanie .cmp-name.muted{color:var(--body)}
+
+    #porownanie .cmp-list{list-style:none;margin:0;padding:0;display:grid;gap:13px}
+    #porownanie .cmp-list li{display:flex;align-items:center;gap:12px;font-size:16px;color:var(--ink)}
+    #porownanie .cmp-list.muted li{color:var(--body)}
+    #porownanie .cmp-list svg{width:22px;height:22px;flex:0 0 auto;color:var(--ink)}
+    #porownanie .cmp-list.muted svg{color:var(--plus)}
+
+    /* NOTA UCZCIWOŚCI — nietykalny mechanizm zaufania */
+    #porownanie .cmp-minus{margin-top:clamp(26px,3vw,38px);display:flex;align-items:flex-start;gap:15px;
+      background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+      padding:20px 24px;max-width:660px;box-shadow:var(--shadow-sm)}
+    #porownanie .cmp-minus svg{width:30px;height:30px;flex:0 0 auto;color:var(--ink);margin-top:1px}
+    #porownanie .cmp-minus p{margin:0;font-size:15.5px;color:var(--body);line-height:1.55}
+    #porownanie .cmp-minus b{color:var(--ink)}
+
+    @media(max-width:760px){
+      #porownanie .cmp-grid{grid-template-columns:1fr;gap:22px}
+      #porownanie .cmp-div{width:auto;height:1px}        /* hairline staje się pozioma */
+      #porownanie .cmp-fig{aspect-ratio:16/11;max-height:46vh}
+    }
+  </style>
+
+  <div class="wrap">
+    <header class="cmp-head">
+      <p class="eyebrow">{{EYEBROW}}</p>
+      <h2 id="cmp-h" class="h2">{{TYTUL}}</h2>
+    </header>
+
+    <div class="cmp-grid">
+      <!-- KOLUMNA: nasz produkt (wygrane) -->
+      <div class="cmp-col">
+        <div class="cmp-fig"><img src="{{OBRAZ_MY}}" width="470" height="376" loading="lazy" decoding="async" alt="{{ALT_MY}}"></div>
+        <p class="cmp-name">{{NAZWA_MY}}</p>
+        <ul class="cmp-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{MY_1}}</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{MY_2}}</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{MY_3}}</li>
+          <!-- ...dodaj <li> wg produktu... -->
+        </ul>
+      </div>
+
+      <div class="cmp-div" aria-hidden="true"></div>
+
+      <!-- KOLUMNA: zwykły produkt (przygaszona = .muted; ZERO czerwonych X) -->
+      <div class="cmp-col">
+        <div class="cmp-fig"><img src="{{OBRAZ_INNI}}" width="404" height="323" loading="lazy" decoding="async" alt="{{ALT_INNI}}"></div>
+        <p class="cmp-name muted">{{NAZWA_INNI}}</p>
+        <ul class="cmp-list muted">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{INNI_1}}</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{INNI_2}}</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg> {{INNI_3}}</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- NOTA UCZCIWOŚCI — OBOWIĄZKOWA (jeden realny minus produktu) -->
+    <div class="cmp-minus">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/></svg>
+      <p><b>{{MINUS_NAGLOWEK}}</b> — {{MINUS_TRESC}}</p>
+    </div>
+  </div>
+</section>

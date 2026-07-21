@@ -5,6 +5,12 @@
 > hotspoty kosztu z dowodów maty/masażera, inwentarz istniejących assetów, research branżowy).
 > Status: PLAN do decyzji Tomka. Data: 2026-07-21.
 
+> **⚙️ PRZERAMOWANIE (decyzja Tomka 21.07): priorytet = JAKOŚĆ, koszt drugorzędny.** *„Mi nawet
+> nie chodzi o koszty… chcę to zoptymalizować tam, gdzie się da."* Czytaj cały plan pod tym kątem:
+> optymalizujemy **czas / spójność / rework** wyłącznie tam, gdzie to **PODNOSI albo NIE RUSZA**
+> jakości; metryki kosztowe niżej są drugorzędne. **Wdrożenie:** wszystkie fazy realizowane —
+> runbook operacyjny = `KAPITALIZACJA-OPS.md`; status per-artefakt w §ROADMAPA (dół pliku).
+
 ---
 
 ## 0. TEZA (jedno zdanie)
@@ -168,6 +174,24 @@ Luki (z inwentarza — mamy 12 landingów i 6 modułów, ale):
 | **FAZA 1 — rdzeń (tydzień)** | (a) **`PARTIALE-PROMPTY.md`** (wydziel partiale) · (b) **Skeletony sekcji** `porownanie/opinie/offer-box @1` · (c) **Tokeny 3-warstwowe** per-produkt (razem ze skeletonami) | F4 „wypełnij kontrakt" zamiast „pisz od zera"; N+1 realnie tańszy | NISKIE (headless + tokeny nie ruszają tożsamości) | średni |
 | **FAZA 2 — inteligencja (2 tyg.)** | (a) **RAG copy/patterny** (framework, nie zdania) · (b) **Variant-gen QD + Verbalized Sampling** dla A/B kierunków · (c) **Biblioteka person** | lepsze copy pass-first; realnie różne warianty; różnorodność między produktami wymuszona | ŚREDNIE (pilnować granularności retrievalu + osi wariancji) | większy |
 | **FAZA 3 — flywheel (ciągłe)** | (a) **`LEKCJE-LANDINGI.md`** + pętla deponowania aktywów po każdym landingu · (b) **Archiwum do repo** | krzywa kosztu krańcowego opada; poprawka propaguje się na wszystko | najniższe bieżące, najwyższy zwrot długoterminowy | rozłożony |
+
+### 🟢 STATUS WDROŻENIA (2026-07-21 — wszystkie fazy zrealizowane, self-verified)
+
+| Artefakt | Faza | Plik | Stan |
+|---|---|---|---|
+| Runbook operacyjny reuse | 0-3 | `KAPITALIZACJA-OPS.md` | ✅ |
+| Rejestr wzorców (12 landingów) | 0 | `EXEMPLARY-INDEX.md` | ✅ zweryfikowany (12/12, spot-check 3, outliery ΔE oznaczone) |
+| Prompt-cache prefix-first | 0 | `PARTIALE-PROMPTY.md` + nota w `wf2gpt-call.py` + STANDARD §7a(e) | ✅ (zero zmian w kodzie proxy) |
+| Preflight pre-decyzji | 0 | `KAPITALIZACJA-OPS §3` | ✅ |
+| Partiale promptów (statyczny prefiks) | 1 | `PARTIALE-PROMPTY.md` | ✅ 5 bloków 1:1 z SSOT |
+| Skeletony sekcji (headless) | 1 | `moduly/{porownanie-tabela,opinie,offer-box}@1.html` + `MODULY.md` | ✅ headless potwierdzony niezależnie (0 hex/rgba/font); recurrence 12/10/10 z 12 |
+| Kontrakt tokenów (3 warstwy) | 1 | `TOKEN-KONTRAKT.md` | ✅ wg realnego `:root` mata/masażer/Drapek |
+| RAG copy + variant-gen QD + persony | 2 | `FAZA2-COPY-WARIANTY.md` | 🟡 PROJEKT gated — **wyłączone** do akceptu Tomka + pilotu side-by-side |
+| Księga lekcji (flywheel wiedzy) | 3 | `LEKCJE-LANDINGI.md` | ✅ 25 lekcji, nośniki zweryfikowane |
+| Pętla deponowania + archiwum→repo | 3 | `KAPITALIZACJA-OPS §4` | ✅ procedura (egzekucja per landing) |
+
+> **Bezpieczeństwo jakości:** wszystkie ✅ są ADDITYWNE (nowe pliki/moduły/noty) — **zero zmian
+> w logice generacji i zero w kodzie bramek**; jedyna wrażliwa na jakość Faza 2 jest 🟡 wyłączona.
 
 ---
 
