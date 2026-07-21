@@ -1,0 +1,1440 @@
+<!--
+============================================================================
+MODUŁ KANONICZNY: checkout-inline@2 (2026-07-21; @1 = poprzednia mechanika)
+ŹRÓDŁO:   zbudowany OD ZERA 2026-07-20 wg CHECKOUT-INLINE-SPEC.md + research
+          Baymard/PL (RESEARCH-UX.md, RESEARCH-PL.md) + Public Storefront API
+          Trevio (docs/zbuduje/platforma-api/README.md — flow potwierdzony empirycznie).
+ROLA:     KASA OSADZONA w sekcji #zamow landinga — klient składa zamówienie bez
+          wyjścia do kasy platformy. Ścieżki: COD (inline), BLIK (inline + polling),
+          płatność online (redirect). Cel: maks konwersja, brak wyjścia z landinga.
+
+────────────────────────────────────────────────────────────────────────────
+KONTRAKT SKÓROWANIA (co WOLNO zmienić — Z6 „design per projekt" dotyczy WYGLĄDU):
+  • tokeny CSS --zc-* (definiowane na .zc-checkout): --zc-bg/--zc-card/--zc-border/
+    --zc-text/--zc-muted/--zc-accent/--zc-accent-text/--zc-ok/--zc-error/--zc-radius/
+    --zc-radius-sm/--zc-shadow/--zc-font — paleta i promienie landingu,
+  • TREŚCI nagłówka sekcji: .zc-eyebrow, .zc-h2 (copy zaproszenia do zamówienia),
+  • mikrocopy zaufania w .zc-trust (chipy) i dane firmy .zc-merchant,
+  • miniatura/nazwa/cena fallback = z KONFIGURACJI (data-zc-config lub wf2-landing-api),
+  • opcjonalny dekoracyjny backdrop sekcji (np. .zc-scene) — czysto wizualny, bez mechaniki.
+
+CO JEST NIETYKALNE (mechanika i prawo — NIE RUSZAĆ):
+  • CAŁY JS (IIFE poniżej): resolve konfiguracji, mint clientId (trv_cid→localStorage→
+    UUIDv7), lazy-load dostaw/płatności, maszyna stanów, flow cart/item →
+    checkout-details → order/cart, BLIK 6-box + polling (2,5 s / max 90 s) + stany
+    błędów, COD inline, redirect online, walidacja PL, eventy analityki.
+  • STRUKTURA i KOLEJNOŚĆ pól: Imię i nazwisko → Telefon → E-mail → Ulica i numer →
+    Kod pocztowy → Miejscowość (1 kolumna, etykiety NAD polami) — dotyczy layout='flat';
+    dla layout='steps' porządek wizualny wg sekcji WARIANT LAYOUTU niżej.
+  • KAŻDE pole danych: autocomplete + inputmode + enterkeyhint + type (natywny autofill;
+    NIGDY autocomplete="off").
+  • BRZMIENIE PRZYCISKU: „Zamawiam i płacę", przy wybranym COD „Zamawiam i płacę przy
+    odbiorze" (dynamicznie, ctaLabelText(); standard fabryki — decyzja Tomka 21.07).
+    Oba brzmienia komunikują obowiązek zapłaty wprost (art. 17 ust. 3–4 UoPK — label bez
+    obowiązku zapłaty, np. samo „Zamawiam"/„Kup teraz", = UMOWA NIE ZAWARTA, ZAKAZ).
+    CTA BEZ KWOTY (@2, decyzja Tomka 21.07) — kwota żyje w podsumowaniu i wierszu „Razem".
+  • PŁATNOŚĆ BEZ PRESELEKCJI (@2): ŻADNA metoda nie jest domyślnie zaznaczona; COD-copy
+    (microcopy pod CTA, label „…przy odbiorze") pojawia się WYŁĄCZNIE po świadomym wyborze
+    COD. Submit bez wyboru = błąd „Wybierz metodę płatności." (slot data-err="payment").
+  • LAYOUT (@2): steps = JEDYNY wariant (root dostaje data-zc-layout="steps" zawsze);
+    markup flat zostaje wyłącznie jako degradacja bez JS.
+  • CHECKBOX regulaminu — NIE pre-checked, PRZED przyciskiem, blokuje submit.
+  • EVENTY: trevio addToCart+beginCheckout @submit, addShippingInfo, paymentInitiated,
+    purchaseOnDelivery|purchase; Meta AddToCart+InitiateCheckout @submit, Purchase
+    (eventID=orderId) TYLKO ścieżki COD i BLIK-sukces — NIGDY przy redirect online.
+
+WYMÓG INTEGRACJI ze sticky-buy: landing z checkout-inline MUSI chować pasek sticky-buy,
+gdy sekcja #zamow jest w viewport (drugi IO obok obserwera .hero — wzorzec w demo
+usmieszek-checkout). Sticky przysłania CTA checkoutu na mobile = zabity submit (E2E 21.07).
+
+⛔ ANTY-WZORCE (naruszenie = ODSTĘPSTWO w LEDGER):
+  • widoczne pole kodu rabatowego, liczniki presji, wymuszona rejestracja/konto,
+  • 2 kolumny pól na mobile, osobne pola Imię/Nazwisko, pole „potwierdź e-mail",
+  • pre-checked checkbox regulaminu, autocomplete="off", zła klawiatura mobilna,
+  • walidacja tylko-na-submit ALBO na-każdy-znak, czyszczenie pól po błędzie,
+  • label przycisku „Zamawiam"/„Kup teraz" (prawnie wadliwy),
+  • fbq Purchase przy redirect online (dubluje Purchase strony wyniku platformy),
+  • ukrywanie COD (u polskiego klienta brak COD = sygnał scamu).
+
+WSPÓŁISTNIENIE z landing-runtime-snippet.html: snippet pali viewItem@load + ViewContent
+  oraz addToCart/beginCheckout TYLKO przy zhydratowanym href zewnętrznym. CTA landinga
+  wskazują #zamow (scroll), więc snippet ich NIE liczy — moduł jest JEDYNYM źródłem
+  addToCart/beginCheckout (@submit). Zero podwójnych eventów.
+
+────────────────────────────────────────────────────────────────────────────
+WARIANT LAYOUTU (data-zc-config.layout='steps' LUB atrybut data-zc-layout="steps" na
+  sekcji — jedno lub drugie wystarcza; default = 'flat'):
+  • 'flat' (domyślny) — układ jak dotąd; KOLEJNOŚĆ pól NIETKNIĘTA
+    (Imię i nazwisko→Telefon→E-mail→Ulica→Kod→Miejscowość, 1 kolumna).
+  • 'steps' — micro-konfigurator wizualny: 4 wizualne kroki na JEDNEJ stronie, bez
+    przycisków „Dalej", bez przeładowań: (1) Kontakt [E-mail→Telefon], (2) Adres dostawy
+    [Imię i nazwisko→Ulica→Kod→Miejscowość], (3) Sposób dostawy, (4) Płatność. Poniżej
+    kroków (total, checkbox regulaminu, CTA, trust) = ZAWSZE widoczne.
+  • REORDER PÓL rozwiązany PRZEZ DOM: JS przy inicjalizacji steps przenosi te SAME inputy
+    (name/id/autocomplete bez zmian) do kontenerów .zc-step — NIE przez CSS `order` (order
+    rozjeżdża kolejność TAB/focus z kolejnością wizualną = pułapka a11y). Skutek: flat = markup
+    nietknięty → kontrakt kolejności flat zachowany „za darmo"; steps = jedyny tryb przestawiający
+    węzły (E-mail przed Telefonem występuje TYLKO tu). Grupy zadeklarowane w markup atrybutem
+    data-zc-step="1|2|3|4" na polach/fieldsetach; kolejność w obrębie kroku ustala JS.
+  • SKÓRKA steps (wolno zmieniać): tokeny --zc-step-* (kolor/tło numeru, tło kroku aktywnego,
+    przygaszenie zablokowanego) + tytuły kroków (.zc-step-title w JS-ie: Kontakt/Adres/…).
+  • NIETYKALNA MECHANIKA steps: krok aktywny rozwinięty, przyszłe zwinięte+przygaszone (ale
+    klikalne), ukończony = 1 linia podsumowania („✓ + skrót", np. „jan@… · +48 500 000 002")
+    + „Zmień"; auto-advance po walidacji on-blur (krok się zwija, następny rozwija, focus na
+    1. polu, scrollIntoView block:'nearest' — bez scroll-jackingu); klik w nagłówek = rozwinięcie
+    (edycja wstecz zawsze możliwa, NIC się nie czyści); kroki 3/4 = wybór radia kompletuje krok;
+    submit z niekompletnym krokiem = rozwiń pierwszy niekompletny + standardowe komunikaty walidacji.
+
+IDENTIFY (oba layouty, NIETYKALNE): po pozytywnej walidacji e-maila/telefonu (on-blur) moduł
+  woła window.trevio.identify({EmailHash:<email>}) oraz ({PhoneHash:'+48'+9 cyfr}) — RAZ per
+  wartość (dedup), forma pól wg guide GET /docs (identify{EmailHash|PhoneHash|CustomerId}),
+  z fallbackiem {type,value} w try/catch; brak window.trevio = cicho pomijane (preview poza platformą).
+
+WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konfiguracja:
+  (A) tryb produkcyjny — data-zc-product="{{WF2_PRODUCT_ID}}" (podmieniane przy publikacji;
+      moduł czyta cenę/nazwę/wariant/websiteId z wf2-landing-api, blok `platform`),
+  (B) tryb override (demo/preview) — data-zc-config='{"websiteId":"…","productVariantId":"…",
+      "name":"…","price":49.99,"checkoutFallbackUrl":"…"}'.
+============================================================================
+-->
+
+<!-- (1) STYLE — do <head> lub scoped. Selektory pod .zc-checkout (id-niezależne). -->
+<style>
+  /* ── TOKENY (SKÓRKA): domyślne = neutralna jasna paleta; landing nadpisuje ── */
+  .zc-checkout{
+    --zc-bg:#f5f6f8;
+    --zc-card:#ffffff;
+    --zc-border:#e4e7ec;
+    --zc-text:#111827;
+    --zc-muted:#667085;
+    --zc-accent:#111827;         /* kolor CTA (skórka) */
+    --zc-accent-text:#ffffff;
+    --zc-ok:#16a34a;             /* pozytywna walidacja */
+    --zc-error:#dc2626;
+    --zc-radius:14px;
+    --zc-radius-sm:10px;
+    --zc-radius-cta:18px;        /* promień przycisku CTA (skórka) — NIE pigułka 999px */
+    --zc-shadow:0 22px 60px rgba(16,24,40,.12);
+    --zc-font:inherit;
+
+    /* ── SKÓRKA wariantu layout='steps' (bez efektu w 'flat') ── */
+    --zc-step-num-bg:var(--zc-accent);          /* tło numeru kroku aktywnego/przyszłego */
+    --zc-step-num-text:var(--zc-accent-text);
+    --zc-step-active-bg:color-mix(in srgb,var(--zc-accent) 4%,var(--zc-card));
+    --zc-step-locked-opacity:.55;               /* przygaszenie kroku zablokowanego */
+
+    position:relative;
+    background:var(--zc-bg);
+    color:var(--zc-text);
+    font-family:var(--zc-font);
+    padding:clamp(48px,7vw,96px) 0;
+    scroll-margin-top:92px;      /* pod sticky-topbar przy scrollu z CTA */
+  }
+  .zc-checkout *{box-sizing:border-box}
+  .zc-checkout .zc-wrap{width:100%;max-width:1040px;margin:0 auto;padding:0 20px;position:relative;z-index:1}
+  .zc-checkout .zc-head{text-align:center;margin-bottom:clamp(22px,3vw,34px)}
+  .zc-checkout .zc-eyebrow{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--zc-muted);margin:0 0 10px}
+  .zc-checkout .zc-h2{margin:0;font-size:clamp(26px,3.6vw,40px);line-height:1.08;letter-spacing:-.02em;font-weight:800;color:var(--zc-text)}
+
+  .zc-checkout .zc-card{
+    background:var(--zc-card);border:1px solid var(--zc-border);border-radius:var(--zc-radius);
+    box-shadow:var(--zc-shadow);padding:clamp(18px,3vw,30px);max-width:900px;margin:0 auto;
+  }
+
+  /* ── LAYOUT: mobile = 1 kolumna (summary→main→trust); desktop ≥900 = form + kolumna podsumowania ── */
+  .zc-checkout .zc-form{display:flex;flex-direction:column;gap:22px}
+  @media (min-width:900px){
+    .zc-checkout .zc-form{
+      display:grid;grid-template-columns:minmax(0,1fr) 314px;
+      grid-template-areas:"main summary" "main trust";
+      column-gap:36px;row-gap:20px;align-items:start;
+    }
+    .zc-checkout .zc-main{grid-area:main;display:flex;flex-direction:column;gap:22px;min-width:0}
+    .zc-checkout .zc-summary{grid-area:summary;position:sticky;top:20px}
+    .zc-checkout .zc-trust{grid-area:trust}
+  }
+  @media (max-width:899px){
+    .zc-checkout .zc-main{display:flex;flex-direction:column;gap:22px;min-width:0}
+  }
+
+  /* ── (1) PASEK PODSUMOWANIA ── */
+  .zc-checkout .zc-summary{border:1px solid var(--zc-border);border-radius:var(--zc-radius-sm);overflow:hidden;background:var(--zc-card)}
+  .zc-checkout .zc-sum-bar{display:flex;align-items:center;gap:12px;width:100%;padding:12px;background:none;border:0;cursor:pointer;text-align:left;font:inherit;color:inherit}
+  .zc-checkout .zc-sum-thumb{width:52px;height:52px;flex:0 0 auto;border-radius:9px;object-fit:cover;background:var(--zc-bg);border:1px solid var(--zc-border)}
+  .zc-checkout .zc-sum-info{flex:1;min-width:0}
+  .zc-checkout .zc-sum-name{font-weight:700;font-size:14.5px;line-height:1.25;color:var(--zc-text);
+    overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .zc-checkout .zc-sum-qty{font-size:12.5px;color:var(--zc-muted);margin-top:2px}
+  .zc-checkout .zc-sum-price{font-weight:800;font-size:16px;color:var(--zc-text);white-space:nowrap}
+  .zc-checkout .zc-sum-chev{flex:0 0 auto;color:var(--zc-muted);transition:transform .2s ease}
+  .zc-checkout .zc-sum-bar[aria-expanded="true"] .zc-sum-chev{transform:rotate(180deg)}
+  .zc-checkout .zc-sum-details{display:none;padding:0 12px 12px;border-top:1px solid var(--zc-border);margin-top:0}
+  .zc-checkout .zc-summary.is-open .zc-sum-details{display:block}
+  .zc-checkout .zc-sum-row{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--zc-muted);padding:8px 0}
+  .zc-checkout .zc-sum-row.zc-sum-total{color:var(--zc-text);font-weight:800;font-size:15px;border-top:1px solid var(--zc-border);margin-top:2px}
+  @media (min-width:900px){
+    .zc-checkout .zc-sum-chev{display:none}
+    .zc-checkout .zc-sum-bar{cursor:default}
+    .zc-checkout .zc-sum-details{display:block !important}
+  }
+
+  /* ── BLOKI ── */
+  .zc-checkout .zc-block{border:0;margin:0;padding:0;min-width:0}
+  .zc-checkout .zc-legend{padding:0;font-weight:800;font-size:16px;color:var(--zc-text);margin:0 0 12px;letter-spacing:-.01em}
+  .zc-checkout .zc-load{font-size:13.5px;color:var(--zc-muted);padding:8px 0}
+
+  /* ── RADIO (płatność/dostawa) ── */
+  .zc-checkout .zc-opt{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--zc-border);
+    border-radius:var(--zc-radius-sm);padding:13px 14px;margin-bottom:9px;cursor:pointer;background:var(--zc-card);
+    transition:border-color .15s ease,box-shadow .15s ease}
+  .zc-checkout .zc-opt:last-child{margin-bottom:0}
+  .zc-checkout .zc-opt:hover{border-color:var(--zc-text)}
+  .zc-checkout .zc-opt.is-sel{border-color:var(--zc-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--zc-accent) 22%,transparent)}
+  .zc-checkout .zc-opt input{margin:2px 0 0;width:19px;height:19px;flex:0 0 auto;accent-color:var(--zc-accent);cursor:pointer}
+  /* focus-visible radio-kart (steps i flat) — ring w kolorze akcentu, nie domyślny UA */
+  .zc-checkout .zc-opt:has(input:focus-visible){outline:2px solid var(--zc-accent);outline-offset:2px}
+  .zc-checkout .zc-opt input:focus-visible{outline:none}
+  .zc-checkout .zc-opt-body{flex:1;min-width:0}
+  .zc-checkout .zc-opt-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .zc-checkout .zc-opt-name{font-weight:700;font-size:15px;color:var(--zc-text)}
+  .zc-checkout .zc-opt-price{font-weight:700;font-size:14.5px;color:var(--zc-text);white-space:nowrap}
+  .zc-checkout .zc-opt-sub{font-size:12.5px;color:var(--zc-muted);margin-top:3px;line-height:1.4}
+  .zc-checkout .zc-opt-badge{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:6px;
+    font-size:11px;font-weight:800;letter-spacing:.03em;background:color-mix(in srgb,var(--zc-accent) 12%,transparent);color:var(--zc-accent);margin-left:8px}
+
+  /* ── BLIK 6-box (ujawniany po wyborze BLIK) ── */
+  .zc-checkout .zc-blik{margin-top:11px;padding:13px;border:1px dashed var(--zc-border);border-radius:var(--zc-radius-sm);background:var(--zc-bg)}
+  .zc-checkout .zc-blik-label{display:block;font-size:13px;font-weight:700;color:var(--zc-text);margin-bottom:9px}
+  .zc-checkout .zc-blik-boxes{display:flex;gap:8px}
+  .zc-checkout .zc-blik-boxes input{width:100%;min-width:0;height:52px;text-align:center;font-size:22px;font-weight:800;
+    border:1px solid var(--zc-border);border-radius:10px;background:var(--zc-card);color:var(--zc-text);padding:0}
+  .zc-checkout .zc-blik-boxes input:focus{outline:none;border-color:var(--zc-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--zc-accent) 22%,transparent)}
+  .zc-checkout .zc-blik-hint{font-size:12px;color:var(--zc-muted);margin:9px 0 0}
+
+  /* ── POLA ── */
+  .zc-checkout .zc-fields{display:flex;flex-direction:column;gap:15px;max-width:520px}
+  .zc-checkout .zc-field{display:flex;flex-direction:column;min-width:0}
+  .zc-checkout .zc-label{font-size:13.5px;font-weight:700;color:var(--zc-text);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .zc-checkout .zc-label .zc-opt-tag{font-weight:600;font-size:12px;color:var(--zc-muted)}
+  .zc-checkout .zc-inwrap{position:relative;display:flex;align-items:center}
+  .zc-checkout .zc-in{width:100%;min-width:0;height:50px;padding:0 14px;font:inherit;font-size:16px;color:var(--zc-text);
+    background:var(--zc-card);border:1px solid var(--zc-border);border-radius:var(--zc-radius-sm);transition:border-color .15s ease,box-shadow .15s ease}
+  .zc-checkout .zc-in:focus{outline:none;border-color:var(--zc-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--zc-accent) 22%,transparent)}
+  .zc-checkout .zc-field.is-err .zc-in{border-color:var(--zc-error)}
+  .zc-checkout .zc-field.is-ok .zc-in{border-color:var(--zc-ok)}
+  .zc-checkout .zc-in.has-prefix{padding-left:52px}
+  .zc-checkout .zc-prefix{position:absolute;left:1px;top:1px;bottom:1px;display:flex;align-items:center;padding:0 12px;
+    color:var(--zc-muted);font-weight:700;font-size:15px;border-right:1px solid var(--zc-border);pointer-events:none}
+  .zc-checkout .zc-check{position:absolute;right:13px;color:var(--zc-ok);opacity:0;transition:opacity .15s ease;pointer-events:none}
+  .zc-checkout .zc-field.is-ok .zc-check{opacity:1}
+  .zc-checkout .zc-err{font-size:12.5px;color:var(--zc-error);margin:6px 0 0;line-height:1.35}
+
+  /* ── TOTAL live ── */
+  .zc-checkout .zc-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    padding:15px 16px;border-radius:var(--zc-radius-sm);background:var(--zc-card);border:1px solid var(--zc-border);box-shadow:0 6px 20px rgba(16,24,40,.06)}
+  .zc-checkout .zc-total-l{font-size:18px;color:var(--zc-text);font-weight:800}
+  .zc-checkout .zc-total-v{font-size:24px;font-weight:800;color:var(--zc-text);letter-spacing:-.02em;white-space:nowrap}
+
+  /* ── CONSENT ── */
+  .zc-checkout .zc-consent{display:flex;align-items:flex-start;gap:11px}
+  .zc-checkout .zc-consent input{margin:2px 0 0;width:20px;height:20px;flex:0 0 auto;accent-color:var(--zc-accent);cursor:pointer;border-radius:6px}
+  .zc-checkout .zc-consent label{font-size:13.5px;color:var(--zc-muted);line-height:1.5;cursor:pointer}
+  .zc-checkout .zc-consent a{color:var(--zc-accent);text-decoration:underline;font-weight:600}
+  .zc-checkout .zc-consent.is-err label{color:var(--zc-error)}
+
+  /* ── CTA ── */
+  .zc-checkout .zc-cta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;
+    min-height:60px;padding:12px 22px;border:0;border-radius:var(--zc-radius-cta);cursor:pointer;font:inherit;font-weight:800;
+    background:var(--zc-accent);color:var(--zc-accent-text);transition:transform .16s ease,opacity .2s ease,filter .2s ease}
+  .zc-checkout .zc-cta:hover{filter:brightness(1.05);transform:translateY(-1px)}
+  .zc-checkout .zc-cta:active{transform:translateY(0)}
+  .zc-checkout .zc-cta[disabled]{opacity:.62;cursor:default;transform:none;filter:none}
+  /* label = pełne brzmienie ustawowe w jednej linii; kwota = osobny wiersz pod labelem */
+  .zc-checkout .zc-cta-label{display:block;width:100%;text-align:center;font-size:clamp(15px,4vw,17px);line-height:1.2;white-space:normal}
+  .zc-checkout .zc-spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;
+    animation:zc-rot .7s linear infinite;display:none}
+  .zc-checkout .zc-cta.is-busy .zc-spin{display:inline-block}
+  @keyframes zc-rot{to{transform:rotate(360deg)}}
+  .zc-checkout .zc-microcopy{font-size:13px;color:var(--zc-muted);text-align:center;margin:11px 0 0;line-height:1.45}
+  .zc-checkout .zc-legal{font-size:12px;color:var(--zc-muted);text-align:center;margin:6px 0 0}
+
+  /* ── BŁĄD ZAMÓWIENIA (inline, dane zostają) ── */
+  .zc-checkout .zc-order-error{border:1px solid var(--zc-error);border-radius:var(--zc-radius-sm);
+    background:color-mix(in srgb,var(--zc-error) 7%,var(--zc-card));padding:14px;color:var(--zc-text)}
+  .zc-checkout .zc-order-error p{margin:0 0 10px;font-size:14px;line-height:1.5}
+  .zc-checkout .zc-fallback{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:999px;
+    background:var(--zc-text);color:var(--zc-card);font-weight:700;font-size:14px;text-decoration:none}
+
+  /* ── TRUST ── */
+  .zc-checkout .zc-trust{display:flex;flex-direction:column;gap:14px}
+  .zc-checkout .zc-trust .pay-badges{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .zc-checkout .zc-chips{display:grid;gap:9px}
+  .zc-checkout .zc-chip{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--zc-muted);line-height:1.4}
+  .zc-checkout .zc-chip svg{width:17px;height:17px;flex:0 0 auto;color:var(--zc-ok);margin-top:1px}
+  .zc-checkout .zc-merchant{font-size:11.5px;color:var(--zc-muted);line-height:1.5;border-top:1px solid var(--zc-border);padding-top:12px}
+
+  /* ── STAN: oczekiwanie BLIK ── */
+  .zc-checkout .zc-blik-wait{text-align:center;padding:clamp(22px,4vw,44px) 12px;max-width:440px;margin:0 auto}
+  .zc-checkout .zc-blik-wait .zc-pulse{width:56px;height:56px;margin:0 auto 18px;border-radius:50%;
+    border:3px solid color-mix(in srgb,var(--zc-accent) 25%,transparent);border-top-color:var(--zc-accent);animation:zc-rot .9s linear infinite}
+  .zc-checkout .zc-blik-wait h3{margin:0 0 10px;font-size:20px;font-weight:800;color:var(--zc-text)}
+  .zc-checkout .zc-blik-wait p{margin:0 0 8px;font-size:14.5px;color:var(--zc-muted);line-height:1.55}
+  .zc-checkout .zc-blik-wait .zc-countdown{font-weight:700;color:var(--zc-text)}
+  .zc-checkout .zc-blik-actions{margin-top:18px;display:flex;flex-direction:column;gap:10px;align-items:center}
+  .zc-checkout .zc-linkbtn{background:none;border:0;color:var(--zc-accent);font:inherit;font-weight:700;font-size:14px;cursor:pointer;text-decoration:underline;padding:6px}
+
+  /* ── STAN: sukces ── */
+  .zc-checkout .zc-success{text-align:center;padding:clamp(24px,4vw,48px) 12px;max-width:480px;margin:0 auto}
+  .zc-checkout .zc-success .zc-tick{width:64px;height:64px;margin:0 auto 18px;border-radius:50%;
+    background:color-mix(in srgb,var(--zc-ok) 14%,transparent);display:grid;place-items:center;color:var(--zc-ok)}
+  .zc-checkout .zc-success .zc-tick svg{width:34px;height:34px}
+  .zc-checkout .zc-success h3{margin:0 0 8px;font-size:24px;font-weight:800;color:var(--zc-text)}
+  .zc-checkout .zc-success p{margin:0 0 12px;font-size:15px;color:var(--zc-muted);line-height:1.55}
+  .zc-checkout .zc-ordno{display:inline-block;margin:2px 0 14px;padding:8px 16px;border-radius:10px;
+    background:var(--zc-bg);border:1px solid var(--zc-border);font-weight:800;font-size:16px;color:var(--zc-text);letter-spacing:.02em}
+  .zc-checkout .zc-cod-amount{margin-top:6px;font-weight:700;color:var(--zc-text)}
+
+  /* ── WARIANT LAYOUTU „steps" (aktywny gdy .zc-checkout[data-zc-layout="steps"]) ── */
+  .zc-checkout[data-zc-layout="steps"] .zc-step{
+    border:1px solid var(--zc-border);border-radius:var(--zc-radius-sm);background:var(--zc-card);
+    overflow:hidden;transition:opacity .18s ease,background .18s ease}
+  .zc-checkout[data-zc-layout="steps"] .zc-step .zc-legend{display:none} /* tytuł kroku zastępuje legendę fieldsetu */
+  .zc-checkout[data-zc-layout="steps"] .zc-step-head{display:flex;align-items:center;gap:12px;width:100%;
+    padding:14px 16px;background:none;border:0;cursor:pointer;font:inherit;color:inherit;text-align:left}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-num{flex:0 0 auto;width:26px;height:26px;border-radius:50%;
+    display:grid;place-items:center;font-size:13px;font-weight:800;line-height:1;
+    background:var(--zc-step-num-bg);color:var(--zc-step-num-text)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-titlewrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-title{font-weight:800;font-size:15px;color:var(--zc-text);letter-spacing:-.01em}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-summary{font-size:13px;color:var(--zc-muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-next{display:inline-block;margin-top:10px;padding:10px 22px;
+    border:1px solid var(--zc-border);border-radius:calc(var(--zc-radius) * .6);background:transparent;
+    color:var(--zc-text);font-weight:700;font-size:14px;cursor:pointer;min-height:44px}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-next:hover{border-color:var(--zc-accent);color:var(--zc-accent)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-edit{flex:0 0 auto;font-size:13px;font-weight:700;
+    color:var(--zc-accent);text-decoration:underline;display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-body{display:flex;flex-direction:column;gap:15px;padding:0 16px 16px}
+  /* stany kroku */
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked{opacity:var(--zc-step-locked-opacity)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked .zc-step-num{background:var(--zc-border);color:var(--zc-muted)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-active{background:var(--zc-step-active-bg)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-num{background:var(--zc-ok);color:transparent;position:relative}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-num::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:800}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked .zc-step-body,
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-body{display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-summary{display:block} /* jedna linia + elipsa (nowrap z bazy) */
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-edit{display:inline}
+
+  /* stany maszyny — pokazywanie paneli */
+  .zc-checkout[data-zc-state="waiting_blik"] .zc-form,
+  .zc-checkout[data-zc-state="success"] .zc-form{display:none}
+  @media (prefers-reduced-motion:reduce){
+    .zc-checkout .zc-spin,.zc-checkout .zc-blik-wait .zc-pulse{animation:none}
+  }
+</style>
+
+<!-- (2) MARKUP — sekcja #zamow. Podmień w SKÓRCE: eyebrow/h2, chipy trust, .zc-merchant. -->
+<section id="zamow" class="zc-checkout" aria-labelledby="zc-title"
+         data-zc-product="{{WF2_PRODUCT_ID}}"
+         data-zc-api="https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-landing-api">
+  <div class="zc-wrap">
+    <header class="zc-head">
+      <p class="zc-eyebrow">Zamówienie</p>
+      <h2 id="zc-title" class="zc-h2">Dokończ zamówienie</h2>
+    </header>
+
+    <div class="zc-card">
+      <!-- FALLBACK gdy brak konfiguracji (placeholder nie podmieniony i brak override) -->
+      <div class="zc-guard" hidden>
+        <p style="margin:0 0 12px;font-size:14.5px">Zamówienie chwilowo niedostępne w tym miejscu.</p>
+        <a class="zc-fallback" data-zc-guard-link href="#" hidden>Przejdź do bezpiecznej kasy</a>
+      </div>
+
+      <form class="zc-form" novalidate>
+        <!-- (1) PASEK PODSUMOWANIA -->
+        <div class="zc-summary" aria-label="Podsumowanie zamówienia">
+          <button type="button" class="zc-sum-bar" aria-expanded="false" aria-controls="zc-sum-details">
+            <img class="zc-sum-thumb" data-zc-thumb src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="" width="52" height="52" loading="lazy">
+            <span class="zc-sum-info">
+              <span class="zc-sum-name" data-zc-name>Produkt</span>
+              <span class="zc-sum-qty">1 szt.</span>
+            </span>
+            <span class="zc-sum-price" data-zc-sum-price>—</span>
+            <svg class="zc-sum-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="zc-sum-details" id="zc-sum-details">
+            <div class="zc-sum-row"><span>Produkt</span><span data-zc-line-product>—</span></div>
+            <div class="zc-sum-row" data-zc-line-delivery-wrap><span>Dostawa</span><span data-zc-line-delivery>—</span></div>
+            <div class="zc-sum-row" data-zc-line-cod-wrap hidden><span>Pobranie</span><span data-zc-line-cod>—</span></div>
+            <div class="zc-sum-row zc-sum-total"><span>Razem</span><span data-zc-line-total>—</span></div>
+          </div>
+        </div>
+
+        <div class="zc-main">
+          <!-- (2) METODY PŁATNOŚCI -->
+          <fieldset class="zc-block zc-pay" data-zc-step="4">
+            <legend class="zc-legend">Płatność</legend>
+            <div class="zc-pay-list" role="radiogroup" aria-label="Metoda płatności">
+              <p class="zc-load" data-zc-pay-load>Ładujemy metody płatności…</p>
+            </div>
+            <p class="zc-err" data-err="payment" role="alert" hidden></p>
+          </fieldset>
+
+          <!-- (3) POLA -->
+          <fieldset class="zc-block zc-fields">
+            <legend class="zc-legend">Dane do wysyłki</legend>
+
+            <div class="zc-field" data-field="name" data-zc-step="2">
+              <label class="zc-label" for="zc-f-name">Imię i nazwisko</label>
+              <div class="zc-inwrap">
+                <input class="zc-in" id="zc-f-name" name="name" type="text" inputmode="text"
+                       autocomplete="name" autocapitalize="words" enterkeyhint="next"
+                       aria-required="true" placeholder="Jan Kowalski">
+                <svg class="zc-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <p class="zc-err" data-err="name" role="alert" hidden></p>
+            </div>
+
+            <div class="zc-field" data-field="phone" data-zc-step="1">
+              <label class="zc-label" for="zc-f-phone">Telefon <span class="zc-opt-tag">— kurier zadzwoni przed dostawą</span></label>
+              <div class="zc-inwrap">
+                <span class="zc-prefix" aria-hidden="true">+48</span>
+                <input class="zc-in has-prefix" id="zc-f-phone" name="phone" type="tel" inputmode="tel"
+                       autocomplete="tel" enterkeyhint="next" aria-required="true" placeholder="600 700 800">
+                <svg class="zc-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <p class="zc-err" data-err="phone" role="alert" hidden></p>
+            </div>
+
+            <div class="zc-field" data-field="email" data-zc-step="1">
+              <label class="zc-label" for="zc-f-email">E-mail <span class="zc-opt-tag">— potwierdzenie zamówienia</span></label>
+              <div class="zc-inwrap">
+                <input class="zc-in" id="zc-f-email" name="email" type="email" inputmode="email"
+                       autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false"
+                       enterkeyhint="next" aria-required="true" placeholder="jan@example.com">
+                <svg class="zc-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <p class="zc-err" data-err="email" role="alert" hidden></p>
+            </div>
+
+            <div class="zc-field" data-field="street" data-zc-step="2">
+              <label class="zc-label" for="zc-f-street">Ulica i numer</label>
+              <div class="zc-inwrap">
+                <input class="zc-in" id="zc-f-street" name="street" type="text" inputmode="text"
+                       autocomplete="street-address" autocapitalize="words" enterkeyhint="next"
+                       aria-required="true" placeholder="Kwiatowa 12/3">
+                <svg class="zc-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <p class="zc-err" data-err="street" role="alert" hidden></p>
+            </div>
+
+            <div class="zc-field" data-field="postCode" data-zc-step="2">
+              <label class="zc-label" for="zc-f-post">Kod pocztowy</label>
+              <div class="zc-inwrap">
+                <input class="zc-in" id="zc-f-post" name="postCode" type="text" inputmode="numeric"
+                       autocomplete="postal-code" enterkeyhint="next" aria-required="true"
+                       maxlength="6" placeholder="00-000">
+                <svg class="zc-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <p class="zc-err" data-err="postCode" role="alert" hidden></p>
+            </div>
+
+            <div class="zc-field" data-field="city" data-zc-step="2">
+              <label class="zc-label" for="zc-f-city">Miejscowość</label>
+              <div class="zc-inwrap">
+                <input class="zc-in" id="zc-f-city" name="city" type="text" inputmode="text"
+                       autocomplete="address-level2" autocapitalize="words" enterkeyhint="done"
+                       aria-required="true" placeholder="Warszawa">
+                <svg class="zc-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <p class="zc-err" data-err="city" role="alert" hidden></p>
+            </div>
+          </fieldset>
+
+          <!-- (4) DOSTAWA -->
+          <fieldset class="zc-block zc-delivery" data-zc-step="3">
+            <legend class="zc-legend">Dostawa</legend>
+            <div class="zc-del-list" role="radiogroup" aria-label="Sposób dostawy">
+              <p class="zc-load" data-zc-del-load>Ładujemy sposoby dostawy…</p>
+            </div>
+            <p class="zc-err" data-err="delivery" role="alert" hidden></p>
+          </fieldset>
+
+          <!-- (5) TOTAL live -->
+          <div class="zc-total">
+            <span class="zc-total-l">Razem do zapłaty</span>
+            <span class="zc-total-v" data-zc-total>—</span>
+          </div>
+
+          <!-- BŁĄD ZAMÓWIENIA (dane NIE giną) -->
+          <div class="zc-order-error" data-zc-order-error hidden>
+            <p data-zc-order-error-msg>Nie udało się złożyć zamówienia. Spróbuj ponownie za chwilę.</p>
+            <a class="zc-fallback" data-zc-fallback href="#" target="_blank" rel="noopener">Przejdź do bezpiecznej kasy</a>
+          </div>
+
+          <!-- (6) CHECKBOX (NIE pre-checked) -->
+          <div class="zc-consent" data-zc-consent-wrap>
+            <input type="checkbox" id="zc-consent" name="consent">
+            <label for="zc-consent">Zapoznałam/em się i akceptuję <a data-zc-terms href="#" target="_blank" rel="noopener">Regulamin</a> oraz <a data-zc-privacy href="#" target="_blank" rel="noopener">Politykę prywatności</a>.</label>
+          </div>
+
+          <!-- (7) CTA — BRZMIENIE USTAWOWE, NIE ZMIENIAĆ -->
+          <button type="submit" class="zc-cta" data-zc-cta>
+            <span class="zc-spin" aria-hidden="true"></span>
+            <span class="zc-cta-label">Zamawiam i płacę</span>
+          </button>
+          <p class="zc-microcopy" data-zc-microcopy hidden></p>
+          <p class="zc-legal">Masz prawo odstąpić od umowy w ciągu 14 dni.</p>
+        </div>
+
+        <!-- (8) TRUST -->
+        <div class="zc-trust">
+          <!-- pay-badges KANONICZNE (docs/zbuduje/assets/pay-badges.html) — id gradientu BLIK unikalne: blikPaZc/blikDoZc -->
+          <div class="pay-badges" aria-label="Dostępne metody płatności">
+            <span class="pb pb--blik" title="BLIK"><svg viewBox="0 0 135.639 64.18" role="img" aria-label="BLIK"><defs><linearGradient id="blikPaZc" x1=".5" x2=".5" y1=".993" y2=".004" gradientUnits="objectBoundingBox"><stop offset="0" stop-color="#5a5a5a"/><stop offset=".146" stop-color="#484848"/><stop offset=".52" stop-color="#212121"/><stop offset=".817" stop-color="#080808"/><stop offset="1"/></linearGradient><linearGradient id="blikDoZc" x1=".147" x2=".854" y1=".146" y2=".854" gradientUnits="objectBoundingBox"><stop offset="0" stop-color="#e52f08"/><stop offset="1" stop-color="#e94f96"/></linearGradient></defs><path d="m175.934 48.266h-119.81a7.919 7.919 0 0 0 -7.914 7.907v48.367a7.919 7.919 0 0 0 7.914 7.906h119.81a7.92 7.92 0 0 0 7.915-7.906v-48.367a7.92 7.92 0 0 0 -7.915-7.907z" fill="#fff" transform="translate(-48.21 -48.266)"/><path d="m176.419 49.579h-119.81a7.083 7.083 0 0 0 -7.087 7.079v48.368a7.082 7.082 0 0 0 7.087 7.078h119.81a7.082 7.082 0 0 0 7.086-7.078v-48.368a7.083 7.083 0 0 0 -7.086-7.079z" fill="url(#blikPaZc)" transform="translate(-48.695 -48.752)"/><g transform="translate(20.254 6.714)"><path d="m37.086 3.355h7.923v44.956h-7.923z" fill="#fff"/><path d="m52.04 18.866h7.923v29.445h-7.923z" fill="#fff"/><path d="m97.69 79.461a14.968 14.968 0 0 0 -7.108 1.784v-17h-7.924v30.242a15.03 15.03 0 1 0 15.032-15.026zm0 22.26a7.233 7.233 0 1 1 7.233-7.234 7.231 7.231 0 0 1 -7.233 7.234z" fill="#fff" transform="translate(-81.203 -60.889)"/><circle cx="7.088" cy="7.088" r="7.088" fill="url(#blikDoZc)" transform="matrix(.00649258 -.99997892 .99997892 .00649258 17.293 15.212)"/></g><path d="m205.694 109.2h10.206l-12.262-15.837 11.119-13.608h-9.257l-10.919 13.693v-29.2h-7.925v44.952h7.925l-.006-15.714z" fill="#fff" transform="translate(-99.413 -54.173)"/></svg></span>
+            <span class="pb pb--visa" title="Visa"><svg viewBox="0 0 24 24" role="img" aria-label="Visa"><path fill="#1A1F71" d="M9.112 8.262L5.97 15.758H3.92L2.374 9.775c-.094-.368-.175-.503-.461-.658C1.447 8.864.677 8.627 0 8.479l.046-.217h3.3a.904.904 0 01.894.764l.817 4.338 2.018-5.102zm8.033 5.049c.008-1.979-2.736-2.088-2.717-2.972.006-.269.262-.555.822-.628a3.66 3.66 0 011.913.336l.34-1.59a5.207 5.207 0 00-1.814-.333c-1.917 0-3.266 1.02-3.278 2.479-.012 1.079.963 1.68 1.698 2.04.756.367 1.01.603 1.006.931-.005.504-.602.725-1.16.734-.975.015-1.54-.263-1.992-.473l-.351 1.642c.453.208 1.289.39 2.156.398 2.037 0 3.37-1.006 3.377-2.564m5.061 2.447H24l-1.565-7.496h-1.656a.883.883 0 00-.826.55l-2.909 6.946h2.036l.405-1.12h2.488zm-2.163-2.656l1.02-2.815.588 2.815zm-8.16-4.84l-1.603 7.496H8.34l1.605-7.496z"/></svg></span>
+            <span class="pb pb--mc" title="Mastercard"><svg viewBox="0 0 36 22" role="img" aria-label="Mastercard"><circle cx="13" cy="11" r="10" fill="#EB001B"/><circle cx="23" cy="11" r="10" fill="#F79E1B"/><path d="M18 3.05a9.98 9.98 0 010 15.9 9.98 9.98 0 010-15.9z" fill="#FF5F00"/></svg></span>
+            <span class="pb pb--cod" title="Płatność przy odbiorze"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>ZA POBRANIEM</span>
+          </div>
+          <div class="zc-chips">
+            <span class="zc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> 14 dni na zwrot bez podawania przyczyny</span>
+            <span class="zc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg> Bezpieczne płatności — BLIK, karta lub za pobraniem</span>
+            <span class="zc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="6" width="13" height="10" rx="1.5"/><path d="M14.5 9H18l3.5 3.2V16h-7z"/><circle cx="6" cy="18" r="1.9"/><circle cx="17" cy="18" r="1.9"/></svg> Wysyłka pod wskazany adres</span>
+          </div>
+          <p class="zc-merchant" data-zc-merchant>Sprzedawca: nazwa firmy · adres · NIP 000-000-00-00. Ceny zawierają VAT.</p>
+        </div>
+      </form>
+
+      <!-- STAN: oczekiwanie na potwierdzenie BLIK -->
+      <div class="zc-blik-wait" data-zc-blik-wait hidden role="status" aria-live="polite">
+        <div class="zc-pulse" aria-hidden="true"></div>
+        <h3>Potwierdź płatność w aplikacji banku</h3>
+        <p>Otwórz aplikację swojego banku i zatwierdź transakcję BLIK. To potrwa kilka sekund.</p>
+        <p>Pozostało: <span class="zc-countdown" data-zc-blik-countdown>90</span> s</p>
+        <div class="zc-blik-actions">
+          <button type="button" class="zc-linkbtn" data-zc-blik-cancel>Anuluj i wróć do formularza</button>
+        </div>
+      </div>
+
+      <!-- STAN: sukces (COD / BLIK) -->
+      <div class="zc-success" data-zc-success hidden role="status" aria-live="polite">
+        <div class="zc-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <h3>Zamówienie przyjęte!</h3>
+        <p data-zc-success-msg>Dziękujemy. Wysłaliśmy potwierdzenie na Twój e-mail.</p>
+        <span class="zc-ordno" data-zc-ordno>—</span>
+        <p class="zc-cod-amount" data-zc-cod-amount hidden></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- (3) SKRYPT — IIFE, zero zależności. CAŁOŚĆ NIETYKALNA. -->
+<script>
+(function () {
+  'use strict';
+  var root = document.getElementById('zamow');
+  if (!root || root.getAttribute('data-zc-init') === '1') return;
+
+  // ── util ──────────────────────────────────────────────────────────────
+  function $(sel, ctx) { return (ctx || root).querySelector(sel); }
+  function $all(sel, ctx) { return Array.prototype.slice.call((ctx || root).querySelectorAll(sel)); }
+  function fmtPln(n) {
+    var v = Number(n) || 0;
+    try { return v.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł'; }
+    catch (e) { return v.toFixed(2).replace('.', ',') + ' zł'; }
+  }
+  function getCookie(name) {
+    try { var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; }
+    catch (e) { return ''; }
+  }
+  function setCookie(name, val, days) {
+    try {
+      var exp = new Date(Date.now() + days * 864e5).toUTCString();
+      document.cookie = name + '=' + encodeURIComponent(val) + '; expires=' + exp + '; path=/; SameSite=Lax';
+    } catch (e) {}
+  }
+
+  // ── clientId: trv_cid (SDK platformy) → localStorage zc_cid → mint UUIDv7 ──
+  // PUŁAPKA (README platforma-api §visitor-identity): na stronach isHtml SDK trzyma
+  // clientId w trv_cid — MUSIMY go użyć, inaczej atrybucja zamówienia będzie pusta.
+  function uuidv7() {
+    var tsHex = Date.now().toString(16);
+    while (tsHex.length < 12) tsHex = '0' + tsHex;
+    tsHex = tsHex.slice(-12);
+    var bytes = new Array(10);
+    if (window.crypto && crypto.getRandomValues) {
+      var rb = crypto.getRandomValues(new Uint8Array(10));
+      for (var i = 0; i < 10; i++) bytes[i] = rb[i];
+    } else {
+      for (var j = 0; j < 10; j++) bytes[j] = Math.floor(Math.random() * 256);
+    }
+    bytes[0] = 0x70 | (bytes[0] & 0x0f);   // wersja 7
+    bytes[2] = 0x80 | (bytes[2] & 0x3f);   // wariant 10xx
+    var rnd = '';
+    for (var k = 0; k < 10; k++) { var h = bytes[k].toString(16); rnd += (h.length < 2 ? '0' : '') + h; }
+    var s = tsHex + rnd; // 32 hex
+    return s.slice(0, 8) + '-' + s.slice(8, 12) + '-' + s.slice(12, 16) + '-' + s.slice(16, 20) + '-' + s.slice(20, 32);
+  }
+  function resolveClientId() {
+    var c = getCookie('trv_cid'); if (c) return c;
+    var ls = ''; try { ls = localStorage.getItem('zc_cid') || ''; } catch (e) {}
+    if (ls) return ls;
+    var id = uuidv7();
+    try { localStorage.setItem('zc_cid', id); } catch (e) {}
+    setCookie('zc_cid', id, 730);
+    return id;
+  }
+
+  // ── STAN GLOBALNY MODUŁU ────────────────────────────────────────────────
+  var CFG = null;                 // { apiBase, websiteId, productVariantId, name, price, thumb, checkoutFallbackUrl, termsUrl, privacyUrl, merchant, deliveryDays }
+  var clientId = resolveClientId();
+  var payments = [];              // [{ id, name, kind:'blik'|'online' }]
+  var delivery = { methods: [], selectedId: null };  // methods: [{ id, name, price, priceGroupId, codPrice, codSupported }]
+  var selectedPayment = null;     // { mode:'blik'|'cod'|'online', providerId }
+  var cartAdded = false;          // czy /cart/item już wysłane w tej próbie
+  var beginSent = false;          // eventy addToCart/beginCheckout — raz
+  var purchaseSent = false;       // Purchase — raz
+  var blikTimer = null, blikDeadline = 0, blikAttempts = 0;
+  var lazyLoaded = false;
+  var identified = {};            // dedup identify() — klucze 'EmailHash:<v>' / 'PhoneHash:<v>'
+  var STEP_EL = {};               // wariant steps: key kroku → element .zc-step
+  var stepsOn = false;
+  var STEP_ORDER = ['contact', 'address', 'delivery', 'payment'];
+
+  // ── KONFIGURACJA: override (data-zc-config) LUB wf2-landing-api ──────────
+  function parseOverride() {
+    var raw = root.getAttribute('data-zc-config');
+    if (!raw) return null;
+    try {
+      var o = JSON.parse(raw);
+      if (!o || !o.websiteId || !o.productVariantId) return null;
+      return o;
+    } catch (e) { return null; }
+  }
+  function deriveShopUrls(cfg) {
+    // linki prawne/fallback po originie kasy (domena sklepu) — chyba że podane wprost
+    var origin = '';
+    try { if (cfg.checkoutFallbackUrl) origin = new URL(cfg.checkoutFallbackUrl).origin; } catch (e) {}
+    cfg.termsUrl = cfg.termsUrl || (origin ? origin + '/regulation' : '#');
+    cfg.privacyUrl = cfg.privacyUrl || (origin ? origin + '/privacy-policy' : '#');
+    return cfg;
+  }
+  function buildConfig() {
+    var ov = parseOverride();
+    if (ov) {
+      return Promise.resolve(deriveShopUrls({
+        apiBase: (ov.apiBase || 'https://api.trevio.pl').replace(/\/+$/, ''),
+        websiteId: ov.websiteId,
+        productVariantId: ov.productVariantId,
+        name: ov.name || document.title,
+        price: (ov.price != null ? Number(ov.price) : null),
+        thumb: ov.thumb || '',
+        checkoutFallbackUrl: ov.checkoutFallbackUrl || '',
+        termsUrl: ov.termsUrl, privacyUrl: ov.privacyUrl,
+        merchant: ov.merchant || '',
+        deliveryDays: (ov.deliveryDays != null ? parseInt(ov.deliveryDays, 10) : parseInt(root.getAttribute('data-zc-delivery-days') || '2', 10))
+      }));
+    }
+    // tryb produkcyjny: wf2-landing-api (blok platform)
+    var pid = root.getAttribute('data-zc-product') || '';
+    var api = root.getAttribute('data-zc-api') || '';
+    if (!pid || pid.indexOf('{{') !== -1 || !api) return Promise.resolve(null);
+    return fetch(api + '?product=' + encodeURIComponent(pid))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.platform || !d.platform.website_id || !d.platform.variant_id) return null;
+        return deriveShopUrls({
+          apiBase: 'https://api.trevio.pl',
+          websiteId: d.platform.website_id,
+          productVariantId: d.platform.variant_id,
+          name: d.name || document.title,
+          price: (d.price != null ? Number(d.price) : null),
+          thumb: '',
+          checkoutFallbackUrl: d.checkout_url || '',
+          termsUrl: null, privacyUrl: null,
+          merchant: '',
+          deliveryDays: parseInt(root.getAttribute('data-zc-delivery-days') || '2', 10)
+        });
+      })
+      .catch(function () { return null; });
+  }
+
+  // ── API storefront ──────────────────────────────────────────────────────
+  function apiUrl(path) { return CFG.apiBase + path; }
+  function apiGet(path, query) {
+    var qs = '';
+    if (query) { var parts = []; for (var k in query) if (query[k] != null) parts.push(k + '=' + encodeURIComponent(query[k])); qs = parts.length ? ('?' + parts.join('&')) : ''; }
+    return fetch(apiUrl(path) + qs, { method: 'GET', headers: { 'accept': 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error('GET ' + path + ' → ' + r.status); return r.text().then(function (t) { return t && t.trim() ? JSON.parse(t) : null; }); });
+  }
+  function apiPost(path, body) {
+    return fetch(apiUrl(path), { method: 'POST', headers: { 'content-type': 'application/json', 'accept': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) {
+        if (!r.ok) return r.text().then(function (t) { var e = new Error('POST ' + path + ' → ' + r.status); e.status = r.status; e.detail = t; throw e; });
+        // puste body przy 200 (np. cart/item, checkout-details) = null — JSON.parse('') by wywalił flow
+        return r.text().then(function (t) { return t && t.trim() ? JSON.parse(t) : null; });
+      });
+  }
+
+  // ── data dostawy (dzień roboczy + offset) ────────────────────────────────
+  function deliveryDateText() {
+    var days = ['niedz.', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.'];
+    var d = new Date(), added = 0, n = (CFG.deliveryDays > 0 ? CFG.deliveryDays : 2);
+    while (added < n) { d.setDate(d.getDate() + 1); var wd = d.getDay(); if (wd !== 0 && wd !== 6) added++; }
+    var dd = d.getDate(), mm = d.getMonth() + 1;
+    return days[d.getDay()] + ', ' + (dd < 10 ? '0' + dd : dd) + '.' + (mm < 10 ? '0' + mm : mm);
+  }
+
+  // ── parsery odpowiedzi (defensywne — kształty storefront potwierdzone przez pola,
+  //    ale nie w docs/OpenAPI; fallbacki na warianty nazw) ─────────────────
+  function asArray(x) {
+    if (!x) return [];
+    if (Array.isArray(x)) return x;
+    // koperty api.trevio.pl (potwierdzone E2E 20.07): delivery-method → {deliveryMethods:[…]}, payment-provider → {providers:[…]}
+    if (Array.isArray(x.deliveryMethods)) return x.deliveryMethods;
+    if (Array.isArray(x.providers)) return x.providers;
+    if (Array.isArray(x.items)) return x.items;
+    if (Array.isArray(x.data)) return x.data;
+    if (Array.isArray(x.results)) return x.results;
+    return [];
+  }
+  function pickId(o) { return o.id || o.deliveryMethodId || o.methodId || o.websitePaymentProviderId || o.providerId || null; }
+  function pickName(o) { return o.name || o.displayName || o.title || o.label || o.provider || 'Metoda'; }
+  function pickPlnGroup(m) {
+    var groups = m.priceGroups || m.pricingTiers || m.priceTiers || m.prices || [];
+    if (!Array.isArray(groups)) groups = [];
+    var g = null;
+    for (var i = 0; i < groups.length; i++) {
+      var cur = (groups[i].currency || groups[i].currencyCode || '').toUpperCase();
+      if (cur === 'PLN') { g = groups[i]; break; }
+    }
+    if (!g && groups.length) g = groups[0];
+    if (!g) return { id: null, price: (m.price != null ? Number(m.price) : 0) };
+    return { id: g.id || g.priceGroupId || null, price: Number(g.price != null ? g.price : (g.amount != null ? g.amount : 0)) };
+  }
+  function codInfo(m) {
+    var supported = (m.isCashOnDelivery === true) || (m.supportsCashOnDelivery === true) || (m.codAvailable === true) || (m.allowCashOnDelivery === true);
+    var price = m.codPrice != null ? m.codPrice : (m.cashOnDeliveryPrice != null ? m.cashOnDeliveryPrice : (m.codSurcharge != null ? m.codSurcharge : 0));
+    // brak jawnej flagi COD w metodzie → dopuszczamy COD (kurier PL standardowo obsługuje pobranie); dopłata = 0 jeśli nieznana
+    return { supported: (m.isCashOnDelivery === false ? false : true) && supported !== false, codPrice: Number(price) || 0 };
+  }
+
+  // ── RENDER: dostawy ──────────────────────────────────────────────────────
+  function renderDelivery(list) {
+    var box = $('.zc-del-list');
+    box.innerHTML = '';
+    if (!list.length) {
+      box.innerHTML = '<p class="zc-load">Brak dostępnych metod dostawy. Spróbuj bezpiecznej kasy poniżej.</p>';
+      return;
+    }
+    var dateTxt = deliveryDateText();
+    // domyślnie zaznaczamy NAJTAŃSZĄ metodę (nie pierwszą): wejściowy total = najniższy uczciwy (E2E 21.07)
+    var defIdx = 0;
+    list.forEach(function (m, i) { if ((m.price || 0) < (list[defIdx].price || 0)) defIdx = i; });
+    list.forEach(function (m, idx) {
+      var priceTxt = m.price > 0 ? fmtPln(m.price) : 'gratis';
+      var id = 'zc-del-' + idx;
+      var lab = document.createElement('label');
+      lab.className = 'zc-opt' + (idx === defIdx ? ' is-sel' : '');
+      lab.setAttribute('for', id);
+      lab.innerHTML =
+        '<input type="radio" name="zc-delivery" id="' + id + '" value="' + m.id + '"' + (idx === defIdx ? ' checked' : '') + '>' +
+        '<span class="zc-opt-body"><span class="zc-opt-top"><span class="zc-opt-name">' + escapeHtml(m.name) + '</span>' +
+        '<span class="zc-opt-price">' + priceTxt + '</span></span>' +
+        '<span class="zc-opt-sub">Dostawa do ' + dateTxt + '</span></span>';
+      box.appendChild(lab);
+    });
+    delivery.selectedId = list[defIdx].id;
+    hideError('delivery');   // walidacja sprzed lazy-loadu mogła zostawić komunikat — default JEST wybrany
+    $all('input[name="zc-delivery"]', box).forEach(function (r) {
+      r.addEventListener('change', function () {
+        delivery.selectedId = r.value;
+        $all('.zc-opt', box).forEach(function (o) { o.classList.remove('is-sel'); });
+        r.closest('.zc-opt').classList.add('is-sel');
+        hideError('delivery');
+        recalcTotal();
+      });
+    });
+    recalcTotal();
+  }
+
+  // ── RENDER: płatności ────────────────────────────────────────────────────
+  function renderPayments(list) {
+    var box = $('.zc-pay-list');
+    box.innerHTML = '';
+    var blik = null, online = [];
+    list.forEach(function (p) {
+      var name = (pickName(p) || '').toLowerCase();
+      var isBlik = name.indexOf('blik') !== -1 || (p.type && String(p.type).toLowerCase().indexOf('blik') !== -1) || p.isBlik === true;
+      if (isBlik && !blik) blik = p; else online.push(p);
+    });
+
+    var opts = [];
+    if (blik) opts.push({ mode: 'blik', providerId: pickId(blik), name: 'BLIK', sub: 'Zapłać kodem z aplikacji banku', badge: 'POLECANE' });
+    // COD zawsze widoczny (u polskiego klienta brak COD = sygnał scamu)
+    opts.push({ mode: 'cod', providerId: null, name: 'Płatność przy odbiorze', sub: 'Płacisz dopiero, gdy kurier dostarczy paczkę', badge: '' });
+    online.forEach(function (p) {
+      opts.push({ mode: 'online', providerId: pickId(p), name: pickName(p), sub: 'Zapłać online — przekierujemy do bezpiecznej płatności', badge: '' });
+    });
+
+    opts.forEach(function (o, idx) {
+      var id = 'zc-pay-' + idx;
+      var sel = false; // ŻADNA metoda nie zaznaczona domyślnie — świadomy wybór (decyzja Tomka 21.07); COD-copy pojawia się TYLKO po wyborze
+      var lab = document.createElement('label');
+      lab.className = 'zc-opt' + (sel ? ' is-sel' : '');
+      lab.setAttribute('for', id);
+      lab.innerHTML =
+        '<input type="radio" name="zc-payment" id="' + id + '" value="' + o.mode + '"' + (o.providerId ? ' data-provider="' + o.providerId + '"' : '') + (sel ? ' checked' : '') + '>' +
+        '<span class="zc-opt-body"><span class="zc-opt-top"><span class="zc-opt-name">' + escapeHtml(o.name) +
+        (o.badge ? '<span class="zc-opt-badge">' + o.badge + '</span>' : '') + '</span></span>' +
+        '<span class="zc-opt-sub">' + escapeHtml(o.sub) + '</span></span>';
+      box.appendChild(lab);
+      // kontener BLIK po opcji BLIK
+      if (o.mode === 'blik') box.appendChild(buildBlikBoxes());
+    });
+
+    // BEZ domyślnego wyboru — selectedPayment=null aż do świadomego kliknięcia (CTA „Zamawiam i płacę", zero COD-copy)
+    $all('input[name="zc-payment"]', box).forEach(function (r, i) {
+      r.addEventListener('change', function () {
+        $all('.zc-opt', box).forEach(function (op) { op.classList.remove('is-sel'); });
+        r.closest('.zc-opt').classList.add('is-sel');
+        selectPayment(opts[i]);
+      });
+    });
+  }
+  function buildBlikBoxes() {
+    var wrap = document.createElement('div');
+    wrap.className = 'zc-blik';
+    wrap.setAttribute('data-zc-blik-input', '');
+    wrap.hidden = true;
+    var boxes = '';
+    for (var i = 0; i < 6; i++) {
+      boxes += '<input type="text" inputmode="numeric" autocomplete="' + (i === 0 ? 'one-time-code' : 'off') + '" ' +
+        'maxlength="1" aria-label="Cyfra ' + (i + 1) + ' kodu BLIK" data-blik-i="' + i + '">';
+    }
+    wrap.innerHTML =
+      '<span class="zc-blik-label">Kod BLIK</span>' +
+      '<div class="zc-blik-boxes">' + boxes + '</div>' +
+      '<p class="zc-blik-hint">Wpisz 6-cyfrowy kod z aplikacji banku.</p>' +
+      '<p class="zc-err" data-err="blik" role="alert" hidden></p>';
+    return wrap;
+  }
+  function wireBlikBoxes() {
+    var wrap = $('[data-zc-blik-input]');
+    if (!wrap) return;
+    var inputs = $all('input[data-blik-i]', wrap);
+    inputs.forEach(function (inp, i) {
+      inp.addEventListener('input', function () {
+        inp.value = inp.value.replace(/\D/g, '').slice(0, 1);
+        if (inp.value && i < 5) inputs[i + 1].focus();
+        hideError('blik');
+      });
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Backspace' && !inp.value && i > 0) { inputs[i - 1].focus(); }
+      });
+      inp.addEventListener('paste', function (e) {
+        e.preventDefault();
+        var txt = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+        for (var k = 0; k < 6; k++) inputs[k].value = txt[k] || '';
+        var next = Math.min(txt.length, 5);
+        inputs[next].focus();
+        hideError('blik');
+      });
+    });
+  }
+  function readBlik() {
+    var wrap = $('[data-zc-blik-input]'); if (!wrap) return '';
+    return $all('input[data-blik-i]', wrap).map(function (i) { return i.value || ''; }).join('');
+  }
+  function resetBlik() {
+    var wrap = $('[data-zc-blik-input]'); if (!wrap) return;
+    $all('input[data-blik-i]', wrap).forEach(function (i) { i.value = ''; });
+  }
+
+  function selectPayment(o) {
+    selectedPayment = { mode: o.mode, providerId: o.providerId };
+    var blikWrap = $('[data-zc-blik-input]');
+    if (blikWrap) blikWrap.hidden = (o.mode !== 'blik');
+    if (o.mode === 'blik') { setTimeout(function () { var f = $('input[data-blik-i="0"]'); if (f) f.focus(); }, 30); }
+    var micro = $('[data-zc-microcopy]');
+    if (micro) {
+      micro.hidden = false;
+      micro.textContent = o.mode === 'cod' ? 'Płacisz dopiero przy odbiorze — nic nie płacisz teraz.'
+        : o.mode === 'blik' ? 'Zapłacisz teraz BLIK-iem — bezpieczna płatność.'
+        : 'Zapłacisz online — przekierujemy Cię do bezpiecznej płatności.';
+    }
+    recalcTotal();
+  }
+
+  // ── TOTAL live + podsumowanie ─────────────────────────────────────────────
+  function currentDelivery() {
+    for (var i = 0; i < delivery.methods.length; i++) if (delivery.methods[i].id === delivery.selectedId) return delivery.methods[i];
+    return null;
+  }
+  // CTA = obowiązek zapłaty (art. 17 UoPK): „Zamawiam i płacę", przy COD „…przy odbiorze" (decyzja Tomka 21.07)
+  function ctaLabelText() {
+    return (selectedPayment && selectedPayment.mode === 'cod') ? 'Zamawiam i płacę przy odbiorze' : 'Zamawiam i płacę';
+  }
+  function recalcTotal() {
+    var unit = CFG.price != null ? CFG.price : 0;
+    var dm = currentDelivery();
+    var dPrice = dm ? dm.price : 0;
+    var isCod = selectedPayment && selectedPayment.mode === 'cod';
+    var codPrice = (isCod && dm) ? dm.codPrice : 0;
+    var total = unit + dPrice + codPrice;
+
+    $('[data-zc-line-product]').textContent = fmtPln(unit);
+    $('[data-zc-sum-price]').textContent = fmtPln(unit);
+    $('[data-zc-line-delivery]').textContent = dm ? (dPrice > 0 ? fmtPln(dPrice) : 'gratis') : '—';
+    var codWrap = $('[data-zc-line-cod-wrap]');
+    if (isCod && codPrice > 0) { codWrap.hidden = false; $('[data-zc-line-cod]').textContent = fmtPln(codPrice); }
+    else { codWrap.hidden = true; }
+    $('[data-zc-line-total]').textContent = fmtPln(total);
+    $('[data-zc-total]').textContent = fmtPln(total);
+    var ctaLab = $('.zc-cta-label'); if (ctaLab && !$('[data-zc-cta]').classList.contains('is-busy')) ctaLab.textContent = ctaLabelText();
+    return total;
+  }
+
+  // ── WALIDACJA PL ──────────────────────────────────────────────────────────
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function fieldEl(name) { return $('.zc-field[data-field="' + name + '"]'); }
+  function showError(name, msg) {
+    var fe = fieldEl(name);
+    if (fe) { fe.classList.add('is-err'); fe.classList.remove('is-ok'); }
+    var er = $('.zc-err[data-err="' + name + '"]');
+    if (er) { er.textContent = msg; er.hidden = false; }
+  }
+  function markOk(name) {
+    var fe = fieldEl(name);
+    if (fe) { fe.classList.add('is-ok'); fe.classList.remove('is-err'); }
+    hideError(name);
+  }
+  function hideError(name) {
+    var fe = fieldEl(name);
+    if (fe) fe.classList.remove('is-err');
+    var er = $('.zc-err[data-err="' + name + '"]');
+    if (er) { er.hidden = true; er.textContent = ''; }
+  }
+  function val(name) { var i = $('#zc-f-' + fieldIdFrag(name)); return i ? i.value.trim() : ''; }
+  function fieldIdFrag(name) { return name === 'postCode' ? 'post' : name; }
+  function normPhone(raw) { return String(raw || '').replace(/[\s\-()]/g, '').replace(/^\+?48/, ''); }
+  function normPost(raw) { var d = String(raw || '').replace(/\D/g, '').slice(0, 5); return d.length > 2 ? d.slice(0, 2) + '-' + d.slice(2) : d; }
+
+  var RULES = {
+    name: function (v) { if (v.length < 3 || v.split(/\s+/).length < 2) return 'Podaj imię i nazwisko.'; return ''; },
+    phone: function (v) { if (!/^\d{9}$/.test(normPhone(v))) return 'Podaj 9-cyfrowy numer telefonu.'; return ''; },
+    email: function (v) { if (!EMAIL_RE.test(v)) return 'Podaj poprawny adres e-mail.'; return ''; },
+    street: function (v) { if (v.length < 3) return 'Podaj ulicę i numer domu.'; if (!/\d/.test(v)) return 'Dopisz numer domu, np. Kwiatowa 12.'; return ''; },
+    postCode: function (v) { if (!/^\d{2}-\d{3}$/.test(normPost(v))) return 'Kod pocztowy w formacie 00-000.'; return ''; },
+    city: function (v) { if (v.length < 2) return 'Podaj miejscowość.'; return ''; }
+  };
+  function validateField(name) {
+    var v = val(name);
+    var msg = RULES[name] ? RULES[name](v) : '';
+    if (msg) { showError(name, msg); return false; }
+    markOk(name); return true;
+  }
+  function validateAll() {
+    var firstBad = null, ok = true;
+    Object.keys(RULES).forEach(function (name) {
+      if (!validateField(name)) { ok = false; if (!firstBad) firstBad = name; }
+    });
+    // dostawa
+    if (!delivery.selectedId) { showFieldNote('delivery', 'Wybierz sposób dostawy.'); ok = false; if (!firstBad) firstBad = 'delivery'; }
+    // consent
+    var consent = $('#zc-consent');
+    if (!consent.checked) { $('[data-zc-consent-wrap]').classList.add('is-err'); ok = false; if (!firstBad) firstBad = 'consent'; }
+    else { $('[data-zc-consent-wrap]').classList.remove('is-err'); }
+    // płatność — brak preselekcji, wybór musi być świadomy
+    if (!selectedPayment) { showFieldNote('payment', 'Wybierz metodę płatności.'); ok = false; if (!firstBad) firstBad = 'payment'; }
+    // BLIK: kod wymagany
+    if (selectedPayment && selectedPayment.mode === 'blik') {
+      if (!/^\d{6}$/.test(readBlik())) { showFieldNote('blik', 'Wpisz 6-cyfrowy kod BLIK.'); ok = false; if (!firstBad) firstBad = 'blik'; }
+    }
+    if (firstBad) focusField(firstBad);
+    return ok;
+  }
+  function showFieldNote(name, msg) { var er = $('.zc-err[data-err="' + name + '"]'); if (er) { er.textContent = msg; er.hidden = false; } }
+  function focusField(name) {
+    if (name === 'consent') { $('#zc-consent').focus(); return; }
+    if (name === 'delivery') { var d = $('input[name="zc-delivery"]'); if (d) d.focus(); return; }
+    if (name === 'payment') { var pp = $('input[name="zc-payment"]'); if (pp) { pp.focus(); try { pp.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} } return; }
+    if (name === 'blik') { var b = $('input[data-blik-i="0"]'); if (b) b.focus(); return; }
+    var i = $('#zc-f-' + fieldIdFrag(name)); if (i) { i.focus(); try { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }
+  }
+
+  // ── EVENTY analityki (trevio + Meta) — guardy przeciw dublom ───────────────
+  function trevioItem() { return { productId: CFG.productVariantId, name: CFG.name, price: CFG.price != null ? CFG.price : 0, quantity: 1 }; }
+  function evBeginCheckout() {
+    if (beginSent) return; beginSent = true;
+    var total = recalcTotal();
+    if (window.trevio) {
+      try { window.trevio.addToCart({ currency: 'PLN', productId: CFG.productVariantId, name: CFG.name, price: CFG.price != null ? CFG.price : 0, quantity: 1 }); } catch (e) {}
+      try { window.trevio.beginCheckout({ currency: 'PLN', total: total, items: [trevioItem()] }); } catch (e) {}
+    }
+    if (window.fbq) { try { window.fbq('track', 'AddToCart'); } catch (e) {} try { window.fbq('track', 'InitiateCheckout'); } catch (e) {} }
+  }
+  function evShippingInfo() { if (window.trevio) { try { window.trevio.addShippingInfo({ currency: 'PLN', total: recalcTotal(), items: [trevioItem()] }); } catch (e) {} } }
+  function evPaymentInitiated() { if (window.trevio) { try { window.trevio.paymentInitiated({ currency: 'PLN', total: recalcTotal(), items: [trevioItem()] }); } catch (e) {} } }
+  function evPurchase(orderId, isCod) {
+    if (window.trevio) {
+      var payload = { currency: 'PLN', total: recalcTotal(), orderId: orderId, items: [trevioItem()] };
+      try { if (isCod) window.trevio.purchaseOnDelivery(payload); else window.trevio.purchase({ currency: 'PLN', total: recalcTotal(), orderId: orderId, items: [trevioItem()], isCashOnDelivery: false }); } catch (e) {}
+    }
+    // Meta Purchase TYLKO COD/BLIK-sukces; eventID=orderId (dedup z CAPI). NIGDY przy redirect online.
+    if (!purchaseSent && window.fbq) {
+      purchaseSent = true;
+      try { window.fbq('track', 'Purchase', { value: recalcTotal(), currency: 'PLN' }, { eventID: String(orderId) }); } catch (e) {}
+    }
+  }
+
+  // ── IDENTIFY (window.trevio) — po pozytywnej walidacji e-maila/telefonu, raz per wartość ──
+  function fireIdentify(type, value) {
+    if (!value) return;
+    var key = type + ':' + value;
+    if (identified[key]) return;
+    if (!window.trevio || typeof window.trevio.identify !== 'function') return; // preview poza platformą
+    identified[key] = true;
+    try {
+      // beacon platformy ma pola identityType/identityValue → primary = {type, value} (E2E 21.07:
+      // wariant {EmailHash: v} przechodził bez błędu, ale identityValue zostawał null)
+      window.trevio.identify({ type: type, value: value, identityType: type, identityValue: value });
+    } catch (e) {
+      // fallback defensywny na formę pól z guide: identify{EmailHash|PhoneHash}
+      try { var o = {}; o[type] = value; window.trevio.identify(o); } catch (e2) {}
+    }
+  }
+  function maybeIdentify(name, rawVal) {
+    if (name === 'email') fireIdentify('EmailHash', rawVal);
+    else if (name === 'phone') fireIdentify('PhoneHash', '+48' + normPhone(rawVal));
+  }
+
+  // ── MASZYNA STANÓW ─────────────────────────────────────────────────────────
+  function setState(s) { root.setAttribute('data-zc-state', s); }
+  function setBusy(on) {
+    var cta = $('[data-zc-cta]');
+    cta.disabled = !!on;
+    cta.classList.toggle('is-busy', !!on);
+    $('.zc-cta-label', cta).textContent = on ? 'Przetwarzamy…' : ctaLabelText();
+  }
+  function showOrderError(msg) {
+    var box = $('[data-zc-order-error]');
+    $('[data-zc-order-error-msg]').textContent = msg || 'Nie udało się złożyć zamówienia. Spróbuj ponownie za chwilę.';
+    var fb = $('[data-zc-fallback]');
+    if (CFG.checkoutFallbackUrl) { fb.href = CFG.checkoutFallbackUrl; fb.style.display = ''; } else { fb.style.display = 'none'; }
+    box.hidden = false;
+    setState('error');
+    try { box.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+  }
+  function hideOrderError() { $('[data-zc-order-error]').hidden = true; }
+
+  // ── SUBMIT (async) ───────────────────────────────────────────────────────
+  function onSubmit(e) {
+    e.preventDefault();
+    hideOrderError();
+    if (!CFG) return;
+    setState('validating');
+    if (!validateAll()) { setState('idle'); return; }
+
+    evBeginCheckout();
+    setState('submitting'); setBusy(true);
+
+    var dm = currentDelivery();
+    var isCod = selectedPayment.mode === 'cod';
+    var isBlik = selectedPayment.mode === 'blik';
+
+    // 1) koszyk
+    apiPost('/storefront/cart/item', { clientId: clientId, websiteId: CFG.websiteId, productVariantId: CFG.productVariantId, quantity: 1 })
+      .then(function () {
+        cartAdded = true;
+        // 2) dane checkoutu
+        var street = val('street');
+        var split = splitStreet(street);
+        return apiPost('/storefront/cart/checkout-details', {
+          clientId: clientId, websiteId: CFG.websiteId,
+          fullName: val('name'),
+          street: split.street, houseNumber: split.houseNumber,
+          postCode: normPost(val('postCode')), city: val('city'),
+          countryCode: 'PL', phoneNumber: '+48' + normPhone(val('phone')), email: val('email'),
+          invoice: false, deliveryMethodId: dm ? dm.id : null
+        });
+      })
+      .then(function () {
+        evShippingInfo();
+        // 3) zamówienie
+        return apiPost('/storefront/order/cart', {
+          clientId: clientId, websiteId: CFG.websiteId,
+          websitePaymentProviderId: selectedPayment.providerId || null,
+          languageCode: 'PL',
+          deliveryMethodId: dm ? dm.id : null,
+          deliveryMethodPriceGroupId: dm ? dm.priceGroupId : null,
+          blikCode: isBlik ? readBlik() : null,
+          isCashOnDelivery: isCod
+        });
+      })
+      .then(function (order) {
+        evPaymentInitiated();
+        order = order || {};
+        var orderNo = order.orderNumber || order.orderNo || order.number || order.orderId || '—';
+        if (isCod) {
+          setBusy(false);
+          showSuccess(orderNo, true);
+          evPurchase(order.orderId || orderNo, true);
+          return;
+        }
+        if (isBlik) {
+          startBlikPolling(order.paymentId, order.orderId || orderNo, orderNo);
+          return;
+        }
+        // online: redirect (BEZ Purchase — pali strona wyniku platformy)
+        if (order.redirectUrl) { window.location.href = order.redirectUrl; return; }
+        setBusy(false);
+        showOrderError('Nie udało się rozpocząć płatności online. Wybierz inną metodę lub przejdź do bezpiecznej kasy.');
+      })
+      .catch(function (err) {
+        setBusy(false);
+        if (isBlik) { blikFailed('Nie udało się potwierdzić kodu BLIK. Wygeneruj nowy kod i spróbuj ponownie.'); return; }
+        showOrderError(errText(err));
+      });
+  }
+  function errText(err) {
+    var s = err && err.status;
+    if (s === 429) return 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.';
+    if (s === 400 || s === 422) return 'Któreś z danych nie przeszło weryfikacji. Sprawdź adres i spróbuj ponownie.';
+    return 'Coś poszło nie tak przy składaniu zamówienia. Spróbuj ponownie lub przejdź do bezpiecznej kasy.';
+  }
+  // split ulicy: ostatni token zawierający cyfrę = numer domu; reszta = ulica
+  function splitStreet(s) {
+    s = String(s || '').trim();
+    var tokens = s.split(/\s+/);
+    for (var i = tokens.length - 1; i >= 0; i--) {
+      if (/\d/.test(tokens[i])) {
+        var houseNumber = tokens[i];
+        var street = tokens.slice(0, i).concat(tokens.slice(i + 1)).join(' ').trim();
+        return { street: street || s, houseNumber: houseNumber };
+      }
+    }
+    return { street: s, houseNumber: '' };
+  }
+
+  // ── BLIK: polling statusu (2,5 s / max 90 s) ───────────────────────────────
+  var BLIK_INTERVAL = 2500, BLIK_MAX = 90000;
+  function startBlikPolling(paymentId, orderId, orderNo) {
+    if (!paymentId) { blikFailed('Brak identyfikatora płatności. Spróbuj ponownie lub zapłać przy odbiorze.'); return; }
+    setState('waiting_blik');
+    $('[data-zc-blik-wait]').hidden = false;
+    blikDeadline = Date.now() + BLIK_MAX;
+    updateBlikCountdown();
+    if (blikTimer) clearInterval(blikTimer);
+    blikTimer = setInterval(function () {
+      updateBlikCountdown();
+      if (Date.now() >= blikDeadline) { stopBlik(); blikTimeout(orderNo); return; }
+      apiGet('/storefront/payment/' + encodeURIComponent(paymentId) + '/status')
+        .then(function (st) {
+          var status = String((st && (st.status || st.state || st.paymentStatus)) || '').toLowerCase();
+          if (/^(success|succeeded|paid|completed|confirmed|settled|done)$/.test(status)) {
+            stopBlik(); $('[data-zc-blik-wait]').hidden = true;
+            showSuccess(orderNo, false); evPurchase(orderId, false);
+          } else if (/^(failed|rejected|declined|error|cancel|canceled|cancelled)$/.test(status)) {
+            stopBlik(); $('[data-zc-blik-wait]').hidden = true; blikFailed('Bank odrzucił płatność. Spróbuj ponownie lub zapłać przy odbiorze.');
+          } else if (/^(expired|timeout)$/.test(status)) {
+            stopBlik(); $('[data-zc-blik-wait]').hidden = true; blikFailed('Kod BLIK wygasł. Wygeneruj nowy kod i spróbuj ponownie.');
+          }
+          // pending/processing/unknown → dalej pollujemy
+        })
+        .catch(function () { /* blip sieci — kolejny tick spróbuje ponownie */ });
+    }, BLIK_INTERVAL);
+  }
+  function stopBlik() { if (blikTimer) { clearInterval(blikTimer); blikTimer = null; } }
+  function updateBlikCountdown() {
+    var left = Math.max(0, Math.ceil((blikDeadline - Date.now()) / 1000));
+    var el = $('[data-zc-blik-countdown]'); if (el) el.textContent = left;
+  }
+  function blikTimeout(orderNo) {
+    $('[data-zc-blik-wait]').hidden = true;
+    blikFailed('Nie otrzymaliśmy potwierdzenia z banku. Sprawdź aplikację banku albo zapłać przy odbiorze.');
+  }
+  function blikFailed(msg) {
+    blikAttempts++;
+    resetBlik();
+    setState('idle'); setBusy(false);
+    if (blikAttempts >= 3) {
+      // po 3 próbach twardo proponujemy COD
+      showOrderError(msg + ' Możesz też wybrać „Płatność przy odbiorze".');
+    } else {
+      showFieldNote('blik', msg);
+      focusField('blik');
+    }
+  }
+
+  // ── SUKCES ─────────────────────────────────────────────────────────────────
+  function showSuccess(orderNo, isCod) {
+    stopBlik();
+    setState('success');
+    $('[data-zc-success]').hidden = false;
+    $('[data-zc-ordno]').textContent = 'Nr zamówienia: ' + orderNo;
+    var msg = $('[data-zc-success-msg]');
+    var codBox = $('[data-zc-cod-amount]');
+    if (isCod) {
+      msg.textContent = 'Kurier dostarczy paczkę pod wskazany adres. Zapłacisz przy odbiorze.';
+      codBox.hidden = false;
+      codBox.textContent = 'Przygotuj ' + fmtPln(recalcTotal()) + ' — gotówka lub karta u kuriera.';
+    } else {
+      msg.textContent = 'Płatność potwierdzona. Wysłaliśmy potwierdzenie na Twój e-mail.';
+      codBox.hidden = true;
+    }
+    try { $('[data-zc-success]').scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+  }
+
+  // ── LAZY LOAD dostaw + płatności (przy wejściu sekcji w viewport / focus) ──
+  function lazyLoad() {
+    if (lazyLoaded || !CFG) return;
+    lazyLoaded = true;
+    apiGet('/storefront/delivery-method', { WebsiteId: CFG.websiteId, ClientId: clientId })
+      .then(function (d) {
+        var raw = asArray(d);
+        delivery.methods = raw.map(function (m) {
+          var g = pickPlnGroup(m), cod = codInfo(m);
+          return { id: pickId(m), name: pickName(m), price: g.price, priceGroupId: g.id, codPrice: cod.codPrice, codSupported: cod.supported };
+        }).filter(function (m) { return m.id; });
+        renderDelivery(delivery.methods);
+      })
+      .catch(function () {
+        $('.zc-del-list').innerHTML = '<p class="zc-load">Nie udało się wczytać dostaw. Możesz dokończyć w bezpiecznej kasie poniżej.</p>';
+      });
+    apiGet('/storefront/payment-provider', { WebsiteId: CFG.websiteId })
+      .then(function (d) { renderPayments(asArray(d)); wireBlikBoxes(); })
+      .catch(function () { renderPayments([]); wireBlikBoxes(); });
+  }
+
+  // ── INIT ─────────────────────────────────────────────────────────────────
+  buildConfig().then(function (cfg) {
+    root.setAttribute('data-zc-init', '1');
+    if (!cfg) { showGuard(); return; }
+    CFG = cfg;
+    applyConfigToDom();
+    setState('idle');
+    recalcTotal();
+
+    // pasek podsumowania — rozwijanie (mobile)
+    var sumBar = $('.zc-sum-bar');
+    if (sumBar) sumBar.addEventListener('click', function () {
+      var open = $('.zc-summary').classList.toggle('is-open');
+      sumBar.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    // submit
+    $('.zc-form').addEventListener('submit', onSubmit);
+
+    // walidacja on-blur + czyszczenie błędu na keystroke; maski
+    Object.keys(RULES).forEach(function (name) {
+      var i = $('#zc-f-' + fieldIdFrag(name)); if (!i) return;
+      i.addEventListener('blur', function () { if (i.value.trim()) { if (validateField(name)) maybeIdentify(name, i.value.trim()); } });
+      i.addEventListener('input', function () {
+        if (name === 'postCode') { var p = i.selectionStart; i.value = normPost(i.value); }
+        var fe = fieldEl(name);
+        if (fe && fe.classList.contains('is-err')) { var msg = RULES[name](i.value.trim()); if (!msg) markOk(name); }
+      });
+    });
+
+    // consent — zdejmij błąd po zaznaczeniu
+    $('#zc-consent').addEventListener('change', function () { if (this.checked) $('[data-zc-consent-wrap]').classList.remove('is-err'); });
+
+    // BLIK: anuluj → wróć do formularza bez utraty danych
+    var cancel = $('[data-zc-blik-cancel]');
+    if (cancel) cancel.addEventListener('click', function () { stopBlik(); $('[data-zc-blik-wait]').hidden = true; setState('idle'); setBusy(false); resetBlik(); });
+
+    // lazy load: IntersectionObserver + fallback na pierwszy focus
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) { es.forEach(function (en) { if (en.isIntersecting) { io.disconnect(); lazyLoad(); } }); }, { rootMargin: '0px 0px 20% 0px', threshold: 0 });
+      io.observe(root);
+    } else { lazyLoad(); }
+    root.addEventListener('focusin', function () { lazyLoad(); }, { once: true });
+
+    // ── WARIANT LAYOUTU: 'flat' (default) lub 'steps' ──
+    // STEPS = JEDYNY layout (decyzja Tomka 21.07); flat zostaje wyłącznie jako degradacja bez JS
+    root.setAttribute('data-zc-layout', 'steps');
+    initSteps();
+  });
+
+  // ── WARIANT LAYOUTU „steps" (micro-konfigurator; te same pola co flat, reorder przez DOM) ──
+  function resolveLayout() {
+    var a = (root.getAttribute('data-zc-layout') || '').toLowerCase();
+    if (a === 'steps') return 'steps';
+    if (a === 'flat') return 'flat';
+    var ov = parseOverride();
+    if (ov && ov.layout && String(ov.layout).toLowerCase() === 'steps') return 'steps';
+    return 'flat';
+  }
+  function stepOfField(name) { return (name === 'email' || name === 'phone') ? 'contact' : 'address'; }
+  function fieldValidSilent(name) { return RULES[name] ? RULES[name](val(name)) === '' : true; }
+  function stepComplete(key) {
+    if (key === 'contact') return fieldValidSilent('email') && fieldValidSilent('phone');
+    if (key === 'address') return fieldValidSilent('name') && fieldValidSilent('street') && fieldValidSilent('postCode') && fieldValidSilent('city');
+    if (key === 'delivery') return !!delivery.selectedId;
+    if (key === 'payment') return !!(selectedPayment && selectedPayment.mode);
+    return false;
+  }
+  function stepSummary(key) {
+    // ✓ NIE w tekście — badge kroku (kółko) przejmuje znacznik ukończenia; jedna linia + elipsa CSS
+    if (key === 'contact') {
+      var em = val('email'), ph = normPhone(val('phone'));
+      var emShort = em ? (em.split('@')[0] + '@…') : '';
+      // telefon BEZ +48, spacje co 3 cyfry (np. 600 700 800)
+      var phF = ph ? ph.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 ') : '';
+      return [emShort, phF].filter(function (x) { return x; }).join(' · ');
+    }
+    if (key === 'address') {
+      // „Ulica 12/3, 00-000 Miasto" — jedna linia, ucinana elipsą (CSS), bez zawijania
+      var loc = (normPost(val('postCode')) + ' ' + val('city')).trim();
+      return [val('street').trim(), loc].filter(function (x) { return x; }).join(', ');
+    }
+    if (key === 'delivery') { var dm = currentDelivery(); return dm ? dm.name : 'wybrano'; }
+    if (key === 'payment') {
+      var m = selectedPayment && selectedPayment.mode;
+      return (m === 'blik' ? 'BLIK' : m === 'cod' ? 'Płatność przy odbiorze' : 'Płatność online');
+    }
+    return '';
+  }
+  function setStepState(key, state) {
+    var el = STEP_EL[key]; if (!el) return;
+    el.classList.remove('is-active', 'is-done', 'is-locked');
+    el.classList.add('is-' + state);
+    var head = el.querySelector('.zc-step-head');
+    if (head) head.setAttribute('aria-expanded', state === 'active' ? 'true' : 'false');
+    var sum = el.querySelector('[data-zc-step-sum]');
+    if (sum) sum.textContent = (state === 'done') ? stepSummary(key) : '';
+  }
+  function focusStep(key) {
+    var el = STEP_EL[key]; if (!el) return;
+    var f = el.querySelector('.zc-step-body input, .zc-step-body select, .zc-step-body textarea');
+    if (f) { try { f.focus(); } catch (e) {} }
+    try { el.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+  }
+  function openStep(key, focusIt) {
+    STEP_ORDER.forEach(function (k) {
+      if (k === key) return;
+      var el = STEP_EL[k]; if (!el) return;
+      if (el.classList.contains('is-active')) setStepState(k, stepComplete(k) ? 'done' : 'locked');
+    });
+    setStepState(key, 'active');
+    if (focusIt) focusStep(key);
+  }
+  function advanceFrom(key) {
+    setStepState(key, 'done');
+    var next = STEP_ORDER[STEP_ORDER.indexOf(key) + 1];
+    if (next) { setStepState(next, 'active'); focusStep(next); }
+  }
+  function firstIncompleteStep() {
+    for (var i = 0; i < STEP_ORDER.length; i++) if (!stepComplete(STEP_ORDER[i])) return STEP_ORDER[i];
+    return null;
+  }
+  function buildStepEl(num, key, title) {
+    var wrap = document.createElement('div');
+    wrap.className = 'zc-step';
+    wrap.setAttribute('data-zc-step-panel', key);
+    var head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'zc-step-head';
+    head.setAttribute('aria-expanded', 'false');
+    head.innerHTML =
+      '<span class="zc-step-num" aria-hidden="true">' + num + '</span>' +
+      '<span class="zc-step-titlewrap"><span class="zc-step-title">' + escapeHtml(title) + '</span>' +
+      '<span class="zc-step-summary" data-zc-step-sum></span></span>' +
+      '<span class="zc-step-edit" aria-hidden="true">Zmień</span>';
+    head.addEventListener('click', function () { openStep(key, true); });
+    var body = document.createElement('div');
+    body.className = 'zc-step-body';
+    wrap.appendChild(head); wrap.appendChild(body);
+    return { wrap: wrap, body: body };
+  }
+  function initSteps() {
+    var main = $('.zc-main'); if (!main) return;
+    var anchor = $('.zc-total'); if (!anchor) return;
+    stepsOn = true;
+
+    // 4 kroki; te SAME węzły co flat przeniesione do kontenerów (E-mail przed Telefonem TYLKO tu)
+    var defs = [
+      { num: 1, key: 'contact', title: 'Kontakt', nodes: [fieldEl('email'), fieldEl('phone')] },
+      { num: 2, key: 'address', title: 'Adres dostawy', nodes: [fieldEl('name'), fieldEl('street'), fieldEl('postCode'), fieldEl('city')] },
+      { num: 3, key: 'delivery', title: 'Sposób dostawy', nodes: [$('.zc-delivery')] },
+      { num: 4, key: 'payment', title: 'Płatność', nodes: [$('.zc-pay')] }
+    ];
+    defs.forEach(function (d) {
+      var b = buildStepEl(d.num, d.key, d.title);
+      d.nodes.forEach(function (nd) { if (nd) b.body.appendChild(nd); });
+      main.insertBefore(b.wrap, anchor);
+      STEP_EL[d.key] = b.wrap;
+    });
+    // pusty po przeniesieniu pól fieldset .zc-fields (legenda-sierota) — ukryj
+    var fieldsFs = $('.zc-fields'); if (fieldsFs) fieldsFs.style.display = 'none';
+
+    // stan startowy: krok 1 aktywny, reszta zablokowana
+    setStepState('contact', 'active');
+    setStepState('address', 'locked');
+    setStepState('delivery', 'locked');
+    setStepState('payment', 'locked');
+
+    // auto-advance kroków 1–2: on-blur pola (po walidacji rdzenia), gdy cały krok kompletny
+    ['email', 'phone', 'name', 'street', 'postCode', 'city'].forEach(function (name) {
+      var i = $('#zc-f-' + fieldIdFrag(name)); if (!i) return;
+      i.addEventListener('blur', function () {
+        var key = stepOfField(name);
+        var el = STEP_EL[key];
+        if (el && el.classList.contains('is-active') && stepComplete(key)) advanceFrom(key);
+      });
+    });
+
+    // auto-advance kroku 3 (dostawa) po wyborze radia; krok 4 (płatność) = ostatni, NIE zwijamy
+    root.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || t.name !== 'zc-delivery') return;
+      if (STEP_EL.delivery && STEP_EL.delivery.classList.contains('is-active')) advanceFrom('delivery');
+    });
+    // pułapka E2E 21.07: klik w JUŻ zaznaczone radio nie emituje change — przechodź też po kliku
+    root.addEventListener('click', function (e) {
+      var lab = e.target && e.target.closest ? e.target.closest('.zc-delivery .zc-opt') : null;
+      if (!lab) return;
+      var el = STEP_EL.delivery;
+      if (!el || !el.classList.contains('is-active')) return;
+      setTimeout(function () {
+        var r = lab.querySelector('input[name="zc-delivery"]');
+        if (r && r.checked && el.classList.contains('is-active')) advanceFrom('delivery');
+      }, 0);
+    });
+    // jawna affordancja „Dalej" w kroku dostawy (user zadowolony z domyślnej metody nie może utknąć)
+    (function () {
+      var el = STEP_EL.delivery; if (!el) return;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'zc-step-next';
+      btn.textContent = 'Dalej';
+      btn.addEventListener('click', function () { if (stepComplete('delivery')) advanceFrom('delivery'); else showFieldNote('delivery', 'Wybierz sposób dostawy.'); });
+      el.querySelector('.zc-step-body').appendChild(btn);
+    })();
+
+    // submit z niekompletnym krokiem → rozwiń pierwszy niekompletny (rdzeń pokaże komunikaty)
+    $('.zc-form').addEventListener('submit', function () {
+      var bad = firstIncompleteStep();
+      if (bad) openStep(bad, true);
+    });
+  }
+
+  function showGuard() {
+    var form = $('.zc-form'); if (form) form.style.display = 'none';
+    var guard = $('.zc-guard'); if (guard) guard.hidden = false;
+  }
+  function applyConfigToDom() {
+    if (CFG.name) { $('[data-zc-name]').textContent = CFG.name; }
+    if (CFG.thumb) { $('[data-zc-thumb]').src = CFG.thumb; $('[data-zc-thumb]').alt = CFG.name || ''; }
+    $('[data-zc-terms]').href = CFG.termsUrl || '#';
+    $('[data-zc-privacy]').href = CFG.privacyUrl || '#';
+    if (CFG.merchant) $('[data-zc-merchant]').textContent = CFG.merchant;
+    var fb = $('[data-zc-fallback]'); if (fb && CFG.checkoutFallbackUrl) fb.href = CFG.checkoutFallbackUrl;
+    var gl = $('[data-zc-guard-link]'); if (gl && CFG.checkoutFallbackUrl) { gl.href = CFG.checkoutFallbackUrl; gl.hidden = false; }
+  }
+})();
+</script>

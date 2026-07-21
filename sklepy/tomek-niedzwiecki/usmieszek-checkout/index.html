@@ -1877,7 +1877,6 @@
   .zc-checkout .zc-cta[disabled]{opacity:.62;cursor:default;transform:none;filter:none}
   /* label = pełne brzmienie ustawowe w jednej linii; kwota = osobny wiersz pod labelem */
   .zc-checkout .zc-cta-label{display:block;width:100%;text-align:center;font-size:clamp(15px,4vw,17px);line-height:1.2;white-space:normal}
-  .zc-checkout .zc-cta-amt{display:block;width:100%;text-align:center;font-weight:800;font-size:14px;opacity:.92;line-height:1.15;white-space:nowrap}
   .zc-checkout .zc-spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;
     animation:zc-rot .7s linear infinite;display:none}
   .zc-checkout .zc-cta.is-busy .zc-spin{display:inline-block}
@@ -2006,6 +2005,7 @@
             <div class="zc-pay-list" role="radiogroup" aria-label="Metoda płatności">
               <p class="zc-load" data-zc-pay-load>Ładujemy metody płatności…</p>
             </div>
+            <p class="zc-err" data-err="payment" role="alert" hidden></p>
           </fieldset>
 
           <!-- (3) POLA -->
@@ -2109,9 +2109,9 @@
           <!-- (7) CTA — BRZMIENIE USTAWOWE, NIE ZMIENIAĆ -->
           <button type="submit" class="zc-cta" data-zc-cta>
             <span class="zc-spin" aria-hidden="true"></span>
-            <span class="zc-cta-label">Zamawiam i płacę</span><span class="zc-cta-amt" data-zc-cta-amt></span>
+            <span class="zc-cta-label">Zamawiam i płacę</span>
           </button>
-          <p class="zc-microcopy" data-zc-microcopy>Płacisz dopiero przy odbiorze.</p>
+          <p class="zc-microcopy" data-zc-microcopy hidden></p>
           <p class="zc-legal">Masz prawo odstąpić od umowy w ciągu 14 dni.</p>
         </div>
 
@@ -2406,7 +2406,7 @@
 
     opts.forEach(function (o, idx) {
       var id = 'zc-pay-' + idx;
-      var sel = idx === 0;
+      var sel = false; // ŻADNA metoda nie zaznaczona domyślnie — świadomy wybór (decyzja Tomka 21.07); COD-copy pojawia się TYLKO po wyborze
       var lab = document.createElement('label');
       lab.className = 'zc-opt' + (sel ? ' is-sel' : '');
       lab.setAttribute('for', id);
@@ -2420,8 +2420,7 @@
       if (o.mode === 'blik') box.appendChild(buildBlikBoxes());
     });
 
-    // domyślny wybór = pierwsza opcja
-    selectPayment(opts[0]);
+    // BEZ domyślnego wyboru — selectedPayment=null aż do świadomego kliknięcia (CTA „Zamawiam i płacę", zero COD-copy)
     $all('input[name="zc-payment"]', box).forEach(function (r, i) {
       r.addEventListener('change', function () {
         $all('.zc-opt', box).forEach(function (op) { op.classList.remove('is-sel'); });
@@ -2486,6 +2485,7 @@
     if (o.mode === 'blik') { setTimeout(function () { var f = $('input[data-blik-i="0"]'); if (f) f.focus(); }, 30); }
     var micro = $('[data-zc-microcopy]');
     if (micro) {
+      micro.hidden = false;
       micro.textContent = o.mode === 'cod' ? 'Płacisz dopiero przy odbiorze — nic nie płacisz teraz.'
         : o.mode === 'blik' ? 'Zapłacisz teraz BLIK-iem — bezpieczna płatność.'
         : 'Zapłacisz online — przekierujemy Cię do bezpiecznej płatności.';
@@ -2518,7 +2518,6 @@
     else { codWrap.hidden = true; }
     $('[data-zc-line-total]').textContent = fmtPln(total);
     $('[data-zc-total]').textContent = fmtPln(total);
-    $('[data-zc-cta-amt]').textContent = fmtPln(total);   // kwota w osobnej linii — bez bulletu
     var ctaLab = $('.zc-cta-label'); if (ctaLab && !$('[data-zc-cta]').classList.contains('is-busy')) ctaLab.textContent = ctaLabelText();
     return total;
   }
@@ -2574,6 +2573,8 @@
     var consent = $('#zc-consent');
     if (!consent.checked) { $('[data-zc-consent-wrap]').classList.add('is-err'); ok = false; if (!firstBad) firstBad = 'consent'; }
     else { $('[data-zc-consent-wrap]').classList.remove('is-err'); }
+    // płatność — brak preselekcji, wybór musi być świadomy
+    if (!selectedPayment) { showFieldNote('payment', 'Wybierz metodę płatności.'); ok = false; if (!firstBad) firstBad = 'payment'; }
     // BLIK: kod wymagany
     if (selectedPayment && selectedPayment.mode === 'blik') {
       if (!/^\d{6}$/.test(readBlik())) { showFieldNote('blik', 'Wpisz 6-cyfrowy kod BLIK.'); ok = false; if (!firstBad) firstBad = 'blik'; }
@@ -2585,6 +2586,7 @@
   function focusField(name) {
     if (name === 'consent') { $('#zc-consent').focus(); return; }
     if (name === 'delivery') { var d = $('input[name="zc-delivery"]'); if (d) d.focus(); return; }
+    if (name === 'payment') { var pp = $('input[name="zc-payment"]'); if (pp) { pp.focus(); try { pp.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} } return; }
     if (name === 'blik') { var b = $('input[data-blik-i="0"]'); if (b) b.focus(); return; }
     var i = $('#zc-f-' + fieldIdFrag(name)); if (i) { i.focus(); try { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }
   }
@@ -2640,7 +2642,6 @@
     cta.disabled = !!on;
     cta.classList.toggle('is-busy', !!on);
     $('.zc-cta-label', cta).textContent = on ? 'Przetwarzamy…' : ctaLabelText();
-    $('[data-zc-cta-amt]').style.display = on ? 'none' : '';
   }
   function showOrderError(msg) {
     var box = $('[data-zc-order-error]');
@@ -2877,9 +2878,9 @@
     root.addEventListener('focusin', function () { lazyLoad(); }, { once: true });
 
     // ── WARIANT LAYOUTU: 'flat' (default) lub 'steps' ──
-    var layout = resolveLayout();
-    root.setAttribute('data-zc-layout', layout);
-    if (layout === 'steps') initSteps();
+    // STEPS = JEDYNY layout (decyzja Tomka 21.07); flat zostaje wyłącznie jako degradacja bez JS
+    root.setAttribute('data-zc-layout', 'steps');
+    initSteps();
   });
 
   // ── WARIANT LAYOUTU „steps" (micro-konfigurator; te same pola co flat, reorder przez DOM) ──

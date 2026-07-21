@@ -831,7 +831,10 @@ do kasy platformy — klient finalizuje NA landingu). Makieta oferty z F2 = wzó
 modułu. **Skórka = mapowanie tokenów `--zc-*` na tokeny landinga ALIASAMI** (`--zc-text:var(--ink)`
 itd. — nie dublować hexów; hex wolno tylko gdy landing nie ma zmiennej). Konfig przez
 `data-zc-product="{{WF2_PRODUCT_ID}}"` (ten sam placeholder co runtime-snippet; publish
-podmienia). Wariant layout (flat/steps) = decyzja per landing do czasu rozstrzygnięcia A/B.
+podmienia). **Layout = STEPS, JEDYNA wersja** (decyzja Tomka 21.07 — micro-konfigurator z otwierającymi
+się etapami; A/B flat-vs-steps ODWOŁANE; flat istnieje wyłącznie jako degradacja bez JS).
+**Płatność BEZ preselekcji (@2):** COD-copy („przy odbiorze") wyłącznie po świadomym wyborze
+metody; **CTA bez kwoty** (kwota tylko w podsumowaniu).
 **CTA submitu modułu (STANDARD FABRYKI, decyzja Tomka 21.07): „Zamawiam i płacę", a przy
 wybranym COD dynamicznie „Zamawiam i płacę przy odbiorze"** (`ctaLabelText()` w mechanice —
 NIE nadpisywać w skórce). To jedyny wyjątek od reguły „⛔ NIGDY COD na przycisku" (ta reguła
