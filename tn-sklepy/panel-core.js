@@ -552,12 +552,7 @@ function renderMatrix(prodDefs) {
     const admin = P.mode === 'admin';
     const cntEl = document.getElementById('portfolio-count');
     if (cntEl) cntEl.textContent = P.products.length ? `(${P.products.length}/${PORTFOLIO_TARGET})` : '';
-    const rrBtn = document.getElementById('reroll-btn');
-    if (rrBtn) {
-        const show = admin && P.products.length > 0;
-        rrBtn.classList.toggle('hidden', !show);
-        rrBtn.classList.toggle('inline-flex', show);
-    }
+    // (przycisk „Przelosuj" żyje W modalu „+ Produkty" — decyzja Tomka 22.07, nie w nagłówku portfela)
 
     const head = ['<th class="px-3 py-2.5">Produkt</th>', '<th class="px-3 py-2.5">Status</th>'];
     if (admin) {

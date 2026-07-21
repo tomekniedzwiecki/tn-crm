@@ -1021,6 +1021,13 @@
                 check:['Sklep istnieje — założony automatem (wf2-merchant) albo przypięty z listy partnera','platform_shop_id zapisany na projekcie','Domena startowa znana'], prompt:'pl_sklep' },
             pl_konto_klient: { desc:'Konto merchanta na platformie — AUTOMAT FABRYKI (od 21.07, edge wf2-merchant): create_store z {project_id} zakłada konto na e-mailu KLIENTA (zajęty w Trevio = 409 → adres systemowy <slug>@tomekniedzwiecki.pl + nota) razem ze sklepem; dane logowania w wf2_merchant_accounts (service-role only, plaintext — NIGDY do portalu). Klient NICZEGO nie zakłada i nie dostaje hasła — portal pokazuje kartę „Panel Twojego sklepu" (login + „Ustaw hasło" przez forgot-password). Krok wykonuje się RAZEM z krokiem „Sklep na platformie".',
                 check:['Konto merchanta utworzone (wf2-merchant create_store — creds w wf2_merchant_accounts)','platform_merchant_email zapisany na projekcie (e-mail klienta albo nota o adresie systemowym po 409)','Karta „Panel Twojego sklepu" w portalu aktywna (albo nota, czemu pending)'] },
+            // ⛔ KROK W BUDOWIE (22.07): moduł „Twoja firma" — prowadzenie klienta przez założenie DG
+            // (research + projekt: docs/zbuduje/FIRMA-KLIENTA.md). Widoczny dla klienta TYLKO w podglądzie
+            // admina — edge wf2-portal filtruje go poza preview (PREVIEW_ONLY_STEPS w index.ts);
+            // udostępnienie klientom = decyzja Tomka (usunięcie klucza z seta + deploy edge).
+            firma: { desc:'Klient zakłada JDG prowadzony przez portal: przygotowanie (profil zaufany + dane) → rejestracja z darmową asystą księgowego inFakt (link polecający Tomka infakt.pl/polecam/tomekniedzwiecki = 100 zł rabatu dla klienta) albo samodzielnie na biznes.gov.pl / przez bank → po rejestracji NIP+data w portalu i dane do kroku „Dane rozliczeniowe". Podpis wniosku CEIDG składa WYŁĄCZNIE klient (Profil Zaufany — pełnomocnik nie może online). ⛔ Zero doradztwa podatkowego: forma opodatkowania/VAT = decyzja klienta z księgowym (granica ustawy o doradztwie podatkowym).',
+                fields:[{k:'nip',l:'NIP (wpisany przez klienta)'},{k:'data_rejestracji',l:'Data rejestracji'}],
+                check:['Klient przygotowany (profil zaufany + dane do wniosku)','Firma zarejestrowana w CEIDG — NIP wpisany w portalu','Księgowość wybrana (inFakt z linku polecającego)','Dane firmy przepisane do kroku Dane rozliczeniowe'] },
             pl_dane: { check:['Numer konta do pobrań (NRB, 26 cyfr)','Dane firmy do faktur/regulaminu','Akceptacja treści prawnych'],
                 fields:[{k:'nrb',l:'NRB do wypłat i rozliczeń COD (26 cyfr)'},{k:'company',l:'Dane firmy (nazwa, NIP, adres)',ta:true},{k:'shop_email',l:'E-mail sklepu'}] },
             pl_branding: { desc:'Logo + favicon sklepu przez API (akcje upload_logo/upload_favicon; base64). Architektura v3: storefront (home/checkout) = marka PARASOLOWA; landing pokazuje mini-markę produktu.',
@@ -2154,6 +2161,14 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 document.getElementById('pk-auto-desc').textContent = products.length
                     ? (n ? `Portfel: ${products.length}/${PORTFOLIO_TARGET} — wylosuję ${n} z całej puli zatwierdzonych. Liczbę zmienisz w środku.` : `Portfel ma już ${products.length} produktów (cel ${PORTFOLIO_TARGET}) — możesz dolosować więcej.`)
                     : `Pusty portfel — wylosuję ${PORTFOLIO_TARGET} produktów z całej puli zatwierdzonych (czysty los, bez algorytmów).`;
+                const rc = document.getElementById('pk-reroll-card');
+                if (rc) {
+                    rc.classList.toggle('hidden', !products.length);
+                    const loose = products.filter(p => !p.pinned).length;
+                    document.getElementById('pk-reroll-desc').textContent = loose
+                        ? `Wymienia ${loose} z ${products.length} produktów BEZ pinezki na nowe losowe — zaznaczone (📌 na liście portfela) zostają. Kasuje postęp wymienianych.`
+                        : `Wszystkie ${products.length} produkty są zaznaczone pinezką — odepnij te, które mam wymienić.`;
+                }
             }
             if (view === 'auto') { document.getElementById('pk-auto-n').value = Math.max(1, pkAutoDefaultCount() || 3); pkAutoRefresh(); }
             if (view === 'manual') { renderPicker(); document.getElementById('pk-search').focus(); }
