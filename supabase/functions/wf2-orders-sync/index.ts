@@ -690,8 +690,10 @@ Deno.serve(async (req) => {
         const r = await syncProject(supabase, SUPABASE_URL, WF2, proj, startedAt);
         processed++; ordersUpserted += r.upserted; unmapped += r.unmapped;
         syncTimedOut = r.timedOut;
-        // 🛒 SKLEP SPRZEDAJE — ping na Slacku przy realnie NOWYCH zamówieniach
-        if (r.new_count > 0) {
+        // 🛒 SKLEP SPRZEDAJE — ping WYŁĄCZONY (decyzja Tomka 21.07: powiadomienia o sprzedaży
+        // NIE idą na #sparing; wrócą na innym kanale). Flip WF2_ORDER_SLACK=true przywraca.
+        const WF2_ORDER_SLACK = false;
+        if (WF2_ORDER_SLACK && r.new_count > 0) {
           await postSlackSparing('wf2_order', {
             project_id: proj.id, customer: proj.customer_name || '',
             count: r.new_count, total_value: r.new_value, shop_domain: proj.domain || '',
