@@ -545,7 +545,7 @@ Ból v1, którego v2 NIE dziedziczy:
 ### ETAP 4 — Środowisko reklamowe (od 19.07 rozbite z dawnych „Kampanii"; scope: project)
 | Krok | Label | Owner | Uwagi |
 |---|---|---|---|
-| `ads_konto` | Konto reklamowe | client | BM klienta: PLN + Europe/Warsaw (nieodwracalne), 2FA, partner access do BM Tomka; dokumenty firmy pod weryfikację |
+| `ads_konto` | Konto reklamowe | client | BM klienta: PLN + Europe/Warsaw (nieodwracalne), 2FA, partner access do BM Tomka; dokumenty firmy pod weryfikację. **Tor Leadsie** (jednoklikowy partner access): connect-link `settings.wf2_leadsie_connect_url` + `customUserId=<project_id>` → webhook `wf2-ads-connect` (gate `?s=WF2_LEADSIE_SECRET`, format v2) auto-odhacza „Partner access…" i zapisuje `data.leadsie`. SSOT: `docs/zbuduje/ADS-ONBOARDING-LEADSIE.md` |
 | `ads_strona` | Strona FB + Instagram | client | wiarygodność przed startem (posty/dane/IG); strona przypisana do konta |
 | `ads_budzet` | Budżet | client | doładowanie prepaid + limit wydatków + zapasowa metoda |
 | `ads_pixel` | Pixel 🏁 | admin | pixel+CAPI, dedup po `event_id`, EMQ 8+ z danych COD, weryfikacja OBU domen, Purchase w Test Events |

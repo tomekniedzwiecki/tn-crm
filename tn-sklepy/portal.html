@@ -447,6 +447,36 @@
         // (pl_konto_klient USUNIĘTE 22.07: konto merchanta zakłada FABRYKA — wf2-merchant
         //  create_store na e-mailu klienta; klient dostaje kartę „Panel Twojego sklepu"
         //  z przyciskiem „Ustaw hasło". Krok przeszedł na owner='admin'.)
+        // ⛔ KROK W BUDOWIE (22.07): widoczny TYLKO w podglądzie admina — edge wf2-portal
+        // filtruje def+instancję poza preview (PREVIEW_ONLY_STEPS). Research i decyzje:
+        // docs/zbuduje/FIRMA-KLIENTA.md. Zero doradztwa podatkowego — decyzje z księgowym.
+        firma: {
+            desc: 'Zakładasz własną firmę — poprowadzę Cię za rękę. Rejestracja jest bezpłatna, w całości online i zajmuje ok. 15 minut.',
+            why: 'Firma otwiera Ci wszystko: wypłaty z zamówień na Twoje konto, faktury, dostęp do hurtowni i skalowanie bez limitów. Rejestracja kosztuje 0 zł, a przez pierwsze pół roku płacisz tylko ok. 433 zł miesięcznie (samą składkę zdrowotną) — państwo zwalnia nowe firmy z reszty składek.',
+            time: 'ok. 15–40 min',
+            guide: `<p><b>Spokojnie — to prostsze, niż brzmi.</b> Firmę zakłada się dziś w całości przez internet, za darmo, w kwadrans. Wszystko masz tu przygotowane, a na końcu Ty tylko podpisujesz wniosek swoim Profilem Zaufanym. Nikt nie może zrobić tego za Ciebie — i dobrze, bo od pierwszego dnia wszystko należy do Ciebie i masz pełną kontrolę.</p>
+                <p style="margin-top:12px"><b>Krok 1 — przygotuj się (5 minut)</b></p>
+                <ol>
+                <li>Załóż <b>Profil Zaufany</b>, jeśli jeszcze nie masz — najszybciej przez swój bank na <a href="https://www.gov.pl/web/profilzaufany" target="_blank" rel="noopener" onclick="track('link_click','profil zaufany')">gov.pl/web/profilzaufany</a>. To Twój bezpieczny podpis w sprawach urzędowych.</li>
+                <li>Przygotuj dowód osobisty i adres, pod którym będzie firma (może być Twoje mieszkanie).</li>
+                </ol>
+                <p style="margin-top:12px"><b>Krok 2 — zarejestruj firmę (kwadrans)</b></p>
+                <p>Polecam zrobić to <b>z darmową pomocą prawdziwego księgowego</b> — usługa „Załóż firmę z inFakt" jest bezpłatna: księgowy wypełnia z Tobą wniosek, pomaga wybrać formę opodatkowania i ustawia zgłoszenia, a Ty tylko podpisujesz. Z mojego linku masz dodatkowo <b>100 zł rabatu</b> na ich księgowość, gdybyś chciał z niej potem korzystać:</p>
+                <a href="https://www.infakt.pl/polecam/tomekniedzwiecki" target="_blank" rel="noopener" onclick="track('link_click','inFakt załóż firmę')" style="display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#0070f3;color:#fff;border-radius:10px;padding:13px 22px;font-size:14.5px;font-weight:600;text-decoration:none;margin:10px 0 4px"><i class="ph ph-buildings"></i> Załóż firmę z darmowym księgowym</a>
+                <div class="note">Wolisz samodzielnie? Rejestracja działa też na <a href="https://www.biznes.gov.pl/pl/portal/03154" target="_blank" rel="noopener" onclick="track('link_click','biznes.gov.pl CEIDG')" style="color:#a9c9f0;text-decoration:underline">biznes.gov.pl</a> (oficjalny kreator, prowadzi Cię pole po polu) albo z poziomu Twojej bankowości — m.in. mBank i ING, banki często dodają przy okazji kilkaset złotych premii za otwarcie konta firmowego.</div>
+                <div class="note">Przy wniosku zaznacz <b>„ulgę na start"</b> — przez pierwsze 6 miesięcy nie płacisz składek społecznych, zostaje tylko zdrowotna (ok. 433 zł/mies.), a potem przez 2 lata płacisz obniżony ZUS. Wszystko to ustawia się w samym wniosku.</div>
+                <div class="warn">O <b>formie opodatkowania i VAT</b> zdecyduj w rozmowie z księgowym (przy rejestracji z inFakt masz ją w pakiecie, za darmo) — najlepsza opcja zależy od tego, co dokładnie sprzedajemy, i to księgowy dobierze ją pod Ciebie.</div>
+                <p style="margin-top:12px"><b>Krok 3 — po rejestracji (2 minuty)</b></p>
+                <ol>
+                <li>Wpisz niżej swój <b>NIP</b> i datę rejestracji — będę wiedział, że działamy.</li>
+                <li>Uzupełnij dane firmy w zadaniu <b>„Dane rozliczeniowe"</b> — trafią do regulaminu sklepu i rozliczeń.</li>
+                </ol>
+                <div class="note"><b>Co Ci to daje?</b> Wypłaty z zamówień idą na Twoje konto, wystawiasz faktury, kupujesz w hurtowniach (wymagają NIP), a przy skalowaniu nic Cię nie ogranicza. Wpis do rejestru masz zwykle jeszcze tego samego dnia.</div>`,
+            fields: [
+                { k: 'nip', l: 'NIP Twojej firmy (wpisz po rejestracji)', type: 'text' },
+                { k: 'data_rejestracji', l: 'Data rejestracji (np. 15.08.2026)', type: 'text' },
+            ],
+        },
         pl_dane: {
             desc: 'Podajesz dane firmy i numer konta — potrzebne do regulaminu sklepu oraz do wypłat i rozliczeń pobrań.',
             why: 'Bez numeru konta nie wypłacimy Ci pieniędzy z zamówień, a dane firmy muszą być w regulaminie.',
@@ -641,6 +671,7 @@
         P.notes = []; P.sales = []; P.adStats = []; P.costs = []; P.genMap = {};
         P.ordersCount = data.orders_count || 0;
         P.merchantPanel = data.merchant_panel || null;
+        P.leadsie = data.leadsie || null; // Etap 4: connect-link + flagi {connected_ad_account,connected_page,at}
         P.WS = CLIENT_WS;
         P.hooks = {
             onOpenStep: (key) => { const d = defFor(key); track('open_step', d ? d.label : key); },
@@ -714,7 +745,7 @@
     // ── Model zadań klienta ─────────────────────────────────────────────────
     // Kolejność JAWNA (decyzja Tomka: strona FB+IG przed kontem reklamowym; „przejęcia"
     // z ostatniego etapu w ogóle poza listą — wrócą, gdy się nimi zajmiemy).
-    const TASK_ORDER = ['pl_dane', 'ads_strona', 'ads_konto', 'ads_budzet'];
+    const TASK_ORDER = ['firma', 'pl_dane', 'ads_strona', 'ads_konto', 'ads_budzet'];
     const TASK_HIDDEN = ['przejecie_kampanii', 'przejecie_operacji'];
     function tvTasks() {
         return P.stepDefs.filter(d => d.owner === 'client' && d.scope === 'project' && !TASK_HIDDEN.includes(d.key))
@@ -731,6 +762,7 @@
     // wszystkie zadania od razu; „przejęcia" czekają do końcówki (frontStage>=6). Zrobione = zawsze widoczne.
     function taskUnlocked(d) {
         if (isTaskDone(d)) return true;
+        if (d.key === 'firma') return true; // firma dostępna od pierwszego dnia (przygotowanie i rejestracja trwają)
         if (d.key === 'przejecie_kampanii' || d.key === 'przejecie_operacji') return frontStage() >= 6;
         const marka = stepFor('marka', null);
         return (marka && marka.status === 'done') || frontStage() >= 2;
@@ -1110,6 +1142,8 @@
                 <div class="fld-ok" id="ok-${d.key}-${f.k}"></div>`;
         });
         const why = ws.why ? `<div class="tv-why"><i class="ph ph-info"></i><div><span class="tv-why-l">Po co to</span><p>${escapeHtml(ws.why)}</p></div></div>` : '';
+        // Etap 4: jednoklikowy tor Leadsie (partner access) na zadaniach reklamowych — nad instrukcją
+        const leadsie = (d.key === 'ads_konto' || d.key === 'ads_strona') ? leadsieConnectBlock() : '';
         const cta = done
             ? `<div class="tv-done-banner"><i class="ph ph-check-circle"></i> To zadanie masz zrobione${st.completed_at ? ' — ' + escapeHtml(relTime(st.completed_at)) : ''}</div>
                <button class="tv-undo" onclick="uncheckTask('${d.key}')"${previewMode ? ' disabled' : ''}>cofnij oznaczenie</button>`
@@ -1117,9 +1151,32 @@
         work.innerHTML = `<div class="tv-w-kicker">Zadanie ${idx + 1} z ${tasks.length} ${timeChip}</div>
             <h2 class="tv-w-title">${escapeHtml(d.label)}</h2>
             ${why}
+            ${leadsie}
             <div class="guide">${guide}</div>
             ${fieldsHtml}
             <div class="tv-cta-row">${cta}</div>`;
+    }
+
+    // Tor Leadsie: przycisk „Połącz konta reklamowe" (link buduje edge wf2-portal z customUserId)
+    // + status „Połączono: konto ✓ / strona ✓". Brak linku (settings pusty) → przycisk znika,
+    // zostaje ręczna instrukcja niżej (fallback). Status pokazujemy, gdy webhook coś już odbił.
+    function leadsieConnectBlock() {
+        const L = P.leadsie;
+        if (!L) return '';
+        let h = '';
+        const c = L.connected;
+        if (c && (c.connected_ad_account || c.connected_page)) {
+            const chip = (ok, label) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:${ok ? '#5cd07f' : '#7a7a7a'}"><i class="ph ${ok ? 'ph-check-circle' : 'ph-circle'}"></i>${escapeHtml(label)}${ok ? ' ✓' : ''}</span>`;
+            h += `<div style="display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;background:rgba(69,165,87,.07);border:1px solid rgba(69,165,87,.28);border-radius:10px;padding:12px 16px;margin-bottom:16px">
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#5cd07f;width:100%">Połączono z moim systemem</span>
+                ${chip(c.connected_ad_account, 'Konto reklamowe')}${chip(c.connected_page, 'Strona / profil')}</div>`;
+        }
+        if (L.connect_url) {
+            h += `<a href="${escapeHtml(L.connect_url)}" target="_blank" rel="noopener" onclick="track('link_click','Leadsie connect')" style="display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#0070f3;color:#fff;border-radius:10px;padding:13px 22px;font-size:14.5px;font-weight:600;text-decoration:none">
+                <i class="ph ph-plugs-connected"></i> Połącz konta reklamowe (2 minuty)</a>
+                <div style="font-size:12.5px;color:#8a8a8a;margin:10px 0 18px;line-height:1.55">Jedno kliknięcie zamiast ręcznego dodawania partnera — logujesz się do Facebooka, zaznaczasz konta i klikasz „Połącz". Instrukcja ręczna niżej, gdyby coś nie zadziałało.</div>`;
+        }
+        return h;
     }
 
     // CTA „Zrobione" → zapis + auto-przejście do pierwszego niezrobionego (ostatnie → gratulacje)

@@ -78,11 +78,20 @@ function isViewableMedia(url: string): boolean {
 // pl_konto_klient USUNIETE 22.07: konto merchanta zaklada FABRYKA (wf2-merchant) -
 // krok przeszedl na owner='admin', klient nie podaje juz e-maila konta.
 const CLIENT_FIELD_WHITELIST: Record<string, string[]> = {
+  firma:           ["nip", "data_rejestracji"],
   pl_dane:         ["company", "nip", "regon", "address", "nrb", "email_kontakt", "phone", "return_address"],
   ads_konto:       ["bm_id", "partner_id", "ad_account_id", "fanpage_url"],
   ads_strona:      ["fanpage_url", "instagram_url"],
   ads_budzet:      ["amount", "method", "confirmation"],
 };
+
+// ── Kroki W BUDOWIE: widoczne WYŁĄCZNIE w podglądzie admina (preview:true + JWT) ──
+// Decyzja Tomka 22.07: moduł „Twoja firma" nieudostępniony klientom do odwołania.
+// Fail-closed po stronie serwera: poza podglądem def + instancja kroku NIE wychodzą
+// z edge (klient nie zobaczy zadania, „Twojego ruchu" ani wpływu na postęp), a zapisy
+// task_save/task_done na tych krokach są zablokowane dla wszystkich (podgląd = readonly).
+// Udostępnienie klientom = usunięcie klucza z tego seta + deploy.
+const PREVIEW_ONLY_STEPS = new Set(["firma"]);
 
 const TRACK_ACTIONS = new Set(["portal_visit", "open_step", "media_view", "link_click", "open_ceny"]);
 
@@ -474,6 +483,7 @@ Deno.serve(async (req: Request) => {
   if (action === "task_save") {
     if (readonly) return json({ error: "podgląd — tylko odczyt" }, 403);
     const step_key = String(body.step_key || "").trim();
+    if (PREVIEW_ONLY_STEPS.has(step_key)) return json({ error: "bad_step" }, 400); // krok w budowie — niewidoczny dla klientów
     const wl = CLIENT_FIELD_WHITELIST[step_key];
     if (!wl) return json({ error: "bad_step" }, 400);
     const def = await stepDef(step_key);
@@ -529,6 +539,7 @@ Deno.serve(async (req: Request) => {
   if (action === "task_done") {
     if (readonly) return json({ error: "podgląd — tylko odczyt" }, 403);
     const step_key = String(body.step_key || "").trim();
+    if (PREVIEW_ONLY_STEPS.has(step_key)) return json({ error: "bad_step" }, 400); // krok w budowie — niewidoczny dla klientów
     const def = await stepDef(step_key);
     if (!def || def.owner !== "client" || def.scope !== "project") return json({ error: "not_client_step" }, 403);
     const done = body.done === true;
@@ -619,7 +630,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // ════════════════════════ DEFAULT: pełny stan (sanityzowany) ══════════════
-  const [defsQ, stepsQ, prodsQ, artsQ, ordQ, priceEvQ, cfgQ] = await Promise.all([
+  const [defsQ, stepsQ, prodsQ, artsQ, ordQ, priceEvQ, cfgQ, leadsieQ] = await Promise.all([
     sb.from("wf2_step_defs")
       .select("key, stage, stage_label, label, icon, sort, owner, scope, milestone_label, sub_of")
       .eq("active", true).order("stage").order("sort"),
@@ -639,9 +650,14 @@ Deno.serve(async (req: Request) => {
       .order("at", { ascending: true }).limit(200),
     // CENY 3.2: config → cost_model
     sb.from("settings").select("value").eq("key", "wf2_price_config").maybeSingle(),
+    // Etap 4: bazowy connect-link Leadsie (edge dokleja customUserId; front nie czyta settings)
+    sb.from("settings").select("value").eq("key", "wf2_leadsie_connect_url").maybeSingle(),
   ]);
 
-  const defs = (defsQ.data || []) as Array<Record<string, any>>;
+  // Kroki w budowie (PREVIEW_ONLY_STEPS) wychodzą z edge TYLKO w podglądzie admina —
+  // klient nie widzi ich defów ani instancji (zadania, „Twój ruch", postęp, oś procesu).
+  const defs = ((defsQ.data || []) as Array<Record<string, any>>)
+    .filter((d) => readonly || !PREVIEW_ONLY_STEPS.has(String(d.key)));
   const ownerByKey: Record<string, string> = {};
   for (const d of defs) ownerByKey[d.key] = d.owner;
 
@@ -672,7 +688,9 @@ Deno.serve(async (req: Request) => {
     }
     return out.length ? out : null;
   };
-  const steps = ((stepsQ.data || []) as Array<Record<string, any>>).map((s) => {
+  const steps = ((stepsQ.data || []) as Array<Record<string, any>>)
+    .filter((s) => readonly || !PREVIEW_ONLY_STEPS.has(String(s.step_key)))
+    .map((s) => {
     let client_fields: Record<string, unknown> | null = null;
     if (ownerByKey[s.step_key] === "client") {
       const d = (s.data && typeof s.data === "object") ? s.data : {};
@@ -776,9 +794,41 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── Leadsie (Etap 4) — connect-link + MINIMALNE flagi połączenia ──
+  // connect_url: bazowy URL z settings + customUserId=<project_id> (klient klika → partner
+  // access do BM Tomka → webhook wf2-ads-connect). Pusty klucz → null (przycisk się nie renderuje).
+  // connected: WYŁĄCZNIE {connected_ad_account, connected_page, at} z ads_konto.data.leadsie —
+  // ŻADNYCH linków do business.facebook.com, nazw kont ani summary_url (portal to KLIENT).
+  let leadsie: { connect_url: string | null; connected: { connected_ad_account: boolean; connected_page: boolean; at: string | null } | null } | null = null;
+  {
+    const base = String((leadsieQ.data as { value?: unknown } | null)?.value || "").trim();
+    let connect_url: string | null = null;
+    if (base) {
+      const sep = base.includes("?") ? "&" : "?";
+      connect_url = `${base}${sep}customUserId=${encodeURIComponent(p.id)}`;
+    }
+    let connected: { connected_ad_account: boolean; connected_page: boolean; at: string | null } | null = null;
+    const adsKontoRaw = ((stepsQ.data || []) as Array<Record<string, any>>)
+      .find((s) => s.step_key === "ads_konto" && !s.product_id);
+    const lb = adsKontoRaw && adsKontoRaw.data && typeof adsKontoRaw.data === "object"
+      ? (adsKontoRaw.data as Record<string, any>).leadsie : null;
+    if (lb && typeof lb === "object") {
+      const la = Array.isArray(lb.assets) ? lb.assets as Array<Record<string, unknown>> : [];
+      const isConn = (a: Record<string, unknown>, kind: string) =>
+        a && a.kind === kind && String(a.status || "").toLowerCase() === "connected";
+      connected = {
+        connected_ad_account: la.some((a) => isConn(a, "ad_account")),
+        connected_page: la.some((a) => isConn(a, "page")),
+        at: typeof lb.at === "string" ? lb.at : null,
+      };
+    }
+    if (connect_url || connected) leadsie = { connect_url, connected };
+  }
+
   return json({
     mode: readonly ? "preview" : "client",
     merchant_panel,
+    leadsie,
     project: {
       id: p.id, name: (p.name || "").trim() || "Twój sklep",
       customer_name: p.customer_name || null, customer_email: p.customer_email || null,

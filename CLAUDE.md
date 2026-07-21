@@ -115,6 +115,16 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   + `wf2_artifacts` kind='ad_creative'; pętla wyników przez `wf2_creative_perf`/`wf2_angle_perf`
   (migracja `20260719d_wf2_grafiki_fabryka`). Storage kanonicznie `bud-assets/<slug>/ads/`.
   Panel: `adsGrafikiBlock` (timeline agr_*, galeria 3 kreacji, akcept per kreacja, koszty, CTA „Generuj przez ad-forge").
+- **Etap 4 → tor Leadsie (onboarding reklamowy; SSOT `docs/zbuduje/ADS-ONBOARDING-LEADSIE.md`):**
+  jednoklikowy partner access do BM Tomka (`737839566050751`) w krokach `ads_konto`/`ads_strona`.
+  Connect-link w `settings.wf2_leadsie_connect_url` (default `''`, migracja `20260722_wf2_leadsie_settings`;
+  odczyt tylko service_role/team — **NIE** anon), edge `wf2-portal` dokleja `customUserId=<project_id>` i
+  podaje klientowi gotowy URL (front nie czyta settings). Odbicie wraca webhookiem **`wf2-ads-connect`**
+  (`--no-verify-jwt`, gate `?s=WF2_LEADSIE_SECRET`, format v2) → zapis `wf2_steps.data.leadsie` +
+  auto-odhaczenie „Partner access…" + `wf2_activities(ads_connect)`. Portal widzi TYLKO flagi
+  `{connected_ad_account,connected_page,at}`; panel (`adsKontoLeadsieBlock`) — pełne assety z chipami.
+  Pusty klucz → przycisk się nie renderuje (fallback: ręczna instrukcja). Automat NIE potwierdza
+  waluty/2FA/karty (to `ads_pixel`/`ads_preflight`).
 - Auto-create projektu: tpay-webhook przy PEŁNEJ płatności za budowę (amt ≥ 1000; decyzja
   Tomka 21.07.2026 — sama rezerwacja 500 zł NIE tworzy projektu; blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).

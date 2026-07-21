@@ -215,5 +215,61 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     : bad('portal.html ustaw hasło', 'brak obsługi password_setup_url w karcie');
 }
 
+// ── 11. Tor Leadsie (Etap 4): webhook wf2-ads-connect + wiring portalu/panelu ──
+// Onboarding reklamowy (partner access do BM Tomka). Gate webhooka fail-closed, kontrakt
+// dedup checklisty (ten sam VERBATIM w 3 miejscach), minimalne flagi do klienta. SSOT:
+// docs/zbuduje/ADS-ONBOARDING-LEADSIE.md.
+{
+  const acPath = join(ROOT, 'supabase', 'functions', 'wf2-ads-connect', 'index.ts');
+  const ac = existsSync(acPath) ? readFileSync(acPath, 'utf8') : '';
+  ac ? ok('wf2-ads-connect/index.ts istnieje (webhook Leadsie)') : bad('wf2-ads-connect', 'brak supabase/functions/wf2-ads-connect/index.ts');
+
+  // gate fail-closed: POST bez ?s= → NIGDY 200 (401 zły sekret / 503 brak env)
+  const st = await edge('wf2-ads-connect', { user: 'x' });
+  [401, 403, 503].includes(st) ? ok(`wf2-ads-connect bez sekretu → ${st} (fail-closed)`) : bad('wf2-ads-connect gate', `status ${st} (oczekiwane 401/403/503, NIGDY 200)`);
+
+  // jawne kolumny na service-role (bez .select('*') = ryzyko wycieku)
+  (!ac.includes(".select('*')") && !ac.includes('.select("*")')) ? ok('wf2-ads-connect: jawna lista kolumn (bez .select(*))') : bad('wf2-ads-connect', '.select(*) na service-role');
+
+  // KONTRAKT DEDUP: VERBATIM „Partner access…" identyczny w webhooku, WS panelu i CHECKLIST_MAP
+  const m = ac.match(/const CHECK_PARTNER_ACCESS = "([^"]+)"/);
+  const verbatim = m ? m[1] : null;
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+  (verbatim && panelSrc.includes(verbatim) && mapSrc.includes(verbatim))
+    ? ok('checklista „Partner access…" VERBATIM zgodna (webhook ↔ WS ↔ CHECKLIST_MAP)')
+    : bad('checklista Partner access dedup', verbatim ? 'VERBATIM rozjechany między webhookiem, panelem i mapą' : 'brak CHECK_PARTNER_ACCESS w webhooku');
+
+  // wf2-portal: buduje leadsie (connect_url z customUserId + minimalne flagi)
+  const portalSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
+  (portalSrc.includes('wf2_leadsie_connect_url') && portalSrc.includes('customUserId') && portalSrc.includes('connected_ad_account'))
+    ? ok('wf2-portal: buduje connect-link Leadsie + minimalne flagi {connected_ad_account,…}')
+    : bad('wf2-portal leadsie', 'brak wf2_leadsie_connect_url / customUserId / connected_ad_account');
+  // portal NIE ujawnia klientowi linków/summary z bloku leadsie (tylko flagi) — brak summary_url w gałęzi leadsie
+  const lsStart = portalSrc.indexOf('let leadsie');
+  const leadsieBlk = lsStart >= 0 ? portalSrc.slice(lsStart, portalSrc.indexOf('return json({', lsStart)) : '';
+  (!/summary_url|linkToAsset|business\.facebook/.test(leadsieBlk))
+    ? ok('wf2-portal: blok leadsie bez summary_url/linków (klient = tylko flagi)')
+    : bad('wf2-portal leadsie sanityzacja', 'blok leadsie przecieka linki/summary do klienta');
+
+  // front: przycisk w portalu + sekcja w panelu
+  const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
+  (portalHtml.includes('leadsieConnectBlock') && portalHtml.includes('Połącz konta reklamowe'))
+    ? ok('portal.html: przycisk „Połącz konta reklamowe" (leadsieConnectBlock)')
+    : bad('portal.html leadsie', 'brak leadsieConnectBlock / tytułu przycisku');
+  panelSrc.includes('adsKontoLeadsieBlock') ? ok('projekt.html: sekcja „Połączenia Leadsie" (adsKontoLeadsieBlock)') : bad('projekt.html leadsie', 'brak adsKontoLeadsieBlock');
+
+  // settings: klucz istnieje (odczyt service-role); migracja obecna
+  const kr = await rest('settings?select=key&key=eq.wf2_leadsie_connect_url', SK);
+  (kr.status < 300 && Array.isArray(kr.data) && kr.data.length === 1) ? ok('settings.wf2_leadsie_connect_url istnieje') : bad('settings wf2_leadsie_connect_url', `status ${kr.status}, rows ${Array.isArray(kr.data) ? kr.data.length : '?'}`);
+  const anonKr = await rest('settings?select=key&key=eq.wf2_leadsie_connect_url', ANON);
+  (!(anonKr.status < 300 && Array.isArray(anonKr.data) && anonKr.data.length > 0)) ? ok('RLS: anon NIE widzi wf2_leadsie_connect_url') : bad('RLS anon leadsie key', 'anon czyta connect-link!');
+  existsSync(join(ROOT, 'supabase', 'migrations', '20260722_wf2_leadsie_settings.sql')) ? ok('migracja 20260722_wf2_leadsie_settings.sql obecna') : bad('migracja leadsie', 'brak pliku migracji');
+
+  // deploy skonfigurowany
+  const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
+  /"deploy:wf2-ads-connect"\s*:/.test(pkg) ? ok('package.json ma deploy:wf2-ads-connect') : bad('package.json', 'brak deploy:wf2-ads-connect');
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);
