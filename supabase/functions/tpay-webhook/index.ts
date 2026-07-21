@@ -933,10 +933,11 @@ Deno.serve(async (req) => {
             await supabase.from('bud_sessions').update({ paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', bs.id)
             console.log('[tpay-webhook] Budowanie: rezerwacja → bud_session paid_at:', bs.id)
           }
-          // WORKFLOW V2 („Sklepy"): opłacona rezerwacja → auto-projekt prowadzenia
-          // wspólnego biznesu (docs/zbuduje/WORKFLOW-V2-PLAN.md §9). Idempotentne po
-          // bud_session_id; własny try/catch — NIGDY nie przerywa obsługi płatności.
-          if (!isFull) {
+          // WORKFLOW V2 („Sklepy"): PEŁNA płatność → auto-projekt prowadzenia
+          // wspólnego biznesu (decyzja Tomka 21.07.2026: sama rezerwacja 500 zł NIE
+          // tworzy projektu — dopiero pełna wpłata). Idempotentne po bud_session_id;
+          // własny try/catch — NIGDY nie przerywa obsługi płatności.
+          if (isFull) {
             try {
               const { data: exProj } = await supabase.from('wf2_projects').select('id').eq('bud_session_id', bs.id).maybeSingle()
               if (!exProj) {
@@ -971,14 +972,21 @@ Deno.serve(async (req) => {
                     })
                   }
                   await supabase.rpc('wf2_ensure_steps', { p_project: proj.id })
-                  // rezerwacja jako pierwsza pozycja harmonogramu płatności — od razu opłacona
+                  // pełna płatność jako pierwsza pozycja harmonogramu — od razu opłacona;
+                  // wcześniejsza rezerwacja (jeśli była) dopisywana drugą pozycją
                   await supabase.from('wf2_payments').insert({
-                    project_id: proj.id, sort: 0, label: 'Rezerwacja (zwrotna, wliczana w budowę)',
+                    project_id: proj.id, sort: 0, label: 'Pełna płatność za budowę',
                     amount: amt, order_id: order.id, paid_at: paidAt,
                   })
+                  if (bs.paid_at) {
+                    await supabase.from('wf2_payments').insert({
+                      project_id: proj.id, sort: 1, label: 'Rezerwacja (zwrotna, wliczona w budowę)',
+                      amount: 500, order_id: null, paid_at: bs.paid_at,
+                    })
+                  }
                   await supabase.from('wf2_activities').insert({
                     project_id: proj.id, actor: 'auto', action: 'created',
-                    description: 'Projekt utworzony automatycznie po opłaceniu rezerwacji 500 zł',
+                    description: 'Projekt utworzony automatycznie po pełnej płatności za budowę',
                   })
                   console.log('[tpay-webhook] WF2: utworzony projekt', proj.id, 'dla bud_session', bs.id)
                 }

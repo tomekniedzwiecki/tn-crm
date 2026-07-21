@@ -98,7 +98,8 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   + `wf2_artifacts` kind='ad_creative'; pętla wyników przez `wf2_creative_perf`/`wf2_angle_perf`
   (migracja `20260719d_wf2_grafiki_fabryka`). Storage kanonicznie `bud-assets/<slug>/ads/`.
   Panel: `adsGrafikiBlock` (timeline agr_*, galeria 3 kreacji, akcept per kreacja, koszty, CTA „Generuj przez ad-forge").
-- Auto-create projektu: tpay-webhook przy opłaconej rezerwacji 500 zł (blok WORKFLOW V2,
+- Auto-create projektu: tpay-webhook przy PEŁNEJ płatności za budowę (amt ≥ 1000; decyzja
+  Tomka 21.07.2026 — sama rezerwacja 500 zł NIE tworzy projektu; blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).
 - **Styl modułu = Geist/Vercel (twardo)**: tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,
   akcent #0070f3, success #45a557, warning #f5a623, error #e5484d, promienie 6–8px,
