@@ -62,7 +62,25 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   `docs/zbuduje/assets/landing-runtime-snippet.html` (window.trevio + INIT-GUARD pixela).
   Marża testowa = pasmo 10–15% narzutu (cena psychologiczna; `TEST_MARGIN_MIN/MAX`; krok
   `kalkulacja` wykonuje fabryka: `panel-sync.py kalkulacja` — potwierdza żywą cenę zakupu
-  i ustala cenę sprzedaży). Portfel: cel **3 produkty** (decyzja Tomka
+  i ustala cenę STARTOWĄ; od v3.1 drabinka w kalkulacji = tylko zapis ceny startowej,
+  NIE plan trajektorii).
+- **CENY 3.0 (21.07; SSOT `docs/zbuduje/CENNIK-PLAN.md` v3.1):** życie ceny PO starcie
+  sprzedaży prowadzi **silnik `wf2-price-engine`** (edge, cron `*/10` — sweep co 10 min,
+  decyzje 1×/dzień po `decision_hour`; migracja `20260721d_wf2_ceny3`, aplikacja:
+  `node scripts/apply-wf2-ceny3.mjs`). Reżimy `price_phase` 1–6 (START/RAMP/BASE/PROBE/
+  HARVEST/LOCKED), cele liczone NA BIEŻĄCO (nie z `price_ladder.rungs` — zdeprecjonowane).
+  Autonomia: globalnie `settings.wf2_price_config` (**FAIL-CLOSED**: `engine_enabled`,
+  `dry_run`, `config_version='3.1'` — silnik czyta TYLKO klucze kanoniczne v3.1) + per
+  produkt `pricing_autonomy` (auto/propose/off) + `landing_price_contract` (auto-wykonanie
+  TYLKO 'hydrated'). Sekwencje kierunkowe: podwyżka = DB→`platform_apply_after`
+  (+cache_grace)→sweep: `set_price`→`verify_price` (nowa akcja wf2-platform)→confirmed;
+  obniżka = kasa PIERWSZA. Atomic claim na `price_phase`+`price_state='ok'`; runy w
+  `wf2_engine_runs` (UNIQUE aktywny run; `decisions` jsonb = log per produkt). Panel
+  `tn-sklepy/ceny.html` = centrum dowodzenia (karty Do decyzji DZIAŁAJĄCE — akcept
+  wykonuje silnik w ≤10 min; wykres SVG; log automatu; sterowanie autonomią). Bez
+  `WF2_META_TOKEN` silnik w trybie no-ads = propose-only (karty po ≥5 zam./30 dni).
+  ⛔ Warunki zdjęcia `dry_run` = checklista w SSOT §9 (m.in. weryfikacja COD `is_paid`
+  na żywych danych, kontrakt landingu, notify wspólnika, WF2_META_TOKEN). Portfel: cel **3 produkty** (decyzja Tomka
   19.07, wcześniej 5 — mniej produkcji, ~165 zł testu/produkt), dobór = **PRAWDZIWE losowanie**
   z approved /trendy (bez scoringu — decyzja Tomka 17.07).
 - **Etap 5 → `ads_grafiki` = FABRYKA statycznych grafik (rev2, 19.07; SSOT
