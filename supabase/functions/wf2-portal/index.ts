@@ -77,13 +77,139 @@ function isViewableMedia(url: string): boolean {
 // ── pola klienckie per krok (whitelist twarda; klucz spoza = 400) ──────────
 const CLIENT_FIELD_WHITELIST: Record<string, string[]> = {
   pl_konto_klient: ["platform_email"],
-  pl_dane:         ["company", "nip", "address", "nrb", "email_kontakt"],
+  pl_dane:         ["company", "nip", "regon", "address", "nrb", "email_kontakt", "phone", "return_address"],
   ads_konto:       ["bm_id", "partner_id", "ad_account_id", "fanpage_url"],
   ads_strona:      ["fanpage_url", "instagram_url"],
   ads_budzet:      ["amount", "method", "confirmation"],
 };
 
 const TRACK_ACTIONS = new Set(["portal_visit", "open_step", "media_view", "link_click", "open_ceny"]);
+
+// ── AUTO-ODŚWIEŻENIE DOKUMENTÓW PRAWNYCH po zmianie danych klienta (pl_dane) ──
+// Zasada (SSOT docs/zbuduje/PRAWNE.md): dane sprzedawcy w dokumentach sklepu pochodzą
+// z portalu — zapis pl_dane re-renderuje i re-publikuje 7 podstron. Szablony kanoniczne
+// czytamy ze Storage (attachments/legal-szablony/ — sync robi legal-forge.py przy
+// publish/update-all). Koalescencja: pierwszy zapis w oknie ustawia flagę pending,
+// śpi 60 s (klient kończy wpisywać kolejne pola — debounce portalu), potem czyta
+// NAJNOWSZE dane i publikuje raz. Best-effort: żaden błąd nie psuje zapisu klienta.
+const LEGAL_PAGES: Array<[string, string, string]> = [
+  ["regulamin.html", "regulation", "Regulamin"],
+  ["polityka-prywatnosci.html", "privacy-policy", "Polityka prywatności"],
+  ["zwroty.html", "return", "Zwroty i reklamacje"],
+  ["kontakt.html", "contact", "Kontakt"],
+  ["dostawa.html", "dostawa", "Dostawa i płatności"],
+  ["polityka-cookies.html", "polityka-cookies", "Polityka cookies"],
+  ["odstapienie.html", "formularz-odstapienia", "Formularz odstąpienia od umowy"],
+];
+const LEGAL_LINKS: Array<[string, string]> = [
+  ["{{REGULAMIN_URL}}", "/regulation"], ["{{POLITYKA_URL}}", "/privacy-policy"],
+  ["{{ZWROTY_URL}}", "/return"], ["{{KONTAKT_URL}}", "/contact"],
+  ["{{DOSTAWA_URL}}", "/dostawa"], ["{{COOKIES_URL}}", "/polityka-cookies"],
+  ["{{ODSTAPIENIE_URL}}", "/formularz-odstapienia"],
+];
+const LEGAL_DELIVERY_DEFAULTS: Record<string, string> = {
+  DELIVERY_TIME_TYPICAL: "7–14 dni roboczych",
+  DELIVERY_TIME_MAX: "do 30 dni",
+};
+
+function legalRenderTemplate(tpl: string, data: Record<string, string>): string {
+  let html = tpl.replace(/<!--IF:([A-Z_]+)-->([\s\S]*?)<!--\/IF:\1-->/g,
+    (_m, key, inner) => (data[key] ? inner : ""));
+  for (const [k, v] of Object.entries(data)) html = html.split(`{{${k}}}`).join(v);
+  return html;
+}
+
+async function refreshLegalPagesAfterClientEdit(
+  sb: ReturnType<typeof createClient>, projectId: string,
+): Promise<void> {
+  try {
+    const { data: step } = await sb.from("wf2_steps").select("id, status, data")
+      .eq("project_id", projectId).eq("step_key", "pl_prawne").is("product_id", null).maybeSingle();
+    if (!step || step.status !== "done") return; // fabryka jeszcze nie publikowała — nic do odświeżania
+    const sd = (step.data && typeof step.data === "object") ? step.data as Record<string, unknown> : {};
+    const pend = Date.parse(String(sd.legal_refresh_pending || "")) || 0;
+    if (Date.now() - pend < 5 * 60_000) return; // ktoś już czeka w oknie — obsłuży najnowsze dane
+    await sb.from("wf2_steps").update({ data: { ...sd, legal_refresh_pending: new Date().toISOString() } })
+      .eq("id", step.id);
+    await sleep(60_000); // koalescencja: klient zwykle zapisuje kilka pól pod rząd
+
+    const { data: pr } = await sb.from("wf2_projects")
+      .select("id, name, domain, td_shop_url, palette, fonts, logo_url, favicon_url, platform_shop_id, platform_merchant_email")
+      .eq("id", projectId).maybeSingle();
+    const { data: daneRow } = await sb.from("wf2_steps").select("data")
+      .eq("project_id", projectId).eq("step_key", "pl_dane").is("product_id", null).maybeSingle();
+    const f = ((daneRow?.data as Record<string, any>)?.fields || {}) as Record<string, string>;
+    const clearPending = async () => {
+      const { data: s2 } = await sb.from("wf2_steps").select("data").eq("id", step.id).maybeSingle();
+      const d2 = (s2?.data && typeof s2.data === "object") ? s2.data as Record<string, unknown> : {};
+      delete d2.legal_refresh_pending;
+      await sb.from("wf2_steps").update({ data: d2 }).eq("id", step.id);
+    };
+    const email = (f.email_kontakt || "").trim() || (pr?.platform_merchant_email || "");
+    if (!pr?.platform_shop_id || !(f.company || "").trim() || !(f.address || "").trim() || !email) {
+      await clearPending(); return; // dane niekompletne — bez publikacji (żadnych zmyślonych danych)
+    }
+
+    const base = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/attachments/legal-szablony`;
+    const verRes = await fetch(`${base}/VERSION?t=${Date.now()}`);
+    if (!verRes.ok) { await clearPending(); return; } // brak szablonów w Storage — sync robi legal-forge
+    const version = (await verRes.text()).trim();
+
+    const palette = Object.fromEntries(
+      Array.from(String(pr.palette || "").matchAll(/([a-z-]+)\s+(#[0-9A-Fa-f]{3,8})/g)).map((m) => [m[1], m[2]]));
+    const mh = /heading:\s*([^·(]+)/.exec(String(pr.fonts || ""));
+    const mb = /body:\s*([^·(]+)/.exec(String(pr.fonts || ""));
+    const head = (mh?.[1] || "Inter").trim(), bodyF = (mb?.[1] || "Inter").trim();
+    const fam = [...new Set([head, bodyF])].map((x) => `${x.replace(/ /g, "+")}:wght@400;600;700`).join("&family=");
+    const dom = String(pr.domain || "").trim() ||
+      String(pr.td_shop_url || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const today = new Date();
+    const data: Record<string, string> = {
+      ...LEGAL_DELIVERY_DEFAULTS,
+      BRAND_NAME: pr.name || "", DOMAIN: dom,
+      COMPANY_NAME: (f.company || "").trim(), COMPANY_ADDRESS: (f.address || "").trim(),
+      NIP: (f.nip || "").trim(), REGON: (f.regon || "").trim(), PHONE: (f.phone || "").trim(),
+      EMAIL: email, RETURN_ADDRESS: (f.return_address || "").trim() || (f.address || "").trim(),
+      LOGO_URL: pr.logo_url || "", FAVICON_URL: pr.favicon_url || pr.logo_url || "",
+      UPDATE_DATE: `${String(today.getDate()).padStart(2, "0")}.${String(today.getMonth() + 1).padStart(2, "0")}.${today.getFullYear()}`,
+      YEAR: String(today.getFullYear()), DOC_VERSION: version,
+      PRIMARY: palette["primary"] || "#2563eb", ACCENT: palette["accent"] || palette["primary"] || "#2563eb",
+      INK: palette["ink"] || "#111827", BG: palette["bg"] || "#ffffff",
+      BG_ALT: palette["bg-alt"] || "#f3f4f6", BORDER: palette["border"] || "#e5e7eb",
+      FONT_HEAD: head, FONT_BODY: bodyF,
+      FONTS_LINK: `https://fonts.googleapis.com/css2?family=${fam}&display=swap`,
+    };
+
+    const fnBase = `${Deno.env.get("SUPABASE_URL")}/functions/v1/wf2-platform`;
+    const secret = Deno.env.get("WF2_GEN_SECRET") || "";
+    let okCount = 0;
+    for (const [tplName, path, name] of LEGAL_PAGES) {
+      const tRes = await fetch(`${base}/${tplName}?t=${Date.now()}`);
+      if (!tRes.ok) continue;
+      let html = legalRenderTemplate(await tRes.text(), data);
+      html = html.replace(/\{\{CANONICAL_URL\}\}/g, `https://${dom}/${path}`);
+      for (const [ph, target] of LEGAL_LINKS) html = html.split(ph).join(target);
+      if (pr.domain) html = html.replace(/<meta[^>]+name="robots"[^>]+noindex[^>]*>\s*/gi, "");
+      const pubRes = await fetch(fnBase, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-wf2-secret": secret },
+        body: JSON.stringify({ action: "publish_landing", shop_id: pr.platform_shop_id, path, html, name }),
+      });
+      if (pubRes.ok) okCount++;
+    }
+
+    const { data: s3 } = await sb.from("wf2_steps").select("data").eq("id", step.id).maybeSingle();
+    const d3 = (s3?.data && typeof s3.data === "object") ? s3.data as Record<string, unknown> : {};
+    delete d3.legal_refresh_pending;
+    const fields3 = (d3.fields && typeof d3.fields === "object") ? d3.fields as Record<string, unknown> : {};
+    d3.fields = { ...fields3, wersja: version, auto_refresh: new Date().toISOString().slice(0, 16) + "Z" };
+    await sb.from("wf2_steps").update({ data: d3 }).eq("id", step.id);
+    await sb.from("wf2_activities").insert({
+      project_id: projectId, actor: "auto", action: "legal_refresh",
+      description: `Dokumenty prawne sklepu zaktualizowane po zmianie danych w portalu (${okCount}/7 stron, PRAWNE-V ${version})`,
+    });
+  } catch (_e) { /* best-effort — nigdy nie psuje zapisu klienta */ }
+}
 
 // tt: max 5 grywalnych/otwieralnych wpisów. Origin (bud_tt_products.tiktok_url) jako link
 // PIERWSZY (gwarantuje obecność), potem kuracja videos_curated.items (keep/PASS) wg kolejnosci.
@@ -387,6 +513,16 @@ Deno.serve(async (req: Request) => {
     // pl_konto_klient: e-mail konta ląduje też w kolumnie projektu (dopasowanie sklepu/operatora)
     if (step_key === "pl_konto_klient" && cleaned.platform_email) {
       await sb.from("wf2_projects").update({ platform_account_email: cleaned.platform_email }).eq("id", p.id);
+    }
+    // pl_dane: dane sprzedawcy żyją w dokumentach sklepu → auto re-publish (koalescencja 60 s,
+    // best-effort w tle; SSOT docs/zbuduje/PRAWNE.md §2)
+    if (step_key === "pl_dane") {
+      try {
+        // @ts-ignore — EdgeRuntime dostępny w środowisku Supabase Edge
+        EdgeRuntime.waitUntil(refreshLegalPagesAfterClientEdit(sb, p.id));
+      } catch (_e) {
+        refreshLegalPagesAfterClientEdit(sb, p.id); // fallback: bez waitUntil (runtime lokalny)
+      }
     }
     await sb.from("wf2_activities").insert({
       project_id: p.id, actor: "client", action: "task_save",

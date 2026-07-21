@@ -190,3 +190,29 @@ lokalny runner z kluczem z .env (technika echo), jak OPENAI_API_KEY.
 - Benchmark koderów (ten sam brief): gpt-5.6-sol 8,5/10 · ~1,0 zł · 90 s vs kimi-k3
   7/10 · ~0,40 zł · 390 s (tylko stream, lokalny runner). Default zostaje gpt-5.6-sol;
   Kimi = drugi silnik w wf2-gpt (routing kimi-*).
+
+## 2026-07-21 wieczór — pl_prawne: KANON DOKUMENTÓW PRAWNYCH (SSOT docs/zbuduje/PRAWNE.md)
+
+- **Audyt prawny (2 agenci: research prawa lipiec 2026 + audyt 9 plików):** stare szablony
+  v1 (templates/dokumenty-prawne, odświeżone 14.07) = 9/10 prawnie (ODR-wygaszenie, cło
+  1.07.2026, Omnibus, SCC już były); świeże strony Trafionka = ładne, ale prawny REGRES —
+  na produkcji wisiał ZAKAZANY link do wygaszonej platformy ODR (hotfix §9 od ręki).
+- **Kanon: templates/prawne-sklepy/ (7 szablonów + VERSION 1.0-2026-07-21):** regulamin
+  §1–§14 (Omnibus 30 dni, COD, magazyny zagraniczne uczciwie, cena końcowa z cłem,
+  niezgodność z umową 5a, opinie art. 7 pkt 5 upnpr, GPSR, ADR bez ODR, zmiany z 14-dn.
+  wyprzedzeniem), polityka prywatności (transfery EOG: Meta DPF/SCC + dropship art. 49),
+  cookies (PKE art. 399), zwroty, formularz odstąpienia (zał. 2 UPK, print CSS), dostawa
+  (box cło od 1.07.2026: „cena końcowa, zero dopłat"), kontakt. Szkielet brand-tokenizowany.
+- **legal-forge.py (data/render/publish/update-all):** dane z pl_dane portalu (+ nowe pola:
+  regon/phone/return_address), tokeny z wf2_projects, bloki warunkowe IF, weryfikacja
+  PRAWNE-V z retry (origin odświeża async), panel-sync; **update-all = masowa aktualizacja
+  wszystkich sklepów przy zmianie prawa** (sync szablonów też do Storage legal-szablony/).
+- **HOT-UPDATE portal→sklep:** wf2-portal task_save(pl_dane) → auto re-render+re-publish
+  7 stron w tle (koalescencja 60 s, szablony ze Storage, best-effort; wpis legal_refresh
+  w kronice). Klient zmienia dane w portalu = dokumenty na sklepie same się aktualizują.
+- Wpięcia: krok pl_prawne sort 95→50 (PRZED produktami/landingami — linki stopek nigdy
+  martwe) + milestone; footer@1 i home-template +Polityka cookies; _substitute 7 ścieżek
+  (koniec wycinania „Dostawa"); gate published +COOKIES_URL/ODSTAPIENIE_URL + FAIL na
+  martwy ODR-link; panel v1 tn-workflow: +zakładki Cookies/Formularz (5 dokumentów) +
+  poprawki szablonów v1 (PKE, bez C-21/23, opinie, „(rękojmia)"→5a).
+- Nota do Adriana: storefront wstrzykuje pixel Meta PRZED zgodą (PKE) — potrzebny CMP/baner.

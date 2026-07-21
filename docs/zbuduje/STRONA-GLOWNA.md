@@ -34,8 +34,9 @@ Mapa sekcji (5 rdzeniowych + 1 opcjonalna, mobile-first, wszystko na jednej stro
 5. **(Opcjonalnie) banda „jak to działa"** — 1-2 zdania między galerią a stopką; włączać
    przy 1-2 produktach (wypełnia stronę bez fałszywych placeholderów).
 6. **Footer = moduł `footer@1`** (skórka w tokenach parasola; komplet linków prawnych
-   `{{REGULAMIN_URL}}` itd. — podmienia je `platform-sync` przy publikacji; `{{DOSTAWA_URL}}`
-   jest wycinane automatycznie). ★/rating dozwolone TYLKO tu, wyłącznie realne.
+   Regulamin·Polityka·Cookies·Zwroty·Dostawa·Kontakt — `{{REGULAMIN_URL}}` itd. podmienia
+   `platform-sync` przy publikacji; strony publikuje legal-forge w kroku pl_prawne, SSOT
+   `docs/zbuduje/PRAWNE.md`). ★/rating dozwolone TYLKO tu, wyłącznie realne.
 
 **Anatomia karty produktu** (stała; siatka wg dyscypliny `galeria@1` — kolumny, jedna
 proporcja, cover):

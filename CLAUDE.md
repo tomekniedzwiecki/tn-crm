@@ -185,6 +185,13 @@ README platforma-api). Referencja API: `docs/zbuduje/platforma-api/README.md`.
 strona główna sklepu (path:"") — szablon RAZ przez gpt-5.6-sol, karty produktów renderowane
 deterministycznie z bazy (markery CARDS/CARD-TEMPLATE/ITEMLIST); nowy gotowy produkt →
 `render`+`publish` ($0, idempotentnie; ręczne tweaki w index.html giną — edycje w template.html).
+**Krok pl_prawne = `scripts/mockup-tools/legal-forge.py`** (SSOT `docs/zbuduje/PRAWNE.md`):
+komplet 7 podstron prawnych z szablonów kanonicznych `templates/prawne-sklepy/` (4 systemowe
+/regulation /privacy-policy /return /contact + /dostawa /polityka-cookies /formularz-odstapienia);
+dane sprzedawcy z kroku pl_dane (portal), tokeny marki z wf2_projects; sort 50 = PRZED landingami.
+⛔ Treści prawne edytuje się TYLKO w szablonach kanonicznych; **zmiana prawa = podbicie
+`templates/prawne-sklepy/VERSION` + `legal-forge.py update-all`** (wszystkie sklepy naraz).
+⛔ ZERO linków do platformy ODR (wygaszona 20.07.2025; gate `published` FAIL).
 
 ### Fabryka → panel `/tn-sklepy`: MOST `panel-sync.py`
 - **Na końcu KAŻDEJ fazy sync do panelu** (`scripts/mockup-tools/panel-sync.py`; kontrakt+mapa

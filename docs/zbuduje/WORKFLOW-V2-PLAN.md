@@ -83,8 +83,16 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   · **2 Landing** (lp_dane → lp_plan → lp_styl_marka → lp_makiety 🏁 → lp_grafiki → lp_kod →
   lp_dopasowanie → lp_zycie → lp_finisz 🏁 — proces fabryki F0→F8 1:1, scope=product)
   · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →
-  pl_integracje → pl_produkt [product] → pl_landing [product] → pl_prawne → pl_glowna →
-  pl_test 🏁 — wszystko przez API Trevio)
+  **pl_prawne (sort 50 — PRZED produktami/landingami)** → pl_integracje → pl_produkt [product]
+  → pl_landing [product] → pl_glowna → pl_test 🏁 — wszystko przez API Trevio)
+  (**pl_prawne WDROŻONE 21.07 wieczór** — SSOT `docs/zbuduje/PRAWNE.md` + narzędzie
+  `scripts/mockup-tools/legal-forge.py` (data/render/publish/update-all): komplet 7 podstron
+  prawnych z szablonów kanonicznych `templates/prawne-sklepy/` (stan prawny 21.07.2026:
+  ODR-wygaszenie, cło 1.07.2026, Omnibus, PKE, GPSR, niezgodność z umową); 4 ścieżki
+  systemowe nadpisane własnym HTML + /dostawa /polityka-cookies /formularz-odstapienia;
+  wersjonowanie PRAWNE-V + **update-all = masowa aktualizacja wszystkich sklepów przy
+  zmianie prawa**; HOT-UPDATE: zapis pl_dane w portalu → wf2-portal auto re-publikuje
+  dokumenty (szablony ze Storage legal-szablony/, koalescencja 60 s).)
   (**pl_glowna WDROŻONE 21.07** — SSOT `docs/zbuduje/STRONA-GLOWNA.md` + narzędzie
   `scripts/mockup-tools/home-forge.py` (collect/brief/build/render/og/publish): mała
   witryna-rozdzielnia parasola; szablon projektuje RAZ gpt-5.6-sol (markery CARDS/
