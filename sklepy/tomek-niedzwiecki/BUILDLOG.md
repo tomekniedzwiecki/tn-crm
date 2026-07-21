@@ -172,3 +172,21 @@ Otwarte: pixel/canonical placeholdery (gate przed kampanią); cross-model review
   Kimi K3 vs gpt-5.6-sol na tym samym briefie (decyzja o domyślnym koderze = Tomek).
 **Lekcja fabryki:** Kimi K3 nie mieści się w wall-clock edge (504) — duże generacje przez
 lokalny runner z kluczem z .env (technika echo), jak OPENAI_API_KEY.
+
+## 2026-07-21 wieczór — pl_glowna v1.2-1.3: wideo w kaflach + automat card-loopów
+
+- Korekta Tomka: wideo hero-loop = KAFEL karty produktu, NIE hero (rotator wycofany;
+  hero = statyczny medalion). Hero-loopy typu FADE (masażer/drapek — kremowa strefa pod
+  copy landingu) odrzucane automatycznie (heurystyka _fade_frame, kalibracja 3/3).
+- Dedykowane card-loopy masażer+drapek: scena fullframe HIGH z refami (bramka wierności
+  2 pary oczu PASS) → Kling 2.5 pętla first=last (RMS 2,0/1,4) → 208/252 KB mp4+webm.
+  Kłujek zostaje na swoim hero-loopie (fullframe od początku). Koszt rundy ~4,5 zł.
+- **AUTOMAT: cardloop-forge.py (scan/gen/run)** — cały tor jako narzędzie fabryki
+  (scene-brief GPT → scena → werdykt vision 5×T/N → Kling → RMS → upload → dowody QA);
+  wpięty w prompt-mapę pl_glowna (krok 2b); SSOT STRONA-GLOWNA v1.3.
+- Incydent naprawiony systemowo: zagnieżdżone komentarze HTML → wyciek CARD-TEMPLATE do
+  DOM (render zawsze wycina blok referencyjny). Cache domeny custom: snapshot per host
+  >2h, flush=unpublish→publish (nota do Adriana: revalidate przy PUT).
+- Benchmark koderów (ten sam brief): gpt-5.6-sol 8,5/10 · ~1,0 zł · 90 s vs kimi-k3
+  7/10 · ~0,40 zł · 390 s (tylko stream, lokalny runner). Default zostaje gpt-5.6-sol;
+  Kimi = drugi silnik w wf2-gpt (routing kimi-*).
