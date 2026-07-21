@@ -65,9 +65,13 @@ BEGIN
 END;
 $$;
 
--- Wołane WYŁĄCZNIE z edge na service-role (wf2-ads-connect / wf2-ads-verify). Odbieramy z PUBLIC,
--- nadajemy service_role (anon/authenticated NIE mają prawa scalać kroków spoza swojego RLS).
+-- Wołane WYŁĄCZNIE z edge na service-role (wf2-ads-connect / wf2-ads-verify). Odbieramy EXECUTE od
+-- PUBLIC ORAZ jawnie od anon/authenticated (Supabase domyślnie nadaje im EXECUTE na funkcjach public
+-- — sam REVOKE FROM PUBLIC nie wystarcza). Zostaje tylko service_role. Defense-in-depth: gdyby ktoś
+-- kiedyś rozszczelnił RLS wf2_steps (patrz „restore anon” w pamięci), anon i tak NIE zawoła tej funkcji.
 REVOKE ALL ON FUNCTION public.wf2_step_merge(uuid, text, jsonb, text[]) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.wf2_step_merge(uuid, text, jsonb, text[]) FROM anon;
+REVOKE ALL ON FUNCTION public.wf2_step_merge(uuid, text, jsonb, text[]) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.wf2_step_merge(uuid, text, jsonb, text[]) TO service_role;
 
 COMMENT ON FUNCTION public.wf2_step_merge(uuid, text, jsonb, text[]) IS
