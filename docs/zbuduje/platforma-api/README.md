@@ -163,6 +163,19 @@ Nowe typed actions adaptera: `order_detail · order_attribution · set_price{pro
    SEO sklepu (nazwa do szablonu title, description, OG-image) + meta per produkt. Auto-strony
    produktów będą się indeksować z „Default" równolegle z landingami.
 
+## ⛔ TESTOWANIE ZAMÓWIEŃ = ZAWSZE SANDBOX (decyzja Tomka 21.07 — „płacimy prowizję")
+
+Platforma nalicza prowizję od zamówień — TAKŻE na sklepie testowym, jeśli zamówienie idzie
+realnymi metodami. Każdy test E2E (checkout-inline, kasa platformy, smoke po publikacji):
+- **Dostawa: WYŁĄCZNIE metody „[Test]"/„[Tryb testowy]"** (broker **Sandbox**; NIGDY Apaczka
+  ani inne realne — nawet na sklepie test).
+- **Płatność online: provider Sandbox** (`isSandbox:true`). **COD tylko w parze z dostawą
+  testową** (COD na realnym kurierze = realne zamówienie z prowizją).
+- W promptach dla agentów E2E ZAWSZE jawnie wpisywać ten wymóg.
+- **API NIE MA anulowania zamówienia** (ani partner, ani storefront — sprawdzone 21.07)
+  — pomyłkowe zamówienia testowe anuluje się ręcznie w panelu platformy. LUKA DO ADRIANA:
+  endpoint anulowania/oznaczania zamówienia jako testowe.
+
 ## PUBLIC STOREFRONT API (odkryte 20.07 wieczór — WŁASNY CHECKOUT MOŻLIWY)
 
 `GET /docs` (partner) ma sekcję **`publicStorefront`**: 59 publicznych endpointów `https://api.trevio.pl/storefront/*`
