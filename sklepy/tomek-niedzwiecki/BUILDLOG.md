@@ -153,3 +153,22 @@ Otwarte: pixel/canonical placeholdery (gate przed kampanią); cross-model review
 **Czeka na Tomka:** zakup trafionek.pl (LH.pl) → pl_domena · NRB do pobrań + dane prawne (pl_dane) · Etap 4 kroki klienckie (konto ads, strona FB, budżet).
 **Następne w kolejce (auto):** pl_glowna (galeria Trafionka, publish_landing path:'') · pl_prawne (po pl_dane) · landingi 4 kandydatów (fabryka) · pl_test na końcu.
 **Kosmetyka do fabryki:** masażer mobile — pusty pas ~500 px między zdjęciem hero a nagłówkiem (agent, nie blokuje).
+
+## 2026-07-21 — Sesja: pl_glowna WDROŻONE + Etap 3 odtworzony na własnym sklepie
+
+**Zrobione (sesja 0a6253d4):**
+- **Etap 3 ODTWORZONY na sklepie 019f847d (trafionek.pl, domena custom AKTYWNA):** pl_produkt ×3
+  (Odprężek 179,00 / Drapek 74,90 / Kłujek 109,90 — ceny z kalkulacji 21.07; kasy HTTP 200)
+  + pl_landing ×3 (noindex ZDJĘTY, canonical finalny). pl_sklep → done.
+- **Naprawa rozjazdu cen:** landingi miały zapieczone STARE ceny (299/149,90/179) w title/meta/og,
+  elementach data-price i JSON-LD/config — podmienione na ceny z bazy + re-publish ×3 (agent Sonnet).
+- **pl_glowna = NOWY KROK FABRYKI:** SSOT `docs/zbuduje/STRONA-GLOWNA.md` + `home-forge.py`
+  (build=GPT szablon z markerami → render=karty z bazy deterministycznie → og → publish).
+  Koncepcja: analiza Sonnet 5 (witryna-rozdzielnia 5-6 sekcji; rama kart = parasol, produkt żyje
+  w foto; równe szanse portfela; OnlineStore+ItemList bez aggregateRating). https://trafionek.pl
+  LIVE — 3 karty, 2 rundy visual-verify (8/10; poprawki: medalion sygnatury w intro, chipy
+  zaufania hug-content, glif „ń" Fredoki = fallback Baloo 2 per-glyph). Koszt ~0,5 zł z 15 zł.
+- **wf2-gpt: routing multi-provider** (kimi-* → Moonshot, KIMI_API_KEY; list_models) — benchmark
+  Kimi K3 vs gpt-5.6-sol na tym samym briefie (decyzja o domyślnym koderze = Tomek).
+**Lekcja fabryki:** Kimi K3 nie mieści się w wall-clock edge (504) — duże generacje przez
+lokalny runner z kluczem z .env (technika echo), jak OPENAI_API_KEY.

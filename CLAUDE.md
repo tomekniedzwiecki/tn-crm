@@ -167,6 +167,10 @@ krok pl_sklep) · `status` (produkty/kasy/strony/integracje + rozjazd cen) · `b
 `home` · `page` · `unpublish`. Gate: publish bez {{WF2_PRODUCT_ID}} = FAIL (runtime-snippet!);
 noindex zdejmowany TYLKO na domenie docelowej. Zmiana ceny = re-publish (JSON-LD zapieczony —
 README platforma-api). Referencja API: `docs/zbuduje/platforma-api/README.md`.
+**Krok pl_glowna = `scripts/mockup-tools/home-forge.py`** (SSOT `docs/zbuduje/STRONA-GLOWNA.md`):
+strona główna sklepu (path:"") — szablon RAZ przez gpt-5.6-sol, karty produktów renderowane
+deterministycznie z bazy (markery CARDS/CARD-TEMPLATE/ITEMLIST); nowy gotowy produkt →
+`render`+`publish` ($0, idempotentnie; ręczne tweaki w index.html giną — edycje w template.html).
 
 ### Fabryka → panel `/tn-sklepy`: MOST `panel-sync.py`
 - **Na końcu KAŻDEJ fazy sync do panelu** (`scripts/mockup-tools/panel-sync.py`; kontrakt+mapa

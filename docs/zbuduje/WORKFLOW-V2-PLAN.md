@@ -85,6 +85,16 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →
   pl_integracje → pl_produkt [product] → pl_landing [product] → pl_prawne → pl_glowna →
   pl_test 🏁 — wszystko przez API Trevio)
+  (**pl_glowna WDROŻONE 21.07** — SSOT `docs/zbuduje/STRONA-GLOWNA.md` + narzędzie
+  `scripts/mockup-tools/home-forge.py` (collect/brief/build/render/og/publish): mała
+  witryna-rozdzielnia parasola; szablon projektuje RAZ gpt-5.6-sol (markery CARDS/
+  CARD-TEMPLATE/ITEMLIST), karty+JSON-LD renderuje deterministycznie baza — aktualizacja
+  przy nowym gotowym produkcie = `render`+`publish`, $0, idempotentnie. Produkt w galerii
+  gdy status='gotowy' + platform_page_url + okładka (oferta.webp→gallery-curated→hero-d).
+  Wykonane na żywo: https://trafionek.pl — 3 karty, koszt ~0,5 zł. Przy okazji Etap 3
+  ODTWORZONY na własnym sklepie 019f847d po przepięciu ze sklepu „test": pl_produkt ×3 +
+  pl_landing ×3 na trafionek.pl + naprawa zapieczonych STARYCH cen w landingach
+  (JSON-LD/meta/copy → ceny z kalkulacji 179/74,90/109,90) + re-publish.)
   · **4 Środowisko reklamowe** (project-scope, wszystko gotowe ZANIM powstaną materiały:
   ads_konto [client] → **ads_strona** [client, NOWY: wiarygodność FB/IG] → ads_budzet [client]
   → ads_pixel 🏁 [pixel+CAPI dedup event_id, EMQ z danych COD] → **ads_preflight 🏁** [NOWY:
