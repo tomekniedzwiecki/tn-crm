@@ -9,6 +9,11 @@ kopii 1:1. Ten plik = runbook; asortyment (co reuse'ujemy) opisuje `PLAN-REUSE-K
 > NIE RUSZA** jakości. Każdy mechanizm tu opisany jest **ADDITYWNY** — to narzędzia **PRZED**
 > bramkami, nigdy zamiast nich. ⛔ Reuse NIGDY nie omija bramek: `cross_landing`, wierność F3A,
 > `layout_diff`, `detail-lint`, `finalny_pass` zostają twardym progiem dla KAŻDEGO landingu.
+>
+> **🎈 REUSE = MIŁY DODATEK, NIE SPOSÓB DZIAŁANIA (dyrektywa Tomka 21.07).** Domyślny tryb fabryki
+> pozostaje: **buduj każdy landing świeżo, jakość ponad tempo.** Kapitalizacja pomaga, GDY się opłaca —
+> nie jest przymusem ani ramą. Dlatego bramki tego systemu (`kapitalizacja_deposit`, `reuse_preflight`)
+> są **WARN — miękkie przypomnienia, NIC nie blokuje DONE**. Nie robimy reuse agresywnie.
 
 ---
 

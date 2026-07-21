@@ -119,14 +119,15 @@ class TestDepositIndex(DepositBase):
         self.assertEqual(idx_rows[0][0], "PASS", "slug w indexie powinien dac PASS")
         self.assertNotIn("FAIL", statuses(res, "kapitalizacja"))
 
-    def test_b_slug_spoza_indexu_deposit_fail(self):
-        """(b) slug spoza indexu -> wiersz EXEMPLARY-INDEX = FAIL (blokuje DONE)."""
+    def test_b_slug_spoza_indexu_deposit_warn(self):
+        """(b) slug spoza indexu -> wiersz EXEMPLARY-INDEX = WARN (miły dodatek, NIE blokuje DONE)."""
         self._paths()
         res = self._run("bar")  # indexu nie ma wiersza 'bar'
         idx_rows = [(st, det) for (st, nm, det) in rows_of(res, "kapitalizacja") if "EXEMPLARY-INDEX" in nm]
         self.assertTrue(idx_rows, "brak wiersza EXEMPLARY-INDEX")
-        self.assertEqual(idx_rows[0][0], "FAIL", "slug spoza indexu powinien dac FAIL")
-        self.assertIn("depozytu wzorca", idx_rows[0][1].lower())
+        self.assertEqual(idx_rows[0][0], "WARN", "slug spoza indexu = WARN (przypomnienie, nie FAIL)")
+        self.assertNotIn("FAIL", statuses(res, "kapitalizacja"), "kapitalizacja NIGDY nie blokuje DONE")
+        self.assertIn("depozyt wzorca", idx_rows[0][1].lower())
 
     def test_index_brak_pliku_skip(self):
         """Brak pliku indexu = SKIP (config, nie karzemy landinga FAIL-em)."""
@@ -143,7 +144,8 @@ class TestDepositIndex(DepositBase):
         write(self.M["kapitalizacja_deposit"]["index_plik"], "| **[foobar](https://x/foobar/)** |\n")
         res = self._run("foo")
         idx_rows = [(st, det) for (st, nm, det) in rows_of(res, "kapitalizacja") if "EXEMPLARY-INDEX" in nm]
-        self.assertEqual(idx_rows[0][0], "FAIL", "'foo' nie moze dopasowac sie do wiersza 'foobar'")
+        # 'foo' NIE dopasowuje sie do 'foobar' => traktowany jak nieobecny => WARN (miły dodatek, nie FAIL)
+        self.assertEqual(idx_rows[0][0], "WARN", "'foo' nie moze dopasowac sie do wiersza 'foobar' (=> WARN)")
 
 
 class TestDepositLesson(DepositBase):
