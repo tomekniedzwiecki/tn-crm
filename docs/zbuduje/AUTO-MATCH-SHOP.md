@@ -139,6 +139,43 @@ order by (tt_shop->'auto_match'->'vision'->>'verdict'),
 Werdykt `NIE` = w rekordzie siedzą **cudze** dane sprzedaży. To kandydaci do rollbacku
 w pierwszej kolejności, nie do przeglądu „kiedyś".
 
+## WYNIK PRZEBIEGU 21.07.2026 — czytaj to przed zaufaniem automatowi
+
+72 rekordy dopasowane po tytule, potem obejrzane (2 niezależne przebiegi):
+
+| wynik | ile | co to znaczy |
+|---|---|---|
+| ✓ zatwierdzone automatycznie | **20** | oba przebiegi: TAK, oba ≥ 0.9 |
+| ⛔ odrzucone (oba: NIE) | **23** | **to był inny produkt** — wycofane |
+| ? niezgodne przebiegi | **10** | raz TAK, raz NIE — z definicji niepewne |
+| ~ niepewne / poniżej progu | **19** | zostają do przeglądu |
+
+**Blisko 1/3 dopasowań po tytule było po prostu błędnych** — mimo że 66 z 72 miało
+`score = 1.0`. To najważniejsza liczba w tym dokumencie: **`score = 1.0` nie znaczy
+„to ten produkt", tylko „wszystkie słowa zapytania są w tytule".**
+
+Przykłady odrzuceń (odniesienie → co automat wpisał):
+- pług ręczny **na kołach** → motyka-grabki bez kół
+- rozrusznik auta → *lampa stroboskopowa do ustawiania zapłonu* dopasowana do boostera
+- nakładka na fotel **z wentylatorem** → żelowa poduszka plaster miodu
+- karmnik dla psa (podstawka) → kompletny karmnik dla kota z kamerą
+- saszetki podróżne na ubrania → organizer na tabletki
+
+### Nagrobek po odrzuceniu
+
+Odrzucone NIE mają `tt_shop = null`, tylko „nagrobek":
+
+```jsonc
+{ "source": "auto_match_rejected",
+  "auto_match": { "rejected": true, "is_auto": false, "vision": {...},
+                  "odrzucony_produkt": { "title": ..., "seo_url": ..., "sold_count": ... } } }
+```
+
+Powód: `tt_shop = null` sprawiłoby, że kolejny `match_existing` wpisze **ten sam błąd**
+jeszcze raz. Nagrobek trzyma dowód i wyklucza rekord z ponownego dopasowania. Sprzedaż
+i cena są usunięte, więc rekord nie liczy się już jako „dowód sprzedaży". `shop_url`
+wyczyszczony tam, gdzie ustawił go automat.
+
 ## Gotcha przy ponownym uruchomieniu
 
 Rekord, którego nie da się dopasować (`brak_wynikow`), zostaje z `tt_shop = null`, więc
