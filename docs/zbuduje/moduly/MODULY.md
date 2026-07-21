@@ -36,6 +36,11 @@ nagłówkowym pliku `<moduł>@<wersja>.html`. Proporcje i JS = nietykalne; token
 - Źródłem wersji jest ZAWSZE konkretny commit dobrego landingu (nie „z głowy").
 
 ## CHANGELOG
+- **2026-07-21 — checkout-inline@1: fix kosmetyczny mobile** — `.zc-total-v` dostał
+  `white-space:nowrap` (pasek „Razem do zapłaty" zawijał samo „zł" do drugiej linii @375px;
+  znalezione przy osadzeniu na macie). Bez bumpu wersji (kosmetyka, zero zmian mechaniki).
+  Kopie zaktualizowane 1:1: usmieszek-checkout, mata. Drugie osadzenie modułu = landing maty
+  (`sklepy/tomek-niedzwiecki/mata/`, wariant steps, skórka aliasami tokenów — wzorzec STANDARD).
 - **2026-07-21 — porownanie-tabela@1 · opinie@1 · offer-box@1 (NOWE, 3× headless skeleton):**
   wydzielone 3 nawracające sekcje z ~12 landingów `sklepy/tomek-niedzwiecki/*` jako reużywalne,
   HEADLESS moduły (struktura DOM + mechanika + a11y + SLOTY na treść; ZERO tożsamości — kolory

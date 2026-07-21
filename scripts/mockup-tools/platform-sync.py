@@ -231,6 +231,12 @@ def _substitute(html, wf2_product_id, canonical, pixel_id, checkout_url, strip_n
         html = html.replace("{{CHECKOUT_URL}}", checkout_url)
     if pixel_id:
         html = html.replace("{{PIXEL_ID}}", pixel_id)
+    # Stopka → strony systemowe platformy (ścieżki względne = działają na każdej domenie).
+    # Platforma NIE ma strony „Dostawa" — <li> z {{DOSTAWA_URL}} wycinamy zamiast linkować donikąd.
+    html = re.sub(r"<li>\s*<a[^>]*\{\{DOSTAWA_URL\}\}[^>]*>.*?</a>\s*</li>\s*", "", html, flags=re.S)
+    for ph, target in (("{{REGULAMIN_URL}}", "/regulation"), ("{{POLITYKA_URL}}", "/privacy-policy"),
+                       ("{{ZWROTY_URL}}", "/return"), ("{{KONTAKT_URL}}", "/contact")):
+        html = html.replace(ph, target)
     if strip_noindex:
         html = re.sub(r'<meta[^>]+name="robots"[^>]+noindex[^>]*>\s*', "", html, flags=re.I)
     return html
