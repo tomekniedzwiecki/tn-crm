@@ -183,6 +183,14 @@
   .vtile .vth{position:relative;width:100%;aspect-ratio:9/16;background:#000}
   .vtile .vth img{width:100%;height:100%;object-fit:cover;display:block}
   .vtile .vthph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim2)}
+  /* Znacznik stanu klipu — propozycja automatu vs świadome odrzucenie przez fabrykę.
+     Bez tego auto-dopasowane wideo wygląda w pasku jak treść zatwierdzona. */
+  .vtile .vbadge{position:absolute;top:4px;left:4px;z-index:2;font-size:7.5px;font-weight:600;
+    letter-spacing:.05em;padding:2px 4px;border-radius:3px;line-height:1}
+  .vtile .vbadge.prop{background:#f5a623;color:#1a1200}
+  .vtile .vbadge.odrz{background:#2a2a30;color:var(--dim)}
+  .vtile.prop{outline:1px solid rgba(245,166,35,.35);outline-offset:-1px}
+  .vtile.odrz{opacity:.55}
   .vtile .vthph svg{width:15px;height:15px}
   .vtile .vcap{font-size:8.5px;color:var(--dim);padding:3px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
   .detImgCol{display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -1099,15 +1107,24 @@ function _detailVideos(x,mainVid){
   cur.forEach(v=>{
     const m=/\/video\/(\d+)/.exec(v&&v.url||''); const id=m?m[1]:null;
     if(!id||seen.has(id))return; seen.add(id);
-    out.push({vid:id,cover:safeUrl(v.cover),plays:v.plays,author:v.author,title:(v.kolor?('['+v.kolor+'] '):'')+(v.alt_pl||v.nick||'')});
+    // Kuracja fabryki trzyma poster w poster_hosted/cover_src, auto-dopasowanie w cover.
+    const cov=safeUrl(v.cover||v.poster_hosted||v.cover_src);
+    // Stan klipu: PROPOZYCJA = znalezione automatem, jeszcze nieobejrzane; keep=false z innym
+    // werdyktem = fabryka je ŚWIADOMIE odrzuciła. Ani jedno, ani drugie nie jest zatwierdzone.
+    const stan=(v.werdykt==='PROPOZYCJA')?'prop':(v.keep===false?'odrz':'');
+    out.push({vid:id,cover:cov,plays:v.plays,author:v.author,stan:stan,powod:v.powod||'',
+      title:(v.kolor?('['+v.kolor+'] '):'')+(v.alt_pl||v.nick||'')});
   });
   return out;
 }
 function vidTileHtml(v){
   const auth=v.author?('@'+v.author):'';
   const cap=[(v.plays!=null?'▶ '+fmt(v.plays):''),auth].filter(Boolean).join(' · ');
-  return `<button class="vtile${v.main?' on':''}" data-vid="${v.vid}" onclick="playVid('${v.vid}')" title="${esc((v.title||'')+(auth?' · '+auth:''))}">
-    <div class="vth">${v.cover?`<img loading="lazy" src="${esc(v.cover)}" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'">`:''}<span class="vthph"${v.cover?' style="display:none"':''}>${I.play}</span></div>
+  const znak=v.stan==='prop'?'<span class="vbadge prop">PROPOZYCJA</span>'
+            :v.stan==='odrz'?'<span class="vbadge odrz">ODRZUCONE</span>':'';
+  const tip=esc((v.title||'')+(auth?' · '+auth:'')+(v.powod?('\n'+v.powod):''));
+  return `<button class="vtile${v.main?' on':''}${v.stan?' '+v.stan:''}" data-vid="${v.vid}" onclick="playVid('${v.vid}')" title="${tip}">
+    <div class="vth">${znak}${v.cover?`<img loading="lazy" src="${esc(v.cover)}" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'">`:''}<span class="vthph"${v.cover?' style="display:none"':''}>${I.play}</span></div>
     <div class="vcap">${esc(cap||'wideo')}</div>
   </button>`;
 }
