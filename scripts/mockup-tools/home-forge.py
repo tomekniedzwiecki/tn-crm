@@ -93,6 +93,24 @@ def _cover(slug):
     return hero if _url_ok(hero) else None
 
 
+def _hover_img(slug, cover):
+    """Drugi kadr karty (hover-swap): hero-d → demo-a → demo-01, różny od covera."""
+    for name in ("hero-d.webp", "demo-a.webp", "demo-01.webp"):
+        u = f"{PUB}/bud-assets/{slug}/scenes/{name}"
+        if u != cover and _url_ok(u):
+            return u
+    return cover
+
+
+def _hero_video(slug):
+    """Hero-loop landingu do rotatora na home (desktop): mp4+webm, jeśli istnieją."""
+    mp4 = f"{PUB}/bud-assets/{slug}/video/hero-loop.mp4"
+    if not _url_ok(mp4):
+        return None
+    webm = f"{PUB}/bud-assets/{slug}/video/hero-loop.webm"
+    return {"mp4": mp4, "webm": webm if _url_ok(webm) else None}
+
+
 def _hook(slug, platform_name):
     """1. zdanie meta-description landingu; fallback: descriptor z platform_name po „—"."""
     path = os.path.join(REPO_ROOT, "sklepy", "tomek-niedzwiecki", slug, "index.html")
@@ -134,11 +152,13 @@ def collect(pid):
             "hook": _hook(p["slug"], p.get("platform_name")) or p["name"],
             "price": p["price"], "price_pl": _money_pl(p["price"]),
             "landing": p["platform_page_url"], "cover": cover,
+            "cover2": _hover_img(p["slug"], cover),
+            "hero_video": _hero_video(p["slug"]),
         })
     return {"project": pr, "parasol": _parasol_slug(pr), "products": prods}
 
 
-CARD_KEYS = ("CARD_URL", "CARD_IMG", "CARD_NAME", "CARD_HOOK", "CARD_PRICE", "CARD_PID", "CARD_CTA", "CARD_ALT")
+CARD_KEYS = ("CARD_URL", "CARD_IMG", "CARD_IMG2", "CARD_NAME", "CARD_HOOK", "CARD_PRICE", "CARD_PID", "CARD_CTA", "CARD_ALT")
 
 
 def _render_html(template, data):
@@ -149,8 +169,8 @@ def _render_html(template, data):
     cards = []
     for p in data["products"]:
         c = card_tpl
-        vals = {"CARD_URL": p["landing"], "CARD_IMG": p["cover"], "CARD_NAME": p["mini"],
-                "CARD_HOOK": p["hook"], "CARD_PRICE": p["price_pl"], "CARD_PID": p["id"],
+        vals = {"CARD_URL": p["landing"], "CARD_IMG": p["cover"], "CARD_IMG2": p.get("cover2") or p["cover"],
+                "CARD_NAME": p["mini"], "CARD_HOOK": p["hook"], "CARD_PRICE": p["price_pl"], "CARD_PID": p["id"],
                 "CARD_CTA": f"Zobacz {p['mini']}", "CARD_ALT": f"{p['mini']} — {p['hook']}"}
         for k in CARD_KEYS:
             c = c.replace("{{%s}}" % k, str(vals[k]))
@@ -173,6 +193,13 @@ def _render_html(template, data):
     ld = '<script type="application/ld+json">' + json.dumps(graph, ensure_ascii=False) + "</script>"
     out = re.sub(r"(<!--ITEMLIST:START-->)(.*?)(<!--ITEMLIST:END-->)",
                  lambda mm: mm.group(1) + ld + mm.group(3), out, flags=re.S)
+    # Rotator hero-video (opcjonalny marker): lista klipów portfela dla kodu strony.
+    vids = [{"name": p["mini"], "landing": p["landing"], "mp4": p["hero_video"]["mp4"],
+             "webm": p["hero_video"].get("webm"), "poster": p.get("cover2") or p["cover"]}
+            for p in data["products"] if p.get("hero_video")]
+    vjs = "<script>window.__HOME_VIDS=" + json.dumps(vids, ensure_ascii=False) + "</script>"
+    out = re.sub(r"(<!--HEROVIDS:START-->)(.*?)(<!--HEROVIDS:END-->)",
+                 lambda mm: mm.group(1) + vjs + mm.group(3), out, flags=re.S)
     return out
 
 

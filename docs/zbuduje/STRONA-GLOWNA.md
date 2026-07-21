@@ -67,6 +67,18 @@ karta w pustej siatce) + banda „jak to działa"; 2-3 → jeden rząd; 4+ → z
 DOKŁADNIE JEDEN akcent UI, para fontów z kontrastem, jeden radius, touch-targets ≥40px,
 fonty latin-ext, `prefers-reduced-motion`, brak h-scrolla 320-1920.
 
+**Życie z materiałów landingów (v1.1 — gdy assety istnieją, reuse za 0 zł):**
+- **Rotator hero-video (desktop ≥980px)** — gdy ≥1 produkt ma `video/hero-loop.mp4`:
+  karta ~4:5 w miejscu wizualu intro, klipy WSZYSTKICH produktów po kolei (równe szanse,
+  bez losowania), crossfade ~6 s, chip z nazwą mini-marki = link do landingu klipu.
+  `preload="none"` + start po IntersectionObserver; mobile = ukryty; reduced-motion =
+  statyczny medalion fallback. Dane wstrzykuje render przez marker
+  `<!--HEROVIDS:START/END-->` (`window.__HOME_VIDS`). ⚠️ Crossfade = miękki
+  double-exposure — bezpieczny przy spójnej palecie klipów; klipy o kontrastowych
+  paletach → rozważ cięcie zamiast fade.
+- **Hover-swap kart** — drugi kadr `{{CARD_IMG2}}` (hero-d → demo-a → demo-01, różny od
+  covera) nakładany opacity na hover/focus; tylko `@media (hover:hover)`.
+
 ## 2. PARTYTURA (per marka parasolowa — z kontraktu marki `wf2_projects`)
 
 | pozycja | źródło | Trafionek (wzorzec) |
@@ -173,5 +185,10 @@ brandowa intro) = wyjątek świadomie uzasadniony w nocie kroku, nadal w limicie
 
 ## CHANGELOG
 
+- **1.1 (2026-07-21 wieczór)** — decyzja Tomka „wykorzystać hero-video z landingów":
+  rotator hero-video (desktop, klipy portfela po kolei, chip-link) + hover-swap kart;
+  marker HEROVIDS + {{CARD_IMG2}} w kontrakcie; home-forge collect zbiera hero_video/cover2.
+  Benchmark koderów na identycznym briefie: gpt-5.6-sol 8,5/10 (~1,0 zł, 90 s) vs
+  kimi-k3 7/10 (~0,40 zł, 390 s, TYLKO stream, lokalny runner) — default zostaje gpt-5.6-sol.
 - **1.0 (2026-07-21)** — pierwsza wersja: koncepcja (Sonnet 5) + architektura
   szablon/render + home-forge.py + wdrożenie Trafionka.
