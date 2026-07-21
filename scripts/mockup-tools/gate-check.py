@@ -1665,6 +1665,133 @@ def check_panel_sync(res, M, ctx):
                     "krok done bez opisu (data.fields puste) — warsztat pusty")
 
 
+# ================================================================== KAPITALIZACJA: egzekucja flywheel reuse (depozyt + preflight retrievalu)
+# Powod (dyrektywa Tomka 21.07): system kapitalizacji byl OPISANY w runbooku (KAPITALIZACJA-OPS),
+# ale reuse nie byl WYMUSZONY zadna bramka — flywheel dzialal na honor-system. Te dwa checki czynia
+# depozyt wzorca CZESCIA definicji DONE (jak panel_sync/wiernosc). Wzorzec: check_sekcje_plan/check_cta
+# (data-driven z manifestu). Doktryna: KAPITALIZACJA-OPS §1 (retrieval) + §4 (depozyt) + EXEMPLARY-INDEX.
+def _resolve_repo_path(path):
+    """Sciezka z manifestu -> absolutna. Absolutna zwracana bez zmian (tak testy podmieniaja
+       fixture). Wzgledna liczona od SCRIPT_DIR (scripts/mockup-tools; '../../' = korzen tn-crm)."""
+    if not path:
+        return None
+    if os.path.isabs(path):
+        return path
+    return os.path.normpath(os.path.join(SCRIPT_DIR, path.replace("/", os.sep)))
+
+def _lekcje_zrodlo_cells(md, header_key):
+    """Komorki kolumny 'Źródło' tabeli LEKCJE-LANDINGI (kolumna z naglowkiem zawierajacym header_key).
+       [] gdy tabela/kolumna nieodnaleziona -> wolajacy robi fallback na cala tresc."""
+    rows = []
+    for ln in (md or "").splitlines():
+        s = ln.strip()
+        if s.startswith("|") and s.endswith("|"):
+            rows.append([c.strip() for c in s.strip("|").split("|")])
+    hi = ci = -1
+    for i, r in enumerate(rows):
+        for j, c in enumerate(r):
+            if norm(header_key) in norm(c):
+                hi, ci = i, j
+                break
+        if hi >= 0:
+            break
+    if hi < 0 or ci < 0:
+        return None
+    cells = []
+    for r in rows[hi + 1:]:
+        if all(re.fullmatch(r"[-:\s]*", c) for c in r):
+            continue
+        if ci < len(r):
+            cells.append(r[ci])
+    return cells
+
+def _slug_root_block(md, slug, window):
+    """True gdy jakikolwiek ':root{' w rejestrze jest poprzedzony wzmianka sluga w oknie `window`
+       znakow (naglowek/etykieta bloku palety). Brak = depozyt palety sluga nie zrobiony."""
+    ns = norm(slug)
+    if not ns:
+        return False
+    for mm in re.finditer(r":root\s*\{", md or ""):
+        pre = md[max(0, mm.start() - int(window)):mm.start()]
+        if ns in norm(pre):
+            return True
+    return False
+
+def check_kapitalizacja_deposit(res, M, ctx):
+    """SILNIK flywheel (KAPITALIZACJA-OPS §4). Po DONE landing MUSI zdeponowac wzorzec:
+       - FAIL: brak wiersza sluga w EXEMPLARY-INDEX (grandfatering BEZ mtime: 12 istniejacych SA
+         w indexie -> PASS; FAIL tylko dla nowego 13.+ sluga bez depozytu).
+       - WARN: brak wzmianki sluga w kolumnie 'Źródło' LEKCJE-LANDINGI (nie kazdy landing rodzi lekcje).
+       - WARN: brak bloku :root sluga w TOKEN-KONTRAKT (paleta dla cross_landing ΔE).
+       Brak pliku (index/lekcje/tokeny) = SKIP (config, nie karzemy landinga)."""
+    m = M.get("kapitalizacja_deposit")
+    if not m:
+        res.add("kapitalizacja", "(config)", "SKIP", "brak kapitalizacja_deposit w manifescie")
+        return
+    sev = m["severity"]
+    slug = ctx["slug"]
+    # --- FAIL: wiersz sluga w EXEMPLARY-INDEX (depozyt wzorca — SILNIK wzrostu) ---
+    idx_path = _resolve_repo_path(m.get("index_plik"))
+    idx = read_text(idx_path) if idx_path else None
+    if idx is None:
+        res.add("kapitalizacja", "EXEMPLARY-INDEX (depozyt wzorca)", "SKIP",
+                "brak pliku indexu: %s" % idx_path)
+    else:
+        pat = m.get("index_slug_regex", r"/{slug}/|\[{slug}\]").replace("{slug}", re.escape(slug))
+        has_row = bool(re.search(pat, idx))
+        res.add("kapitalizacja", "EXEMPLARY-INDEX ma wiersz sluga", status_for(has_row, sev),
+                "wiersz obecny (depozyt wzorca OK)" if has_row
+                else m.get("index_brak_msg", "brak depozytu wzorca — dopisz wiersz do EXEMPLARY-INDEX"))
+    # --- WARN: lekcja sluga w kolumnie 'Źródło' LEKCJE-LANDINGI ---
+    lek_path = _resolve_repo_path(m.get("lekcje_plik"))
+    lek = read_text(lek_path) if lek_path else None
+    lsev = m.get("lekcje_severity", "WARN")
+    if lek is None:
+        res.add("kapitalizacja", "LEKCJE-LANDINGI (lekcja sluga)", "SKIP", "brak pliku lekcji")
+    else:
+        cells = _lekcje_zrodlo_cells(lek, m.get("lekcje_kolumna_naglowek", "źródło"))
+        if cells is None:  # kolumna nieodnaleziona -> fallback na cala tresc (bezpieczniej WARN nie FAIL)
+            has_lesson = norm(slug) in norm(lek)
+        else:
+            has_lesson = any(norm(slug) in norm(c) for c in cells)
+        res.add("kapitalizacja", "LEKCJE-LANDINGI (lekcja sluga)",
+                "PASS" if has_lesson else status_for(False, lsev),
+                "slug wzmiankowany w kolumnie Źródło" if has_lesson
+                else m.get("lekcje_brak_msg", "rozważ depozyt lekcji"))
+    # --- WARN: blok :root sluga w TOKEN-KONTRAKT (paleta policzalna dla cross_landing) ---
+    tok_path = _resolve_repo_path(m.get("tokens_plik"))
+    tok = read_text(tok_path) if tok_path else None
+    tsev = m.get("tokens_severity", "WARN")
+    if tok is None:
+        res.add("kapitalizacja", "TOKEN-KONTRAKT (:root sluga)", "SKIP", "brak pliku rejestru tokenow")
+    else:
+        has_root = _slug_root_block(tok, slug, m.get("tokens_root_window", 240))
+        res.add("kapitalizacja", "TOKEN-KONTRAKT (:root sluga)",
+                "PASS" if has_root else status_for(False, tsev),
+                "blok :root sluga obecny" if has_root
+                else m.get("tokens_brak_msg", "brak bloku :root sluga w TOKEN-KONTRAKT"))
+
+def check_reuse_preflight(res, M, ctx):
+    """F1 PREFLIGHT RETRIEVALU (KAPITALIZACJA-OPS §1) — miekki nudge. Gdy PLAN.md istnieje ale NIE
+       deklaruje markera '## WZORCE' (lista wzorcow dobranych z EXEMPLARY-INDEX) => WARN. Brak PLAN.md
+       = SKIP. WARN, NIE FAIL — istniejace PLAN-y markera nie maja, FAIL zlamalby baseline."""
+    m = M.get("reuse_preflight")
+    if not m:
+        res.add("reuse_preflight", "(config)", "SKIP", "brak reuse_preflight w manifescie")
+        return
+    arch = ctx.get("archiwum")
+    if not arch:
+        res.add("reuse_preflight", "(PLAN.md)", "SKIP", "brak archiwum")
+        return
+    plan = read_text(os.path.join(arch, m.get("plan_plik", "PLAN.md").replace("/", os.sep)))
+    if plan is None:
+        res.add("reuse_preflight", "(PLAN.md)", "SKIP", "brak PLAN.md (landing sprzed reguly)")
+        return
+    marker = m.get("wzorce_marker", "## WZORCE")
+    ok = marker in plan
+    res.add("reuse_preflight", "PLAN deklaruje wzorce (%s)" % marker, status_for(ok, m.get("severity", "WARN")),
+            "marker obecny" if ok else m.get("brak_msg", "PLAN nie deklaruje wzorcow z EXEMPLARY-INDEX"))
+
 # ================================================================== F7 COPY-GATE (task#2): kotwiczenie liczb w KARCIE + jedna cena
 def _num_tokens(text):
     """Zbior znormalizowanych liczb z tekstu (przecinek->kropka; wariant bez zbednych zer)."""
@@ -1913,6 +2040,7 @@ CHECK_ORDER = [
     ("files", check_files),
     ("dopasowanie", check_dopasowanie),
     ("sekcje_plan", check_sekcje_plan),
+    ("reuse_preflight", check_reuse_preflight),
     ("cta", check_cta),
     ("interakcje", check_interakcje),
     ("grep_forbidden", check_grep_forbidden),
@@ -1930,6 +2058,7 @@ CHECK_ORDER = [
     ("wiernosc", check_wiernosc),
     ("cross_landing", check_cross_landing),
     ("panel_sync", check_panel_sync),
+    ("kapitalizacja_deposit", check_kapitalizacja_deposit),
     ("published", check_published),
     ("finalny_pass", check_finalny_pass),
 ]
