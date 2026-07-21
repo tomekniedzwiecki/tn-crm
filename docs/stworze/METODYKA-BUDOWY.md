@@ -263,6 +263,17 @@ Tomek przegląda DOWODY, nie kod.
 - Trial: domyślnie **bez karty na wejściu** (nieznana marka = karta ścina rejestracje ~65%); prośba o kartę
   w momencie aha (contextual capture). Model per apka potwierdza krok `pricing`.
 - AI w produkcie tylko jako silnik jednego workflow niszy (mierzalna oszczędność w 1. sesji użytkownika), nigdy bajer.
+- **Klucz AI = DEDYKOWANY per aplikacja i per dostawca (STANDARD fabryki, decyzja Tomka 21.07).** Każda apka
+  używająca AI ma WŁASNY klucz utworzony w panelu dostawcy (OpenAI/Moonshot) DLA TEGO projektu — NIE współdzielony
+  org-key wklejony wszędzie. Powód: atrybucja zużycia per projekt (panel dostawcy), niezależna rotacja i limit
+  wydatku, mały blast-radius (wyciek/roll = 1 apka). Sekrety AI to sekrety Supabase danej apki; „osobny klucz" =
+  osobna WARTOŚĆ, nie osobna nazwa env. **Warstwa providera (`_shared/openai-fetch.ts resolveProvider`) wybiera
+  dostawcę openai⇄kimi z env (`AI_PROVIDER`/`AI_MODEL`/`KIMI_BASE_URL`/`KIMI_API_KEY`) BEZ zmiany kodu** — brak env =
+  openai (zero regresji); przełącznik env istotny dla apek prawnych/RODO (EU vs zagranica). Koszt liczony lokalnie
+  (`costUsdFromTokens` — stawki per dostawca `AI_COST_*`/`KIMI_COST_*`; `ai_usage`/`ai_billing_month`), a osobny klucz
+  DODAJE atrybucję i cap także po stronie dostawcy. Ops: limit wydatku per klucz w panelu dostawcy, rotacja przy
+  offboardingu apki, spójne nazwy sekretów cross-fabryka. Krok `env_secrets` (Etap 2) to weryfikuje. Nośnik doktryny =
+  starter (`.env.example` + CLAUDE.md „Klucze AI (per aplikacja)").
 - Mobile-first zawsze (nisze B2B pracują z telefonu — patrz Grzegorz: „fachowiec w trasie").
 - **Seed danych referencyjnych = REALNE treści z autorytatywnego źródła, nie `TODO-seed`.** Apki compliance
   (analizator umów, checklisty norm) stoją na treściach ustaw/norm — **fabryka SAMA seeduje realne, dosłowne

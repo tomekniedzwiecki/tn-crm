@@ -272,6 +272,9 @@
         <!-- Twoje zadania — karta-CTA (pełny przepływ w ekranie #tasks-view) -->
         <section id="sec-tasks" class="hidden"></section>
 
+        <!-- Panel Twojego sklepu — login + link + ustaw hasło (gdy konto merchanta = e-mail klienta) -->
+        <section id="sec-merchant" class="hidden"></section>
+
         <!-- Nawigacja etapami: pasek etapów (klik = przełącz etap; steruje osią i matrycą poniżej) -->
         <div id="stage-nav" class="card hidden" style="margin-top:44px;overflow:hidden">
             <div id="stage-pills" class="flex overflow-x-auto no-scrollbar"></div>
@@ -594,6 +597,7 @@
         }));
         P.notes = []; P.sales = []; P.adStats = []; P.costs = []; P.genMap = {};
         P.ordersCount = data.orders_count || 0;
+        P.merchantPanel = data.merchant_panel || null;
         P.WS = CLIENT_WS;
         P.hooks = {
             onOpenStep: (key) => { const d = defFor(key); track('open_step', d ? d.label : key); },
@@ -636,6 +640,7 @@
             : `Jesteśmy na etapie: <b style="color:#fff">${escapeHtml(stageLabel)}</b>`;
         renderMove();
         renderHomeCard();
+        renderMerchantPanel();
         renderStageNav();
         if (pr.deadline_at) { const d = new Date(pr.deadline_at); if (!isNaN(d)) $('p-deadline').textContent = 'Planowane domknięcie: ' + d.toLocaleDateString('pl-PL'); }
         $('tv-brand').textContent = pr.name || pr.customer_name || 'Wasz sklep';
@@ -715,6 +720,46 @@
             <div class="hc-s">Zrób je jedno po drugim — poprowadzę Cię krok po kroku.</div></div>
             <button class="hc-btn" onclick="enterTasks()">Przejdź do zadań <i class="ph ph-arrow-right"></i></button>
         </div><div class="hc-list">${preview}</div></div>`;
+    }
+
+    // ── Karta „Panel Twojego sklepu" ─────────────────────────────────────────
+    // Widoczna tylko gdy sklep na platformie istnieje. active = konto merchanta na e-mail klienta
+    // → pokazujemy adres logowania + link do panelu + „Ustaw hasło" (klient sam, forgot-password).
+    // pending = sklep działa, ale konto na adresie systemowym → dostęp przekazujemy osobno (bez adresu).
+    function renderMerchantPanel() {
+        const sec = $('sec-merchant');
+        const mp = P.merchantPanel;
+        if (!mp) { sec.classList.add('hidden'); sec.innerHTML = ''; return; }
+        sec.classList.remove('hidden');
+        if (mp.active) {
+            const email = mp.login_email || '';
+            const emailE = escapeHtml(email);
+            const loginUrl = mp.login_url || 'https://panel.niedzwiecki.ai/';
+            const setupUrl = mp.password_setup_url || 'https://panel.niedzwiecki.ai/auth/forgot-password';
+            sec.innerHTML = `<div class="home-card">
+                <div class="hc-top">
+                    <div class="hc-ic"><i class="ph ph-storefront"></i></div>
+                    <div class="hc-tt"><div class="hc-h">Panel Twojego sklepu</div>
+                    <div class="hc-s">Stąd zarządzasz swoim sklepem — produktami, zamówieniami i ustawieniami.</div></div>
+                </div>
+                <div style="margin-top:16px;padding-top:14px;border-top:1px solid #161616">
+                    <label class="lbl" style="margin-top:0">Adres logowania (e-mail)</label>
+                    <div class="copybox">${emailE} <button type="button" onclick="copyText('${emailE}', this)">Kopiuj</button></div>
+                    <p style="color:#a1a1aa;font-size:13px;line-height:1.6;margin-top:10px">Konto założyliśmy dla Ciebie. Przy pierwszym logowaniu kliknij <b style="color:#fff">„Ustaw hasło"</b> — odnośnik do ustawienia własnego hasła przyjdzie na Twój adres e-mail.</p>
+                    <div class="task-actions">
+                        <a class="btn btn-accent" href="${escapeHtml(loginUrl)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px" onclick="track('link_click','Przejdź do panelu sklepu')"><i class="ph ph-arrow-square-out"></i> Przejdź do panelu</a>
+                        <a class="btn btn-sec" href="${escapeHtml(setupUrl)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px" onclick="track('link_click','Ustaw hasło do panelu sklepu')"><i class="ph ph-lock-key"></i> Ustaw hasło</a>
+                    </div>
+                </div>
+            </div>`;
+        } else {
+            // pending — sklep działa, dostęp przekażę osobno (BEZ pokazywania adresu systemowego)
+            sec.innerHTML = `<div class="home-card"><div class="hc-top">
+                <div class="hc-ic"><i class="ph ph-storefront"></i></div>
+                <div class="hc-tt"><div class="hc-h">Panel Twojego sklepu</div>
+                <div class="hc-s">Twój sklep działa na platformie. Dostęp do panelu przekażę Ci osobno.</div></div>
+            </div></div>`;
+        }
     }
 
     // ── Ekran „Twoje zadania" (SPA) ──────────────────────────────────────────

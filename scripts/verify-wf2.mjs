@@ -176,6 +176,10 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   missAct.length ? bad('wf2-merchant akcje', `brak: ${missAct.join(', ')}`) : ok(`wf2-merchant: komplet akcji (${wantActions.length})`);
   // idempotencja + sygnał ręcznej obsługi zajętego e-maila (kontrakt paczki pl_sklep)
   (src.includes('email_taken_no_creds') && src.includes('onConflict')) ? ok('wf2-merchant: idempotencja (upsert onConflict) + email_taken_no_creds') : bad('wf2-merchant idempotencja', 'brak email_taken_no_creds lub upsert onConflict');
+  // domyślna tożsamość konta = e-mail klienta z projektu (create_store z samym project_id)
+  (src.includes('customer_email') && src.includes('email_or_project_required')) ? ok('wf2-merchant: domyślna tożsamość z projektu (customer_email; email|project wymagane)') : bad('wf2-merchant default email', 'brak derivacji customer_email / email_or_project_required');
+  // create_store zwraca informacyjne URL-e logowania/ustawienia hasła
+  (src.includes('login_url') && src.includes('password_setup_url')) ? ok('wf2-merchant: create_store zwraca login_url/password_setup_url') : bad('wf2-merchant urls', 'brak login_url/password_setup_url w odpowiedzi create_store');
   // gate: x-wf2-secret + service-role, anon NIGDY (nie osłabiać)
   (src.includes('WF2_GEN_SECRET') && src.includes('adminGate')) ? ok('wf2-merchant: gate x-wf2-secret/service/adminGate') : bad('wf2-merchant gate', 'brak WF2_GEN_SECRET/adminGate w gate');
 
@@ -185,6 +189,30 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   existsSync(join(ROOT, 'supabase', 'migrations', '20260721d_wf2_merchant_accounts.sql'))
     ? ok('migracja 20260721d_wf2_merchant_accounts.sql obecna')
     : bad('migracja wf2_merchant_accounts', 'brak pliku migracji 20260721d_wf2_merchant_accounts.sql');
+}
+
+// ── 10. Portal klienta: karta „Panel Twojego sklepu" (merchant_panel) ──────
+// Karta = login klienta do panelu sklepu; active TYLKO gdy konto merchanta = e-mail klienta.
+// Portal NIE czyta haseł ani tabeli wf2_merchant_accounts (bezpieczeństwo).
+{
+  const portalSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
+  portalSrc.includes('merchant_panel') ? ok('wf2-portal: buduje merchant_panel w odpowiedzi') : bad('wf2-portal merchant_panel', 'brak merchant_panel w odpowiedzi portalu');
+  (portalSrc.includes('platform_shop_id') && portalSrc.includes('platform_merchant_email'))
+    ? ok('wf2-portal: gate karty po platform_shop_id + platform_merchant_email==customer_email')
+    : bad('wf2-portal gate karty', 'brak platform_shop_id/platform_merchant_email w logice merchant_panel');
+  // portal NIE dotyka tabeli z hasłami (wf2_merchant_accounts) — wystarczą kolumny wf2_projects.
+  // Sprawdzamy realne zapytanie (.from(...)), nie wzmiankę w komentarzu.
+  (!portalSrc.includes('from("wf2_merchant_accounts")') && !portalSrc.includes("from('wf2_merchant_accounts')"))
+    ? ok('wf2-portal: nie czyta tabeli wf2_merchant_accounts (zero haseł)')
+    : bad('wf2-portal bezpieczeństwo', 'portal odpytuje wf2_merchant_accounts — NIE powinien');
+
+  const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
+  (portalHtml.includes('renderMerchantPanel') && portalHtml.includes('Panel Twojego sklepu'))
+    ? ok('portal.html: karta „Panel Twojego sklepu" (renderMerchantPanel)')
+    : bad('portal.html karta', 'brak renderMerchantPanel / tytułu karty w portalu');
+  portalHtml.includes('password_setup_url')
+    ? ok('portal.html: karta linkuje „Ustaw hasło" (password_setup_url)')
+    : bad('portal.html ustaw hasło', 'brak obsługi password_setup_url w karcie');
 }
 
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);

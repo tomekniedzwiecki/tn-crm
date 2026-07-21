@@ -24,6 +24,9 @@ import { adminGate } from "../_shared/bud-owner.ts";
 const TREVIO_BASE = "https://gateway.trevio.pl";
 const TREVIO_ORIGIN = "https://panel.niedzwiecki.ai";
 const TENANT_FALLBACK = "019f1eb3-95d4-79e7-aa42-ca56ece13021";
+// URL-e informacyjne zwracane w create_store (klient loguje sie i sam ustawia haslo):
+const LOGIN_URL = "https://panel.niedzwiecki.ai/";
+const PASSWORD_SETUP_URL = "https://panel.niedzwiecki.ai/auth/forgot-password";
 
 const ALLOWED_ORIGINS = [
   "https://crm.tomekniedzwiecki.pl",
@@ -202,12 +205,27 @@ Deno.serve(async (req) => {
 
     // ── create_store — pelny flow z idempotencja ──
     if (action === "create_store") {
-      const email = s(body.email).trim().toLowerCase();
-      const firstName = s(body.first_name).trim() || "Sklep";
-      const storeName = s(body.store_name).trim();
+      let email = s(body.email).trim().toLowerCase();
+      let firstName = s(body.first_name).trim();
+      let storeName = s(body.store_name).trim();
       const projectId = s(body.project_id) || null;
       const isCompany = body.is_company === true;
       const linkProject = body.link_project !== false; // default true
+
+      // DOMYSLNA TOZSAMOSC KONTA = e-mail KLIENTA z projektu (decyzja Tomka 21.07):
+      // gdy body.email pusty a mamy project_id -> bierzemy customer_email/customer_name/name z wf2_projects.
+      // Jawnie podany body.email WYGRYWA (potrzebny do fallbacku systemowego po 409 email_taken_no_creds) —
+      // wtedy portal NIE pokaze klientowi karty logowania (dostep przekazywany osobno).
+      if (!email && !projectId) return J({ error: "email_or_project_required" }, 400);
+      if (!email && projectId) {
+        const { data: proj } = await supabase.from("wf2_projects")
+          .select("customer_email, customer_name, name").eq("id", projectId).maybeSingle();
+        if (!proj) return J({ error: "project_not_found", project_id: projectId }, 404);
+        email = s(proj.customer_email).trim().toLowerCase();
+        if (!firstName) firstName = s(proj.customer_name).trim().split(/\s+/)[0] || "Klient";
+        if (!storeName) storeName = s(proj.name).trim() || s(proj.customer_name).trim();
+      }
+      if (!firstName) firstName = "Klient";
       if (!email || !email.includes("@")) return J({ error: "email_required" }, 400);
       if (!storeName) return J({ error: "store_name_required" }, 400);
 
@@ -235,7 +253,7 @@ Deno.serve(async (req) => {
           if (linkProject && projectId && existing.website_id) {
             await supabase.from("wf2_projects").update({ platform_shop_id: existing.website_id, platform_merchant_email: email }).eq("id", projectId);
           }
-          return J({ website_id: existing.website_id, subdomain: existing.subdomain, org_id: existing.org_id, email, created: false, warnings });
+          return J({ website_id: existing.website_id, subdomain: existing.subdomain, org_id: existing.org_id, email, created: false, login_url: LOGIN_URL, password_setup_url: PASSWORD_SETUP_URL, warnings });
         }
         orgId = existing.org_id || claim(decodeJwt(accessToken), ["organizationId", "orgId", "organization_id", "OrganizationId"]);
         websiteId = existing.website_id || claim(decodeJwt(accessToken), ["websiteId", "website_id", "WebsiteId"]);
@@ -330,7 +348,7 @@ Deno.serve(async (req) => {
         if (pErr) warnings.push(`update_wf2_projects: ${pErr.message}`);
       }
 
-      return J({ website_id: websiteId, subdomain, org_id: orgId, email, created, warnings });
+      return J({ website_id: websiteId, subdomain, org_id: orgId, email, created, login_url: LOGIN_URL, password_setup_url: PASSWORD_SETUP_URL, warnings });
     }
 
     return J({ error: "nieznana_akcja", allowed: ["create_store", "token", "list_accounts"] }, 400);

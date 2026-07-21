@@ -32,6 +32,10 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Panel merchanta (Trevio) — link logowania + reset hasła (klient sam ustawia hasło forgot-password).
+const MERCHANT_LOGIN_URL = "https://panel.niedzwiecki.ai/";
+const MERCHANT_PW_SETUP_URL = "https://panel.niedzwiecki.ai/auth/forgot-password";
+
 function json(body: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -151,7 +155,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: p } = await sb
     .from("wf2_projects")
-    .select("id, name, customer_name, customer_email, status, links, target_orders, domain, deadline_at, platform_account_email, created_at, unique_token, client_password_hash")
+    .select("id, name, customer_name, customer_email, status, links, target_orders, domain, deadline_at, platform_account_email, platform_shop_id, platform_merchant_email, created_at, unique_token, client_password_hash")
     .eq("unique_token", token)
     .maybeSingle();
   if (!p) { await sleep(300); return json({ error: "unauthorized" }, 401); }
@@ -405,8 +409,30 @@ Deno.serve(async (req: Request) => {
       created_at: a.created_at,
     }));
 
+  // ── Panel merchanta (Trevio) — karta „Panel Twojego sklepu" w portalu ──
+  // active = TRUE tylko gdy sklep istnieje (platform_shop_id) I konto na platformie jest KLIENTA
+  // (platform_merchant_email == customer_email, case-insensitive/trim). Gdy sklep jest, ale konto
+  // na adresie SYSTEMOWYM → {active:false, pending:true} BEZ ujawniania adresu. Brak sklepu → null.
+  // ŻADNYCH haseł; tabela wf2_merchant_accounts NIE jest tu czytana (wystarczą kolumny wf2_projects).
+  let merchant_panel: Record<string, unknown> | null = null;
+  if (p.platform_shop_id) {
+    const custEmail = String(p.customer_email || "").trim().toLowerCase();
+    const merchEmail = String(p.platform_merchant_email || "").trim().toLowerCase();
+    if (custEmail && merchEmail && custEmail === merchEmail) {
+      merchant_panel = {
+        active: true,
+        login_email: p.customer_email,
+        login_url: MERCHANT_LOGIN_URL,
+        password_setup_url: MERCHANT_PW_SETUP_URL,
+      };
+    } else {
+      merchant_panel = { active: false, pending: true };
+    }
+  }
+
   return json({
     mode: readonly ? "preview" : "client",
+    merchant_panel,
     project: {
       id: p.id, name: (p.name || "").trim() || "Twój sklep",
       customer_name: p.customer_name || null, customer_email: p.customer_email || null,
