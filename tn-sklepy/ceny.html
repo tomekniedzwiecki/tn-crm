@@ -170,6 +170,8 @@
         <div class="p-6 space-y-6">
             <div id="dr-stats" class="grid grid-cols-3 gap-3"></div>
 
+            <div id="dr-cost"></div>
+
             <div>
                 <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Trajektoria 30 dni</div>
                 <div id="dr-chart" class="border border-[#1f1f1f] rounded-lg p-3 bg-black"></div>
@@ -263,6 +265,7 @@
             campaign_kill: 'Kampania: KILL / wymiana kreacji', creative_refresh: 'Odświeżenie kreacji',
             budget_scale: 'Skalowanie budżetu', budget_realloc: 'Realokacja budżetu',
             manual_price_platform: 'Ręczna zmiana ceny na platformie', landing_republish: 'Re-publish landingu (cena)',
+            client_cost_review: 'Koszt od klienta — do weryfikacji',
         };
         const ACTION_META = {
             hold: ['#71717a', 'trzymaj'], step_up: ['#62c073', 'podnieś'], probe: ['#52a8ff', 'probe'],
@@ -298,6 +301,143 @@
             t.textContent = message;
             document.body.appendChild(t);
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2400);
+        }
+
+        // ============ MODEL KOSZTÓW v3.2 (port spec §3 — wszystko liczone w panelu) ============
+        function costModel() {
+            return Object.assign({
+                vat_rate: 0.23, dropship_customs_fee_pln: 13, wholesale_discount: 0.40,
+                wholesale_extras_pct: 0.15, wholesale_local_ship_pln: 14, client_cost_sanity_band: [0.4, 1.6]
+            }, (cfg && cfg.cost_model) || {});
+        }
+        // dropship → BAZA brutto (VAT z Ali NIEODLICZALNY); wholesale → BAZA netto (VAT odliczalny)
+        function normalizeClientCost(rawVal, isNet, source, cm) {
+            const vat = num(cm.vat_rate) || 0.23, r = num(rawVal);
+            if (!(r > 0)) return null;
+            if (source === 'wholesale') return isNet ? r : r / (1 + vat);
+            return isNet ? r * (1 + vat) : r;
+        }
+        // rozbicie kosztu efektywnego: {cost, baza, source, shipAdd, customs, active, inBand, hasClient, raw, clientNorm}
+        function costParts(p, cm) {
+            cm = cm || costModel();
+            const vat = num(cm.vat_rate) || 0.23;
+            const customsFee = num(cm.dropship_customs_fee_pln);
+            const band = (Array.isArray(cm.client_cost_sanity_band) && cm.client_cost_sanity_band.length === 2)
+                ? cm.client_cost_sanity_band : [0.4, 1.6];
+            const raw = num(p.client_cost_purchase), cp = num(p.cost_purchase);
+            const hasClient = raw > 0;
+            // gdy cost_purchase puste — akceptuj (spec §3); inaczej cena klienta w paśmie 0.4–1.6 × cost_purchase
+            const inBand = hasClient && (cp > 0 ? (raw >= band[0] * cp && raw <= band[1] * cp) : true);
+            const active = hasClient && inBand;
+            let baza, source, clientNorm = null;
+            if (active) {
+                source = (p.client_cost_source === 'wholesale') ? 'wholesale' : 'dropship';
+                clientNorm = normalizeClientCost(raw, p.client_cost_is_net === true, source, cm);
+                baza = clientNorm;
+            } else {
+                source = 'dropship'; baza = cp; // legacy Ali = brutto = dropship
+            }
+            const shipAdd = (p.shipping_paid_by === 'shop') ? num(p.cost_shipping) : 0;
+            const customs = (source === 'dropship') ? customsFee : 0; // cło tylko przy dropship
+            return { cost: num(baza) + shipAdd + customs, baza: num(baza), source, shipAdd, customs, active, inBand, hasClient, raw, clientNorm };
+        }
+        function effectiveCost(p, cm) { return costParts(p, cm || costModel()).cost; }
+        // marża NETTO (tax-aware, model 'goods') — VAT należny 23% od sprzedaży
+        function unitProfitNet(p, price, cm) {
+            cm = cm || costModel();
+            const vat = num(cm.vat_rate) || 0.23, pr = num(price), feesPct = num(p.fees_pct);
+            const saleNet = pr / (1 + vat);
+            const feeNet = pr * feesPct / 100 / (1 + vat);
+            const eff = effectiveCost(p, cm);
+            const profit = saleNet - eff - feeNet;
+            return { unit_profit_net: profit, margin_net_pct: saleNet > 0 ? profit / saleNet : null, sale_net: saleNet, fee_net: feeNet, effective_cost: eff };
+        }
+        // prognoza hurtu (informacyjna) — bazuje na koszcie Ali brutto (cost_purchase)
+        function wholesaleForecast(p, cm) {
+            cm = cm || costModel();
+            const vat = num(cm.vat_rate) || 0.23, cpBrutto = num(p.cost_purchase), pr = num(p.price);
+            if (!(cpBrutto > 0) || !(pr > 0)) return null;
+            const extras = num(cm.wholesale_extras_pct), localShip = num(cm.wholesale_local_ship_pln);
+            const discC = num(cm.wholesale_discount) || 0.40, feesPct = num(p.fees_pct);
+            const saleNet = pr / (1 + vat), feeNet = pr * feesPct / 100 / (1 + vat);
+            const shipCost = (p.shipping_paid_by === 'shop') ? localShip : 0; // local ship tylko gdy sklep płaci
+            const costAt = (d) => (cpBrutto / (1 + vat)) * (1 - d) * (1 + extras);
+            const profitAt = (d) => saleNet - costAt(d) - feeNet - shipCost;
+            const dropshipNet = unitProfitNet(p, pr, cm).unit_profit_net;
+            return {
+                cost: costAt(discC), cost_min: costAt(0.50), cost_max: costAt(0.30),
+                profit: profitAt(discC), profit_pess: profitAt(0.30), profit_opt: profitAt(0.50),
+                uplift: profitAt(discC) - dropshipNet, uplift_pess: profitAt(0.30) - dropshipNet, uplift_opt: profitAt(0.50) - dropshipNet,
+            };
+        }
+        // znormalizowana wartość z karty client_cost_review (payload → fallback produkt/payload raw wg wzorów)
+        function cardNormalizedCost(pr, prod, cm) {
+            cm = cm || costModel();
+            const pl = pr.payload || {};
+            const cand = [pl.normalized_cost, pl.normalized_cost_purchase, pl.new_cost_purchase, pl.cost_purchase_normalized, pl.client_cost_normalized, pl.normalized, pl.value_normalized];
+            for (const c of cand) { if (c != null && num(c) > 0) return num(c); }
+            if (prod && num(prod.client_cost_purchase) > 0) {
+                return normalizeClientCost(prod.client_cost_purchase, prod.client_cost_is_net === true, prod.client_cost_source === 'wholesale' ? 'wholesale' : 'dropship', cm);
+            }
+            const rawPl = num(pl.client_cost_purchase != null ? pl.client_cost_purchase : (pl.value != null ? pl.value : pl.raw));
+            if (rawPl > 0) return normalizeClientCost(rawPl, (pl.client_cost_is_net != null ? pl.client_cost_is_net : pl.is_net) === true, (pl.client_cost_source || pl.source) === 'wholesale' ? 'wholesale' : 'dropship', cm);
+            return null;
+        }
+        // komórka „Zysk/szt." (netto) + tooltip rozbicia + badge „K" (koszt od klienta w paśmie)
+        function profitCell(p, cm) {
+            cm = cm || costModel();
+            const price = num(p.price);
+            const upn = price > 0 ? unitProfitNet(p, price, cm) : null;
+            const netVal = upn ? upn.unit_profit_net : null;
+            const parts = costParts(p, cm);
+            const legacy = num(p.unit_profit);
+            const title = `netto po VAT/prowizjach: ${money(netVal)} | legacy brutto: ${money(legacy)} | koszt: ${money(parts.cost)} (źródło: ${parts.active ? 'klient' : 'Ali'})`;
+            const cls = netVal == null ? 'text-zinc-600' : netVal > 0 ? 'text-[#62c073]' : 'text-[#f26d78]';
+            const kBadge = parts.active ? ` <span class="mini-badge border-[#0070f3]/50 text-[#52a8ff]" style="padding:0 4px;font-size:9px" title="koszt od klienta (w paśmie sanity)">K</span>` : '';
+            return `<td class="px-4 py-3 text-right font-mono ${cls}" title="${escapeHtml(title)}">${money(netVal)}${kBadge}</td>`;
+        }
+        // sekcja drawera „Koszty i potencjał"
+        function costPotentialBlock(p, cm) {
+            cm = cm || costModel();
+            const price = num(p.price), parts = costParts(p, cm);
+            const upn = price > 0 ? unitProfitNet(p, price, cm) : null;
+            const wf = wholesaleForecast(p, cm);
+            const row = (label, val, valCls, extra) => `<div class="flex items-center justify-between text-xs py-1">
+                <span class="text-zinc-500">${escapeHtml(label)}${extra ? ` <span class="text-zinc-600">${escapeHtml(extra)}</span>` : ''}</span>
+                <span class="font-mono ${valCls || 'text-zinc-300'}">${val}</span></div>`;
+            const custLine = parts.customs > 0 ? ` +cło ${money(parts.customs)}` : '';
+            const shipLine = parts.shipAdd > 0 ? ` +wysyłka ${money(parts.shipAdd)}` : '';
+            let breakdown = '';
+            breakdown += row('Cena (brutto)', money(price), 'text-white');
+            breakdown += row('Sprzedaż netto', money(upn ? upn.sale_net : null), 'text-zinc-300', `−VAT ${Math.round((num(cm.vat_rate) || 0.23) * 100)}%`);
+            breakdown += row('Koszt efektywny', money(parts.cost), 'text-zinc-300', `${parts.active ? 'klient' : 'Ali'}${custLine}${shipLine}`);
+            breakdown += row('Prowizje netto', upn ? '−' + money(upn.fee_net) : '—', 'text-zinc-400', `${num(p.fees_pct)}% ceny`);
+            const netCls = upn && upn.unit_profit_net > 0 ? 'text-[#62c073]' : 'text-[#f26d78]';
+            const marginTxt = upn && upn.margin_net_pct != null ? ` · marża ${(upn.margin_net_pct * 100).toFixed(1).replace('.', ',')}%` : '';
+            breakdown += `<div class="flex items-center justify-between text-xs pt-2 mt-1 border-t border-[#1f1f1f]">
+                <span class="text-zinc-200 font-medium">Zysk/szt. netto</span>
+                <span class="font-mono ${netCls}">${money(upn ? upn.unit_profit_net : null)}<span class="text-zinc-500">${marginTxt}</span></span></div>`;
+            let hurt = '';
+            if (wf) {
+                const upliftCls = wf.uplift >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]';
+                hurt = `<div class="mt-3 pt-3 border-t border-[#1f1f1f]">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Prognoza hurtu <span class="text-zinc-600 lowercase">(~${Math.round((num(cm.wholesale_discount) || 0.4) * 100)}% taniej · widełki 30–50%)</span></div>
+                    <div class="text-xs text-zinc-400 leading-relaxed">koszt ~<span class="font-mono text-zinc-200">${money(wf.cost)}</span> <span class="text-zinc-600">(${money(wf.cost_min)}–${money(wf.cost_max)})</span> · zysk ~<span class="font-mono text-[#62c073]">${money(wf.profit_pess)}–${money(wf.profit_opt)}</span>/szt. · uplift <span class="font-mono ${upliftCls}">${wf.uplift >= 0 ? '+' : ''}${money(wf.uplift)}</span> vs dziś</div></div>`;
+            }
+            let clientNote = '';
+            if (parts.hasClient) {
+                const isNet = p.client_cost_is_net === true;
+                const src = p.client_cost_source === 'wholesale' ? 'hurt' : 'dropshipping';
+                const bandNote = parts.inBand ? '' : ` <span class="text-[#f5b955]">poza pasmem — niezastosowany</span>`;
+                clientNote = `<div class="mt-3 pt-3 border-t border-[#1f1f1f]">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Koszt zgłoszony przez klienta</div>
+                    <div class="text-xs text-zinc-400"><span class="font-mono text-zinc-200">${money(parts.raw)}</span> ${isNet ? 'netto' : 'brutto'} · ${escapeHtml(src)}${bandNote}${p.client_cost_set_at ? ` <span class="text-zinc-600">· ${escapeHtml(relDate(p.client_cost_set_at))}</span>` : ''}</div>
+                    ${p.client_cost_note ? `<div class="text-xs text-zinc-500 mt-1 italic">„${escapeHtml(p.client_cost_note)}”</div>` : ''}</div>`;
+            }
+            return `<div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Koszty i potencjał</div>
+                <div class="border border-[#1f1f1f] rounded-lg p-3 bg-black">${breakdown}${hurt}${clientNote}</div>
+            </div>`;
         }
 
         // ============ MODAL POTWIERDZENIA ============
@@ -383,6 +523,7 @@
         // ============ PASEK STATUSU SILNIKA ============
         function renderEngineBar() {
             const el = document.getElementById('engine-bar');
+            const cm = costModel();
             const lastDecision = runs.find(r => r.kind === 'decision' && r.ok === true);
             const lastAny = runs[0];
             const staleDecision = !lastDecision || (Date.now() - new Date(lastDecision.started_at).getTime()) > 26 * 3600 * 1000;
@@ -423,6 +564,7 @@
                     ${stuck.length ? `<div class="text-[#f26d78] flex items-center gap-1.5"><i class="ph ph-warning-circle"></i> ${stuck.length} ${stuck.length === 1 ? 'produkt utknął' : 'produkt(y) utknęły'} w <span class="font-mono">pending_platform</span> &gt; 20 min: ${stuck.slice(0,4).map(p => escapeHtml(p.name)).join(', ')}${stuck.length > 4 ? '…' : ''}</div>` : ''}
                 </div>` : ''}
                 <div class="mt-3 text-[10.5px] text-zinc-600">Sweep co 10 min (dokańcza zmiany + wykonuje karty) · decyzje raz dziennie ok. godz. <b class="text-zinc-500">${num(cfg.decision_hour ?? 7)}:00</b> · cooldown ${num(cfg.cooldown_days ?? 7)} dni.</div>
+                <div class="mt-2 text-[10.5px] text-zinc-600">Twardy próg: żadnych zmian cen poniżej <b class="text-zinc-500">${num(cfg.hard_min_orders ?? 5)}</b> zamówień (opłaconych/COD). Marże liczone NETTO (po VAT 23%, cło dropship ${num(cm.dropship_customs_fee_pln) || 13} zł/szt. od 1.07.2026).</div>
             </div>`;
         }
 
@@ -555,6 +697,24 @@
         function cardBody(pr) {
             const pl = pr.payload || {};
             const row = (label, val) => `<div class="text-xs mb-0.5"><span class="text-zinc-600">${label}:</span> <span class="text-zinc-300">${escapeHtml(val)}</span></div>`;
+            // KOSZT OD KLIENTA — do weryfikacji (wartość klienta vs obecny koszt)
+            if (pr.kind === 'client_cost_review') {
+                const cm = costModel();
+                const prod = products.find(x => x.id === pr.product_id);
+                const norm = cardNormalizedCost(pr, prod, cm);
+                const rawVal = num((prod && prod.client_cost_purchase != null) ? prod.client_cost_purchase : (pl.client_cost_value != null ? pl.client_cost_value : (pl.client_cost_purchase != null ? pl.client_cost_purchase : pl.value)));
+                const isNet = ((prod && prod.client_cost_is_net != null) ? prod.client_cost_is_net : (pl.client_cost_is_net != null ? pl.client_cost_is_net : pl.is_net)) === true;
+                const src = (((prod && prod.client_cost_source) || pl.client_cost_source || pl.source) === 'wholesale') ? 'hurt' : 'dropshipping';
+                const cur = num(prod && prod.cost_purchase);
+                let h = '';
+                h += row('Klient podał', money(rawVal) + ' ' + (isNet ? 'netto' : 'brutto') + ' · ' + src);
+                if (num(norm) > 0) h += row('Znormalizowany koszt', money(norm));
+                h += row('Obecny koszt', money(cur));
+                if (num(norm) > 0 && cur > 0) { const diff = (num(norm) / cur - 1) * 100; h += row('Odchylenie od obecnego', (diff >= 0 ? '+' : '') + diff.toFixed(0) + '%'); }
+                const note = (prod && prod.client_cost_note) || pl.client_note || pl.note;
+                if (note) h += row('Notatka klienta', note);
+                return h || '<div class="text-zinc-500 text-xs">brak danych w karcie</div>';
+            }
             // KONTRAKT §3.4
             if (pl.observation || pl.recommendation || (pl.expected_effect_zl && typeof pl.expected_effect_zl === 'object')) {
                 const eff = pl.expected_effect_zl || {};
@@ -600,6 +760,7 @@
                     <div class="flex items-center gap-2 mt-3">
                         <button onclick="propDecide('${pr.id}','accepted')" class="st-btn st-accept text-xs">Akceptuj</button>
                         <button onclick="propDecide('${pr.id}','rejected')" class="st-btn st-reject text-xs">Odrzuć</button>
+                        ${pr.kind === 'client_cost_review' ? `<button onclick="applyClientCost('${pr.id}')" class="st-btn text-xs" style="background:rgba(0,112,243,.14);border:1px solid rgba(0,112,243,.5);color:#52a8ff">Zastosuj koszt klienta</button>` : ''}
                         ${exp ? `<span class="ml-auto text-[10px] ${exp === 'wygasła' ? 'text-[#f26d78]' : 'text-zinc-600'}">${exp}</span>` : (deadline ? `<span class="ml-auto text-[10px] text-zinc-600">${escapeHtml(pl.deadline)}</span>` : '')}
                     </div>
                 </div>`;
@@ -618,6 +779,25 @@
         async function logActivity(projectId, action, description) {
             if (!projectId) return;
             try { await supabaseClient.from('wf2_activities').insert({ project_id: projectId, actor: 'admin', action, description }); } catch (_) {}
+        }
+        // Karta client_cost_review → przenieś znormalizowaną wartość do wf2_products.cost_purchase
+        async function applyClientCost(id) {
+            const pr = proposals.find(p => p.id === id); if (!pr) return;
+            const prod = products.find(p => p.id === pr.product_id);
+            if (!prod) { showToast('Nie znaleziono produktu karty', 'error'); return; }
+            const cm = costModel();
+            const norm = cardNormalizedCost(pr, prod, cm);
+            if (!(num(norm) > 0)) { showToast('Brak znormalizowanej wartości w karcie', 'error'); return; }
+            confirmModal('Zastosować koszt od klienta?',
+                `Ustawi <span class="font-mono text-white">cost_purchase = ${escapeHtml(money(norm))}</span> dla „${escapeHtml(prod.name)}" (dotychczas ${escapeHtml(money(prod.cost_purchase))}). Karta zostanie zaakceptowana.`,
+                'Zastosuj koszt', false, async () => {
+                    const { error } = await supabaseClient.from('wf2_products').update({ cost_purchase: num(norm) }).eq('id', prod.id);
+                    if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                    await supabaseClient.from('wf2_proposals').update({ status: 'accepted', decided_at: new Date().toISOString(), decided_by: 'tomek' }).eq('id', id);
+                    await logActivity(pr.project_id || prod.project_id, 'client_cost_applied', `Koszt od klienta zastosowany dla ${prod.name}: cost_purchase = ${money(norm)}`);
+                    showToast('Koszt zastosowany — cost_purchase zaktualizowany', 'success');
+                    await loadAll();
+                });
         }
 
         // ============ TABELA ============
@@ -640,7 +820,9 @@
             if (!d) return '<span class="text-zinc-600 text-xs">—</span>';
             const meta = ACTION_META[d.action] || ['#a1a1aa', d.action || '?'];
             const reason = d.reason_pl || '';
-            return `<span class="mini-badge" style="border-color:${meta[0]}55;color:${meta[0]}" title="${escapeHtml(reason)}${reason ? ' · ' : ''}${escapeHtml(relAgo(d.run_at))}">${escapeHtml(meta[1])}</span>`;
+            const qo = (d.metrics && d.metrics.qualifying_orders != null) ? d.metrics.qualifying_orders : d.qualifying_orders;
+            const qoTxt = (qo != null) ? ` · zamówienia kwalifikowane: ${num(qo)}/${num(cfg.hard_min_orders ?? 5)}` : '';
+            return `<span class="mini-badge" style="border-color:${meta[0]}55;color:${meta[0]}" title="${escapeHtml(reason)}${reason ? ' · ' : ''}${escapeHtml(relAgo(d.run_at))}${qoTxt}">${escapeHtml(meta[1])}</span>`;
         }
         function autonomyCell(p) {
             const a = autonomyOf(p);
@@ -662,6 +844,7 @@
             if (fau) rows = rows.filter(p => autonomyOf(p) === fau);
             if (fat) rows = rows.filter(attention);
             document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
+            const cm = costModel();
             document.getElementById('rows').innerHTML = rows.map(p => {
                 const proj = projects.find(x => x.id === p.project_id);
                 const ph = PHASES[phaseOf(p)] || PHASES[1];
@@ -684,7 +867,7 @@
                     <td class="px-4 py-3 text-right font-mono text-white whitespace-nowrap">${money(p.price)} <span class="ml-1">${STATE_ICON[p.price_state || 'ok'] || ''}</span></td>
                     <td class="px-4 py-3 text-right font-mono text-zinc-400">${money(p.platform_price)}</td>
                     <td class="px-4 py-3"><span class="mini-badge ${lm.cls}">${lm.label}</span></td>
-                    <td class="px-4 py-3 text-right font-mono ${num(p.unit_profit) > 0 ? 'text-[#62c073]' : 'text-[#f26d78]'}">${money(p.unit_profit)}</td>
+                    ${profitCell(p, cm)}
                     <td class="px-4 py-3 text-right font-mono ${c14 == null ? 'text-zinc-600' : c14 >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]'}">${c14 == null ? '—' : money(c14)}</td>
                     <td class="px-4 py-3">${lastDecisionCell(p)}</td>
                     <td class="px-4 py-3 text-right font-mono text-zinc-300">${spend ? money(spend) : '—'}</td>
@@ -809,6 +992,7 @@
         function openDrawer(pid) {
             const p = products.find(x => x.id === pid); if (!p) return;
             const proj = projects.find(x => x.id === p.project_id);
+            const cm = costModel();
             document.getElementById('dr-name').textContent = p.name;
             document.getElementById('dr-project').textContent = (proj?.customer_name || '') + ' · reżim ' + (PHASES[phaseOf(p)]?.label || '?') + (p.phase_started_at ? ' od ' + relDate(p.phase_started_at) : '');
             const cov = document.getElementById('dr-cover');
@@ -827,6 +1011,9 @@
                 stat('Przychód (all-time)', money(rev)) +
                 stat('Spend (all-time)', money(spend)) +
                 stat('Autonomia', `<span class="mini-badge ${am.cls}">${am.label}</span> <span class="mini-badge ${lm.cls} ml-1">${lm.label}</span>`);
+
+            // koszty i potencjał (v3.2)
+            document.getElementById('dr-cost').innerHTML = costPotentialBlock(p, cm);
 
             // wykres
             document.getElementById('dr-chart').innerHTML = drawChart(p);

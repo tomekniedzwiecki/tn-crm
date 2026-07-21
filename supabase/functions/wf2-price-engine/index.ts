@@ -1,4 +1,4 @@
-// wf2-price-engine — SILNIK DECYZJI CENOWYCH „CENY 3.0" (SSOT: docs/zbuduje/CENNIK-PLAN.md v3.1 §5.2).
+// wf2-price-engine — SILNIK DECYZJI CENOWYCH „CENY 3.0" (SSOT: docs/zbuduje/CENNIK-PLAN.md v3.2 §5.2).
 //
 // DWIE ODPOWIEDZIALNOŚCI (wołany co 10 min przez pg_cron, gate decyzji w kodzie):
 //   (A) SWEEP  — KAŻDE wywołanie: (1) wygaś przeterminowane karty, (2) dokończ podwyżki w toku
@@ -6,7 +6,7 @@
 //   (B) DECYZJE — RAZ DZIENNIE (gate: brak udanego run kind='decision' dziś w Europe/Warsaw
 //                oraz godzina ≥ decision_hour): pętla per produkt → reguły v2.1 → auto|karta.
 //
-// FAIL-CLOSED: config_version≠'3.1' = run z błędem, ZERO akcji. engine_enabled≠true = heartbeat.
+// FAIL-CLOSED: config_version≠'3.2' = run z błędem, ZERO akcji. engine_enabled≠true = heartbeat.
 //              dry_run=true = licz i loguj decyzje, ZERO update products / set_price / kart.
 //
 // Dowody, nie deklaracje: 'confirmed' dopiero po verify_price na platformie. Atomic claim chroni
@@ -102,9 +102,35 @@ function crossesWall(from: number, to: number, walls: number[]): boolean {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// CONFIG (settings.wf2_price_config, TEXT JSON) — WYŁĄCZNIE klucze KANONICZNE v3.1 (§8)
+// CONFIG (settings.wf2_price_config, TEXT JSON) — WYŁĄCZNIE klucze KANONICZNE v3.2 (§8)
 // ══════════════════════════════════════════════════════════════════════════
 type Cfg = Record<string, Any>;
+
+// ── MODEL KOSZTÓW v3.2 (config.cost_model; research podatkowy VAT/cło/hurt) ───
+type CostModel = {
+  vat_rate: number;                 // 0.23
+  dropship_customs_fee_pln: number; // cło ryczałt ~3 EUR/poz. (od 1.07.2026)
+  wholesale_discount: number;       // hurt vs detal (informacyjnie w prognozie)
+  wholesale_extras_pct: number;
+  wholesale_local_ship_pln: number;
+  client_cost_sanity_band: [number, number]; // pasmo akceptacji ceny klienta vs cost_purchase
+  tax_model_default: string;        // 'goods' (deemed supplier — konserwatywnie)
+};
+function costModel(cfg: Cfg): CostModel {
+  const cm = (cfg.cost_model && typeof cfg.cost_model === 'object') ? cfg.cost_model as Cfg : {};
+  const band = Array.isArray(cm.client_cost_sanity_band) && cm.client_cost_sanity_band.length === 2
+    ? [num(cm.client_cost_sanity_band[0]), num(cm.client_cost_sanity_band[1])] as [number, number]
+    : [0.4, 1.6] as [number, number];
+  return {
+    vat_rate: num(cm.vat_rate ?? 0.23),
+    dropship_customs_fee_pln: num(cm.dropship_customs_fee_pln ?? 13),
+    wholesale_discount: num(cm.wholesale_discount ?? 0.40),
+    wholesale_extras_pct: num(cm.wholesale_extras_pct ?? 0.15),
+    wholesale_local_ship_pln: num(cm.wholesale_local_ship_pln ?? 14),
+    client_cost_sanity_band: band,
+    tax_model_default: typeof cm.tax_model_default === 'string' ? cm.tax_model_default : 'goods',
+  };
+}
 async function loadConfig(supabase: Supa): Promise<{ ok: boolean; cfg: Cfg; reason: string }> {
   const { data, error } = await supabase.from('settings').select('value').eq('key', 'wf2_price_config').maybeSingle();
   if (error) return { ok: false, cfg: {}, reason: `settings_read_error:${error.message}` };
@@ -112,7 +138,7 @@ async function loadConfig(supabase: Supa): Promise<{ ok: boolean; cfg: Cfg; reas
   let cfg: Cfg;
   try { cfg = typeof data.value === 'string' ? JSON.parse(data.value) : data.value; }
   catch (e) { return { ok: false, cfg: {}, reason: `config_parse_error:${e instanceof Error ? e.message : e}` }; }
-  if (cfg.config_version !== '3.1') return { ok: false, cfg, reason: `config_version_mismatch:${cfg.config_version}` };
+  if (cfg.config_version !== '3.2') return { ok: false, cfg, reason: `config_version_mismatch:${cfg.config_version}` };
   return { ok: true, cfg, reason: '' };
 }
 
@@ -143,7 +169,7 @@ async function finalizeRun(supabase: Supa, runId: string, patch: Record<string, 
 
 // ── kontekst wspólny wykonania ───────────────────────────────────────────────
 type Ctx = {
-  supabase: Supa; baseUrl: string; wf2: string; cfg: Cfg; runId: string; nowIso: string; startedAt: number;
+  supabase: Supa; baseUrl: string; wf2: string; cfg: Cfg; cm: CostModel; runId: string; nowIso: string; startedAt: number;
   pl: { date: string; hour: number; weekday: number }; dryRun: boolean;
   errors: Array<{ where: string; msg: string }>;
   decisions: Any[]; actionsExecuted: number; cardsCreated: number;
@@ -193,6 +219,21 @@ function execPayload(base: Record<string, unknown>, target: number, nextPhase: n
   return { ...base, target, next_phase: nextPhase };
 }
 
+// S8: re-check warunków W MOMENCIE WYKONANIA karty (akcept NIE przebija guardraili). Zwraca powód skipu lub null.
+//   podwyżka: price_state='ok' + cooldown + rollback_lock + hard_min_orders; obniżka/rollback: tylko price_state='ok' (obrona).
+async function sweepGuard(ctx: Ctx, p: Any, dir: string): Promise<string | null> {
+  const cfg = ctx.cfg;
+  if (p.price_state !== 'ok') return `price_state=${p.price_state}`;
+  if (dir === 'up') {
+    const cd = num(cfg.cooldown_days ?? 7);
+    if (p.last_price_change_at && (Date.now() - Date.parse(p.last_price_change_at)) < cd * DAY_MS) return 'cooldown';
+    if (p.rollback_lock_until && Date.parse(p.rollback_lock_until) > Date.now()) return 'rollback_lock';
+    const q = await qualifyingOrders(ctx, p.project_id, p.id);
+    if (q < num(cfg.hard_min_orders ?? 5)) return `hard_min_orders ${q}/${num(cfg.hard_min_orders ?? 5)}`;
+  }
+  return null;
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // SWEEP — każde wywołanie
 // ══════════════════════════════════════════════════════════════════════════
@@ -236,7 +277,7 @@ async function sweep(ctx: Ctx): Promise<void> {
   // (3) wykonaj ZAAKCEPTOWANE karty cenowe (accepted, kind cenowe) — sekwencja wg kierunku
   try {
     // wykonywalne kind: price_* + rollback + winner_reco (akcept START→RAMP = auto ramp, SSOT §2)
-    const { data: acc } = await ctx.supabase.from('wf2_proposals').select('id, project_id, product_id, kind, payload')
+    const { data: acc } = await ctx.supabase.from('wf2_proposals').select('id, project_id, product_id, kind, payload, dedup_key, decided_at')
       .eq('status', 'accepted').in('kind', ['price_scale', 'price_opt_over_ceiling', 'rollback', 'winner_reco']).limit(50);
     for (const card of (acc || []) as Any[]) {
       if (overBudget(ctx)) break;
@@ -246,6 +287,17 @@ async function sweep(ctx: Ctx): Promise<void> {
       const target = num(card.payload?.target ?? card.payload?.price);
       if (!(target > 0)) continue;
       const dir = target > num(p.price) ? 'up' : 'down';
+      // S8: re-check warunków wykonania (price_state/cooldown/rollback_lock/hard_min_orders) — akcept nie przebija guardraili
+      const skip = await sweepGuard(ctx, p, dir);
+      if (skip) {
+        // S7: karta zaakceptowana a niewykonalna >7 dni od akceptu → expired + nota (kolizja expiry==delay wyeliminowana)
+        const acceptedMs = card.decided_at ? Date.parse(card.decided_at) : NaN;
+        if (Number.isFinite(acceptedMs) && (Date.now() - acceptedMs) > num(ctx.cfg.stale_accept_expire_days ?? 7) * DAY_MS) {
+          await ctx.supabase.from('wf2_proposals').update({ status: 'expired', dedup_key: `${card.dedup_key || card.id}|expacc${ctx.pl.date}`, payload: { ...card.payload, expire_note: `niewykonalna >7 dni (${skip})` } }).eq('id', card.id);
+          await alertNote(ctx, card.project_id, card.product_id, '⚠️ AUTOMAT: karta wygasła', `⚠️ AUTOMAT: karta ${card.kind} produktu ${card.product_id} zaakceptowana, ale niewykonalna >7 dni (${skip}) — wygaszona. Ustaw warunki i wygeneruj ponownie jeśli trzeba.`);
+        }
+        continue;   // retry następnym sweepem (karta zostaje accepted)
+      }
       let done = false;
       if (dir === 'up') done = await executeUp(ctx, p, target, num(card.payload?.next_phase) || p.price_phase, `karta zaakceptowana: ${card.payload?.recommendation || ''}`.slice(0, 500), card.payload?.metrics || {}, 'ai_proposal', card.id);
       else done = await executeDown(ctx, p, target, card.payload?.next_phase != null ? num(card.payload.next_phase) : null, `karta zaakceptowana: ${card.payload?.recommendation || ''}`.slice(0, 500), card.payload?.metrics || {}, card.kind === 'rollback', card.id);
@@ -265,7 +317,7 @@ async function shopIdsFor(ctx: Ctx, projectIds: string[]): Promise<Map<string, s
 
 async function loadProduct(ctx: Ctx, id: string): Promise<Any | null> {
   const { data } = await ctx.supabase.from('wf2_products')
-    .select('id, project_id, name, price, price_phase, price_state, platform_product_id, platform_variant_id, landing_price_contract, rollback_lock_until, wf2_projects!inner(platform_shop_id)')
+    .select('id, project_id, name, price, price_phase, price_state, platform_product_id, platform_variant_id, landing_price_contract, rollback_lock_until, last_price_change_at, wf2_projects!inner(platform_shop_id)')
     .eq('id', id).maybeSingle();
   if (!data) return null;
   data.shop_id = (data as Any).wf2_projects?.platform_shop_id || null;
@@ -367,12 +419,79 @@ async function codShare(ctx: Ctx, projectId: string, productId: string): Promise
   return (cod || 0) / total;
 }
 
-// unit_profit przy cenie X (respektuje shipping_paid_by — spójne z GENERATED w DB)
-function unitProfitAt(p: Any, price: number): number {
-  const ship = p.shipping_paid_by === 'shop' ? num(p.cost_shipping) : 0;
-  return price - num(p.cost_purchase) - ship - price * num(p.fees_pct) / 100;
+// §1 TWARDY PRÓG: liczba zamówień KWALIFIKOWANYCH (is_paid=true OR is_cod=true), ALL-TIME, produkt w lines.
+async function qualifyingOrders(ctx: Ctx, projectId: string, productId: string): Promise<number> {
+  const lineMatch = JSON.stringify([{ product_id: productId }]);
+  const { count } = await ctx.supabase.from('wf2_orders').select('id', { count: 'exact', head: true })
+    .eq('project_id', projectId).contains('lines', lineMatch).or('is_paid.eq.true,is_cod.eq.true');
+  return count || 0;
 }
-function marginPctAt(p: Any, price: number): number { return price > 0 ? unitProfitAt(p, price) / price * 100 : 0; }
+
+// S1: liczba podwyżek (price_events direction='up') od ostatniego dnia ze spend>0 — hamulec ratchetu no-ads.
+async function noAdsRaisesSinceSpend(ctx: Ctx, productId: string, daily: Daily[]): Promise<number> {
+  let last: string | null = null;
+  for (const r of daily) if (num(r.spend) > 0 && (!last || r.date > last)) last = r.date;
+  const sinceIso = last
+    ? new Date(Date.parse(`${last}T23:59:59Z`)).toISOString()
+    : new Date(Date.now() - num(ctx.cfg.no_ads_window_days ?? 30) * DAY_MS).toISOString();
+  const { count } = await ctx.supabase.from('wf2_price_events').select('id', { count: 'exact', head: true })
+    .eq('product_id', productId).eq('direction', 'up').in('status', ['applied', 'confirmed']).gt('at', sinceIso);
+  return count || 0;
+}
+
+// ── KOSZT EFEKTYWNY + MARŻA NETTO (v3.2 §3) — WSZYSTKIE decyzje silnika na netto ──
+// Kolumna GENERATED unit_profit (brutto legacy) w DB = nietykana; wartości netto liczone w locie.
+
+// Ocena ceny zakupu podanej przez klienta: sanity band + normalizacja bazy wg źródła.
+//   dropship  → BAZA brutto (VAT nieodliczalny): podał netto → ×(1+vat).
+//   wholesale → BAZA netto  (VAT odliczalny):    podał brutto → /(1+vat).
+type ClientCost = { has: boolean; raw: number; inBand: boolean; normalizedBase: number | null; source: 'dropship' | 'wholesale'; isNet: boolean };
+function clientCostEval(p: Any, cm: CostModel): ClientCost {
+  const raw = num(p.client_cost_purchase);
+  const source: 'dropship' | 'wholesale' = p.client_cost_source === 'wholesale' ? 'wholesale' : 'dropship';
+  const isNet = p.client_cost_is_net === true;
+  if (!(raw > 0)) return { has: false, raw: 0, inBand: false, normalizedBase: null, source, isNet };
+  const cost = num(p.cost_purchase);
+  const [lo, hi] = cm.client_cost_sanity_band;
+  const inBand = !(cost > 0) || (raw >= lo * cost && raw <= hi * cost);   // gdy cost_purchase puste → akceptuj
+  const v = 1 + cm.vat_rate;
+  const base = source === 'dropship' ? (isNet ? raw * v : raw) : (isNet ? raw : raw / v);
+  return { has: true, raw, inBand, normalizedBase: Math.round(base * 100) / 100, source, isNet };
+}
+
+// effective_cost (PLN, per produkt) = BAZA + dodatki.
+//   BAZA: cena klienta w sanity band (priorytet, znormalizowana) inaczej cost_purchase (brutto Ali = dropship).
+//   dodatki: + cost_shipping (shipping_paid_by='shop') + dropship_customs_fee_pln (tylko gdy źródło = dropship).
+function effectiveCost(p: Any, cm: CostModel): number {
+  const cc = clientCostEval(p, cm);
+  let base: number, dropship: boolean;
+  if (cc.has && cc.inBand && cc.normalizedBase != null) { base = cc.normalizedBase; dropship = cc.source === 'dropship'; }
+  else { base = num(p.cost_purchase); dropship = true; }                 // fallback brutto Ali = dropship
+  const ship = p.shipping_paid_by === 'shop' ? num(p.cost_shipping) : 0;
+  const customs = dropship ? cm.dropship_customs_fee_pln : 0;
+  return base + ship + customs;
+}
+
+// Marża NETTO tax-aware (model 'goods'): sale_net = price/(1+vat); VAT należny realny, VAT Ali nieodliczalny.
+function saleNet(price: number, cm: CostModel): number { return price / (1 + cm.vat_rate); }
+function feeNet(p: Any, price: number, cm: CostModel): number { return price * num(p.fees_pct) / 100 / (1 + cm.vat_rate); }
+function unitProfitNet(p: Any, price: number, cm: CostModel): number { return saleNet(price, cm) - effectiveCost(p, cm) - feeNet(p, price, cm); }
+function marginNetPct(p: Any, price: number, cm: CostModel): number { const sn = saleNet(price, cm); return sn > 0 ? unitProfitNet(p, price, cm) / sn * 100 : 0; }
+
+// mediana (spend-matched baseline collapse S5)
+function median(arr: number[]): number {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+// S4: liczba PEŁNYCH dni od ostatniego dnia ze spend>0 do dziś (0=dziś jest spend; ≥2=luka)
+function trailingSpendGapDays(daily: Daily[], todayStr: string): number {
+  let last: string | null = null;
+  for (const r of daily) if (num(r.spend) > 0 && (!last || r.date > last)) last = r.date;
+  if (!last) return 0;
+  return Math.max(0, Math.floor((Date.parse(`${todayStr}T00:00:00Z`) - Date.parse(`${last}T00:00:00Z`)) / DAY_MS));
+}
 
 // ══════════════════════════════════════════════════════════════════════════
 // KLASYFIKACJA AUTONOMII (§3.3) — zwraca null gdy full-auto, inaczej powód (→ karta)
@@ -392,7 +511,7 @@ function autoReasonBlock(ctx: Ctx, p: Any, target: number, stepPct: number, adsS
   if ((cfg.no_raise_weekdays ?? [4, 5]).includes(ctx.pl.weekday)) return 'no_raise_weekday';
   if (stepPct > num(cfg.small_step_no_adset_pct ?? 10) && !freshAdset) return 'no_fresh_adset';   // P3
   if (youngAdAge != null && youngAdAge < num(cfg.learning_grace_days ?? 3)) return 'learning_grace';   // P4
-  if (marginPctAt(p, target) < num(cfg.min_margin_floor_pct ?? 5)) return 'margin_floor';
+  if (marginNetPct(p, target, ctx.cm) < num(cfg.min_margin_floor_pct ?? 5)) return 'margin_floor';   // NETTO (v3.2 §3)
   if (adsState !== 'full') return 'ads_not_full';                                        // (b) HOLD / (c) no-ads
   return null;
 }
@@ -403,14 +522,15 @@ function autoReasonBlock(ctx: Ctx, p: Any, target: number, stepPct: number, adsS
 function scaleBase(ctx: Ctx, p: Any, adSpend: number, orders: number, walls: number[]): { base: number | null; flag: boolean; viableFloor: number; ceiling: number } {
   const cfg = ctx.cfg;
   const fees = num(p.fees_pct) / 100;
-  const ship = p.shipping_paid_by === 'shop' ? num(p.cost_shipping) : 0;
-  const cost = num(p.cost_purchase);
+  const eff = effectiveCost(p, ctx.cm);       // koszt efektywny (klient/Ali + shipping + cło) — v3.2
+  const vat1 = 1 + ctx.cm.vat_rate;
   // CPA_scale_est: pesymistyczny CI (kwantyl 1-cpa_ci_quantile liczby zamówień → mniej zam. = wyższe CPA)
   const cpaTest = orders > 0 ? adSpend / orders : 0;
   const lowerOrders = Math.max(1, poissonQuantileLower(orders, 1 - num(cfg.cpa_ci_quantile ?? 0.65)));
   const cpaScaleEst = adSpend > 0 && orders > 0 ? adSpend / lowerOrders : cpaTest;
-  const viableFloor = (cost + ship + cpaScaleEst) / (1 - fees - num(cfg.scale_margin_survival ?? 0.12));
-  const targetPrice = (cost + ship) / (1 - fees - num(cfg.scale_margin_target ?? 0.40));
+  // floory NETTO tax-aware (×1.23 — VAT należny realny; §3): viable_floor / target_price
+  const viableFloor = vat1 * (eff + cpaScaleEst) / (1 - fees - num(cfg.scale_margin_survival ?? 0.12));
+  const targetPrice = vat1 * eff / (1 - fees - num(cfg.scale_margin_target ?? 0.40));
   const wall = wallAbove(Math.max(num(p.price), targetPrice), walls);
   const ceiling = wall ?? targetPrice * 1.5;                                              // brak danych konkurencji → ściana psych jako ceiling
   if (viableFloor > ceiling) return { base: null, flag: true, viableFloor, ceiling };     // ekonomia nie domyka się przy rynku → FLAGA
@@ -436,22 +556,71 @@ async function collapseCheck(ctx: Ctx, p: Any, daily: Daily[], priorBreach: bool
   const baseFrom = dateStr(new Date(changeMs - num(cfg.collapse_baseline_days ?? 7) * DAY_MS));
   const baseTo = dateStr(new Date(changeMs));
   const graceTo = dateStr(new Date(changeMs + num(cfg.learning_grace_days ?? 3) * DAY_MS));   // dni learningu wykluczone z okna oceny
-  let baseOrders = 0, baseSpend = 0, postOrders = 0, postSpend = 0;
-  for (const r of daily) {
-    if (r.date >= baseFrom && r.date < baseTo) { baseOrders += num(r.orders); baseSpend += num(r.spend); }
-    else if (r.date >= graceTo) { postOrders += num(r.orders); postSpend += num(r.spend); }
-  }
-  if (baseSpend <= 0) return { state: 'none', expected: 0, observed: 0 };
+  const rbTarget = num(ev.old_price);
+  const rbPhase = num(ev.phase_from) || (p.price_phase - 1);
+  // okno POST (po grace) + rozkład dziennego spendu (S5 spend-matched)
+  let postOrders = 0, postSpend = 0;
+  const postSpends: number[] = [];
+  for (const r of daily) if (r.date >= graceTo) { postOrders += num(r.orders); postSpend += num(r.spend); if (num(r.spend) > 0) postSpends.push(num(r.spend)); }
   // okno obserwacji: akumuluj aż spend_po ≥ collapse_min_spend LUB minie collapse_max_days
   if (postSpend < num(cfg.collapse_min_spend ?? 150) && ageDays < num(cfg.collapse_max_days ?? 5)) return { state: 'pending', expected: 0, observed: postOrders };
+  // S5: baseline liczony TYLKO z dni o spend > 0.5×mediana spendu POST (spend-matched — eliminuje fałsz z niskiego test-spendu)
+  const spendFloor = 0.5 * median(postSpends);
+  let baseOrders = 0, baseSpend = 0;
+  for (const r of daily) if (r.date >= baseFrom && r.date < baseTo) {
+    if (spendFloor > 0 && num(r.spend) <= spendFloor) continue;
+    baseOrders += num(r.orders); baseSpend += num(r.spend);
+  }
+  if (baseSpend <= 0) return { state: 'none', expected: 0, observed: postOrders };   // brak porównywalnego baseline → nie oceniaj
   const tempoBase = baseOrders / baseSpend;
   const expected = tempoBase * postSpend;
   const q10 = poissonQuantileLower(expected, num(cfg.collapse_quantile ?? 0.10));
-  const breached = postOrders < q10;
+  // S5: naruszenie = observed ≤ q10 ORAZ względny spadek < collapse_rel_floor (0.6×expected) — nie sam szum Poissona
+  const breached = postOrders <= q10 && postOrders < num(cfg.collapse_rel_floor ?? 0.6) * expected;
   if (!breached) return { state: 'none', expected, observed: postOrders };
-  if (expected < num(cfg.collapse_min_expected ?? 5)) return { state: 'weak', expected, observed: postOrders };   // moc <5 → karta rollback, nie auto
+  if (expected < num(cfg.collapse_min_expected ?? 8)) return { state: 'weak', expected, observed: postOrders, rollbackTarget: rbTarget, rollbackPhase: rbPhase };   // moc <min → karta rollback, nie auto
   if (!priorBreach) return { state: 'breach', expected, observed: postOrders };                                    // pierwszy run naruszenia → obserwuj (flag)
-  return { state: 'rollback', expected, observed: postOrders, rollbackTarget: num(ev.old_price), rollbackPhase: num(ev.phase_from) || (p.price_phase - 1) };
+  return { state: 'rollback', expected, observed: postOrders, rollbackTarget: rbTarget, rollbackPhase: rbPhase };
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// S6 POST-STEP GUARD (§2) — obrona elastycznych winnerów po podwyżce
+// Po opt_window_days od potwierdzonej podwyżki: kontrybucja_netto/zł spendu okno-po vs okno-przed.
+// keep < contribution_keep_frac → KARTA obniżki (powrót na poprzedni poziom). NIE łapie collapse (to katastrofy).
+// ══════════════════════════════════════════════════════════════════════════
+async function postStepGuard(ctx: Ctx, p: Any, daily: Daily[], optDays: number): Promise<Plan | null> {
+  const cfg = ctx.cfg;
+  if (!p.last_price_change_at) return null;
+  const ageDays = (Date.now() - Date.parse(p.last_price_change_at)) / DAY_MS;
+  if (ageDays < optDays || ageDays > 2 * optDays) return null;          // okno musi dojrzeć, ale nie oceniaj wstecz w nieskończoność
+  // ostatni event ceny = potwierdzona PODWYŻKA
+  const { data: lastEv } = await ctx.supabase.from('wf2_price_events').select('direction, old_price, new_price, phase_from, at').in('status', ['applied', 'confirmed']).eq('product_id', p.id).order('at', { ascending: false }).limit(1);
+  const ev = (lastEv || [])[0];
+  if (!ev || ev.direction !== 'up') return null;
+  const changeMs = Date.parse(p.last_price_change_at);
+  const beforeFrom = dateStr(new Date(changeMs - optDays * DAY_MS));
+  const beforeTo = dateStr(new Date(changeMs));
+  let obOrders = 0, obSpend = 0, oaOrders = 0, oaSpend = 0;
+  for (const r of daily) {
+    if (r.date >= beforeFrom && r.date < beforeTo) { obOrders += num(r.orders); obSpend += num(r.spend); }
+    else if (r.date >= beforeTo) { oaOrders += num(r.orders); oaSpend += num(r.spend); }
+  }
+  if (obSpend <= 0 || oaSpend <= 0) return null;                        // brak porównywalnych okien spendu
+  const oldP = num(ev.old_price), newP = num(ev.new_price);
+  const cpsBefore = (unitProfitNet(p, oldP, ctx.cm) * obOrders - obSpend) / obSpend;   // kontrybucja NETTO / zł spendu
+  const cpsAfter = (unitProfitNet(p, newP, ctx.cm) * oaOrders - oaSpend) / oaSpend;
+  if (!(cpsBefore > 0)) return null;                                    // przed też nie zarabiał — nie ma czego bronić
+  const keep = cpsAfter / cpsBefore;
+  if (keep >= num(cfg.contribution_keep_frac ?? 0.80)) return null;
+  const backTo = oldP;
+  const backPhase = num(ev.phase_from) || null;
+  const ttl = new Date(Date.now() + num(cfg.proposal_ttl_days ?? 14) * DAY_MS).toISOString();
+  return { product: p, phase: p.price_phase, action: 'poststep_revert_card',
+    reason_pl: `Post-step guard: kontrybucja/zł po podwyżce ${cpsAfter.toFixed(2)} < ${Math.round(num(cfg.contribution_keep_frac ?? 0.80) * 100)}%×${cpsBefore.toFixed(2)} okna-przed (keep ${keep.toFixed(2)}). Karta powrotu do ${backTo}.`,
+    metrics: { poststep: { cps_before: Math.round(cpsBefore * 100) / 100, cps_after: Math.round(cpsAfter * 100) / 100, keep: Math.round(keep * 100) / 100, opt_days: optDays } },
+    delta_contribution: 0, delta_revenue: 0,
+    card: { kind: 'rollback', dedup: `rollback|${p.id}|poststep|${Math.round(backTo * 100)}`, expires: ttl,
+      payload: execPayload(payload(`Po podwyżce (${optDays}d) kontrybucja/zł spadła do ${keep.toFixed(2)}× poziomu sprzed zmiany — elastyczny popyt zjada zysk (bez collapse).`, `Rozważ powrót do ${backTo} zł.`, 0, 0, 'medium', ttl), backTo, backPhase) } };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -469,7 +638,7 @@ async function decideProduct(ctx: Ctx, p: Any, project: Any, parentIds: Set<stri
   const cfg = ctx.cfg;
   const walls: number[] = (cfg.walls ?? [100, 150]).map(num);
   const shipFree = project.shipping_free_threshold != null ? num(project.shipping_free_threshold) : null;
-  const ttl = () => new Date(Date.now() + num(cfg.proposal_ttl_days ?? 7) * DAY_MS).toISOString();
+  const ttl = () => new Date(Date.now() + num(cfg.proposal_ttl_days ?? 14) * DAY_MS).toISOString();
   const mk = (action: string, reason: string, metrics: Any = {}, extra: Partial<Plan> = {}): Plan =>
     ({ product: p, phase: p.price_phase, action, reason_pl: reason, metrics, delta_contribution: 0, delta_revenue: 0, ...extra });
 
@@ -493,7 +662,14 @@ async function decideProduct(ctx: Ctx, p: Any, project: Any, parentIds: Set<stri
   const codH = (await codShare(ctx, project.id, p.id)) > num(cfg.cod_settled_gating_share ?? 0.60);
   const optDays = codH ? optWindowCod : num(cfg.opt_window_days ?? 14);
   const wOpt = sumWindow(daily30, daysAgoStr(optDays));
-  const baseMetrics = { w14, w30, cod_heavy: codH, opt_days: optDays };
+  // v3.2: koszt efektywny + marża NETTO + zamówienia kwalifikowane (§3, §1) — do metryk i decyzji
+  const eff = effectiveCost(p, ctx.cm);
+  const upNet = unitProfitNet(p, num(p.price), ctx.cm);
+  const mNetPct = marginNetPct(p, num(p.price), ctx.cm);
+  const qOrders = await qualifyingOrders(ctx, project.id, p.id);
+  const baseMetrics = { w14, w30, cod_heavy: codH, opt_days: optDays,
+    effective_cost: Math.round(eff * 100) / 100, unit_profit_net: Math.round(upNet * 100) / 100,
+    margin_net_pct: Math.round(mNetPct * 10) / 10, qualifying_orders: qOrders };
 
   // ŚWIEŻOŚĆ ADS — 3 stany (§4.3)
   let adsState: 'full' | 'hold' | 'no_ads';
@@ -501,30 +677,67 @@ async function decideProduct(ctx: Ctx, p: Any, project: Any, parentIds: Set<stri
   else if (w14.spend > num(cfg.ads_min_spend_active ?? 1)) adsState = 'full';   // (a) sync żywy + spend
   else adsState = 'hold';                                              // (b) sync żywy, produkt bez spendu
 
-  // COLLAPSE (po podwyżce) — priorytet nad awansami
+  // S4: dziura danych — spend w oknie 14d (adsState=full) ale ostatnie ≥2 dni spend=0 → hold_dq (NIE no-ads!)
+  if (adsState === 'full') {
+    const gap = trailingSpendGapDays(daily30, dateStr(new Date()));   // baza UTC (spójnie z oknami daysAgoStr)
+    if (gap >= num(cfg.dq_spend_gap_days ?? 2)) {
+      return mk('hold_dq', `Data-quality: dziura w spendzie — ostatni spend ${gap} dni temu przy żywym sync globalnym. Pauza DQ (NIE tryb no-ads).`, { ...baseMetrics, spend_gap_days: gap },
+        { note: { prefix: '⚠️ AUTOMAT: DQ luka', body: `⚠️ AUTOMAT: DQ luka spendu produktu ${p.name || p.id} — ostatni spend ${gap} dni temu, a kampania wydawała w oknie 14d. Silnik wstrzymuje decyzje cenowe do wyrównania danych (pauza kampanii lub luka syncu).` } });
+    }
+  }
+
+  // COLLAPSE (po podwyżce) — obrona, priorytet nad awansami, ZWOLNIONA z twardego progu (§1)
   const col = await collapseCheck(ctx, p, daily30, priorBreach);
   if (col.state === 'rollback' && !codH) {
-    return mk('rollback_auto', `Collapse potwierdzony (oczek. ${col.expected.toFixed(1)} zam., jest ${col.observed}). Auto-rollback do ${col.rollbackTarget} + lock ${cfg.rollback_lock_days}d.`, { collapse: col },
+    return mk('rollback_auto', `Collapse potwierdzony (oczek. ${col.expected.toFixed(1)} zam., jest ${col.observed}). Auto-rollback do ${col.rollbackTarget} + lock ${cfg.rollback_lock_days}d.`, { ...baseMetrics, collapse: col },
       { exec: { dir: 'rollback', target: num(col.rollbackTarget), nextPhase: col.rollbackPhase ?? null, triggerKind: 'rollback' } });
   }
-  if (col.state === 'weak') {
-    return mk('rollback_card', `Collapse podejrzewany, ale moc statystyczna <${cfg.collapse_min_expected} (oczek. ${col.expected.toFixed(1)}). Karta rollback (człowiek).`, { collapse: col },
-      { card: { kind: 'rollback', dedup: `rollback|${p.id}|${Math.round(num(col.rollbackTarget) * 100)}`, expires: ttl(), payload: execPayload(payload(`Spadek popytu po podwyżce (oczek. ${col.expected.toFixed(1)} zam., jest ${col.observed}), za mało danych na auto.`, `Rozważ powrót do ${col.rollbackTarget} zł.`, 0, 0, 'low', ttl()), num(col.rollbackTarget), col.rollbackPhase ?? null) } });
+  // S9: COD-heavy w prawdziwym collapse NIE dostaje auto-rollbacku → KARTA rollback (dziś gubiony); weak = mała moc
+  if (col.state === 'weak' || (col.state === 'rollback' && codH)) {
+    const why = col.state === 'weak' ? `moc statystyczna <${num(cfg.collapse_min_expected ?? 8)}` : 'COD-heavy (bez auto-rollbacku)';
+    return mk('rollback_card', `Collapse podejrzewany (${why}) — oczek. ${col.expected.toFixed(1)} zam., jest ${col.observed}. Karta rollback (człowiek).`, { ...baseMetrics, collapse: col },
+      { card: { kind: 'rollback', dedup: `rollback|${p.id}|${Math.round(num(col.rollbackTarget) * 100)}`, expires: ttl(), payload: execPayload(payload(`Spadek popytu po podwyżce (oczek. ${col.expected.toFixed(1)} zam., jest ${col.observed}); ${why}.`, `Rozważ powrót do ${col.rollbackTarget} zł.`, 0, 0, 'low', ttl()), num(col.rollbackTarget), col.rollbackPhase ?? null) } });
   }
-  if (col.state === 'breach') return mk('collapse_watch', `Naruszenie q10 (1. run) — obserwacja, potwierdzę w kolejnym runie.`, { collapse: col, collapse_breach: true });
-  if (col.state === 'pending') return mk('collapse_pending', `Okno collapse zbiera dane (spend po zmianie < próg).`, { collapse: col });
+  if (col.state === 'breach') return mk('collapse_watch', `Naruszenie q10 (1. run) — obserwacja, potwierdzę w kolejnym runie.`, { ...baseMetrics, collapse: col, collapse_breach: true });
+  if (col.state === 'pending') return mk('collapse_pending', `Okno collapse zbiera dane (spend po zmianie < próg).`, { ...baseMetrics, collapse: col });
 
-  // TRYB NO-ADS (c) — TYLKO karty, X = jeden szczebel psych w górę (§4.3c)
+  // S6: POST-STEP GUARD — obrona elastycznych winnerów (kontrybucja/zł spadła po podwyżce). Downward = zwolniony z §1.
+  const guard = await postStepGuard(ctx, p, daily30, optDays);
+  if (guard) return guard;
+
+  // §1 TWARDY PRÓG 5 ZAMÓWIEŃ — PRZED każdą akcją/kartą cenową (winner_reco/price_scale/no-ads/podwyżki).
+  //   Wyjątki (już obsłużone WYŻEJ): obrona collapse, post-step, DQ, karty informacyjne.
+  if (qOrders < num(cfg.hard_min_orders ?? 5)) {
+    return mk('hold_min_orders', `Twardy próg: ${qOrders}/${num(cfg.hard_min_orders ?? 5)} zamówień (opłaconych/COD).`, baseMetrics);
+  }
+
+  // TRYB NO-ADS (c) — TYLKO karty, +1 szczebel psych, z HAMULCAMI S1 (§4.3c). hard_min_orders już spełniony (gate wyżej).
   if (adsState === 'no_ads') {
     if (p.price_phase >= HARVEST) return mk('hold_no_ads_locked', 'Sync ads martwy; reżim nie podnosi ceny.', baseMetrics);
     const wNoAds = sumWindow(daily30, daysAgoStr(num(cfg.no_ads_window_days ?? 30)));
-    if (wNoAds.orders >= num(cfg.winner_orders_no_ads ?? 5) && wNoAds.orders_paid >= num(cfg.min_prepaid_orders ?? 1)) {
-      const target = psychPriceUp(num(p.price) + 0.01);
-      const dRev = (target - num(p.price)) * wNoAds.orders / Math.max(1, num(cfg.no_ads_window_days ?? 30)) * 14;
-      return mk('propose_no_ads', `Tryb no-ads: ${wNoAds.orders} zam./${cfg.no_ads_window_days}d. Propozycja +1 szczebel do ${target} (CPA/elastyczność NIEZNANE).`, { ...baseMetrics, no_ads: wNoAds },
-        { card: { kind: 'price_scale', dedup: `price_scale|${p.id}|${Math.round(target * 100)}`, expires: ttl(), payload: execPayload(payload(`Sync reklam martwy (>${cfg.ads_fresh_hours}h). ${wNoAds.orders} zam. w ${cfg.no_ads_window_days} dni, ${wNoAds.orders_paid} przedpłat.`, `Podnieś do ${target} zł — JEDEN szczebel. UWAGA: podwyżka w ciemno (brak danych o elastyczności).`, 0, dRev, 'low', ttl()), target, p.price_phase) } });
-    }
-    return mk('hold_no_ads', `Tryb no-ads: za mało zamówień w oknie (${wNoAds.orders}/${cfg.winner_orders_no_ads}).`, { ...baseMetrics, no_ads: wNoAds });
+    if (!(wNoAds.orders >= num(cfg.winner_orders_no_ads ?? 5) && wNoAds.orders_paid >= num(cfg.min_prepaid_orders ?? 1)))
+      return mk('hold_no_ads', `Tryb no-ads: za mało zamówień w oknie (${wNoAds.orders}/${cfg.winner_orders_no_ads}).`, { ...baseMetrics, no_ads: wNoAds });
+    // S1a: cooldown minął
+    const cd = codH ? num(cfg.cod_cooldown_days ?? 21) : num(cfg.cooldown_days ?? 7);
+    if (p.last_price_change_at && (Date.now() - Date.parse(p.last_price_change_at)) < cd * DAY_MS)
+      return mk('hold_no_ads_cooldown', `Tryb no-ads: cooldown (${cd}d) jeszcze trwa.`, { ...baseMetrics, no_ads: wNoAds });
+    // S1b: liczba podwyżek od ostatniego dnia ze spend>0 < no_ads_max_steps (anty-ratchet)
+    const raisesNoAds = await noAdsRaisesSinceSpend(ctx, p.id, daily30);
+    if (raisesNoAds >= num(cfg.no_ads_max_steps ?? 2))
+      return mk('hold_no_ads_capped', `Tryb no-ads: osiągnięto limit podwyżek bez spendu (${raisesNoAds}/${num(cfg.no_ads_max_steps ?? 2)}).`, { ...baseMetrics, no_ads: wNoAds, no_ads_raises: raisesNoAds });
+    // S1c: nowa cena nie przecina ściany (walls + shipping_free_threshold)
+    const target = psychPriceUp(num(p.price) + 0.01);
+    const wallSet = shipFree ? [...walls, shipFree] : walls;
+    if (crossesWall(num(p.price), target, wallSet))
+      return mk('hold_no_ads_wall', `Tryb no-ads: podwyżka do ${target} zł przecięłaby ścianę — trzymam.`, { ...baseMetrics, no_ads: wNoAds });
+    // S1d: przychód okna 14d ≥ przychód poprzednich 14d (spadek → hold, nie podwyżka)
+    const wPrev14 = sumWindow(daily30.filter((r) => r.date < daysAgoStr(14)), daysAgoStr(28));
+    if (w14.revenue < wPrev14.revenue)
+      return mk('hold_no_ads_decline', `Tryb no-ads: przychód 14d (${w14.revenue.toFixed(0)}) < poprzednie 14d (${wPrev14.revenue.toFixed(0)}) — nie podnoszę.`, { ...baseMetrics, no_ads: wNoAds });
+    // wszystkie hamulce OK → karta +1 szczebel
+    const dRev = (target - num(p.price)) * wNoAds.orders / Math.max(1, num(cfg.no_ads_window_days ?? 30)) * 14;
+    return mk('propose_no_ads', `Tryb no-ads: ${wNoAds.orders} zam./${cfg.no_ads_window_days}d, hamulce S1 OK. Propozycja +1 szczebel do ${target}.`, { ...baseMetrics, no_ads: wNoAds },
+      { card: { kind: 'price_scale', dedup: `price_scale|${p.id}|${Math.round(target * 100)}`, expires: ttl(), payload: execPayload(payload(`Sync reklam martwy (>${cfg.ads_fresh_hours}h). ${wNoAds.orders} zam. w ${cfg.no_ads_window_days} dni, ${wNoAds.orders_paid} przedpłat. Hamulce S1 (cooldown/limit/ściana/przychód) OK.`, `Podnieś do ${target} zł — JEDEN szczebel. UWAGA: podwyżka w ciemno (brak danych o elastyczności).`, 0, dRev, 'low', ttl()), target, p.price_phase) } });
   }
 
   // (b) HOLD — sync żywy, produkt bez spendu: zero kart „podnieś"
@@ -545,30 +758,38 @@ async function decideProduct(ctx: Ctx, p: Any, project: Any, parentIds: Set<stri
       const costPerAtc = adWin.atc > 0 ? adWin.spend / adWin.atc : Infinity;
       const cp2 = cfg.winner_needs_cp2 === false || (atcRate >= num(cfg.cp2_atc_rate ?? 5) && costPerAtc <= num(cfg.cp2_cost_atc_max ?? 12));
       const orders = w14.orders;
-      const winner = cp2 && orders >= num(cfg.winner_orders ?? 3) && adWin.spend >= num(cfg.winner_spend ?? 300);
+      const winner = cp2 && orders >= num(cfg.winner_orders ?? 5) && adWin.spend >= num(cfg.winner_spend ?? 300);   // v3.2: próg 5
       if (!winner) return mk('hold_start', `START: brak WINNER (CP2 ${cp2 ? 'OK' : `NIE: ATC ${atcRate.toFixed(1)}%/koszt-ATC ${isFinite(costPerAtc) ? costPerAtc.toFixed(1) : '∞'}`}, zam. ${orders}/${cfg.winner_orders}, spend ${adWin.spend.toFixed(0)}/${cfg.winner_spend}).`, { ...baseMetrics, atc_rate: atcRate, cost_per_atc: costPerAtc, ad_spend: adWin.spend });
       // START→RAMP = ZAWSZE KARTA (werdykt WINNER; §3.3 [D-A1] default)
+      // S2: CLAMP kroku do auto_step_max_pct od ceny; ściana bliżej → pod ścianę (RAMP = SERIA kroków, nie skok do ściany)
+      const stepCap = num(p.price) * (1 + num(cfg.auto_step_max_pct ?? 20) / 100);
       const wall = wallAbove(num(p.price), walls);
-      const rampTarget = wall ? psychPriceDown(wall - 0.10) : psychPriceUp(num(p.price) * 1.15);
+      const rampCap = Math.min(stepCap, wall != null ? wall - 0.10 : Infinity);
+      let rampTarget = psychPriceDown(rampCap);
+      if (!(rampTarget > num(p.price))) rampTarget = psychPriceUp(num(p.price) + 0.01);   // zaparkowany pod ścianą → minimalny szczebel
       const conf = orders >= num(cfg.winner_high_confidence_orders ?? 5) ? 'high' : 'medium';
       const dRev = (rampTarget - num(p.price)) * (w14.orders / 14) * 14;
-      return mk('winner_card', `WINNER: ${orders} zam., ATC ${atcRate.toFixed(1)}%. Karta RAMP do ${rampTarget} (świeży ad set).`, { ...baseMetrics, atc_rate: atcRate, cost_per_atc: costPerAtc, ad_spend: adWin.spend },
-        { card: { kind: 'winner_reco', dedup: `winner_reco|${p.id}`, expires: null, payload: execPayload(payload(`Produkt sprzedaje: ${orders} zam., ATC ${atcRate.toFixed(1)}%, spend ${adWin.spend.toFixed(0)} zł.`, `Awansuj do RAMP: cena ${rampTarget} zł na ŚWIEŻYM ad secie z nowymi kreacjami (nie mutuj żywego zwycięzcy).`, unitProfitAt(p, rampTarget) * w14.orders - unitProfitAt(p, num(p.price)) * w14.orders, dRev, conf, null), rampTarget, RAMP) } });
+      const dContrib = (unitProfitNet(p, rampTarget, ctx.cm) - unitProfitNet(p, num(p.price), ctx.cm)) * w14.orders;
+      return mk('winner_card', `WINNER: ${orders} zam., ATC ${atcRate.toFixed(1)}%. Karta RAMP do ${rampTarget} (świeży ad set; krok ≤${num(cfg.auto_step_max_pct ?? 20)}%).`, { ...baseMetrics, atc_rate: atcRate, cost_per_atc: costPerAtc, ad_spend: adWin.spend },
+        { card: { kind: 'winner_reco', dedup: `winner_reco|${p.id}`, expires: null, payload: execPayload(payload(`Produkt sprzedaje: ${orders} zam., ATC ${atcRate.toFixed(1)}%, spend ${adWin.spend.toFixed(0)} zł.`, `Awansuj do RAMP: cena ${rampTarget} zł na ŚWIEŻYM ad secie z nowymi kreacjami (nie mutuj żywego zwycięzcy).`, dContrib, dRev, conf, null), rampTarget, RAMP) } });
     }
     case RAMP: {
       // RAMP→BASE: ramp_orders AND ramp_spend (COD-heavy: na rozliczonych)
       const orders = codH ? wOpt.orders_paid : w14.orders;
-      if (orders < num(cfg.ramp_orders ?? 3) || adWin.spend < num(cfg.ramp_spend ?? 150))
+      if (orders < num(cfg.ramp_orders ?? 5) || adWin.spend < num(cfg.ramp_spend ?? 150))   // v3.2: próg 5
         return mk('hold_ramp', `RAMP: za mało (zam. ${orders}/${cfg.ramp_orders}, spend ${adWin.spend.toFixed(0)}/${cfg.ramp_spend}).`, { ...baseMetrics, ad_spend: adWin.spend });
       const sb = scaleBase(ctx, p, adWin.spend, orders, walls);
       if (sb.flag) return mk('flag_over_ceiling', `RAMP→BASE: viable_floor ${sb.viableFloor.toFixed(0)} > ceiling ${sb.ceiling.toFixed(0)} — ekonomia nie domyka się przy rynku.`, { ...baseMetrics, scale: sb },
         { card: { kind: 'price_opt_over_ceiling', dedup: `price_opt_over_ceiling|${p.id}|floor`, expires: ttl(), payload: payload(`Aby przeżyć przy skali trzeba ${sb.viableFloor.toFixed(0)} zł, a rynek/ściana ${sb.ceiling.toFixed(0)} zł.`, 'Tańsze źródło / multipak / kill — decyzja.', 0, 0, 'medium', ttl()) } });
-      if (!sb.base || sb.base <= num(p.price)) return mk('hold_ramp', `RAMP: scale_base ${sb.base ?? '—'} nie wyższy niż cena.`, { ...baseMetrics, scale: sb });
-      return await routeUp(ctx, p, sb.base, BASE, `RAMP→BASE: scale_base ${sb.base} (CPA-est, marża docelowa).`, baseMetrics, adsState, freshAdset, freshAge, codH, walls, shipFree, codPropose, 'price_scale');
+      // S3: scale_base > cena → RAMP→BASE (rzadkie). scale_base ≤ cena (zaparkowany) → RAMP→PROBE bezpośrednio (koniec wiecznego hold_ramp)
+      if (sb.base && sb.base > num(p.price))
+        return await routeUp(ctx, p, sb.base, BASE, `RAMP→BASE: scale_base ${sb.base} (CPA-est, marża docelowa).`, baseMetrics, adsState, freshAdset, freshAge, codH, walls, shipFree, codPropose, 'price_scale');
+      const probePct = (num(cfg.opt_probe_pct_min ?? 15) + num(cfg.opt_probe_pct_max ?? 20)) / 2;
+      return await routeUp(ctx, p, num(p.price) * (1 + probePct / 100), PROBE, `RAMP→PROBE (S3): scale_base ${sb.base ?? '—'} ≤ cena — ramp zaparkowany; probe +${probePct.toFixed(0)}% (ponad ścianę = karta).`, baseMetrics, adsState, freshAdset, freshAge, codH, walls, shipFree, codPropose, 'price_opt_over_ceiling');
     }
     case BASE: {
       // BASE→PROBE: jeden probe +opt_probe_pct
-      if (w14.orders < num(cfg.ramp_orders ?? 3)) return mk('hold_base', `BASE: mało danych do probe (zam. ${w14.orders}).`, baseMetrics);
+      if (w14.orders < num(cfg.ramp_orders ?? 5)) return mk('hold_base', `BASE: mało danych do probe (zam. ${w14.orders}).`, baseMetrics);   // v3.2: próg 5
       const pct = (num(cfg.opt_probe_pct_min ?? 15) + num(cfg.opt_probe_pct_max ?? 20)) / 2;
       const rawTarget = num(p.price) * (1 + pct / 100);
       return await routeUp(ctx, p, rawTarget, PROBE, `BASE→PROBE: jeden probe +${pct.toFixed(0)}%.`, baseMetrics, adsState, freshAdset, freshAge, codH, walls, shipFree, codPropose, 'price_opt_over_ceiling');
@@ -577,7 +798,7 @@ async function decideProduct(ctx: Ctx, p: Any, project: Any, parentIds: Set<stri
       // ocena probe: keep_frac AND MER (miękki gdy marża<mer_gate_min_margin)
       const revPrev = w30.revenue - wOpt.revenue;                      // proxy „przed probe" = wcześniejsza część okna 30d
       const keepFrac = revPrev > 0 ? wOpt.revenue / revPrev : 1;
-      const marginBase = marginPctAt(p, num(p.price)) / 100;
+      const marginBase = marginNetPct(p, num(p.price), ctx.cm) / 100;   // NETTO (v3.2)
       const be = marginBase > 0 ? 1 / marginBase : Infinity;
       const mer = wOpt.spend > 0 ? wOpt.revenue / wOpt.spend : Infinity;
       const merHard = marginBase >= num(cfg.mer_gate_min_margin ?? 0.30);
@@ -602,14 +823,14 @@ async function decideProduct(ctx: Ctx, p: Any, project: Any, parentIds: Set<stri
 // wspólne trasowanie PODWYŻKI: pipeline kroku (clamp→psychDown→ściany→dead-band) → auto|karta
 async function routeUp(ctx: Ctx, p: Any, rawTarget: number, nextPhase: number, reason: string, metrics: Any, adsState: string, freshAdset: boolean, freshAge: number | null, codH: boolean, walls: number[], shipFree: number | null, codPropose: boolean, cardKind: string): Promise<Plan> {
   const cfg = ctx.cfg;
-  const ttl = new Date(Date.now() + num(cfg.proposal_ttl_days ?? 7) * DAY_MS).toISOString();
+  const ttl = new Date(Date.now() + num(cfg.proposal_ttl_days ?? 14) * DAY_MS).toISOString();
   // pipeline (§2e): clamp do auto_step_max_pct → psychPriceDown (nigdy ponad cap)
   const cap = num(p.price) * (1 + num(cfg.auto_step_max_pct ?? 20) / 100);
   const capped = Math.min(rawTarget, cap);
   const target = psychPriceDown(capped);
   const stepPct = (target - num(p.price)) / num(p.price) * 100;
   const dRev = (target - num(p.price)) * (num(metrics.w14?.orders ?? 0) / 14) * 14;
-  const dContribution = (unitProfitAt(p, target) - unitProfitAt(p, num(p.price))) * num(metrics.w14?.orders ?? 0);
+  const dContribution = (unitProfitNet(p, target, ctx.cm) - unitProfitNet(p, num(p.price), ctx.cm)) * num(metrics.w14?.orders ?? 0);   // NETTO (v3.2)
   const base: Plan = { product: p, phase: p.price_phase, action: '', reason_pl: reason, metrics: { ...metrics, target, step_pct: stepPct }, delta_contribution: dContribution, delta_revenue: dRev };
 
   // dead-band + stabilność celu (§2e)
@@ -639,6 +860,34 @@ async function routeUp(ctx: Ctx, p: Any, rawTarget: number, nextPhase: number, r
   return { ...base, action: 'step_up', exec: { dir: 'up', target, nextPhase, triggerKind: 'rung_auto' } };
 }
 
+// client_cost poza sanity band → KARTA client_cost_review (§3, pkt 5). INFORMACYJNA — sweep jej NIE wykonuje
+// (kind spoza listy wykonywalnych); akcept = Tomek ręcznie przenosi wartość do cost_purchase w panelu.
+// Dedup po produkcie + wartości klienta; expires proposal_ttl_days (14).
+async function clientCostPass(ctx: Ctx, prods: Any[]): Promise<void> {
+  const cm = ctx.cm;
+  for (const p of prods) {
+    const cc = clientCostEval(p, cm);
+    if (!cc.has || cc.inBand) continue;                 // brak ceny klienta lub w paśmie → nic
+    const ttl = new Date(Date.now() + num(ctx.cfg.proposal_ttl_days ?? 14) * DAY_MS).toISOString();
+    const [lo, hi] = cm.client_cost_sanity_band;
+    await createCard(ctx, {
+      projectId: p.project_id, productId: p.id, kind: 'client_cost_review',
+      dedup: `client_cost_review|${p.id}|${Math.round(cc.raw * 100)}`, expires: ttl,
+      payload: {
+        observation: `Klient podał koszt zakupu ${cc.raw} zł (${cc.source === 'wholesale' ? 'hurt' : 'dropshipping'}, ${cc.isNet ? 'netto' : 'brutto'}), po normalizacji ${cc.normalizedBase} zł — odbiega od obecnego cost_purchase ${num(p.cost_purchase)} zł (poza pasmem ${lo}–${hi}×).`,
+        recommendation: 'Zweryfikuj i — jeśli poprawny — przenieś wartość do cost_purchase ręcznie w panelu.',
+        client_cost_value: cc.raw,
+        client_cost_normalized: cc.normalizedBase,
+        client_cost_source: cc.source,
+        client_cost_is_net: cc.isNet,
+        current_cost_purchase: num(p.cost_purchase),
+        client_note: p.client_cost_note || null,
+        informational: true,
+      },
+    });
+  }
+}
+
 // ── orkiestracja pętli: plany → karty/noty → wykonania (cap max_price_changes_per_run) → decisions ──
 async function decideAll(ctx: Ctx): Promise<void> {
   const cfg = ctx.cfg;
@@ -658,7 +907,7 @@ async function decideAll(ctx: Ctx): Promise<void> {
 
   // produkty (status ≠ kill, price NOT NULL, autonomia ≠ off)
   const { data: products } = await ctx.supabase.from('wf2_products')
-    .select('id, project_id, name, platform_name, price, price_phase, price_state, phase_started_at, platform_product_id, platform_variant_id, campaign_id, cost_purchase, cost_shipping, fees_pct, shipping_paid_by, pricing_autonomy, last_price_change_at, platform_apply_after, rollback_lock_until, target_snapshot, landing_price_contract, parent_product_id, orders_paid, unit_profit')
+    .select('id, project_id, name, platform_name, price, price_phase, price_state, phase_started_at, platform_product_id, platform_variant_id, campaign_id, cost_purchase, cost_shipping, fees_pct, shipping_paid_by, pricing_autonomy, last_price_change_at, platform_apply_after, rollback_lock_until, target_snapshot, landing_price_contract, parent_product_id, orders_paid, unit_profit, client_cost_purchase, client_cost_is_net, client_cost_source, client_cost_note, client_cost_set_at')
     .in('project_id', [...projMap.keys()]).neq('status', 'kill').not('price', 'is', null).neq('pricing_autonomy', 'off');
   const prods = (products || []) as Any[];
 
@@ -691,6 +940,7 @@ async function decideAll(ctx: Ctx): Promise<void> {
 
   // 2) karty + noty (side-effecty) — pomijane w dry_run (czyste logowanie decyzji)
   if (!ctx.dryRun) {
+    await clientCostPass(ctx, prods);   // karty client_cost_review (informacyjne, niezależne od decyzji cenowej)
     for (const pl of plans) {
       if (pl.card) await createCard(ctx, { projectId: pl.product.project_id, productId: pl.product.id, kind: pl.card.kind, dedup: pl.card.dedup, expires: pl.card.expires, payload: pl.card.payload });
       if (pl.note) await alertNote(ctx, pl.product.project_id, pl.product.id, pl.note.prefix, pl.note.body);
@@ -774,7 +1024,7 @@ Deno.serve(async (req) => {
     if (cl.conflict) return J({ status: 'already_running' });
     const runId = cl.id!;
 
-    const ctx: Ctx = { supabase, baseUrl: SUPABASE_URL, wf2: WF2, cfg, runId, nowIso, startedAt, pl, dryRun, errors: [], decisions: [], actionsExecuted: 0, cardsCreated: 0 };
+    const ctx: Ctx = { supabase, baseUrl: SUPABASE_URL, wf2: WF2, cfg, cm: costModel(cfg), runId, nowIso, startedAt, pl, dryRun, errors: [], decisions: [], actionsExecuted: 0, cardsCreated: 0 };
 
     // SWEEP zawsze; DECYZJE gdy gate przechodzi
     await sweep(ctx);

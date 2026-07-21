@@ -1,7 +1,14 @@
-# CENNIK v3.1 „CENY 3.0" — SILNIK DECYZJI CENOWYCH (stan + polityka), Workflow v2 „Sklepy"
+# CENNIK v3.2 „CENY 3.0" — SILNIK DECYZJI CENOWYCH (stan + polityka), Workflow v2 „Sklepy"
 
-**Wersja: 3.1 · Data: 2026-07-21 · Status: PLAN OSTATECZNY, WIEDZA v2.1 ZWALIDOWANA
-(Monte Carlo 19.07), ORKIESTRACJA PRZEPROJEKTOWANA.**
+**Wersja: 3.2 · Data: 2026-07-21 · Status: PLAN OSTATECZNY, WIEDZA v2.1 ZWALIDOWANA
+(Monte Carlo 19.07), POPRAWKI SYMULACYJNE (Monte Carlo silnika 21.07), ORKIESTRACJA
+PRZEPROJEKTOWANA.**
+
+**v3.1→v3.2:** **twardy próg 5 zamówień** Tomka (§2f) + poprawki po symulacji MC S1–S9
+(SIM-ENGINE-V3-WYNIKI.md — no-ads ratchet, uncapped ramp, collapse kalibracja, bugi
+wykonania kart) + **model kosztów VAT/cło/hurt tax-aware** (§2g) + **cena zakupu klienta
+priorytetowa z sanity-band** (§2g/§7b) + **zakładka „Ceny" w portalu klienta** (§7b).
+Migracja `20260722_wf2_ceny32.sql`, config `config_version "3.2"`.
 
 **v3.0→v3.1:** poprawki po 2× krytyce (collapse spec, histereza, landing-kontrakt, run
 lifecycle, COD-weryfikacja, cisza prawna UOKiK). Wprowadza pełną specyfikację collapse/
@@ -85,8 +92,8 @@ ustalonej trajektorii** — reżim to STAN, przejścia liczy silnik per run.
 | # | Reżim | Sens | Cena (liczona per run) |
 |---|---|---|---|
 | **1** | **START** | cena startowa 10–15%, zbieranie danych | `psychPriceUp(cost×[1.10–1.15])`, `test_pricing_mode` |
-| **2** | **RAMP** | podnoszenie po potwierdzeniu sprzedaży, POD ścianą psychologiczną, ŚWIEŻY ad set | `ramp_price` parkowany pod najbliższą ścianą (94,90 pod 100; 149,00 pod 150 — NIE arytm. połowa) |
-| **3** | **BASE** | cena bazowa po dwustopniowym skalowaniu | `scale_base` v2 (§2a) **liczone NA BIEŻĄCO** |
+| **2** | **RAMP** | podnoszenie po potwierdzeniu sprzedaży, POD ścianą psychologiczną, ŚWIEŻY ad set | `ramp_price` **jako SERIA kroków ≤ `auto_step_max_pct 20` (S2, kolejny po cooldownie — NIE jeden skok pod ścianę)**, parkowany pod najbliższą ścianą (94,90 pod 100; 149,00 pod 150 — NIE arytm. połowa) |
+| **3** | **BASE** | cena bazowa po dwustopniowym skalowaniu (**w praktyce pomijana — S3: po rampie idziemy wprost do PROBE**) | `scale_base` v2 (§2a) **liczone NA BIEŻĄCO** |
 | **4** | **PROBE (OPT)** | pojedynczy probe optymalizacyjny | `base × (1 + 15–20%)` [P] (jeden probe, NIE staircase 8–12%) |
 | **5** | **HARVEST/DECLINE** | nasycenie/śmierć produktu: mroź podwyżki, multipak, rotacja | cena zamrożona; dźwignia → AOV |
 | **6** | **LOCKED** | stop-lock: optimum, trzymaj | cena bez zmian |
@@ -98,11 +105,11 @@ wyjdź z zyskiem/rotuj". Panel PHASES rozszerzony o 5/6.
 
 | Przejście | Bramka (progi jawne) | Autonomia |
 |---|---|---|
-| **1→2 START→RAMP** | **WINNER = `CP2_passed (ATC ≥ 5% [P] AND koszt/ATC ≤ 12 zł [P]) AND orders ≥ 3 [P] AND spend ≥ 300 [P]`.** SUROWE zamówienia (sygnał popytu; haircut COD tylko w P&L). Tier „high-confidence" `orders ≥ 5 [P]`. Poprzednia bramka 5eff/200 = nieosiągalna (implikowała CPA ≤ 33 zł) | **ZAWSZE KARTA** (werdykt WINNER) — [D-A1 default: karta na START→RAMP nawet w 'auto'; przy ≥5 zam. high-confidence rozważ auto] |
-| **2 RAMP wykonanie** | krok 1 = `ramp_price` na **ŚWIEŻYM ad secie z nowymi kreacjami** (nie mutujemy żywego zwycięskiego seta; nowy post = czysty wątek komentarzy) | auto po akcepcie karty START→RAMP |
-| **2→3 RAMP→BASE** | `ramp_orders ≥ 3 [P] AND ramp_spend ≥ 150 [P]` (LICZBA, nie kalendarz; `ramp_hold_days 7` = tylko dolny bezpiecznik czasu) AND brak collapse. COD-heavy (udział > 60% [P]): liczone na zamówieniach ROZLICZONYCH | full-auto (kierunek w górę, guardraile OK) |
-| **collapse (2/3/4)** | **pełna spec §2d:** Poisson q10 znormalizowany SPENDEM, bramka mocy `collapse_min_expected 5`, potwierdzenie w 2 runach, aktywny TYLKO po podwyżce | **AUTO-ROLLBACK** (moc ≥5) + `rollback_lock 21d` + karta INFO; moc <5 → karta `rollback` ([D-A4]) |
-| **3→4 BASE→PROBE** | JEDEN probe `+15–20%` [P] ponad bazę (psych_round W DÓŁ, §2e) | full-auto jeśli nie przecina ściany; przez ściany 100/150/free-ship = karta |
+| **1→2 START→RAMP** | **WINNER = `CP2_passed (ATC ≥ 5% [P] AND koszt/ATC ≤ 12 zł [P]) AND orders ≥ 5 [P] (twardy próg, §2f) AND spend ≥ 300 [P]`.** SUROWE zamówienia (sygnał popytu; haircut COD tylko w P&L). **`winner_orders 3→5` (S7 / SIM scen.13: przy `=3` wysoko-CPA szum awansował w 56% przy <5 zam.; `=5` → 0% BEZ straty prawdziwych winnerów — poprawka bez kosztu).** Poprzednia bramka 5eff/200 = nieosiągalna (implikowała CPA ≤ 33 zł) | **ZAWSZE KARTA** (werdykt WINNER) — [D-A1 default: karta na START→RAMP nawet w 'auto'; przy ≥5 zam. high-confidence rozważ auto] |
+| **2 RAMP wykonanie** | krok 1 = `ramp_price` na **ŚWIEŻYM ad secie z nowymi kreacjami** (nie mutujemy żywego zwycięskiego seta; nowy post = czysty wątek komentarzy). **RAMP = SERIA kroków, każdy ≤ `auto_step_max_pct 20` od ceny bieżącej (S2 — clamp też dla kroku z karty winner_reco; przy dużym dystansie do ściany rób w 2 krokach, nie jednym skokiem)** | auto po akcepcie karty START→RAMP |
+| **2→3 RAMP→BASE/PROBE** | `ramp_orders ≥ 5 [P] (twardy próg) AND ramp_spend ≥ 150 [P]` (LICZBA, nie kalendarz; `ramp_hold_days 7` = tylko dolny bezpiecznik czasu) AND brak collapse. COD-heavy (udział > 60% [P]): liczone na zamówieniach ROZLICZONYCH. **Po zaparkowaniu rampy (kolejny krok niemożliwy — ściana/cap): S3 → wprost do PROBE gdy `scale_base ≤ cena bieżąca` (BASE tylko gdy `scale_base > cena` — rzadkie); eliminuje wieczny `hold_ramp`** | full-auto (kierunek w górę, guardraile OK) |
+| **collapse (2/3/4)** | **pełna spec §2d:** Poisson q10 znormalizowany SPENDEM **(baseline SPEND-MATCHED — dni o spend > 0,5× mediany post-change; S5)**, bramka mocy `collapse_min_expected 8` **ORAZ** `observed < collapse_rel_floor 0.6 × expected`, potwierdzenie w 2 runach, aktywny TYLKO po podwyżce | **AUTO-ROLLBACK** (moc ≥8 AND rel<0,6) + `rollback_lock 21d` + karta INFO; moc <8 → karta `rollback` ([D-A4]) |
+| **3→4 BASE→PROBE** | JEDEN probe `+15–20%` [P] ponad bazę (psych_round W DÓŁ, §2e). **Post-step guard (S6): po każdej potwierdzonej podwyżce, po `opt_window_days` — kontrybucja/zł spendu okno-po < `keep_frac 0,80` → KARTA obniżki (powrót na poprzedni poziom; chroni elastyczne winnery, scen.1)** | full-auto jeśli nie przecina ściany; przez ściany 100/150/free-ship = karta |
 | **4 PROBE ocena** | **kontrybucja na złotówkę spendu** (NIE zł/dzień), okno `opt_window_days 14` [P] (COD-heavy `opt_window_days_cod 21`), `keep_frac ≥ 0,80` [P] AND `MER ≥ be × 1,2` [P] (marża BASE < `mer_gate_min_margin 0.30` → MER MIĘKKI: decyduje keep_frac, P16) → trzymaj albo wróć na bazę | trzymanie auto; obniżka = karta |
 | **→5 HARVEST/DECLINE** | `frequency > 3,5 [P]` AND CPM ↑ ≥ `harvest_cpm_rise_pct 20`% w `harvest_window_days 14` AND kontrybucja płaska/spadająca MIMO refreshu → karta: żniwa + ROTACJA produktu | karta (człowiek decyduje) |
 | **→6 LOCKED (STOP/LOCK)** | kontrybucja/zł spadła istotnie LUB `MER < be×1,2` LUB anomalia (§5.3): cofnij o krok i zablokuj optimum | obniżka/rollback = ZAWSZE karta |
@@ -205,15 +212,21 @@ sygnałem MIĘKKIM (decyduje `keep_frac`), nie twardym vetem.
 
 Auto-rollback = JEDYNA zmiana ceny w 'auto' bez uprzedniej karty — dlatego spec twarda.
 **Normalizacja SPENDEM, nie kalendarzem** (budżet dzienny bywa nierówny):
-- **λ bazowa:** okno `collapse_baseline_days 7` PRZED zmianą; tempo_bazowe = zamówienia/zł spendu
-  na STAREJ cenie. Oczekiwane po zmianie = `tempo_bazowe × spend_po_zmianie`.
+- **λ bazowa (SPEND-MATCHED, S5):** okno `collapse_baseline_days 7` PRZED zmianą; tempo_bazowe =
+  zamówienia/zł spendu na STAREJ cenie liczone **TYLKO z dni o spend > 0,5× mediany spendu
+  post-change** (baseline mierzony na tym samym poziomie spendu co obserwacja — inaczej skok
+  budżetu TEST→SCALE zaniża oczekiwane i fałszuje collapse). Oczekiwane po zmianie =
+  `tempo_bazowe × spend_po_zmianie`.
 - **Okno obserwacji:** akumuluj aż `spend_po ≥ collapse_min_spend 150` LUB `collapse_max_days 5`
   (co pierwsze). Świeży ad set w międzyczasie → pomiń pierwsze `learning_grace_days 3` (dni
   learningu NIE liczą się do collapse ani `keep_frac`; okno oceny startuje PO learningu).
-- **Bramka mocy `collapse_min_expected 5`:** oczekiwane zamówienia < 5 → ZERO auto-rollbacku,
-  tylko karta `rollback` (moc statystyczna za mała na q10).
+- **Bramka mocy `collapse_min_expected 5→8` (S5):** oczekiwane zamówienia < 8 → ZERO
+  auto-rollbacku, tylko karta `rollback` (moc statystyczna za mała na q10; podniesione z 5 —
+  scen.8 fałszywy collapse ~20% przy małej próbie baseline).
 - **Potwierdzenie:** naruszenie q10 (jednostronny Poisson, `collapse_quantile 0.10`) w DWÓCH
-  kolejnych runach decyzyjnych (nie pojedynczy blip).
+  kolejnych runach decyzyjnych (nie pojedynczy blip) **ORAZ minimalny spadek WZGLĘDNY
+  `observed < collapse_rel_floor 0.6 × expected` (S5 — sam q10 przy szumie Poissona trącał zdrowy
+  popyt; wymóg 0,6× odsiewa łagodne wahania).**
 - **Zakres czasowy:** collapse-test aktywny TYLKO gdy ostatni event ceny = PODWYŻKA i minęło
   ≤ (`collapse_max_days` + `learning_grace_days`) od zmiany. Późniejsze spadki popytu → anomalia/
   karta (§5.3), NIE auto-rollback.
@@ -237,6 +250,79 @@ target_change_min_pct 10` ORAZ cel utrzymuje się (ta sama cena psych po `psych_
 lub `shipping_free_threshold` → KARTA) → check dead-band → akcja. **`max_step_pct` USUNIĘTY**
 (redundancja). Probe rządzi się `opt_probe_pct_min/max 15–20`; WSZYSTKIE ruchy auto capem
 `auto_step_max_pct 20`; `psych_round` stosowany do WSZYSTKICH wyjść (ramp/base/probe).
+
+### 2f. TWARDY PRÓG DANYCH: `hard_min_orders 5` (dyrektywa Tomka, v3.2)
+
+**Zasada nadrzędna nad wszystkimi bramkami cenowymi.** Dopóki produkt nie ma **≥ 5 zamówień
+KWALIFIKOWANYCH** silnik NIE wykonuje ŻADNEJ akcji cenowej ANI nie tworzy kart cenowych.
+- **Zamówienie kwalifikowane** = wiersz `wf2_orders` z tym produktem w `lines` gdzie
+  `is_paid = true OR is_cod = true`, liczone **ALL-TIME** (COUNT, nie okno).
+- **Czego dotyczy próg:** WSZYSTKIE akcje i karty cenowe — `winner_reco` (START→RAMP),
+  `price_scale`, rollback-podwyżkowy, karta no-ads „podnieś". Poniżej 5 zam. → dozwolone TYLKO:
+  `hold` z powodem, karty DQ/informacyjne, **auto-rollback OBRONNY (collapse) — obrona NIE
+  podlega progowi** (kasa pierwsza; katastrofa nie czeka na próg danych).
+- **Dlaczego 5 (SIM scen.13):** przy `winner_orders 3` produkt wysoko-CPA z dobrym ATC (3 zam. =
+  szum Poissona) awansował w **56%** przebiegów przy <5 zam. — łamał wymóg Tomka; `=5` → **0%**
+  przy **ZEROWEJ** zmianie wyniku prawdziwych winnerów (winner i tak pada przy ≥5 zam.). Próg
+  praktycznie DARMOWY. `winner_high_confidence_orders` (już 5) staje się progiem bazowym; sygnał
+  „zmiana ceny przy <5 zam." = flaga patologii = 0% we wszystkich scenariuszach po poprawce.
+
+### 2g. MODEL KOSZTÓW I MARŻA NETTO (tax-aware, v3.2)
+
+Kolumna `unit_profit` w DB = **BEZ ZMIAN** (GENERATED, legacy „uproszczona brutto"). Wartości
+**netto liczone są W LOCIE** (silnik/panel/portal). Parametry w `config.cost_model` (§8).
+Stare formuły bez `×1,23` **ZANIŻAŁY floory** — VAT należny 23% od sprzedaży jest realnym
+obciążeniem, a VAT z Ali (dropship) jest **NIEODLICZALNY**.
+
+**Koszt efektywny (PLN/szt.)** = BAZA + dodatki:
+```
+BAZA:
+  • jeśli client_cost_purchase ustawione ORAZ w sanity band
+    [0.4, 1.6] × cost_purchase (gdy cost_purchase puste — akceptuj)
+    → CENA KLIENTA JEST NAJWAŻNIEJSZA (znormalizowana):
+        source='dropship'  → brutto (podał netto → ×1.23; VAT NIEODLICZALNY)
+        source='wholesale' → netto  (podał brutto → /1.23; VAT ODLICZALNY)
+  • inaczej → cost_purchase (dotychczasowy, brutto Ali)
+  • POZA pasmem → NIE stosuj + KARTA kind 'client_cost_review' (info, bez auto-wykonania;
+    akcept = Tomek ręcznie przenosi wartość do cost_purchase w panelu)
+DODATKI:
+  + cost_shipping                (tylko gdy shipping_paid_by = 'shop')
+  + dropship_customs_fee_pln 13  (cło ryczałt ~3 EUR/pozycję — OBOWIĄZUJE od 1.07.2026;
+                                  TYLKO gdy źródło kosztu = dropship)
+```
+
+**Marża NETTO — model `goods` (WSZYSTKIE decyzje silnika na niej):**
+```
+sale_net        = price / 1.23
+fee_net         = price × fees_pct/100 / 1.23
+unit_profit_net = sale_net − effective_cost − fee_net
+margin_net_pct  = unit_profit_net / sale_net
+kontrybucja     = unit_profit_net × orders − spend      (haircut COD dla COD-heavy bez zmian)
+viable_floor    = 1.23 × (effective_cost + CPA_est) / (1 − fees_pct/100 − 0.12)
+target_price    = 1.23 × effective_cost / (1 − fees_pct/100 − 0.40)
+min_margin      : unit_profit_net ≥ 0.05 × sale_net
+```
+
+**Prognoza HURTU (informacyjna — panel drawer + portal klienta):**
+```
+est_cost_hurt_net = (cost_ali_brutto/1.23) × (1 − wholesale_discount 0.40) × (1 + wholesale_extras_pct 0.15)
+unit_profit_hurt  = sale_net − est_cost_hurt_net − fee_net − wholesale_local_ship_pln 14…
+                    (local ship TYLKO gdy sklep płaci wysyłkę; przy 'client' POMIŃ)
+uplift            = unit_profit_hurt − unit_profit_net(dropship)
+```
+Prezentacja: „Przy zakupie hurtowym (~40% taniej): koszt ~X zł, zysk ~Y zł/szt. (+Z zł)".
+**Widełki:** pesymistycznie `discount 0.30`, optymistycznie `0.50` (pokazać zakres).
+
+**Tabela reżimów podatkowych (per produkt, `cost_model.tax_model_default 'goods'`):**
+
+| Źródło | VAT | Cło | Wysyłka | Uwagi |
+|---|---|---|---|---|
+| **dropship** (Ali) | brutto, **NIEODLICZALNY** (koszt = cena z VAT) | + `dropship_customs_fee_pln 13` od 1.07.2026 | klient płaci (dropship: 0 dla sklepu) | konserwatywnie „deemed supplier" |
+| **hurt** (wholesale) | netto, **ODLICZALNY** (VAT z faktury wchodzi) | w `wholesale_extras_pct 0.15` (fracht+cło+ubezp.+agencja) | `wholesale_local_ship_pln 14` gdy sklep płaci | zysk wyższy → uplift dla klienta |
+
+`tax_model` = przełącznik `goods` (default, konserwatywnie) / `agency` — **`agency` = TODO
+(W-later)**: model pośrednika (marża = przychód usługi), inne traktowanie VAT; do wdrożenia gdy
+struktura prawna sklepów to potwierdzi.
 
 ## 3. POZIOMY AUTONOMII (NOWA — sedno v3)
 
@@ -326,6 +412,16 @@ NIE mieści się w jednej inwokacji edge. Stąd rozdział: **DECYZJE** (raz dzie
   wymaga ≥ `winner_orders_no_ads 5` zam. W OKNIE `no_ads_window_days 30` (nie all-time) +
   `min_prepaid_orders 1`; X = JEDEN szczebel psych w górę (nie multi-step); payload JAWNIE:
   „CPA/elastyczność NIEZNANE — podwyżka w ciemno". Bramki no-ads na zamówieniach SUROWYCH (§2).
+  **HAMULCE S1 (SIM scen.10: bez tokena Meta silnik windował 299 zł przy 28 zmianach, optimum 100
+  — kontrybucja PONIŻEJ baseline „nic nie rób"). Karta no-ads „podnieś" TYLKO gdy WSZYSTKIE:**
+  (1) cooldown minął (`cod_cooldown_days` / `cooldown_days`); (2) liczba podwyżek od ostatniego
+  dnia ze `spend > 0` < `no_ads_max_steps 2` [P]; (3) nowa cena NIE przecina ściany (`walls` +
+  `shipping_free_threshold`); (4) **przychód okna 14d ≥ przychód poprzednich 14d** (spadek
+  przychodu → `hold`, NIE podwyżka — STOP ratchetu); (5) `hard_min_orders 5` spełniony (§2f).
+- **S4 — DZIURA DANYCH ≠ no-ads:** kampania która WCZEŚNIEJ wydawała (spend>0 w ostatnich 14d),
+  a ostatnie **≥2 dni spend=0** → `hold_dq` (NIE przełączaj na tryb no-ads!). Tryb no-ads
+  TYLKO gdy sync GLOBALNIE martwy (heurystyka 3-stanowa bez zmian). SIM scen.9: 5-dniowa luka
+  przełączała na no-ads (ratchet) + psuła baseline collapse — 4,3 zmian, oscylacja 16%.
 - **Zasada: automat bez spendu NIE wykonuje, tylko proponuje.** W dniu dodania `WF2_META_TOKEN`
   ads-sync pisze ad_stats → bramki ożywają — **zero przeróbek kodu.**
 
@@ -364,7 +460,11 @@ widział" → „kierunek sekwencji minimalizuje scenariusz płacenia więcej; w
 
 ## 5. ARCHITEKTURA TECHNICZNA
 
-### 5.1 Model danych v3 — migracja `20260721d_wf2_ceny3.sql` (PRZED pushem kodu)
+### 5.1 Model danych v3 — migracje `20260721d_wf2_ceny3.sql` (v3.1) + `20260722_wf2_ceny32.sql` (v3.2) (PRZED pushem kodu)
+
+**v3.2 (`20260722_wf2_ceny32.sql`, aplikacja `node scripts/apply-wf2-ceny32.mjs`) dokłada
+addytywnie:** kolumny `client_cost_*` na `wf2_products` (pkt 2), `kind 'client_cost_review'` na
+`wf2_proposals` (pkt 4), config → v3.2 (pkt 8). Baza = v3.1 musi być zaaplikowana.
 
 **1. `wf2_engine_runs` (NOWA — heartbeat + dziennik decyzji + lifecycle P10):**
 ```
@@ -393,7 +493,11 @@ cache_grace) · **`+ rollback_lock_until timestamptz`** (P2 — blokada re-podwy
 **`+ target_snapshot jsonb`** (P5 — `{target, first_seen}`, stabilność celu) · **`+
 landing_price_contract text NOT NULL DEFAULT 'legacy' CHECK (IN ('hydrated','legacy','none'))`**
 (P19) · **`+ parent_product_id uuid REFERENCES wf2_products(id)`** (P20 — rodzina multipaków;
-NULL dla bazy; `bundle_discount_pct` w kolumnie/payload rodziny). *(Kolumny z v2.1 zostają:
+NULL dla bazy; `bundle_discount_pct` w kolumnie/payload rodziny). **v3.2 (§2g/§7b): `+
+client_cost_purchase numeric(10,2)` · `+ client_cost_is_net bool` · `+ client_cost_source text
+NOT NULL DEFAULT 'dropship' CHECK (IN ('dropship','wholesale'))` · `+ client_cost_note text` ·
+`+ client_cost_set_at timestamptz`** (cena zakupu podana przez klienta w portalu — priorytetowa
+w sanity-band, poza pasmem → karta `client_cost_review`). *(Kolumny z v2.1 zostają:
 `price`, `price_ladder`, `price_phase`, `phase_started_at`, `platform_variant_id`, `price_state`,
 `orders_paid/confirmed`, `shipping_paid_by`, `cost_*`, `fees_pct`, `platform_price/synced_at`,
 `campaign_id`.)*
@@ -401,7 +505,9 @@ NULL dla bazy; `bundle_discount_pct` w kolumnie/payload rodziny). *(Kolumny z v2
 Enum statusu bez zmian: `proposed|accepted|rejected|applied|confirmed|failed`;
 `direction (up|down)`, `trigger_kind`, `actor (engine|tomek|claude)`.
 **4. `wf2_proposals`:** `+ expires_at timestamptz` (NULL dla `winner_reco` — nie wygasa, P24).
-`kind` rozszerzony o **`landing_republish`** (P19). Payload wg jednolitego kontraktu (§3.4).
+`kind` rozszerzony o **`landing_republish`** (P19) oraz **`client_cost_review`** (v3.2 — karta
+INFO gdy cena zakupu klienta poza pasmem [0.4,1.6]; DROP+ADD z pełną listą 11 kindów). Payload
+wg jednolitego kontraktu (§3.4).
 (`dedup_key UNIQUE` — przy expiry sufiks `|exp<data>`; `status proposed|accepted|rejected|expired`.)
 **5. `wf2_projects`:** `+ orders_unmapped_last int DEFAULT 0` (`wf2-orders-sync` liczy unmapped;
 dopisać UPDATE) · **`+ shipping_free_threshold numeric(10,2)`** (P21 — ręcznie; ściana psych).
@@ -429,10 +535,14 @@ produktów).
     istniejącego (`COALESCE` — nie nadpisujemy kill-switcha); `config_version:"3.1"`;
 (c) blok **`DO $$ … RAISE EXCEPTION`** jeśli po UPDATE: `engine_enabled≠false` LUB `dry_run≠true`
     LUB `contribution_keep_frac≠0.80` LUB `config_version≠'3.1'` (asercje fail-fast migracji);
-(d) **silnik przy starcie waliduje `config_version=='3.1'`** — inna wartość = run z błędem, ZERO
-    akcji (**fail-closed**). Kod czyta WYŁĄCZNIE klucze kanoniczne v3.1; stare klucze ignorowane
-    (§8 DEPRECATED). Obecny seed (`advance_orders_test:5`, `winner_spend_floor:200`,
+(d) **silnik przy starcie waliduje `config_version`** — inna wartość = run z błędem, ZERO
+    akcji (**fail-closed**). Kod czyta WYŁĄCZNIE klucze kanoniczne bieżącej wersji; stare klucze
+    ignorowane (§8 DEPRECATED). Obecny seed (`advance_orders_test:5`, `winner_spend_floor:200`,
     `opt_step_pct 8–12`, `keep_frac 0.95`, `effective_factor 0.90` płaski) — WSZYSTKIE zastąpione.
+**v3.2 (`20260722_wf2_ceny32.sql`):** backup do `wf2_price_config_backup_v31`; `config_version:"3.2"`
+(silnik v3.2 waliduje `=='3.2'`); asercje `DO $$ RAISE`: `config_version='3.2'` LUB `dry_run≠true`
+(TWARDO — pilot musi zostać w dry_run) LUB `hard_min_orders≠5` LUB `contribution_keep_frac≠0.80`;
+`engine_enabled`/`dry_run` PRZENOSZONE z obecnego configu (COALESCE). Nowe/zmienione klucze: §8.
 
 **9. Cron `wf2-price-engine` w pg_cron (P11):** **`*/10 * * * *`** (co 10 min — sweep zwykle
 no-op, ale okno „landing wyższa / kasa niższa" skraca się do ~6–16 min; decyzje gate'owane
@@ -492,16 +602,25 @@ Phosphor, radius 6–8px, **ZERO fioletu/rose**. Wykresy: **inline SVG (zero now
 
 1. **Pasek statusu silnika:** chip `enabled`/`dry_run` + heartbeat (ostatni run, decyzje/akcje,
    następny run) + przycisk „Uruchom teraz" (admin; POST `wf2-price-engine` z JWT/adminGate);
-   **alert gdy produkt w `pending_platform` > 20 min** (P11).
+   **alert gdy produkt w `pending_platform` > 20 min** (P11); **nota metodologiczna: `hard_min_orders 5`
+   — poniżej 5 zam. kwalifikowanych silnik tylko trzyma cenę (§2f).**
 2. **Strefa „Do decyzji" DZIAŁAJĄCA** (dziś read-only): wzorzec `propDecide` (update
    `wf2_proposals {status,decided_at,decided_by} + logActivity + toast + reload`); obsługa obu
    kształtów payload (observation/recommendation vs rule/nums); **nota „wykona silnik w ≤10 min"**;
-   `expires_at` countdown.
+   `expires_at` countdown. **Karta `client_cost_review` (v3.2): `KIND_LABEL` „Koszt od klienta do
+   akceptacji" + przycisk „Zastosuj koszt klienta" → update `wf2_products.cost_purchase =
+   znormalizowana wartość` + toast + `logActivity` (bez auto-eventu ceny — karta INFO, Tomek
+   decyduje).**
 3. **Tabela produktów:** + kolumna **Autonomia** (badge; admin: select auto/propose/off → update
    `wf2_products.pricing_autonomy`), **Kontrybucja (14 dni)**, **ostatnia decyzja silnika**, badge
    **landing** (`hydrated`/`legacy`/`none` — P19; `legacy` = zmiana ceny idzie kartą + republish).
+   **Kolumna Zysk/szt. = `unit_profit_net` (v3.2, liczone w locie; tooltip: rozbicie brutto legacy
+   vs netto) + badge „koszt od klienta" gdy `client_cost_purchase` aktywny.**
 4. **Drawer per produkt:** **WYKRES inline SVG** — trajektoria ceny (kroki z `wf2_price_events`)
    + słupki spend dzienny + punkty zamówień + linia kontrybucji skumulowanej (okno 30 dni);
+   **sekcja „Koszty i potencjał" (v3.2): `effective_cost` (źródło: Ali / klient) + rozbicie NETTO
+   (cena → koszt → VAT+prowizje → `unit_profit_net`) + prognoza hurtu z zakresem
+   `wholesale_discount 30–50%` (koszt ~X, zysk ~Y, uplift +Z) + `client_cost_note` klienta (§2g);**
    pod spodem decyzje silnika dot. produktu (z `wf2_engine_runs.decisions`) + historia eventów;
    akcje admin: pauza (`price_state='paused'`), autonomia.
 5. **Log automatu (nowa sekcja):** strumień z `wf2_engine_runs` — per run: kiedy, dry_run,
@@ -536,16 +655,48 @@ historia 30 dni (podkładka Omnibus).
 świeżym ad secie/poście. Automat zmieniający ceny „po cichu" = ryzyko relacyjne „kto ruszył moją
 cenę?" — mityguje powiadomienie wspólnika (§11).
 
-## 8. PARAMETRY — docelowy `settings.wf2_price_config` v3.1 (pełny zrzut)
+### 7b. PORTAL KLIENTA — zakładka „Ceny" (v3.2)
 
-**Silnik czyta WYŁĄCZNIE klucze KANONICZNE v3.1** (waliduje `config_version=='3.1'` fail-closed,
-P8). Klucze DEPRECATED (niżej) są ignorowane. `engine_enabled:false`, `dry_run:true` (start
-bezpieczny). **ZASADA P7: żaden próg wyzwalający akcję auto nie żyje wyłącznie w prozie.**
+Sekcja `#sec-ceny` „Wasze ceny i zyski" w `portal.html` (po `#sec-portfolio`), zasilana edge
+`wf2-portal` (token + hasło klienta). **Ton ciepły, ZERO żargonu — BEROAS/CPA/spend ZAKAZANE
+w tej sekcji.**
 
-### KANONICZNE v3.1
+**Co POKAZUJEMY (per produkt — TYLKO status live/test/winner/skala):**
+- cena aktualna + **friendly label z `price_phase`** (słownik **FAIL-CLOSED**): `1–2` →
+  „Cena startowa — testujemy popyt", `3–4` → „Cena optymalizowana", `5` → „Faza dojrzała",
+  `6` → „Cena ustalona", **nieznane → „Cena aktywna"** (nigdy surowy numer fazy);
+- rozbicie: **„Cena → koszt zakupu → podatki i prowizje → Wasz zysk na sztuce (netto)"**
+  (`unit_profit_net`, §2g);
+- mini-wykres SVG trajektorii ceny (**BEZ powodów**), licznik zamówień 30d;
+- blok **„Potencjał hurtowy"**: zakres zysku przy hurcie (`wholesale_forecast {cost, profit,
+  uplift, range}`, discount 30–50%, §2g);
+- pole **„Twoja cena zakupu"**: kwota + `netto`/`brutto` + skąd (`dropshipping`/`hurt`) +
+  notatka; zapis debounced → przeliczenie marży NA ŻYWO. `previewMode` → `disabled`.
+
+**Co UKRYWAMY (nigdy do klienta):** `reason_pl`, `metrics`, `actor` decyzji, wszelki żargon
+reklamowy. **`price_history` z `wf2_price_events` = TYLKO `product_id/at/old_price/new_price/
+direction`** (bez powodów/metryk/aktora), limit 200. `orders_by_product` + `revenue` z
+`wf2_product_daily` (suma 30 dni). Wyliczone w edge z `settings`: `cost_effective`,
+`unit_profit_net`, `wholesale_forecast` (wzory §2g).
+
+**Akcja `set_client_cost` (NOWA w `wf2-portal`):** `previewMode`/readonly → **403**; walidacja
+`0 < x ≤ 100000`, `product ∈ projekt`; pola `client_cost_source ∈ {'dropship','wholesale'}`,
+`note ≤ 300 zn.`; zapis `wf2_products.client_cost_*` + `client_cost_set_at` + wpis
+`wf2_activities`. **NIE nadpisuje `cost_purchase`** — silnik/panel decydują (sanity-band → karta
+`client_cost_review` gdy poza pasmem, §2g). Typy body edge rozszerzone. **`CLIENT_WS`:** opis
+sekcji; **tracking `open_ceny` → whitelista `TRACK_ACTIONS`.**
+
+## 8. PARAMETRY — docelowy `settings.wf2_price_config` v3.2 (pełny zrzut)
+
+**Silnik czyta WYŁĄCZNIE klucze KANONICZNE v3.2** (waliduje `config_version=='3.2'` fail-closed,
+P8). Klucze DEPRECATED (niżej) są ignorowane. `engine_enabled`/`dry_run` PRZENOSZONE z obecnego
+configu (COALESCE) — dziś oba żyją w pilocie (enabled=true, dry_run=true; asercja migracji:
+dry_run MUSI zostać true). **ZASADA P7: żaden próg wyzwalający akcję auto nie żyje wyłącznie w prozie.**
+
+### KANONICZNE v3.2
 ```json
 {
-  "config_version": "3.1",
+  "config_version": "3.2",
   "engine_enabled": false,
   "dry_run": true,
   "autonomy_default": "propose",
@@ -553,7 +704,9 @@ bezpieczny). **ZASADA P7: żaden próg wyzwalający akcję auto nie żyje wyłą
   "decision_hour": 7,
   "no_raise_weekdays": [4, 5],
 
-  "winner_orders": 3,
+  "hard_min_orders": 5,
+
+  "winner_orders": 5,
   "winner_spend": 300,
   "winner_needs_cp2": true,
   "cp2_atc_rate": 5.0,
@@ -562,7 +715,7 @@ bezpieczny). **ZASADA P7: żaden próg wyzwalający akcję auto nie żyje wyłą
   "winner_orders_no_ads": 5,
   "min_prepaid_orders": 1,
 
-  "ramp_orders": 3,
+  "ramp_orders": 5,
   "ramp_spend": 150,
   "ramp_hold_days": 7,
   "ramp_wall_snap": true,
@@ -572,7 +725,8 @@ bezpieczny). **ZASADA P7: żaden próg wyzwalający akcję auto nie żyje wyłą
   "collapse_baseline_days": 7,
   "collapse_min_spend": 150,
   "collapse_max_days": 5,
-  "collapse_min_expected": 5,
+  "collapse_min_expected": 8,
+  "collapse_rel_floor": 0.6,
   "learning_grace_days": 3,
   "rollback_lock_days": 21,
   "q4_cpm_uplift": 40,
@@ -612,6 +766,7 @@ bezpieczny). **ZASADA P7: żaden próg wyzwalający akcję auto nie żyje wyłą
   "ads_min_spend_active": 1,
   "dq_unmapped_ratio": 0.2,
   "no_ads_window_days": 30,
+  "no_ads_max_steps": 2,
 
   "market_gap_flag": 0.75,
   "cooldown_days": 7,
@@ -621,11 +776,26 @@ bezpieczny). **ZASADA P7: żaden próg wyzwalający akcję auto nie żyje wyłą
   "cache_grace_min": 6,
   "max_price_changes_per_run": 5,
   "decision_ttl_days": 14,
-  "proposal_ttl_days": 7,
+  "proposal_ttl_days": 14,
   "paid_definition": "synced",
-  "client_price_consent": "notify"
+  "client_price_consent": "notify",
+
+  "cost_model": {
+    "vat_rate": 0.23,
+    "dropship_customs_fee_pln": 13,
+    "wholesale_discount": 0.40,
+    "wholesale_extras_pct": 0.15,
+    "wholesale_local_ship_pln": 14,
+    "client_cost_sanity_band": [0.4, 1.6],
+    "tax_model_default": "goods"
+  }
 }
 ```
+
+**NOWE/ZMIENIONE v3.2 (reszta kluczy v3.1 bez zmian):** `config_version 3.2` · `hard_min_orders 5`
+(§2f) · `winner_orders 3→5` · `ramp_orders 3→5` · `collapse_min_expected 5→8` · `collapse_rel_floor
+0.6` (§2d) · `no_ads_max_steps 2` (§4.3 S1) · `proposal_ttl_days 7→14` (S7 — kolizja expiry==delay
+reakcji Tomka, scen.12) · sekcja `cost_model` (§2g).
 
 ### DEPRECATED (silnik IGNORUJE; w seedzie mogą zostać jako ślad migracji — kod czyta tylko kanoniczne)
 - `max_step_pct 15` → zastąpione `auto_step_max_pct 20` (P6, redundancja).
@@ -748,15 +918,55 @@ Budowa F1–F3 + pilot dry-run = BEZPIECZNE od razu. `dry_run=false` DOPIERO gdy
   kasą → Meta/Google mogą pociągnąć STARĄ cenę do katalogu produktowego. Mityg.: JSON-LD BEZ
   `price` dopóki re-publish nieautomatyczny (P18c); gate `cena_panel` FAIL na `Offer.price`. **NOWE.**
 - **H. Config drift:** obecny seed = stare progi. Mityg. (P8): backup + COALESCE kill-switcha +
-  asercje `DO $$ RAISE` + walidacja `config_version=='3.1'` fail-closed. **ZAADRESOWANE.**
+  asercje `DO $$ RAISE` + walidacja `config_version=='3.2'` fail-closed (v3.2: backup do
+  `wf2_price_config_backup_v31`). **ZAADRESOWANE.**
+
+**Nowe / zaktualizowane ryzyka v3.2 (z symulacji MC silnika — `docs/zbuduje/assets/SIM-ENGINE-V3-WYNIKI.md`,
+12 scen. ×500; wszystkie ZAADRESOWANE poprawkami S1–S9):**
+- **I. No-ads RATCHET (P1.1, scen.10):** bez tokena Meta silnik windował cenę do 299 zł (28 zmian!)
+  przy optimum 100 — kontrybucja 1829 < baseline 2227 (Δ −399, GORZEJ niż „nic nie rób"). Mityg.
+  (S1, §4.3): `no_ads_max_steps 2` + cooldown + blok ściany + STOP gdy przychód 14d spada +
+  `hard_min_orders`. **ZAADRESOWANE.**
+- **J. UNCAPPED RAMP → overshoot + collapse (P1.2, scen.7):** karta winnera liczyła `rampTarget`
+  BEZ capu — skok 109,90→149,90 (+36%) przez klif 130 → collapse → rollback (round-trip Δ −501).
+  Mityg. (S2): clamp każdego kroku ≤ `auto_step_max_pct 20`; RAMP = SERIA kroków. **ZAADRESOWANE.**
+- **K. Martwe reżimy BASE/PROBE/HARVEST (P2.3):** cały portfel niskokosztowy kończył w RAMP/START
+  (BASE = dead code: `scale_base ≤ cena RAMP` → wieczny `hold_ramp`). Mityg. (S3): po rampie
+  przejście WPROST do PROBE. **ZAADRESOWANE.**
+- **L. Dziury w danych ads (P2.4, scen.9):** 5-dniowa luka → przełączenie na no-ads (ratchet) +
+  zepsuty baseline collapse (4,3 zmian, oscylacja 16%). Mityg. (S4): luka spend=0 ≥2 dni →
+  `hold_dq`, NIE no-ads. **ZAADRESOWANE.**
+- **M. FAŁSZYWY collapse na świeżym ad secie (P2.5, scen.8):** ~20% fałszywych rollbacków (weekend +
+  szum Poissona przy małej próbie baseline). Mityg. (S5): `collapse_min_expected 5→8` +
+  `collapse_rel_floor 0.6` + baseline SPEND-MATCHED. **ZAADRESOWANE.**
+- **N. Elastyczne winnery KRZYWDZONE przez jednokierunkowy ratchet RAMP (P3.6, scen.1):** Δ −117 vs
+  baseline; collapse łapie tylko katastrofy, nie łagodne straty 10–20%. Mityg. (S6): post-step
+  guard — po `opt_window_days` kontrybucja/zł < `keep_frac 0,80` → KARTA obniżki. **ZAADRESOWANE.**
+- **O. Latencja kart (P3.7, scen.12):** `proposal_ttl_days 7` + akcept w dniu 7 = expiry==delay
+  (karta wygasa zanim się wykona). Mityg. (S7): `proposal_ttl_days 7→14`. **ZAADRESOWANE.**
+- **P. BUG omijania locka/cooldownu przy WYKONANIU karty (P4.9, S8):** `wall_cross` zwracany PRZED
+  `cooldown`/`rollback_lock`, a sweep przy wykonaniu NIE re-sprawdzał guardraili — akcept karty
+  przebijał oba (nie eksplodowało tylko dzięki dedup, przypadek nie projekt). Mityg. (S8): sweep
+  przy WYKONANIU re-sprawdza `price_state='ok'`, cooldown, `rollback_lock_until`, `hard_min_orders`
+  — inaczej skip z notą (karta zostaje `accepted`, retry następnym sweepem). **ZAADRESOWANE.**
+- **R. COD-heavy `rollback` GUBIONY (P4.10, S9):** przy `col.state=='rollback' AND codH` warunek
+  `!codH` nie wchodził → produkt COD-heavy w prawdziwym collapse nie dostawał ANI auto-rollbacku
+  ANI karty. Mityg. (S9): dla `codH` w stanie `rollback` emituj KARTĘ `rollback`. **ZAADRESOWANE.**
+- **S. Freeze po auto-rollbacku (P4.11):** karta `winner_reco` (klucz bez poziomu) zużyta, produkt
+  zamrożony na starej cenie bez ponowienia próby. **ŚWIADOMA decyzja — freeze celowy** (chroni przed
+  oscylacją; ewentualny powrót winnera po `decision_ttl_days` z podniesioną poprzeczką = opcja W-later).
 
 ## ŹRÓDŁA
 Jak v1/v2.1 (research 18.07: pricing/repricing 2× Sonnet; runda v2.1: walidacja Monte Carlo
 `docs/zbuduje/assets/sim-drabinka.py` + 2× krytyk Opus pricing science/praktyk PL) + konspekt
 architektury „Ceny 3.0" (orkiestrator, 21.07 — decyzje wiążące A–I) + **runda v3.1: 2× krytyka
 (pricing science K1–K6/W7–W22 + praktyk PL #1–#23), audyt landingu, research prawny UOKiK/Meta —
-rozstrzygnięcia orkiestratora P1–P24** + fakty techniczne z 4 raportów agentów analizy repo
-tn-crm (21.07: schemat DB, edge functions, panel, sekwencje kierunkowe). Meta `adrules_library`
+rozstrzygnięcia orkiestratora P1–P24** + **runda v3.2 (21.07 wieczór): symulacja Monte Carlo
+SILNIKA (`docs/zbuduje/assets/SIM-ENGINE-V3-WYNIKI.md` — wierny port `wf2-price-engine`, 12 scen.
+×500 + scen.13 próg 3 vs 5) → poprawki S1–S9 + twardy próg 5 (dyrektywa Tomka); research podatkowy
+VAT/cło/IOSS/hurt (model kosztów tax-aware); analiza portalu klienta (zakładka „Ceny")** + fakty
+techniczne z 4 raportów agentów analizy repo tn-crm (21.07: schemat DB, edge functions, panel,
+sekwencje kierunkowe). Meta `adrules_library`
 (developers.facebook.com), commonthreadco.com (MER),
 admetrics.io (contribution margin), jetfuel.agency (Andromeda), dsers/simplebundles (multipak),
 olzalogistic/apaczka (COD PL), prawo.pl/UOKiK (dark patterns, kary), infor.pl (cena

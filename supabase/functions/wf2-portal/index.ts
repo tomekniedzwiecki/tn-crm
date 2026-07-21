@@ -83,7 +83,7 @@ const CLIENT_FIELD_WHITELIST: Record<string, string[]> = {
   ads_budzet:      ["amount", "method", "confirmation"],
 };
 
-const TRACK_ACTIONS = new Set(["portal_visit", "open_step", "media_view", "link_click"]);
+const TRACK_ACTIONS = new Set(["portal_visit", "open_step", "media_view", "link_click", "open_ceny"]);
 
 // tt: max 5 grywalnych/otwieralnych wpisów. Origin (bud_tt_products.tiktok_url) jako link
 // PIERWSZY (gwarantuje obecność), potem kuracja videos_curated.items (keep/PASS) wg kolejnosci.
@@ -115,6 +115,102 @@ function buildTiktoks(tt: Record<string, any> | undefined): Array<{ url: string;
   return out.slice(0, 5);
 }
 
+// ── CENY 3.2: model kosztów (SSOT = settings.wf2_price_config.cost_model; defaulty = spec §3) ──
+const COST_MODEL_DEFAULTS = {
+  vat_rate: 0.23,
+  dropship_customs_fee_pln: 13,
+  wholesale_discount: 0.40,
+  wholesale_extras_pct: 0.15,
+  wholesale_local_ship_pln: 14,
+  client_cost_sanity_band: [0.4, 1.6] as [number, number],
+};
+type CostModel = typeof COST_MODEL_DEFAULTS;
+
+function num(v: unknown): number { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+function r2(n: number): number { return Math.round(n * 100) / 100; }
+
+// price_phase → friendly label. FAIL-CLOSED: nieznana faza → „Cena aktywna" (NIGDY surowej fazy do klienta).
+function priceStatusLabel(phase: unknown): string {
+  const n = Number(phase);
+  if (n === 1 || n === 2) return "Cena startowa — testujemy popyt";
+  if (n === 3 || n === 4) return "Cena optymalizowana";
+  if (n === 5) return "Cena dojrzała";
+  if (n === 6) return "Cena ustalona";
+  return "Cena aktywna";
+}
+
+// Wylicza koszt efektywny + marżę netto + prognozę hurtu wg wzorów spec §3.
+// Wejście p: pola surowe produktu (price, cost_purchase, fees_pct, shipping_paid_by,
+// cost_shipping, price_phase + client_cost_purchase/is_net/source). Zwraca WYŁĄCZNIE
+// wartości bezpieczne dla klienta (bez price_phase/reason).
+function computeCeny(p: Record<string, unknown>, cm: CostModel) {
+  const vat = 1 + num(cm.vat_rate);                       // 1.23
+  const price = num(p.price);
+  const feesPct = num(p.fees_pct);
+  const shopPaysShip = p.shipping_paid_by === "shop";
+  const shipAdd = shopPaysShip ? num(p.cost_shipping) : 0;
+  const aliBrutto = num(p.cost_purchase);                 // referencja dropship (brutto Ali)
+
+  // ── BAZA kosztu: cena klienta (jeśli w paśmie sanity) MA PRIORYTET ──
+  const band = Array.isArray(cm.client_cost_sanity_band) ? cm.client_cost_sanity_band : [0.4, 1.6];
+  const cc = num(p.client_cost_purchase);
+  const hasClient = cc > 0;
+  const isNet = p.client_cost_is_net === true;
+  const clientSource = p.client_cost_source === "wholesale" ? "wholesale" : "dropship";
+  // pasmo 0.4–1.6 × cost_purchase; gdy cost_purchase puste → akceptuj (nie ma z czym porównać)
+  const inBand = hasClient && (aliBrutto <= 0 || (cc >= num(band[0]) * aliBrutto && cc <= num(band[1]) * aliBrutto));
+
+  let base: number;
+  let costSource: "dropship" | "wholesale";
+  if (hasClient && inBand) {
+    costSource = clientSource;
+    if (clientSource === "dropship") base = isNet ? cc * vat : cc;   // brutto (VAT nieodliczalny)
+    else base = isNet ? cc : cc / vat;                               // netto (VAT odliczalny)
+  } else {
+    costSource = "dropship";
+    base = aliBrutto;                                                // fallback: cost_purchase (brutto Ali)
+  }
+  const customsAdd = costSource === "dropship" ? num(cm.dropship_customs_fee_pln) : 0;
+  const effective = base + shipAdd + customsAdd;
+
+  const hasPrice = price > 0;
+  const saleNet = hasPrice ? price / vat : 0;
+  const feeNet = hasPrice ? (price * (feesPct / 100)) / vat : 0;
+  const unitProfitNet = hasPrice ? saleNet - effective - feeNet : null;
+
+  // ── prognoza HURTU (informacyjna) — spec §3: ZAWSZE od cost_ali_brutto (cost_purchase),
+  //    spójnie z panelem ceny.html (wholesaleForecast) i wzorem est_cost_hurt_net. ──
+  const grossRef = aliBrutto;
+  const localShip = shopPaysShip ? num(cm.wholesale_local_ship_pln) : 0;
+  const extras = 1 + num(cm.wholesale_extras_pct);
+  const profitAt = (discount: number): number => {
+    const costHurtNet = (grossRef / vat) * (1 - discount) * extras;
+    return saleNet - costHurtNet - feeNet - localShip;
+  };
+  let wholesale_forecast:
+    | null
+    | { cost_net: number; profit: number; uplift: number; profit_lo: number; profit_hi: number } = null;
+  if (hasPrice && grossRef > 0 && unitProfitNet != null) {
+    const disc = num(cm.wholesale_discount);
+    const costMid = (grossRef / vat) * (1 - disc) * extras + localShip;
+    const profitMid = profitAt(disc);
+    wholesale_forecast = {
+      cost_net: r2(costMid),
+      profit: r2(profitMid),
+      uplift: r2(profitMid - unitProfitNet),
+      profit_lo: r2(profitAt(0.30)),   // pesymistycznie (mniejszy rabat = wyższy koszt = niższy zysk)
+      profit_hi: r2(profitAt(0.50)),   // optymistycznie
+    };
+  }
+
+  return {
+    cost_effective: r2(effective),
+    unit_profit_net: unitProfitNet == null ? null : r2(unitProfitNet),
+    price_status_label: priceStatusLabel(p.price_phase),
+    wholesale_forecast,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -127,6 +223,8 @@ Deno.serve(async (req: Request) => {
     token?: string; password?: string; action?: string; preview?: boolean;
     step_key?: string; fields?: Record<string, unknown>; done?: boolean;
     events?: Array<{ action?: string; description?: string; product_id?: string }>;
+    // CENY 3.2 — akcja set_client_cost
+    product_id?: string; amount?: number | null; is_net?: boolean; source?: string; note?: string;
   };
   try { body = JSON.parse(raw); } catch { return json({ error: "bad_request" }, 400); }
 
@@ -326,20 +424,91 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, status: upd.status });
   }
 
+  // ════════════════════════ SET_CLIENT_COST (CENY 3.2) ══════════════════════
+  // Klient podaje SWOJĄ cenę zakupu (najważniejsze wejście do kalkulacji marży).
+  // amount null/0 = wyczyść (klient się rozmyślił). Zwraca przeliczone cost_effective +
+  // unit_profit_net (front pokazuje od razu). Podwójny gate: produkt MUSI należeć do projektu.
+  if (action === "set_client_cost") {
+    if (readonly) return json({ error: "podgląd — tylko odczyt" }, 403);
+    const pid = String(body.product_id || "").trim();
+    if (!/^[0-9a-f-]{36}$/i.test(pid)) return json({ error: "bad_product" }, 400);
+
+    const { data: prod } = await sb.from("wf2_products")
+      .select("id, price, cost_purchase, fees_pct, shipping_paid_by, cost_shipping, price_phase")
+      .eq("id", pid).eq("project_id", p.id).maybeSingle();
+    if (!prod) return json({ error: "not_found" }, 404);
+
+    // cost_model z configu (defaulty gdy migracja 3.2 jeszcze bez sekcji cost_model)
+    let costModel: CostModel = { ...COST_MODEL_DEFAULTS };
+    try {
+      const { data: cfgRow } = await sb.from("settings").select("value").eq("key", "wf2_price_config").maybeSingle();
+      const raw = (cfgRow as { value?: unknown } | null)?.value;
+      const cfg = typeof raw === "string" ? JSON.parse(raw) : (raw && typeof raw === "object" ? raw as Record<string, unknown> : null);
+      const cm = cfg && typeof cfg.cost_model === "object" ? cfg.cost_model as Record<string, unknown> : null;
+      if (cm) costModel = { ...COST_MODEL_DEFAULTS, ...cm } as CostModel;
+    } catch { /* defaulty */ }
+
+    const rawAmount = body.amount;
+    const clearing = rawAmount == null || Number(rawAmount) === 0;
+
+    let upd: Record<string, unknown>;
+    let ccInput: Record<string, unknown>;
+    let logDesc: string;
+    if (clearing) {
+      upd = {
+        client_cost_purchase: null, client_cost_is_net: null,
+        client_cost_source: "dropship", client_cost_note: null, client_cost_set_at: null,
+      };
+      ccInput = { client_cost_purchase: null, client_cost_is_net: null, client_cost_source: "dropship" };
+      logDesc = `Klient wyczyścił swoją cenę zakupu [product:${pid}]`;
+    } else {
+      const amount = r2(Number(rawAmount));                     // do groszy
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 100000) {
+        return json({ error: "validation", messages: ["Podaj kwotę od 0,01 do 100000 zł."] }, 400);
+      }
+      const isNet = body.is_net === true;
+      const source = body.source === "wholesale" ? "wholesale" : "dropship";
+      const note = String(body.note == null ? "" : body.note).trim().slice(0, 300);
+      upd = {
+        client_cost_purchase: amount, client_cost_is_net: isNet,
+        client_cost_source: source, client_cost_note: note || null, client_cost_set_at: new Date().toISOString(),
+      };
+      ccInput = { client_cost_purchase: amount, client_cost_is_net: isNet, client_cost_source: source };
+      logDesc = `Klient podał cenę zakupu ${amount.toFixed(2)} zł (${source === "wholesale" ? "hurt" : "dropshipping"}, ${isNet ? "netto" : "brutto"}) [product:${pid}]`;
+    }
+
+    const { error: upErr } = await sb.from("wf2_products").update(upd).eq("id", pid).eq("project_id", p.id);
+    if (upErr) return json({ error: "save_failed" }, 500);
+
+    await sb.from("wf2_activities").insert({
+      project_id: p.id, actor: "client", action: "client_cost_set", description: logDesc,
+    });
+
+    const ceny = computeCeny({ ...prod, ...ccInput }, costModel);
+    return json({ ok: true, cost_effective: ceny.cost_effective, unit_profit_net: ceny.unit_profit_net });
+  }
+
   // ════════════════════════ DEFAULT: pełny stan (sanityzowany) ══════════════
-  const [defsQ, stepsQ, prodsQ, artsQ, ordQ] = await Promise.all([
+  const [defsQ, stepsQ, prodsQ, artsQ, ordQ, priceEvQ, cfgQ] = await Promise.all([
     sb.from("wf2_step_defs")
       .select("key, stage, stage_label, label, icon, sort, owner, scope, milestone_label, sub_of")
       .eq("active", true).order("stage").order("sort"),
     sb.from("wf2_steps").select("step_key, product_id, status, completed_at, data")
       .eq("project_id", p.id).range(0, 999),
     sb.from("wf2_products")
-      .select("id, name, slug, status, cover_url, unit_profit, price, sort, platform_page_url, supplier_url, tt_product_id")
+      .select("id, name, slug, status, cover_url, unit_profit, price, sort, platform_page_url, supplier_url, tt_product_id, cost_purchase, fees_pct, shipping_paid_by, cost_shipping, price_phase, client_cost_purchase, client_cost_is_net, client_cost_source, client_cost_note, client_cost_set_at")
       .eq("project_id", p.id).order("sort"),
     sb.from("wf2_artifacts")
       .select("id, product_id, step_key, kind, url, meta, created_at")
       .eq("project_id", p.id).order("created_at", { ascending: false }).limit(500),
     sb.from("wf2_orders").select("id", { count: "exact", head: true }).eq("project_id", p.id),
+    // CENY 3.2: historia cen (TYLKO applied/confirmed = realne zmiany; NIGDY reason_pl/metrics/actor/trigger)
+    sb.from("wf2_price_events")
+      .select("product_id, at, old_price, new_price, direction")
+      .eq("project_id", p.id).in("status", ["applied", "confirmed"])
+      .order("at", { ascending: true }).limit(200),
+    // CENY 3.2: config → cost_model
+    sb.from("settings").select("value").eq("key", "wf2_price_config").maybeSingle(),
   ]);
 
   const defs = (defsQ.data || []) as Array<Record<string, any>>;
@@ -392,12 +561,59 @@ Deno.serve(async (req: Request) => {
       .in("id", ttIds);
     for (const t of (ttRows || []) as Array<Record<string, any>>) ttMap[t.id] = t;
   }
-  const products = prods.map((x) => ({
-    id: x.id, name: x.name, slug: x.slug, status: x.status, cover_url: x.cover_url,
-    unit_profit: x.unit_profit, price: x.price, sort: x.sort,
-    platform_page_url: x.platform_page_url, supplier_url: x.supplier_url,
-    tiktoks: buildTiktoks(x.tt_product_id ? ttMap[x.tt_product_id] : undefined),
-  }));
+  // ── CENY 3.2: cost_model z config, historia cen, zamówienia 30 dni ─────────
+  let costModel: CostModel = { ...COST_MODEL_DEFAULTS };
+  try {
+    const raw = (cfgQ.data as { value?: unknown } | null)?.value;
+    const cfg = typeof raw === "string" ? JSON.parse(raw) : (raw && typeof raw === "object" ? raw as Record<string, unknown> : null);
+    const cm = cfg && typeof cfg.cost_model === "object" ? cfg.cost_model as Record<string, unknown> : null;
+    if (cm) costModel = { ...COST_MODEL_DEFAULTS, ...cm } as CostModel;
+  } catch { /* defaulty gdy migracja 3.2 jeszcze bez cost_model */ }
+
+  const histByProd: Record<string, Array<{ at: string; old_price: number | null; new_price: number | null; direction: string | null }>> = {};
+  for (const ev of ((priceEvQ.data || []) as Array<Record<string, any>>)) {
+    const pid = String(ev.product_id);
+    (histByProd[pid] ||= []).push({
+      at: ev.at,
+      old_price: ev.old_price == null ? null : num(ev.old_price),
+      new_price: ev.new_price == null ? null : num(ev.new_price),
+      direction: ev.direction || null,
+    });
+  }
+
+  const prodIds = prods.map((x) => x.id).filter(Boolean);
+  const orders30ByProd: Record<string, number> = {};
+  if (prodIds.length) {
+    const since30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const { data: daily } = await sb.from("wf2_product_daily")
+      .select("product_id, date, orders, revenue").in("product_id", prodIds).gte("date", since30);
+    for (const row of ((daily || []) as Array<Record<string, any>>)) {
+      const pid = String(row.product_id);
+      orders30ByProd[pid] = (orders30ByProd[pid] || 0) + num(row.orders);
+    }
+  }
+
+  const products = prods.map((x) => {
+    const ceny = computeCeny(x, costModel);
+    return {
+      id: x.id, name: x.name, slug: x.slug, status: x.status, cover_url: x.cover_url,
+      unit_profit: x.unit_profit, price: x.price, sort: x.sort,
+      platform_page_url: x.platform_page_url, supplier_url: x.supplier_url,
+      tiktoks: buildTiktoks(x.tt_product_id ? ttMap[x.tt_product_id] : undefined),
+      // ── CENY 3.2 (wszystko wyliczone/whitelistowane; NIGDY price_phase/reason surowo) ──
+      cost_effective: ceny.cost_effective,
+      unit_profit_net: ceny.unit_profit_net,
+      price_status_label: ceny.price_status_label,
+      wholesale_forecast: ceny.wholesale_forecast,
+      price_history: histByProd[String(x.id)] || [],
+      orders_30d: orders30ByProd[String(x.id)] || 0,
+      client_cost_purchase: x.client_cost_purchase == null ? null : num(x.client_cost_purchase),
+      client_cost_is_net: x.client_cost_is_net === true,
+      client_cost_source: x.client_cost_source === "wholesale" ? "wholesale" : "dropship",
+      client_cost_note: x.client_cost_note || null,
+      client_cost_set_at: x.client_cost_set_at || null,
+    };
+  });
 
   // artefakty: tylko oglądalne media (obraz/wideo), publiczne, bez pracy AI/QA; meta→{viewport}
   const artifacts = ((artsQ.data || []) as Array<Record<string, any>>)

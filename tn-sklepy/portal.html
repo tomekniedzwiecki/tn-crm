@@ -170,6 +170,38 @@
         /* Portfel — sticky pierwsza kolumna na mobile */
         .mx-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
         #matrix-head th:first-child, #matrix-body td:first-child { position:sticky; left:0; background:#0a0a0a; z-index:1; }
+        /* ── Ceny i zyski ── */
+        .ceny-card { padding:18px 20px; }
+        .ceny-top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .ceny-name { color:#fff; font-size:15.5px; font-weight:600; letter-spacing:-.01em; flex:1 1 auto; min-width:120px; }
+        .ceny-price { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600; color:#fff; font-variant-numeric:tabular-nums; }
+        .ceny-badge { font-size:11px; color:#52a8ff; background:rgba(0,112,243,.1); border:1px solid rgba(0,112,243,.3); border-radius:99px; padding:4px 11px; white-space:nowrap; }
+        .ceny-break { margin-top:16px; padding-top:14px; border-top:1px solid #161616; display:flex; flex-direction:column; gap:7px; }
+        .ceny-break-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; font-size:13px; color:#a1a1aa; }
+        .ceny-break-row .mono { font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; color:#c4c4ca; white-space:nowrap; }
+        .ceny-break-row.total { margin-top:5px; padding-top:9px; border-top:1px solid #161616; font-size:14px; color:#fff; font-weight:500; }
+        .ceny-break-row.total .mono { font-size:15px; font-weight:600; }
+        .ceny-pos { color:#62c073 !important; } .ceny-neg { color:#f26d78 !important; }
+        .ceny-meta { display:flex; align-items:center; gap:16px; margin-top:16px; flex-wrap:wrap; }
+        .ceny-spark { border:1px solid #1a1a1a; border-radius:8px; background:#080808; flex-shrink:0; }
+        .ceny-orders { color:#8a8a93; font-size:12.5px; } .ceny-orders b { color:#d4d4d8; font-variant-numeric:tabular-nums; }
+        .ceny-hurt { margin-top:16px; background:rgba(69,165,87,.06); border:1px solid rgba(69,165,87,.22); border-radius:10px; padding:13px 15px; color:#bfe0c8; font-size:13px; line-height:1.55; }
+        .ceny-hurt b { color:#8fe0a3; }
+        .ceny-form { margin-top:18px; padding-top:16px; border-top:1px solid #161616; }
+        .ceny-form-row { display:flex; gap:10px; align-items:stretch; flex-wrap:wrap; }
+        .ceny-amount { flex:1 1 150px; min-width:130px; }
+        .ceny-seg { display:inline-flex; border:1px solid #2a2a2e; border-radius:8px; overflow:hidden; flex-shrink:0; }
+        .ceny-seg button { background:#0a0a0a; color:#8a8a93; border:none; padding:0 15px; font-size:13px; cursor:pointer; white-space:nowrap; min-height:44px; }
+        .ceny-seg button + button { border-left:1px solid #2a2a2e; }
+        .ceny-seg button.sel { background:#18181b; color:#fff; }
+        .ceny-seg-wide { display:flex; margin-top:10px; width:100%; } .ceny-seg-wide button { flex:1; padding:10px 10px; }
+        .ceny-src-note { margin-top:10px; }
+        .ceny-clear { margin-top:12px; background:none; border:none; color:#71717a; font-size:12.5px; cursor:pointer; text-decoration:underline; padding:0; }
+        .ceny-clear:hover { color:#a1a1aa; }
+        .ceny-clear:disabled { opacity:.5; cursor:default; text-decoration:none; }
+        .ceny-note-small { margin-top:12px; color:#5c5c64; font-size:11.5px; line-height:1.55; }
+        .ceny-seg button:disabled { opacity:.5; cursor:default; }
+        @media (max-width:560px){ .ceny-form-row { flex-direction:column; } .ceny-seg { width:100%; } .ceny-seg button { flex:1; } }
         /* Mobile: pola 16px = brak auto-zoomu iOS; główne przyciski pełnej szerokości */
         @media (max-width:560px){
             input[type=password], input[type=text], input[type=email], textarea { font-size:16px; }
@@ -300,6 +332,13 @@
                 </div>
                 <div id="matrix-empty" class="hidden py-8 text-center text-zinc-500 text-xs">Produkty pojawią się tutaj, gdy tylko je dobierzemy.</div>
             </div>
+        </section>
+
+        <!-- Wasze ceny i zyski -->
+        <section id="sec-ceny" class="hidden">
+            <div class="shead"><h2>Wasze ceny i zyski</h2><span class="scount" id="ceny-count"></span></div>
+            <p class="sdesc">Ile kosztuje produkt, ile zostaje Wam na czysto z każdej sprzedaży i jak zmieniała się cena. Podaj swoją cenę zakupu — policzymy Wasz zysk co do grosza.</p>
+            <div id="ceny-list" style="display:flex;flex-direction:column;gap:16px"></div>
         </section>
 
         <div class="foot">
@@ -590,6 +629,14 @@
             id: p.id, name: p.name, slug: p.slug, status: p.status, cover_url: p.cover_url,
             unit_profit: p.unit_profit, price: p.price, sort: p.sort,
             platform_page_url: p.platform_page_url, supplier_url: p.supplier_url, tiktoks: p.tiktoks || [],
+            // ── CENY 3.2 (wyliczone po stronie edge) ──
+            cost_effective: p.cost_effective, unit_profit_net: p.unit_profit_net,
+            price_status_label: p.price_status_label, wholesale_forecast: p.wholesale_forecast || null,
+            price_history: p.price_history || [], orders_30d: p.orders_30d || 0,
+            client_cost_purchase: (p.client_cost_purchase != null ? p.client_cost_purchase : null),
+            client_cost_is_net: p.client_cost_is_net === true,
+            client_cost_source: p.client_cost_source || 'dropship',
+            client_cost_note: p.client_cost_note || null,
         }));
         P.artifacts = (data.artifacts || []).map(a => ({
             id: a.id, product_id: a.product_id || null, step_key: a.step_key, kind: a.kind,
@@ -642,6 +689,7 @@
         renderHomeCard();
         renderMerchantPanel();
         renderStageNav();
+        renderCeny();
         if (pr.deadline_at) { const d = new Date(pr.deadline_at); if (!isNaN(d)) $('p-deadline').textContent = 'Planowane domknięcie: ' + d.toLocaleDateString('pl-PL'); }
         $('tv-brand').textContent = pr.name || pr.customer_name || 'Wasz sklep';
     }
@@ -760,6 +808,190 @@
                 <div class="hc-s">Twój sklep działa na platformie. Dostęp do panelu przekażę Ci osobno.</div></div>
             </div></div>`;
         }
+    }
+
+    // ── Ceny i zyski ─────────────────────────────────────────────────────────
+    // Sekcja pokazuje TYLKO produkty z ceną i statusem live/test/winner/skala.
+    // Ton ciepły, zero żargonu (BEROAS/CPA/spend/faza = zakazane). Wszystkie liczby
+    // przychodzą wyliczone z edge; „Twoja cena zakupu" zapisuje się przez set_client_cost.
+    const CENY_STATUSES = new Set(['live', 'test', 'winner', 'skala']);
+    const cenyState = {};          // id → { net:'brutto'|'netto', src:'dropship'|'wholesale' }
+    const cenySaveTimers = {};
+    let cenyTrackObs = null, cenyTracked = false;
+
+    function cenyProducts() {
+        return (P.products || []).filter(p => CENY_STATUSES.has(p.status) && Number(p.price) > 0)
+            .sort((a, b) => (a.sort || 0) - (b.sort || 0));
+    }
+    function fmtZl(n) { return (Number(n) || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function plProd(n) { return n === 1 ? 'produkt' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'produkty' : 'produktów'; }
+
+    // mini-wykres trajektorii ceny (prosty stepline, 240×60, bez legendy technicznej)
+    function cenySpark(history, price) {
+        const W = 240, H = 60, pad = 8;
+        let pts = [];
+        if (Array.isArray(history) && history.length) {
+            const first = history[0];
+            const start = (first.old_price != null ? first.old_price : first.new_price);
+            if (start != null) pts.push(Number(start));
+            history.forEach(ev => { if (ev.new_price != null) pts.push(Number(ev.new_price)); });
+        }
+        if (pts.length < 2) { const v = Number(price) || 0; pts = [v, v]; }
+        const min = Math.min(...pts), max = Math.max(...pts), span = (max - min) || 1, n = pts.length;
+        const x = i => pad + (W - 2 * pad) * (n === 1 ? 0 : i / (n - 1));
+        const y = v => (max === min) ? H / 2 : (H - pad) - (H - 2 * pad) * ((v - min) / span);
+        let d = `M ${x(0).toFixed(1)} ${y(pts[0]).toFixed(1)}`;
+        for (let i = 1; i < n; i++) d += ` L ${x(i).toFixed(1)} ${y(pts[i - 1]).toFixed(1)} L ${x(i).toFixed(1)} ${y(pts[i]).toFixed(1)}`;
+        return `<svg class="ceny-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="#52a8ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+    }
+
+    // rozbicie „Cena → koszt → podatki → zysk" (odejmowanie zawsze się domyka: taxes = cena − koszt − zysk)
+    function cenyBreakHtml(p) {
+        const price = Number(p.price) || 0;
+        const cost = Number(p.cost_effective) || 0;
+        const profit = (p.unit_profit_net == null) ? null : Number(p.unit_profit_net);
+        const taxes = (profit == null) ? null : (price - cost - profit);
+        const srcLbl = (p.client_cost_purchase != null)
+            ? (p.client_cost_source === 'wholesale' ? 'hurt' : 'dropshipping')
+            : 'u dostawcy';
+        const profCls = (profit == null) ? '' : (profit >= 0 ? 'ceny-pos' : 'ceny-neg');
+        return `
+            <div class="ceny-break-row"><span>Cena dla klienta</span><span class="mono">${fmtZl(price)} zł</span></div>
+            <div class="ceny-break-row"><span>− koszt zakupu (${escapeHtml(srcLbl)})</span><span class="mono">−${fmtZl(cost)} zł</span></div>
+            <div class="ceny-break-row"><span>− podatki i prowizje</span><span class="mono">${taxes == null ? '—' : '−' + fmtZl(taxes) + ' zł'}</span></div>
+            <div class="ceny-break-row total"><span>= Wasz zysk na sztuce</span><span class="mono ${profCls}">${profit == null ? '—' : fmtZl(profit) + ' zł netto'}</span></div>`;
+    }
+    function cenyHurtHtml(p) {
+        const wf = p.wholesale_forecast;
+        if (!wf || !(Number(wf.uplift) > 0)) return '';
+        return `<div class="ceny-hurt">💡 <b>Potencjał hurtowy:</b> kupując hurtowo (zwykle 30–50% taniej), zysk na sztuce mógłby wynieść od <b>${fmtZl(wf.profit_lo)} zł</b> do <b>${fmtZl(wf.profit_hi)} zł</b>.</div>`;
+    }
+
+    function renderCeny() {
+        const sec = $('sec-ceny');
+        const list = cenyProducts();
+        if (!list.length) { sec.classList.add('hidden'); $('ceny-list').innerHTML = ''; return; }
+        sec.classList.remove('hidden');
+        $('ceny-count').textContent = list.length + ' ' + plProd(list.length);
+        const dis = previewMode ? 'disabled' : '';
+        $('ceny-list').innerHTML = list.map(p => {
+            const id = p.id;
+            cenyState[id] = { net: p.client_cost_is_net ? 'netto' : 'brutto', src: p.client_cost_source === 'wholesale' ? 'wholesale' : 'dropship' };
+            const st = cenyState[id];
+            const amountVal = (p.client_cost_purchase != null) ? String(p.client_cost_purchase) : '';
+            const noteVal = p.client_cost_note || '';
+            const seg = (kind, v, sel) => `class="${sel ? 'sel' : ''}" data-seg="${kind}" data-v="${v}"`;
+            return `<div class="ceny-card card" id="ceny-card-${id}">
+                <div class="ceny-top">
+                    <div class="ceny-name">${escapeHtml(p.name || 'Produkt')}</div>
+                    <div class="ceny-price">${fmtZl(p.price)} zł</div>
+                    <span class="ceny-badge">${escapeHtml(p.price_status_label || 'Cena aktywna')}</span>
+                </div>
+                <div class="ceny-break" id="ceny-break-${id}">${cenyBreakHtml(p)}</div>
+                <div class="ceny-meta">
+                    ${cenySpark(p.price_history, p.price)}
+                    <div class="ceny-orders">Zamówienia (30 dni): <b>${Number(p.orders_30d) || 0}</b></div>
+                </div>
+                <div id="ceny-hurt-${id}">${cenyHurtHtml(p)}</div>
+                <div class="ceny-form">
+                    <label class="lbl" style="margin-top:0">Twoja cena zakupu</label>
+                    <div class="ceny-form-row">
+                        <input type="text" inputmode="decimal" class="ceny-amount" data-ceny-amount="${id}" value="${escapeHtml(amountVal)}" placeholder="np. 24,50" oninput="queueCenySave('${id}')" ${dis}>
+                        <div class="ceny-seg">
+                            <button type="button" ${seg('net', 'brutto', st.net === 'brutto')} onclick="cenySeg('${id}','net','brutto')" ${dis}>brutto</button>
+                            <button type="button" ${seg('net', 'netto', st.net === 'netto')} onclick="cenySeg('${id}','net','netto')" ${dis}>netto</button>
+                        </div>
+                    </div>
+                    <div class="ceny-seg ceny-seg-wide">
+                        <button type="button" ${seg('src', 'dropship', st.src === 'dropship')} onclick="cenySeg('${id}','src','dropship')" ${dis}>AliExpress / dropshipping</button>
+                        <button type="button" ${seg('src', 'wholesale', st.src === 'wholesale')} onclick="cenySeg('${id}','src','wholesale')" ${dis}>Hurt / import</button>
+                    </div>
+                    <input type="text" class="ceny-src-note" data-ceny-note="${id}" value="${escapeHtml(noteVal)}" placeholder="Skąd kupujesz? (opcjonalnie)" maxlength="300" oninput="queueCenySave('${id}')" ${dis}>
+                    <button type="button" class="ceny-clear" onclick="cenyClear('${id}')" ${dis}>Wyczyść</button>
+                </div>
+                <div class="ceny-note-small">Podana cena zakupu jest dla nas najważniejsza — użyjemy jej w kalkulacjach. Duże odchylenia potwierdzamy ręcznie.</div>
+            </div>`;
+        }).join('');
+        observeCeny();
+    }
+
+    // tracking open_ceny — raz, przy pierwszym scrollu do sekcji
+    function observeCeny() {
+        if (previewMode || cenyTracked || cenyTrackObs) return;
+        const el = $('sec-ceny'); if (!el || el.classList.contains('hidden')) return;
+        try {
+            cenyTrackObs = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting && !cenyTracked) {
+                        cenyTracked = true; track('open_ceny', 'Wasze ceny i zyski');
+                        if (cenyTrackObs) { cenyTrackObs.disconnect(); cenyTrackObs = null; }
+                    }
+                });
+            }, { threshold: 0.25 });
+            cenyTrackObs.observe(el);
+        } catch (e) {}
+    }
+
+    function cenySeg(id, kind, val) {
+        if (previewMode) return;
+        (cenyState[id] = cenyState[id] || { net: 'brutto', src: 'dropship' })[kind] = val;
+        const card = $('ceny-card-' + id);
+        if (card) card.querySelectorAll('button[data-seg="' + kind + '"]').forEach(b => b.classList.toggle('sel', b.getAttribute('data-v') === val));
+        queueCenySave(id);
+    }
+    function queueCenySave(id) {
+        if (previewMode) return;
+        clearTimeout(cenySaveTimers[id]);
+        cenySaveTimers[id] = setTimeout(() => saveCeny(id), 800);
+    }
+    async function saveCeny(id) {
+        if (previewMode) return;
+        const amtEl = document.querySelector('[data-ceny-amount="' + id + '"]');
+        const noteEl = document.querySelector('[data-ceny-note="' + id + '"]');
+        const st = cenyState[id] || { net: 'brutto', src: 'dropship' };
+        const raw = (amtEl ? amtEl.value : '').trim().replace(/\s/g, '').replace(',', '.');
+        let amount = null;
+        if (raw !== '') { const nn = Number(raw); if (!isFinite(nn) || nn <= 0) return; amount = nn; }  // niepoprawna kwota → nie zapisuj
+        const note = noteEl ? noteEl.value.trim().slice(0, 300) : '';
+        try {
+            const r = await api({ token, password: currentPw, action: 'set_client_cost', product_id: id, amount, is_net: st.net === 'netto', source: st.src, note });
+            if (r.status < 300 && r.json && r.json.ok) {
+                applyCenySaved(id, r.json.cost_effective, r.json.unit_profit_net, amount, st, note);
+                showToast('Zapisano — przeliczyliśmy Wasz zysk', 'success');
+            } else { showToast('Nie udało się zapisać — spróbuj ponownie', 'error'); }
+        } catch (e) { showToast('Chwilowa przerwa techniczna — spróbuj za moment', 'error'); }
+    }
+    async function cenyClear(id) {
+        if (previewMode) return;
+        clearTimeout(cenySaveTimers[id]);
+        const amtEl = document.querySelector('[data-ceny-amount="' + id + '"]');
+        const noteEl = document.querySelector('[data-ceny-note="' + id + '"]');
+        if (amtEl) amtEl.value = '';
+        if (noteEl) noteEl.value = '';
+        cenyState[id] = { net: 'brutto', src: 'dropship' };
+        const card = $('ceny-card-' + id);
+        if (card) {
+            card.querySelectorAll('button[data-seg="net"]').forEach(b => b.classList.toggle('sel', b.getAttribute('data-v') === 'brutto'));
+            card.querySelectorAll('button[data-seg="src"]').forEach(b => b.classList.toggle('sel', b.getAttribute('data-v') === 'dropship'));
+        }
+        try {
+            const r = await api({ token, password: currentPw, action: 'set_client_cost', product_id: id, amount: null });
+            if (r.status < 300 && r.json && r.json.ok) {
+                applyCenySaved(id, r.json.cost_effective, r.json.unit_profit_net, null, cenyState[id], '');
+                showToast('Wyczyszczono', 'success');
+            } else { showToast('Nie udało się zapisać — spróbuj ponownie', 'error'); }
+        } catch (e) { showToast('Chwilowa przerwa techniczna — spróbuj za moment', 'error'); }
+    }
+    // po zapisie: podmień TYLKO rozbicie (cost_effective/unit_profit_net z odpowiedzi) — inputy zostają nietknięte
+    function applyCenySaved(id, costEff, profitNet, amount, st, note) {
+        const p = (P.products || []).find(x => x.id === id); if (!p) return;
+        p.cost_effective = costEff;
+        p.unit_profit_net = profitNet;
+        p.client_cost_purchase = amount;
+        p.client_cost_is_net = st.net === 'netto';
+        p.client_cost_source = st.src;
+        p.client_cost_note = note || null;
+        const br = $('ceny-break-' + id); if (br) br.innerHTML = cenyBreakHtml(p);
     }
 
     // ── Ekran „Twoje zadania" (SPA) ──────────────────────────────────────────
