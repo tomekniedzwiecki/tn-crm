@@ -2384,6 +2384,9 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             if (project.access_mail_sent_at) {
                 const d = new Date(project.access_mail_sent_at);
                 lines.push(`<div class="text-[#62c073]"><i class="ph ph-envelope-simple-open"></i> Mail z dostępem: utworzono draft ${isNaN(d) ? '' : d.toLocaleDateString('pl-PL')}</div>`);
+            } else if (typeof stepFor === 'function' && stepFor('marka', null)?.status === 'done') {
+                // marka gotowa, a dostęp jeszcze nie wysłany → od tego momentu klient może zrobić wszystkie swoje zadania
+                lines.push(`<div class="text-[#f5b955]"><i class="ph ph-lightbulb"></i> Marka gotowa — dobry moment, by wysłać klientowi dostęp.</div>`);
             }
             box.innerHTML = lines.join('') || '<div class="text-zinc-700">Mail z dostępem jeszcze nie wysłany.</div>';
             // ostatnie wejście klienta do panelu (dedykowane zapytanie — portal_visit bywa poza 30 ostatnimi aktywnościami)
