@@ -1,6 +1,6 @@
 # PLAN: Szczypta Magii — /sklep (Zbuduję)
 
-> **Data:** 2026-07-08 · **Cel:** podnieść ekscytację i skłonność do **impulsywnej** wpłaty rezerwacji 500 zł u osób marzących o biznesie online (AWE).
+> **Data:** 2026-07-08 · **Cel:** podnieść ekscytację i skłonność do **impulsywnej** wpłaty rezerwacji 100 zł u osób marzących o biznesie online (AWE).
 > **Metoda:** audyt 6 warstw lejka (6 równoległych agentów, 2026-07-08) + weryfikacja lokalizacji w źródle.
 > **Status:** mapa wdrożeń. Fundament (nadrzędna misja) WDROŻONY w bud-chat 2026-07-08 — patrz §0.5; pozostałe fazy (QW/SL/EM/RS) czekają na decyzję.
 > **SSOT nadrzędny:** [`LEJEK-V2-PLAN.md`](./LEJEK-V2-PLAN.md) — guardraile poniżej są twarde.
@@ -10,7 +10,7 @@
 
 ## 0. Guardraile Lejka V2 — NIE łamać
 
-- **[V2.1, 2026-07-10; obniżka 2026-07-21] CENA BUDOWY JAWNA: 4900 zł (wcześniej 9400), jedna i stała** (500 zł zwrotne wliczone), podawana proaktywnie w turze domknięcia z kotwicą wartości (u agencji 25–40 tys./rok). Zero symulacji zysków.
+- **[V2.1, 2026-07-10; obniżka 2026-07-21] CENA BUDOWY JAWNA: 4900 zł (wcześniej 9400), jedna i stała** (100 zł zwrotne wliczone), podawana proaktywnie w turze domknięcia z kotwicą wartości (u agencji 25–40 tys./rok). Zero symulacji zysków.
 - **Zero „10% / udziału %" w rozmowie** → „udział ustalany indywidualnie po rezerwacji".
 - **Zero kwalifikacji przed sklepem** (budżet, czas, doświadczenie, etat, „czego się boisz"). Pytania przedrezerwacyjne = tylko personalizacja (produkt/marka/styl).
 - **[V2.1] Budżet reklamowy WYŁĄCZNIE reaktywnie:** „~1000 zł łącznie na start, skalujemy z dochodów". Karta „kwoty inwestycji" i bramka 2000 zł WYCOFANE. Nie rozbijać kwoty usera na towar/reklamy. Raty reaktywnie (formy ustala Tomek po rezerwacji).
@@ -67,7 +67,7 @@ Kotwice **✓ zweryfikowane** = linia potwierdzona grepem 2026-07-08. **~** = z 
 | **QW1** | **Input „co chcesz sprzedawać?" w hero landingu** → `goSklep({idea})`. Backend prefill jest KOMPLETNY: zapis `bud_prefill_idea` (zbuduje `✓l.1996`) + odczyt do inputu czatu (sklep `✓l.17664-17671`). Brakuje tylko pola. | Foot-in-the-door + self-relevance: klik staje się deklaracją, nie ciekawością. Rozmowa startuje o JEGO pomyśle. | `zbuduje/index.html` hero (dodać input) | **S** |
 | **QW2** | **Zdegradować poboczne external-checkout w piku intencji.** Karta `mkCardEl` ma już inline BLIK jako przycisk główny (`✓l.14940`); usunąć/schować drugi link `href=checkoutURL() target=_blank` (`✓l.14966`) oraz w zakładce Współpraca (`✓l.11227`) i pjx-cta (`✓l.10562`). External tylko jako świadomy fallback „wolę kartę/przelew". | Każde wyjście z ciepłej rozmowy w piku intencji = re-trust + wyciek. Jedna ścieżka = mniej tarcia. | `sklep/index.html` | **S** |
 | **QW3** | **Ceremonia po wpłacie na ścieżce inline BLIK.** `reservationConfirmed` (`✓l.7488`) dziś daje suchą kartę tekstową; confetti + animowany checkmark istnieją w `checkout/success.html` (`✓`). Przenieść mechanizm (self-contained, to inny deploy!) + zdanie dumy „Twój pierwszy dzień jako właściciel [Marka]" + miniatura ICH sklepu. | Duma > SLA. Dopamina domyka decyzję i tłumi żal zakupu. Najczęstsza ścieżka (inline) ma dziś najsłabszą celebrację. | `sklep/index.html` `reservationConfirmed` | **S/M** |
-| **QW4** | **Rozbrajacz lęku w samym paywallu BLIK.** `showReservationPaywall` (`✓l.7610`) — dodać nad polem kodu 1 linijkę + mini-twarz Tomka: „500 zł wraca w 100%, jeśli nie wejdziecie. Zarabiam, dopiero gdy Ty zarabiasz." | Gwarancja jest wyeksponowana wszędzie POZA paywallem — czyli znika tam, gdzie lęk #1 (scam) kulminuje. | `sklep/index.html` `showReservationPaywall` | **S** |
+| **QW4** | **Rozbrajacz lęku w samym paywallu BLIK.** `showReservationPaywall` (`✓l.7610`) — dodać nad polem kodu 1 linijkę + mini-twarz Tomka: „100 zł wraca w 100%, jeśli nie wejdziecie. Zarabiam, dopiero gdy Ty zarabiasz." | Gwarancja jest wyeksponowana wszędzie POZA paywallem — czyli znika tam, gdzie lęk #1 (scam) kulminuje. | `sklep/index.html` `showReservationPaywall` | **S** |
 | **QW5** | **Animowany „reel dorobku" nad BLIK.** Recap `have[]` w `mkCardEl` (`✓l.14919`) jest statyczny → 3-sek montaż 5 artefaktów wjeżdżających z ✓ „wszystko w 9 minut. Zaklep to." | Endowment + awersja do straty w punkcie płatności: „nie porzucę na wpół zbudowanego biznesu". | `sklep/index.html` `mkCardEl` | **S** |
 | **QW6** | **Reserve-CTA (button) w mailach WOW.** 4 z 5 maili-odsłon nie ma CTA rezerwacji; `reserveUrl` już liczony (`~drip:463`). Wpiąć button do `reveal_strona` i `reveal_reklamy`. | Kuj żelazo w sekundzie „to naprawdę mój sklep" — nie każ szukać przycisku w panelu. | `bud-drip/index.ts` cele + `getRevealEmail` | **S** |
 | **QW7** | **Uczciwa pilność z zębami — wszędzie.** „Kolejka" bez terminu jest abstrakcyjna. Statyczne, prawdziwe: „Najbliższy wolny start: ten tydzień" / „Trzymamy Twój prototyp 7 dni". | Powód, by nie odkładać, bez fejk-licznika (zgodne z guardrailami). | `sklep/index.html` (karta/paywall), `bud-drip` maile, `zbuduje/index.html` | **S/M** |
@@ -76,7 +76,7 @@ Kotwice **✓ zweryfikowane** = linia potwierdzona grepem 2026-07-08. **~** = z 
 ### FAZA 1 — Dźwignie systemowe (koszt M, największy wpływ na „ekscytację + impuls")
 
 **SL-A · Kuj żelazo póki gorące — zbliż rezerwację do momentu WOW.**
-Dziś: reveal sklepu w osobnej zakładce (`~renderLandingBuild:12380`, `~withReveal:12420`), a `<zielone>` pada w dedykowanej turze PO szczycie (gate kolejności `~2060-2067`). Zmiana: (1) reveal materializuje się **w czacie** (mini-iframe z kaskadą + linia Tomka „Zobacz — Twój sklep właśnie stanął"), (2) `<zielone>` może paść w TEJ SAMEJ turze co entuzjazm usera („to jest to!"). Zachować „brak 500 zł przed zielonym", ale zielone niech pada szybciej. · Zależność: `genCardReadyInChat` (`~l.9283`). · **M**.
+Dziś: reveal sklepu w osobnej zakładce (`~renderLandingBuild:12380`, `~withReveal:12420`), a `<zielone>` pada w dedykowanej turze PO szczycie (gate kolejności `~2060-2067`). Zmiana: (1) reveal materializuje się **w czacie** (mini-iframe z kaskadą + linia Tomka „Zobacz — Twój sklep właśnie stanął"), (2) `<zielone>` może paść w TEJ SAMEJ turze co entuzjazm usera („to jest to!"). Zachować „brak 100 zł przed zielonym", ale zielone niech pada szybciej. · Zależność: `genCardReadyInChat` (`~l.9283`). · **M**.
 
 **SL-B · Teatr budowania na żywo — zamień doliny na szczyty.**
 Dziś: 2 długie generacje (raport ~2 min, sklep ~3 min); kod wypełnia ciszę pitchem (QUALIFY_ENGAGE `~1961-1967`); timer budowy fejkowy (`BUILD_TOTAL_MS` odklejony od backendu, `~l.12362`). Zmiana: streamowana narracja TWORZENIA na REALNYM progresie backendu (lifestyle→spec→html) + twardy cut „ożyło" w chwili `landingHtml` (+ subtelny „ding"). Wzorzec SSE już istnieje w projekcie. · **M**.
@@ -95,7 +95,7 @@ Dziś: `state.name` zbierane, niewidoczne w artefaktach; hasło trafia na hero a
 
 - **RS1 · Re-close zamiast pojedynczego strzału.** Dziś `reveal_rezerwacja` (h30) fire'uje RAZ, potem cisza aż do LOST (7 dni) — największy wyciek impulsu. Dodać domknięcia +48h/+5d z realną datą trzymania kolejki. · `bud-reveal-plan.ts` (nowe kroki) + pętla close w `bud-drip`. · **M**.
 - **RS2 · Realny screenshot ŻYWEGO sklepu w mailu** (nie makieta-JPEG). Podmienić `chosenMock.url` na wysoki zrzut `landing_html` z overlay „zobacz na żywo". Widok WŁASNEGO sklepu = najsilniejszy anty-scam. · `artifactImagesHtml` gałąź `strona` (`~drip:156`). · **M**.
-- **RS3 · Blok zaufania przy ofercie w mailu.** Agregatowy dowód („już kilkanaście osób buduje" — NIGDY nazwane sklepy), twarz/podpis Tomka, twarda gwarancja „500 zł wraca w 100%". · nowy `trustBlockHtml` (`~drip:165`). · **S/M**.
+- **RS3 · Blok zaufania przy ofercie w mailu.** Agregatowy dowód („już kilkanaście osób buduje" — NIGDY nazwane sklepy), twarz/podpis Tomka, twarda gwarancja „100 zł wraca w 100%". · nowy `trustBlockHtml` (`~drip:165`). · **S/M**.
 - **RS4 · Echo hasła/wyboru w mailu.** `<haslo>` + wybrany styl do `revealBrief.facts` + temat „»ich hasło« — tak brzmi Twój sklep". · `revealBrief` (`~drip:255`). · **S**.
 - **RS5 · Powrót jednym kliknięciem → BLIK** (nie do panelu). Button na checkout z prefill (lead_id/sid/email już w `checkoutLink`). Zweryfikować domyślny BLIK. · **S/M**.
 - **RS6 · [STRETCH] Prewarm raportu dla porzuconych.** Maszyneria istnieje (`~drip:546-569`): `market_report NOT NULL` przełącza abandonów w silnik odsłon → 54% dostaje loss-aversion na REALNYM artefakcie zamiast obietnic. · **L**.
@@ -112,7 +112,7 @@ Ten plan **nie duplikuje** wdrożonego (cały Lejek V2, TOP #1-5 audytu 2026-07-
 - **Audyt #10** (`reservation_rescue` porzucony BLIK + nurture zielonych bez wpłaty) — pokrywa RS1/RS5.
 - **LEJEK-V2 poz. 7** (copy drip/followups pod V2, bez kwot/%) — wykonać przy QW6/RS3/RS4.
 - **S5 „druga fala WOW"** — realizują SL-C, EM2, RS2.
-- **P8 warunki-PDF** (jednostronicowe „Warunki rezerwacji 500 zł") — wspiera QW4 (rozbrajacz może linkować do PDF).
+- **P8 warunki-PDF** (jednostronicowe „Warunki rezerwacji 100 zł") — wspiera QW4 (rozbrajacz może linkować do PDF).
 
 ---
 

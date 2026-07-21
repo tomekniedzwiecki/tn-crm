@@ -1818,7 +1818,7 @@
 
                     <!-- Main pitch -->
                     <h2 id="hero-title" class="text-xl sm:text-2xl font-bold text-white leading-tight mb-2">
-                        Zarezerwuj miejsce za <span class="text-amber-400">500 zł</span>
+                        Zarezerwuj miejsce za <span class="text-amber-400">100 zł</span>
                     </h2>
                     <p id="hero-sub" class="text-zinc-400 text-sm sm:text-base mb-6 leading-relaxed">
                         Rezerwacja (w pełni zwrotna) blokuje Twój termin w grafiku. Resztę rozliczamy zgodnie z harmonogramem płatności.
@@ -2083,7 +2083,7 @@
             __OFFER_TOKEN ? { global: { headers: { 'x-offer-token': __OFFER_TOKEN } } } : undefined
         );
 
-        const DEPOSIT_AMOUNT = 500;
+        const DEPOSIT_AMOUNT = 100; // od 2026-07-21 (wcześniej 500)
 
         let clientOffer = null;
         let offer = null;
@@ -3123,7 +3123,7 @@
             window.location.href = checkoutUrl;
         }
 
-        // Pay the remainder after deposit (full price - 500 zł)
+        // Pay the remainder after deposit (full price - DEPOSIT_AMOUNT)
         async function proceedToRemainingPayment() {
             trackInitiateCheckout('remaining');
             const remaining = Math.max(0, getEffectivePrice() - DEPOSIT_AMOUNT);
@@ -3154,7 +3154,7 @@
                     .select('id, status, amount, description')
                     .eq('lead_id', lead.id)
                     .eq('status', 'paid')
-                    .eq('amount', DEPOSIT_AMOUNT)
+                    .in('amount', [DEPOSIT_AMOUNT, 500])
                     .or('description.ilike.Zadatek*,description.ilike.Rezerwacja*')
                     .order('paid_at', { ascending: false })
                     .limit(1);

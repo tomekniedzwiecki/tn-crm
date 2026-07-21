@@ -3,7 +3,7 @@
 // strona → rezerwacja) rozłożone w czasie i bramkowane ZAANGAŻOWANIEM (wejścia do
 // panelu) ORAZ ISTNIENIEM ARTEFAKTU (pole `requires` w REVEAL_PLAN). Zamiast wysypać
 // wszystko naraz — odkrywamy po kolei, każdy = mail-„wow" z linkiem do panelu + CTA
-// rezerwacji 500 zł (zwrotnej). Zimny lead → pauza (nie palimy kasy/czasu).
+// rezerwacji 100 zł (zwrotnej). Zimny lead → pauza (nie palimy kasy/czasu).
 //
 // FORK silnika spar-drip (Aplikacja) na lejek /sklep. Tabele bud_* są lustrem spar_*
 // (te same kolumny, tylko prefiks). Różnice merytoryczne: artefakty /sklep (market_report,
@@ -29,7 +29,7 @@ import { REVEAL_PLAN, PANEL_VISITS_GATE } from "../_shared/bud-reveal-plan.ts";
 
 const PANEL_URL = 'https://tomekniedzwiecki.pl/sklep/'
 const CHECKOUT_URL = 'https://crm.tomekniedzwiecki.pl/checkout/v2/'
-// Fallback = realna oferta rezerwacji 500 zł (audyt 2026-07-03 #1: bez `offer=` checkout
+// Fallback = realna oferta rezerwacji 100 zł (audyt 2026-07-03 #1: bez `offer=` checkout
 // pokazywał „oferta nie istnieje" — kliki „Rezerwuję" z maili umierały).
 const OFFER_ID = Deno.env.get('BUD_OFFER_ID') || 'f32102f9-cc1e-42a3-9742-82593dadaaf1'
 const FN = (name: string) => `${Deno.env.get('SUPABASE_URL')}/functions/v1/${name}`
@@ -351,7 +351,7 @@ function staticReveal(s: any, key: string, viewUrl: string, reserveUrl: string |
     strona: { subject: `${n} ma już działającą stronę`, body: `Cześć${im}!\n\nZbudowała się działająca strona sprzedażowa ${n} — to prawdziwa strona w przeglądarce, nie grafika.\n\n[Otwórz ją tutaj](LINK_VIEW), przewiń, możesz nawet pokazać komuś i zapytać, co myśli.` },
     rezerwacja: { subject: `${n}: zarezerwujesz budowę?`, body: `Cześć${im}!\n\nPrzeszliśmy przez ${recapArtifacts(s)} ${n} — widać na tym, jak to realnie wygląda.\n\nJeśli chcesz, żebym zbudował to na serio, [zarezerwuj miejsce](LINK_RESERVE). Rezerwacja jest zwrotna — to tylko zaklepanie terminu, nie zobowiązanie.` },
     // RE-CLOSE po rezerwacji — CTA (LINK_VIEW/LINK_RESERVE) prowadzi do PANELU (#wspolpraca).
-    reclose1: { subject: `${n}: trzymam Ci miejsce w kolejce`, body: `Cześć${im}!\n\nTrzymam Ci miejsce w kolejce — ${n} czeka. 500 zł jest w pełni zwrotne; jeśli nie wejdziecie we współpracę, wraca w całości.\n\n[Wróć do swojego projektu](LINK_VIEW) i zaklep termin.` },
+    reclose1: { subject: `${n}: trzymam Ci miejsce w kolejce`, body: `Cześć${im}!\n\nTrzymam Ci miejsce w kolejce — ${n} czeka. 100 zł jest w pełni zwrotne; jeśli nie wejdziecie we współpracę, wraca w całości.\n\n[Wróć do swojego projektu](LINK_VIEW) i zaklep termin.` },
     reclose2: { subject: `${n}: domykam kolejkę na ten tydzień`, body: `Cześć${im}!\n\nDomykam kolejkę na ten tydzień. Twój projekt zostaje zapisany — ale jeśli chcesz, żeby Tomek wziął go na warsztat teraz, to jest ten moment.\n\n[Otwórz projekt](LINK_VIEW).` },
   }
   const m = M[key] || M.raport

@@ -600,7 +600,7 @@ async function maybeNotifyGreenSlack(
   }
 }
 
-// Bot zaproponował leadowi wpłatę rezerwacji 500 zł (marker <makieta>, po zielonym świetle)
+// Bot zaproponował leadowi wpłatę rezerwacji 100 zł (marker <makieta>, po zielonym świetle)
 // → #sparing (raz na sesję, dedup atomowym claimem na slack_reservation_notified_at).
 // To najgorętszy moment lejka — jawna prośba o pieniądze. Zielone światło pinguje osobno
 // (spar_green); tu chodzi o SAMĄ propozycję rezerwacji.
@@ -687,7 +687,7 @@ async function maybeNotifyChosenMockupSlack(
 // ── Normalizacja kwoty budżetu startu (LEJEK V2) ──────────────────────────────
 // Karta budżetu daje tylko kategorię (budget_declared: lt2/2-5/5-10/10plus). Kwotę
 // podaną SŁOWNIE mózg oznacza markerem <budzet_kwota>…</budzet_kwota> (tylko on
-// odróżnia budżet leada od ceny 4900 / rezerwacji 500 / statystyk TikToka — regex
+// odróżnia budżet leada od ceny 4900 / rezerwacji 100 / statystyk TikToka — regex
 // mylił je). Ta funkcja NORMALIZUJE treść markera („10 000 zł", „2 tys", „10k") na
 // { pln, note, code }; próg ≥1 tys. odsiewa drobne. Zwraca null, gdy brak kwoty.
 function fmtPlnSpace(n: number): string {
@@ -718,7 +718,7 @@ function extractBudgetPln(text: string): { pln: number; note: string; code: stri
     }
     if (val >= 500 && val <= 5000000 && val > best) best = val
   }
-  if (best < 1000) return null   // < 1 tys. (np. rezerwacja 500 zł) — to nie budżet startu
+  if (best < 1000) return null   // < 1 tys. (np. rezerwacja 100 zł) — to nie budżet startu
   return { pln: best, note: fmtPlnSpace(best), code: budgetCodeFromPln(best) }
 }
 
@@ -812,7 +812,7 @@ async function persistAfterStream(
       update.preview_brief = projekt
     }
     // Budżet startu z MARKERA mózgu <budzet_kwota> (tylko on odróżnia budżet leada od
-    // ceny 4900/rezerwacji 500/statystyk TikToka). Normalizujemy treść markera na kwotę.
+    // ceny 4900/rezerwacji 100/statystyk TikToka). Normalizujemy treść markera na kwotę.
     // Ostatnia zadeklarowana kwota wygrywa; tury bez markera NIE nadpisują.
     const budMark = assistantText.match(/<budzet_kwota>([\s\S]{1,40}?)<\/budzet_kwota>/i)
     const budHit = budMark ? extractBudgetPln(budMark[1]) : null
@@ -1139,7 +1139,7 @@ const FALLBACK_GATE_INSTRUCTION = `[ETAP USTALENIA] Gdy raport jest gotowy, prze
 <ustalenia>{"dla_kogo":"...","kat":"...","ton_marki":"...","nazwa":"...","korzysci":["...","..."]}</ustalenia>
 JSON musi być POPRAWNY (tylko podwójne cudzysłowy, bez znaków sterujących). Po markerze front przechodzi do makiet.`
 const FALLBACK_RESIGNATION_INSTRUCTION = `[REZYGNACJA] Jeśli rozmówca wyraźnie sygnalizuje, że rezygnuje/nie jest zainteresowany, NIE oznaczaj od razu — dopytaj raz, czy na pewno chce zakończyć. Dopiero po wyraźnym potwierdzeniu w KOLEJNEJ turze wystaw w osobnej linii marker <rezygnacja/>. Nie wymuszaj, reaguj z szacunkiem.`
-const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany — to WERSJA WSTĘPNA (finalną dopracujecie razem po starcie współpracy). Pierwsza reakcja po sklepie: w 2-3 zdaniach oprowadź po KONKRETACH z jego ustaleń (hero z jego hasłem, sekcja pod jego grupę) — ma zobaczyć, że to POD NIEGO. NIE pytaj „jak Ci się podoba" ani nie proś o akceptację. Gdy rozmówca reaguje pozytywnie — najpierw wystaw <zielone> (pozytywna decyzja + 2-3 mocne strony + 2-3 rzeczy do dopracowania razem), BEZ kwoty w tej turze. W NASTĘPNEJ turze domykasz SAM Z SIEBIE (TURA DOMKNIĘCIA): 1-2 zdania kotwicy wartości + JAWNA cena budowy 4900 zł (jedna, stała; 500 zł zwrotnej rezerwacji wliczone — przy umowie zostaje 4400 zł) + <makieta> w tej samej turze. NIE pytaj o budżet (karta „kwoty inwestycji" WYCOFANA). REZERWACJA: 500 zł, w pełni ZWROTNA — NIGDY „zadatek"; MIEJSCE W KOLEJCE do budowy (Tomek prowadzi ograniczoną liczbę budów naraz). Procentu udziału nie podajesz (indywidualnie po rezerwacji). Budżet reklamowy TYLKO gdy zapyta: ok. 1000 zł łącznie na start, dalej z dochodów sklepu. Kartę <makieta> wystaw też W TEJ SAMEJ turze, gdy padnie sygnał gotowości (pyta o pieniądze/warunki, deklaruje kwotę — także słownie — albo pyta „jak zacząć"); karta jest pasywna — po wystawieniu nie wracaj do niej w każdej turze. Kwota deklarowana wyraźnie poniżej ceny → uczciwie, że dziś się nie spina, zamiast karty.`
+const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany — to WERSJA WSTĘPNA (finalną dopracujecie razem po starcie współpracy). Pierwsza reakcja po sklepie: w 2-3 zdaniach oprowadź po KONKRETACH z jego ustaleń (hero z jego hasłem, sekcja pod jego grupę) — ma zobaczyć, że to POD NIEGO. NIE pytaj „jak Ci się podoba" ani nie proś o akceptację. Gdy rozmówca reaguje pozytywnie — najpierw wystaw <zielone> (pozytywna decyzja + 2-3 mocne strony + 2-3 rzeczy do dopracowania razem), BEZ kwoty w tej turze. W NASTĘPNEJ turze domykasz SAM Z SIEBIE (TURA DOMKNIĘCIA): 1-2 zdania kotwicy wartości + JAWNA cena budowy 4900 zł (jedna, stała; 100 zł zwrotnej rezerwacji wliczone — przy umowie zostaje 4800 zł) + <makieta> w tej samej turze. NIE pytaj o budżet (karta „kwoty inwestycji" WYCOFANA). REZERWACJA: 100 zł, w pełni ZWROTNA — NIGDY „zadatek"; MIEJSCE W KOLEJCE do budowy (Tomek prowadzi ograniczoną liczbę budów naraz). Procentu udziału nie podajesz (indywidualnie po rezerwacji). Budżet reklamowy TYLKO gdy zapyta: ok. 1000 zł łącznie na start, dalej z dochodów sklepu. Kartę <makieta> wystaw też W TEJ SAMEJ turze, gdy padnie sygnał gotowości (pyta o pieniądze/warunki, deklaruje kwotę — także słownie — albo pyta „jak zacząć"); karta jest pasywna — po wystawieniu nie wracaj do niej w każdej turze. Kwota deklarowana wyraźnie poniżej ceny → uczciwie, że dziś się nie spina, zamiast karty.`
 // ODWRÓCONA SELEKCJA WSPÓLNIKA (decyzja Tomka 2026-07-08) — mechanizm niedostępności:
 // PO zielonym świetle, PRZED kartą rezerwacji, lead musi WŁASNYMI SŁOWAMI powiedzieć,
 // czemu chce w to wejść (effort justification + commitment → cenniejsza decyzja). Uczciwe,
@@ -1157,11 +1157,11 @@ CARVE-OUT (audyt 2026-07-10 — selekcja nie może hamować gotowych): gdy user 
 
 // Minimum faktów na wypadek awarii loadu settings — żeby czat NIGDY nie zmyślał liczb.
 // V2.1 (decyzja Tomka 2026-07-10, SSOT: docs/zbuduje/LEJEK-V2-PLAN.md): cena budowy
-// JAWNA (od 2026-07-21: 4900 zł, 500 zł wliczone); budżet reklamowy TYLKO reaktywnie
+// JAWNA (od 2026-07-21: 4900 zł, 100 zł wliczone); budżet reklamowy TYLKO reaktywnie
 // (~1000 zł łącznie); procent udziału nadal ustalany po rezerwacji.
 const FALLBACK_MODEL_FACTS = `[FAKTY OFERTY — minimum]
-- Rezerwacja: 500 zł, w pełni ZWROTNA (nie „zadatek"), wliczana potem w koszty budowy. Rezerwacja = MIEJSCE W KOLEJCE: Tomek prowadzi ograniczoną liczbę budów jednocześnie (nie podawaj konkretnej liczby budów).
-- Cena budowy (JAWNA — V2.1): 4900 zł, JEDNA i stała, bez tierów i negocjacji; 500 zł rezerwacji WLICZONE (przy umowie zostaje 4400 zł). Na pytanie „ile to kosztuje" odpowiadaj WPROST kwotą + krótką kotwicą wartości (portfel 10 produktów, budowa sklepu, kampanie prowadzone przez Tomka do ~1000 zamówień, wdrożenie; u agencji rynkowo 25–40 tys. zł w pierwszym roku) — i podawaj ją SAM w turze domknięcia.
+- Rezerwacja: 100 zł, w pełni ZWROTNA (nie „zadatek"), wliczana potem w koszty budowy. Rezerwacja = MIEJSCE W KOLEJCE: Tomek prowadzi ograniczoną liczbę budów jednocześnie (nie podawaj konkretnej liczby budów).
+- Cena budowy (JAWNA — V2.1): 4900 zł, JEDNA i stała, bez tierów i negocjacji; 100 zł rezerwacji WLICZONE (przy umowie zostaje 4800 zł). Na pytanie „ile to kosztuje" odpowiadaj WPROST kwotą + krótką kotwicą wartości (portfel 10 produktów, budowa sklepu, kampanie prowadzone przez Tomka do ~1000 zamówień, wdrożenie; u agencji rynkowo 25–40 tys. zł w pierwszym roku) — i podawaj ją SAM w turze domknięcia.
 - Za mały budżet — bez progu-liczby: gdy lead deklaruje kwotę wyraźnie poniżej ceny budowy, powiedz uczciwie, że dziś się nie spina; nie wciskaj, projekt zostaje zapisany. Gdy kwota blisko ceny — płatność da się rozłożyć (formy ustala Tomek po rezerwacji).
 - Udział Tomka: ustalany INDYWIDUALNIE po rezerwacji — zależy od zakresu pracy Tomka i zaangażowania leada. Macie być wspólnikami, więc warunki muszą być OK dla OBU stron. NIE podawaj żadnego procentu ani widełek.
 - Etapy: przygotowania → formalności → materiały reklamowe → uruchomienie kampanii (cel 1000 zamówień) → ~180 dni skalowania i przekazania sterów.
@@ -1186,7 +1186,7 @@ PROTOTYP, NIE GOTOWY BIZNES (twarda granica uczciwości): makiety, sklep i rekla
 
 MODEL, KTÓRY ZAMIENIA PROTOTYP W REALNY BIZNES (wplataj naturalnie, nie recytuj): Tomek ZBUDUJE całość pod klucz → WDROŻY i sam poprowadzi sprzedaż do pierwszych ~1000 zamówień → PRZEKAŻE Ci stery, ucząc przy żywym sklepie → ZOSTANIE wspólnikiem-doradcą, który zarabia dopiero, gdy TY zarabiasz. Ten model jest zarazem obietnicą wartości i dowodem, że to nie ściema — używaj go, by rozbrajać oba lęki: „nie ogarnę" i „to oszustwo".
 
-UCZCIWOŚĆ = CZĘŚĆ MAGII: u tej grupy lęk numer jeden to scam. Ekscytacja ma rosnąć z tego, co realne i szczere (namacalny prototyp + skóra w grze Tomka), NIGDY z naciągania czy fałszywej pilności. Cena budowy jest JAWNA (4900 zł, zwrotne 500 zł wliczone) i podajesz ją z kotwicą wartości w turze domknięcia — jawność to dowód uczciwości; bez procentu udziału i bez downsellu przed rezerwacją (te konkrety domyka Tomek po niej).
+UCZCIWOŚĆ = CZĘŚĆ MAGII: u tej grupy lęk numer jeden to scam. Ekscytacja ma rosnąć z tego, co realne i szczere (namacalny prototyp + skóra w grze Tomka), NIGDY z naciągania czy fałszywej pilności. Cena budowy jest JAWNA (4900 zł, zwrotne 100 zł wliczone) i podajesz ją z kotwicą wartości w turze domknięcia — jawność to dowód uczciwości; bez procentu udziału i bez downsellu przed rezerwacją (te konkrety domyka Tomek po niej).
 
 [PRAWO ZWIĘZŁOŚCI — NADRZĘDNY ARBITER DŁUGOŚCI, feedback Tomka 2026-07-08. Bije KAŻDĄ inną instrukcję o długości czy „pełnej opowieści" w całym prompcie — także przy pytaniach o model, cenę, proces i współpracę.]
 - Dymek = MAKS 2-3 KRÓTKIE zdania (cel ~350 znaków), które rozmówca czyta w 3 sekundy. Lepiej ZA krótko i dopytać niż zalać ścianą.
@@ -1207,7 +1207,7 @@ const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, na
 - TOMEK BUDUJE GO DLA CIEBIE jak Twój człowiek od e-commerce: składa cały sklep z zespołem, odpala reklamy i rozkręca sprzedaż (pierwsze ~1000 zamówień), potem ~pół roku skaluje i uczy Cię, aż przejmiesz stery.
 - TO WSPÓLNY BIZNES — Tomek wchodzi jako WSPÓLNIK: zarabia dopiero wtedy, gdy TY zarabiasz (nie bierze faktury za usługę i nie znika). To jego skóra w grze i dowód, że nie wciska byle czego (rozbraja „a co Ty z tego masz / czy to nie oszustwo"). Konkretne warunki udziału ustalacie INDYWIDUALNIE po rezerwacji — pod zakres pracy Tomka i zaangażowanie leada; wspólnicy muszą się czuć z warunkami OK po OBU stronach. NIE podawaj procentu ani kwot.
 - TWOJA ROLA: uczysz się przy GOTOWYM, działającym sklepie; obsługa to proste czynności (nie kod), realne przy kilku godzinach tygodniowo. Jeśli lead boi się „nie ogarnę / nie znam się / mam mało czasu" — rozbrój to WPROST i ciepło tym faktem.
-- PIENIĄDZE (V2.1): projekt, raport i podgląd sklepu są DARMOWE i zostają jego. Cena budowy jest JAWNA: 4900 zł, jedna i stała (500 zł zwrotnej rezerwacji wliczone — przy umowie zostaje 4400 zł); na pytanie o koszty odpowiadaj WPROST kwotą + krótką kotwicą wartości (portfel 10 produktów, budowa, kampanie Tomka do ~1000 zamówień, wdrożenie; u agencji rynkowo 25–40 tys. zł w pierwszym roku), a w turze domknięcia podajesz ją sam. Procentu udziału NIE podajesz (indywidualnie po rezerwacji). BUDŻET REKLAMOWY — TYLKO gdy zapyta: ok. 1000 zł łącznie na start, dalej reklamy finansują się z dochodów sklepu (skalujemy z zysków, nie z kieszeni). Gdy lead sygnalizuje „mam mało / ostatnie pieniądze" — uczciwie i ciepło: wejście to 4900 zł; jeśli to dziś poza zasięgiem, projekt zostaje zapisany i nigdzie nie ucieka; nie ciągnij go pod ścianę, której nie udźwignie. Gdy kwota blisko ceny — płatność da się rozłożyć (formy ustala Tomek po rezerwacji).
+- PIENIĄDZE (V2.1): projekt, raport i podgląd sklepu są DARMOWE i zostają jego. Cena budowy jest JAWNA: 4900 zł, jedna i stała (100 zł zwrotnej rezerwacji wliczone — przy umowie zostaje 4800 zł); na pytanie o koszty odpowiadaj WPROST kwotą + krótką kotwicą wartości (portfel 10 produktów, budowa, kampanie Tomka do ~1000 zamówień, wdrożenie; u agencji rynkowo 25–40 tys. zł w pierwszym roku), a w turze domknięcia podajesz ją sam. Procentu udziału NIE podajesz (indywidualnie po rezerwacji). BUDŻET REKLAMOWY — TYLKO gdy zapyta: ok. 1000 zł łącznie na start, dalej reklamy finansują się z dochodów sklepu (skalujemy z zysków, nie z kieszeni). Gdy lead sygnalizuje „mam mało / ostatnie pieniądze" — uczciwie i ciepło: wejście to 4900 zł; jeśli to dziś poza zasięgiem, projekt zostaje zapisany i nigdzie nie ucieka; nie ciągnij go pod ścianę, której nie udźwignie. Gdy kwota blisko ceny — płatność da się rozłożyć (formy ustala Tomek po rezerwacji).
 - JAKOŚĆ: makiety i reklamy, które teraz widzi, to SZYBKIE SZKICE kierunku — finalne kreacje robicie po starcie z prawdziwą sesją/realnym twórcą (rozbraja „to mocno AI-owe"). Produkt = sprawdzony popyt pod Twoją marką i marżę; NIGDY nie ujawniaj źródła ani ceny zakupu produktu.
 [ROZPOZNAWAJ SYGNAŁY KUPUJĄCEGO i naturalnie dostrajaj ton (z danych: kupują głównie ci, którzy piszą konkretnie i znają temat — NIGDY nie mów leadowi, że go „oceniasz"):]
 - Wspomina, że KORZYSTAŁ JUŻ od Tomka/TakeDrop/z kursu/coachingu („kupiłem u was", „mam sklep na TakeDrop", „byłem na coachingu") → NAJCIEPLEJSZY sygnał (kupują ~4× częściej). Odwołaj się ciepło do wspólnej historii, potraktuj jak kogoś, kto już zaufał, i płynnie prowadź do DOKOŃCZENIA tego, co utknęło.
@@ -2083,7 +2083,7 @@ FAZA A — jeśli w rozmowie NIE padło jeszcze „Wybieram styl": JEDNO lekkie 
 FAZA B — jeśli „Wybieram styl" JUŻ padło (reklamy i sklep składają się w tle): ustalenia są DOMKNIĘTE — ZAKAZ dalszego dopytywania o produkt i preferencje (lead zna ten produkt słabo i to go męczy; jedyny wyjątek: hasło do hero, gdy strona o nie poprosi). Zamiast tego prowadź WĄTEK MODELU WSPÓŁPRACY — JEDEN krok na turę, kontynuując od miejsca, w którym wątek stanął (NIGDY nie powtarzaj już opowiedzianego):
   B1. Otwarcie (gdy wątek modelu jeszcze nie ruszył): „Zanim wskoczą reklamy i podgląd sklepu — wiesz już, na czym polega model współpracy z Tomkiem, czy opowiedzieć w skrócie?" <opcje>["Opowiedz w skrócie","Coś tam wiem — dopytam","Znam — co dalej?"]
   B2. Skrót modelu (gdy poprosił albo zna słabo; 3-5 zdań, prosto, słowami Tomka) — PIĘĆ BEATÓW OBOWIĄZKOWYCH, żaden nie może wypaść: (1) Tomek praktycznie WSZYSTKO buduje — markę wokół produktu masowego, który rozwiązuje konkretny problem (marka = klienci chętniej kupują i płacą więcej); (2) przez pierwsze ~4-6 MIESIĘCY prowadzi sprzedaż; (3) do minimum ~1000 zamówień — wtedy przekazuje Ci prowadzenie biznesu; (4) zostaje wspólnikiem-doradcą (warunki udziału indywidualnie po rezerwacji — zarabia dopiero, gdy Ty zarabiasz); (5) najważniejsza robota to pierwsze pół roku. Zakończ: „Jeśli ten model Ci odpowiada — przejdziemy do szczegółów." <opcje> z pierwszą opcją akceptującą.
-  B3. Dalsze tury: odpowiadaj na pytania/obiekcje o model z FAKTÓW OFERTY (cena budowy JAWNA: 4900 zł, 500 zł zwrotnej rezerwacji wliczone, z krótką kotwicą wartości; zero procentu udziału; budżet reklamowy ~1000 zł łącznie TYLKO gdy zapyta). SYGNAŁ GOTOWOŚCI („przekonuje mnie / co dalej / jak zacząć", pytanie o pieniądze, deklaracja kwoty) → wystaw <makieta> W TEJ turze TAKŻE, gdy sklep dopiero się składa (karta rezerwacji NIE wymaga gotowego sklepu — „sklep dokończy się w tle, a Ty masz już miejsce w kolejce"); NIGDY nie odpowiadaj na taki sygnał kolejnym menu pytań. Kwoty (500 zł / 4900 zł) wymieniaj DOPIERO przy sygnale/pytaniu o koszty albo w turze domknięcia — nie w luźnej zaczepce. Gdy reklamy/sklep dojadą — pokaż je jako ELEMENT WSPÓLNEGO BIZNESU (przewodnik po 2-3 konkretach z ICH ustaleń), po czym naturalnie wróć do wątku modelu/rezerwacji.
+  B3. Dalsze tury: odpowiadaj na pytania/obiekcje o model z FAKTÓW OFERTY (cena budowy JAWNA: 4900 zł, 100 zł zwrotnej rezerwacji wliczone, z krótką kotwicą wartości; zero procentu udziału; budżet reklamowy ~1000 zł łącznie TYLKO gdy zapyta). SYGNAŁ GOTOWOŚCI („przekonuje mnie / co dalej / jak zacząć", pytanie o pieniądze, deklaracja kwoty) → wystaw <makieta> W TEJ turze TAKŻE, gdy sklep dopiero się składa (karta rezerwacji NIE wymaga gotowego sklepu — „sklep dokończy się w tle, a Ty masz już miejsce w kolejce"); NIGDY nie odpowiadaj na taki sygnał kolejnym menu pytań. Kwoty (100 zł / 4900 zł) wymieniaj DOPIERO przy sygnale/pytaniu o koszty albo w turze domknięcia — nie w luźnej zaczepce. Gdy reklamy/sklep dojadą — pokaż je jako ELEMENT WSPÓLNEGO BIZNESU (przewodnik po 2-3 konkretach z ICH ustaleń), po czym naturalnie wróć do wątku modelu/rezerwacji.
 DYSCYPLINA: „składa się w tle / za chwilę zobaczysz" wolno powiedzieć ŁĄCZNIE RAZ w całym oknie — potem rozmawiasz o modelu bez montażowych wtrętów. Nazw marki NIE odmieniaj i nie sklejaj (pisz „sklepu CzarnaMesa", nie „CzarnejMesy"); w <opcje> pełne polskie znaki. Jedna rzecz na turę, ciepło, jak Tomek do znajomego — sprzedażowo, ale bez nachalności. OBOWIĄZKOWO <opcje> z 2-4 klikalnymi odpowiedziami.]`
     const qualifyTrigger = QUALIFY_ENGAGE_TRIGGER   // qualifyTopic ignorowane od V2 (kompatybilność ze starymi frontami)
     void qualifyTopic
@@ -2190,9 +2190,9 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // WPROST z umowy (transparentność), zamiast zbywać. Tylko w fazie współpracy.
         sessionContext += `\n\n[FAKTY OFERTY I UMOWY — to BAZA WIEDZY, NIE skrypt do wygłoszenia. Czerpiesz stąd WSZYSTKIE konkrety o współpracy; gdy rozmówca pyta o cenę, procent Tomka, etapy, czas, co wchodzi w cenę, warunki — wyciągasz JEDNĄ krótką odpowiedź na TO pytanie (2-3 zdania, wg PRAWA ZWIĘZŁOŚCI), nie zbywasz „to na rozmowie", ale też NIGDY nie wypisujesz wielu faktów naraz ani całej listy; nie zmyślaj niczego spoza tego bloku]\n${MODEL_FACTS}`
         // ZIELONE ŚWIATŁO przed rezerwacją: dopóki verdict != 'zielony', wymuś <zielone> jako PIERWSZE,
-        // zero kwoty 500 zł przed nim (QA: 500 zł pitchowane przed zielonym = odruchowy upsell).
+        // zero kwoty 100 zł przed nim (QA: 100 zł pitchowane przed zielonym = odruchowy upsell).
         if ((existingSession?.verdict as string | null) !== 'zielony') {
-          sessionContext += `\n\n[KOLEJNOŚĆ — TWARDE: rozmówca ma już gotową stronę, ale ZIELONE ŚWIATŁO jeszcze NIE padło w tej rozmowie. W NAJBLIŻSZEJ odpowiedzi (gdy reaguje na stronę albo pyta „co dalej") NAJPIERW wydaj <zielone> (pozytywna decyzja + 2-3 mocne strony z raportu + 2-3 rzeczy „co dopracujemy razem"). NIE wymieniaj kwoty 500 zł ani słowa „rezerwacja", DOPÓKI nie padło zielone światło. Rezerwację (<makieta>) proponujesz DOPIERO po zielonym świetle.]`
+          sessionContext += `\n\n[KOLEJNOŚĆ — TWARDE: rozmówca ma już gotową stronę, ale ZIELONE ŚWIATŁO jeszcze NIE padło w tej rozmowie. W NAJBLIŻSZEJ odpowiedzi (gdy reaguje na stronę albo pyta „co dalej") NAJPIERW wydaj <zielone> (pozytywna decyzja + 2-3 mocne strony z raportu + 2-3 rzeczy „co dopracujemy razem"). NIE wymieniaj kwoty 100 zł ani słowa „rezerwacja", DOPÓKI nie padło zielone światło. Rezerwację (<makieta>) proponujesz DOPIERO po zielonym świetle.]`
         } else {
           // Zielone już padło → wstrzyknij odwróconą selekcję wspólnika (krok przed <makieta>).
           sessionContext += `\n\n${REVERSE_SELECT}`
@@ -2216,7 +2216,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // reklamowy tylko reaktywnie. FAKTY OFERTY (MODEL_FACTS) niosą te zasady; bot
         // odpowiada o kosztach TYM mechanizmem (wprost, ciepło), zamiast zbywać ALBO
         // zrzucać cennik (obie skrajności zabijały rozmowy).
-        sessionContext += `\n\n[FAKTY OFERTY — to BAZA WIEDZY, NIE skrypt. Gdy rozmówca pyta o koszty, udział Tomka albo warunki współpracy, odpowiadaj WPROST z tego bloku: cena budowy JAWNA (4900 zł, 500 zł zwrotnej rezerwacji wliczone) z krótką kotwicą wartości; ZERO procentu udziału; budżet reklamowy (~1000 zł łącznie na start, dalej z dochodów) TYLKO gdy zapyta. Gdy pyta o model/proces/„jak to działa" — daj KRÓTKĄ esencję (2-3 zdania, wg PRAWA ZWIĘZŁOŚCI) i NIGDY nie zbywaj menu „o co dokładnie pytasz"; PEŁNĄ sekwencję z sekcji PROCES PO REZERWACJI podaj TYLKO na dopytanie i wtedy w <sekcje>, nie ścianą w dymku. Dotyczą OFERTY, nie danych z raportu rynku.]\n${MODEL_FACTS}`
+        sessionContext += `\n\n[FAKTY OFERTY — to BAZA WIEDZY, NIE skrypt. Gdy rozmówca pyta o koszty, udział Tomka albo warunki współpracy, odpowiadaj WPROST z tego bloku: cena budowy JAWNA (4900 zł, 100 zł zwrotnej rezerwacji wliczone) z krótką kotwicą wartości; ZERO procentu udziału; budżet reklamowy (~1000 zł łącznie na start, dalej z dochodów) TYLKO gdy zapyta. Gdy pyta o model/proces/„jak to działa" — daj KRÓTKĄ esencję (2-3 zdania, wg PRAWA ZWIĘZŁOŚCI) i NIGDY nie zbywaj menu „o co dokładnie pytasz"; PEŁNĄ sekwencję z sekcji PROCES PO REZERWACJI podaj TYLKO na dopytanie i wtedy w <sekcje>, nie ścianą w dymku. Dotyczą OFERTY, nie danych z raportu rynku.]\n${MODEL_FACTS}`
         // [GROUNDING 2026-07-03, feedback Tomka: „doradziłeś bez sensu — czy ty wiesz, jaki to
         // produkt?"] REALNY produkt z AliExpress (snapshot): tytuł + specyfikacja + realne
         // opinie kupujących. Bez tego model proponował grupy odbiorców „z powietrza".
@@ -2511,7 +2511,7 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
           }
 
           // ── PROPOZYCJA REZERWACJI (/sklep) — model wystawił kartę <makieta> ──
-          // Jawna prośba o wpłatę zwrotnej rezerwacji 500 zł (po zielonym świetle) =
+          // Jawna prośba o wpłatę zwrotnej rezerwacji 100 zł (po zielonym świetle) =
           // najgorętszy moment lejka. Ping na #sparing (dedup atomowy w helperze — raz
           // na sesję). Zielone światło pinguje osobno (spar_green wyżej).
           if (/<makieta[\s/>]/.test(assistantText)) {

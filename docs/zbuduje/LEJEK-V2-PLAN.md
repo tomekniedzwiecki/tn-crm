@@ -22,7 +22,7 @@
 
 ## Decyzje (ostateczne, 2026-07-06)
 
-1. **Rezerwacja 500 zł zostaje** (zwrotna, wliczana). Framing: **„rezerwuję miejsce
+1. **Rezerwacja 100 zł zostaje** (zwrotna, wliczana). Framing: **„rezerwuję miejsce
    w kolejce"** — „Tomek prowadzi ograniczoną liczbę budów jednocześnie". Bez konkretnej
    liczby budów, bez dynamicznego licznika. **ŻADNEGO downsellu / zamrożenia projektu.**
 2. **Zero kwot przed rezerwacją.** Bot NIE wymienia 9400 zł, wykupu, symulacji. Na pytanie
@@ -58,7 +58,7 @@ B. **WOW:** link do żywego sklepu z ich marką + reklamy/makiety. „To prototy
    biznesu."
 C. Otoczka (bez kwot i procentów, pkt 2–4) → pytanie o budżet inwestycji (pkt 5)
    → bramka 2000.
-D. Karta rezerwacji: miniatura ICH sklepu + „Rezerwuję miejsce w kolejce — 500 zł,
+D. Karta rezerwacji: miniatura ICH sklepu + „Rezerwuję miejsce w kolejce — 100 zł,
    zwrotne, wliczane". Po wpłacie: Tomek dzwoni, zbiera kwalifikację, przedstawia
    indywidualny plan i warunki.
 
@@ -90,8 +90,8 @@ D. Karta rezerwacji: miniatura ICH sklepu + „Rezerwuję miejsce w kolejce — 
 > ukrywanie kwot w /sklep = 0 rezerwacji, 10 porzuconych kas) + rynkowa kotwica
 > (software house / agencja liczy 25–40 tys. zł za analogiczny zakres w 1. roku).
 
-1. **CENA BUDOWY JEST JAWNA: 4900 zł, jedna i stała** (500 zł zwrotnej rezerwacji
-   wliczone → przy umowie zostaje 4400 zł; ⚠️ OBNIŻKA 2026-07-21 decyzją Tomka —
+1. **CENA BUDOWY JEST JAWNA: 4900 zł, jedna i stała** (100 zł zwrotnej rezerwacji
+   wliczone → przy umowie zostaje 4800 zł; ⚠️ OBNIŻKA 2026-07-21 decyzją Tomka —
    wcześniej 9400/8900). Bot podaje ją PROAKTYWNIE w turze
    domknięcia (po <zielone>) i na każde pytanie o koszt — ZAWSZE z kotwicą wartości
    (portfel 10 produktów, budowa, kampanie Tomka do ~1000 zamówień, wdrożenie;
@@ -105,7 +105,7 @@ D. Karta rezerwacji: miniatura ICH sklepu + „Rezerwuję miejsce w kolejce — 
    że się nie spina (projekt zostaje zapisany). Marker <budzet_kwota> działa pasywnie.
 4. **Raty wracają reaktywnie:** „da się rozłożyć — formy ustala Tomek po rezerwacji".
 5. **Bez zmian:** zero procentu udziału przed rezerwacją; zero kwalifikacji przed
-   sklepem; „miejsce w kolejce"; maile/drip nadal z jedyną liczbą 500 zł (cena
+   sklepem; „miejsce w kolejce"; maile/drip nadal z jedyną liczbą 100 zł (cena
    z kotwicą pada w rozmowie, nie w zimnym mailu).
 
 Wdrożone 2026-07-10 w: settings (budowanie_model_biznesowy, budowanie_etap_wspolpraca,

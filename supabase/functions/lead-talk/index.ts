@@ -1,7 +1,7 @@
 // lead-talk — nowe okno rozmowy AI dla leadów z /zapisy (lejek /zbuduje, przywrócony 17.07.2026).
 // CZYSTA ROZMOWA — zero artefaktów (makiet/raportów/landingów). Cele: zaangażować,
 // zakwalifikować naturalnie, opowiedzieć warunki, dać wizję modelu, doprowadzić do
-// rezerwacji 500 zł (zwrotnej). Transkrypcja: talk_sessions/talk_messages → lead.html (CRM).
+// rezerwacji 100 zł (zwrotnej). Transkrypcja: talk_sessions/talk_messages → lead.html (CRM).
 //
 // ⚠️ DEPLOY: ZAWSZE z flagą --no-verify-jwt (front wywołuje bez JWT):
 //   npx supabase functions deploy lead-talk --no-verify-jwt --project-ref yxmavwkwnfuphjqbelws
@@ -19,7 +19,7 @@
 // Markery w odpowiedziach modelu (ukrywane na froncie):
 //   <opcje>["...","..."]</opcje> — chipy szybkich odpowiedzi (max 3)
 //   <faza>nazwa</faza>           — stempel dramaturgii/obiekcji → talk_sessions.tags (CRM)
-//   <rezerwacja>                 — front pokazuje lekką kartę rezerwacji 500 zł
+//   <rezerwacja>                 — front pokazuje lekką kartę rezerwacji 100 zł
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -370,7 +370,7 @@ Deno.serve(async (req) => {
         .select('role,content').eq('session_id', sid).order('id', { ascending: true })
       const openaiMessages = await buildMessages(lead, session, [
         ...(hist || []),
-        { role: 'user', content: '[SYSTEM: Lead właśnie WRÓCIŁ ze strony oferty BEZ dokonania rezerwacji — coś go wstrzymało. Napisz JEDNĄ krótką wiadomość (max 3 zdania + pytanie): ciepło zauważ powrót, zapytaj wprost, co go wstrzymuje przy ofercie (cena? niepewność? termin?), przypomnij w pół zdania, że rezerwacja to zwrotne 500 zł i że oferta jest ważna tylko 7 dni. Chipy <opcje> z typowymi wahaniami + stempel <faza>powrot_z_oferty</faza>.]' },
+        { role: 'user', content: '[SYSTEM: Lead właśnie WRÓCIŁ ze strony oferty BEZ dokonania rezerwacji — coś go wstrzymało. Napisz JEDNĄ krótką wiadomość (max 3 zdania + pytanie): ciepło zauważ powrót, zapytaj wprost, co go wstrzymuje przy ofercie (cena? niepewność? termin?), przypomnij w pół zdania, że rezerwacja to zwrotne 100 zł i że oferta jest ważna tylko 7 dni. Chipy <opcje> z typowymi wahaniami + stempel <faza>powrot_z_oferty</faza>.]' },
       ])
       const res = await openaiFetch({ model: MODEL, messages: openaiMessages, max_completion_tokens: 350 })
       const j = await res.json()

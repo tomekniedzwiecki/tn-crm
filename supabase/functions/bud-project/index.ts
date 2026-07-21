@@ -172,16 +172,16 @@ Deno.serve(async (req) => {
       return jsonResponse({ orderId: order.id, amount: offer.price }, 200, cors)
     }
 
-    // ── action 'buy_reservation': pending order na ZWROTNĄ REZERWACJĘ 500 zł (/sklep) ──
+    // ── action 'buy_reservation': pending order na ZWROTNĄ REZERWACJĘ 100 zł (/sklep) ──
     // BLIK inline w rozmowie (lustro buy_conversation). KLUCZOWE dla tpay-webhook (blok
     // „LEJEK BUDOWANIA"): (a) description zawiera 'rezerwacj' + 'sklep' → isBudReservation=true;
-    // (b) amount 500 (< 1000) → rezerwacja, nie pełna budowa; (c) spar_session_id = bud sessionId
+    // (b) amount 100 (< 1000) → rezerwacja, nie pełna budowa; (c) spar_session_id = bud sessionId
     // → TWARDY link order→sesja, webhook ustawia bud_sessions.paid_at; (d) offer_id → walidacja
     // kwoty w tpay-create. lead_id z sesji = fallback linku + status leada 'won'.
     if (action === 'buy_reservation') {
       const rsid = (sessionId || '').trim()
       if (!rsid || !UUID_RE.test(rsid)) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
-      const RES_OFFER_ID = 'f32102f9-cc1e-42a3-9742-82593dadaaf1'   // „Rezerwacja — Twój sklep online" (500 zł), dedykowana /sklep
+      const RES_OFFER_ID = 'f32102f9-cc1e-42a3-9742-82593dadaaf1'   // „Rezerwacja — Twój sklep online" (100 zł od 21.07), dedykowana /sklep
       const { data: rOffer, error: rOffErr } = await supabase
         .from('offers').select('id, name, price, is_active').eq('id', RES_OFFER_ID).maybeSingle()
       if (rOffErr || !rOffer || rOffer.is_active === false) {
@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
           customer_email: rEmail,
           description: 'Rezerwacja — Twój sklep online',   // zawiera 'rezerwacj' + 'sklep' → webhook: isBudReservation
           offer_id: RES_OFFER_ID,                          // walidacja kwoty w tpay-create (amount == cena oferty)
-          amount: rOffer.price,                            // 500 (< 1000 → rezerwacja, nie pełna budowa)
+          amount: rOffer.price,                            // 100 (< 1000 → rezerwacja, nie pełna budowa)
           status: 'pending',
           payment_source: 'tpay',
           spar_session_id: rsid,                           // TWARDY link order→bud_session (webhook ustawi paid_at)

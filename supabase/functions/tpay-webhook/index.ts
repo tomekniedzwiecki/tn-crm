@@ -903,12 +903,12 @@ Deno.serve(async (req) => {
       // etapu know-how. Lustro logiki spar. Match: sid (twardy link order→sesja, pewny —
       // ID bud i spar są z różnych tabel, więc match w bud_sessions = na pewno budowanie)
       // > lead_id > e-mail (najnowsza aktywna: last_user_at DESC). Rezerwacja vs pełna
-      // płatność rozstrzygana KWOTĄ (rezerwacja = 500; budowa ≫ 1000). Idempotentne.
+      // płatność rozstrzygana KWOTĄ (rezerwacja = 100, do 21.07 = 500; budowa ≫ 1000). Idempotentne.
       try {
         const descB = (order.description || '').toLowerCase()
         const isBudReservation = descB.includes('rezerwacj') && (descB.includes('zbuduj') || descB.includes('sklep') || descB.includes('biznes online'))
         const amt = parseFloat(String(order.amount)) || 0
-        const isFull = amt >= 1000 // rezerwacja = 500 zł; pełna budowa ≫ 1000
+        const isFull = amt >= 1000 // rezerwacja = 100 zł (do 21.07: 500); pełna budowa ≫ 1000
         const sid = order.spar_session_id || null
         // deno-lint-ignore no-explicit-any
         let bs: any = null
@@ -934,7 +934,7 @@ Deno.serve(async (req) => {
             console.log('[tpay-webhook] Budowanie: rezerwacja → bud_session paid_at:', bs.id)
           }
           // WORKFLOW V2 („Sklepy"): PEŁNA płatność → auto-projekt prowadzenia
-          // wspólnego biznesu (decyzja Tomka 21.07.2026: sama rezerwacja 500 zł NIE
+          // wspólnego biznesu (decyzja Tomka 21.07.2026: sama rezerwacja (100 zł) NIE
           // tworzy projektu — dopiero pełna wpłata). Idempotentne po bud_session_id;
           // własny try/catch — NIGDY nie przerywa obsługi płatności.
           if (isFull) {
@@ -979,9 +979,10 @@ Deno.serve(async (req) => {
                     amount: amt, order_id: order.id, paid_at: paidAt,
                   })
                   if (bs.paid_at) {
+                    // kwota rezerwacji: 100 zł od 2026-07-21 (wpłaty sprzed zmiany = 500 zł)
                     await supabase.from('wf2_payments').insert({
                       project_id: proj.id, sort: 1, label: 'Rezerwacja (zwrotna, wliczona w budowę)',
-                      amount: 500, order_id: null, paid_at: bs.paid_at,
+                      amount: bs.paid_at < '2026-07-21T18:00:00Z' ? 500 : 100, order_id: null, paid_at: bs.paid_at,
                     })
                   }
                   await supabase.from('wf2_activities').insert({
@@ -996,7 +997,7 @@ Deno.serve(async (req) => {
             }
           }
           const leadId = bs.lead_id || order.lead_id
-          // Rezerwacja 500 zł (zwrotna) = etap NEGOCJACJE — rozmowa z Tomkiem dopiero przed
+          // Rezerwacja 100 zł (zwrotna) = etap NEGOCJACJE — rozmowa z Tomkiem dopiero przed
           // nami; „won" WYŁĄCZNIE przy pełnej płatności budowy (decyzja Tomka 2026-07-03;
           // wcześniej każda rezerwacja lądowała w CRM jako wygrany deal i psuła metrykę WON).
           if (leadId) {
