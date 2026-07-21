@@ -539,7 +539,11 @@ function renderMatrix(prodDefs) {
     if (cntEl) cntEl.textContent = P.products.length ? `(${P.products.length}/${PORTFOLIO_TARGET})` : '';
 
     const head = ['<th class="px-3 py-2.5">Produkt</th>', '<th class="px-3 py-2.5">Status</th>'];
-    if (admin) head.push('<th class="px-3 py-2.5 text-right">Zysk/szt.</th>');
+    if (admin) {
+        head.push('<th class="px-3 py-2.5 text-right">Zakup</th>');
+        head.push('<th class="px-3 py-2.5 text-right">Sprzedaż</th>');
+        head.push('<th class="px-3 py-2.5 text-right">Zysk/szt.</th>');
+    }
     head.push('<th class="px-3 py-2.5 min-w-[90px]">Postęp</th>');
     prodDefs.forEach((d, i) => {
         const desc = (P.WS[d.key] && P.WS[d.key].desc) ? String(P.WS[d.key].desc) : '';
@@ -593,6 +597,8 @@ function renderMatrix(prodDefs) {
             <td class="px-3 py-2.5"><div class="flex items-center gap-2.5 min-w-[180px]">${cover}
                 <div class="min-w-0">${nameCell}${subLine}</div></div></td>
             <td class="px-3 py-2.5"><span class="inline-block px-2 py-0.5 rounded-md text-[10.5px] ${sm.cls}">${sm.label}</span></td>
+            ${admin ? `<td class="px-3 py-2.5 text-right font-mono text-xs text-zinc-400">${p.cost_purchase != null ? moneyPL(p.cost_purchase) : '—'}</td>` : ''}
+            ${admin ? `<td class="px-3 py-2.5 text-right font-mono text-xs text-zinc-200">${p.price != null ? moneyPL(p.price) : '—'}</td>` : ''}
             ${admin ? `<td class="px-3 py-2.5 text-right font-mono text-xs ${profitCls}">${p.price !== null && profit !== null ? moneyPL(profit) : '—'}</td>` : ''}
             <td class="px-3 py-2.5">
                 <div class="pp-bar" title="Etap: ${pr.done}/${pr.total} · Całość: ${prAll.done}/${prAll.total}"><div style="width:${pr.pct}%"></div></div>
@@ -672,7 +678,7 @@ function renderMatrixCards(prodDefs) {
                     <div class="mxc-namerow">${nameCell}${rowIcons}</div>
                     <div class="mxc-badges">
                         <span class="mxc-status ${sm.cls}">${sm.label}</span>
-                        ${admin && p.price !== null && profit !== null ? `<span class="mxc-profit ${profitCls}">${moneyPL(profit)}/szt.</span>` : ''}
+                        ${admin && p.price !== null && profit !== null ? `<span class="mxc-profit ${profitCls}">${p.cost_purchase != null ? moneyPL(p.cost_purchase).replace(' zł', '') + ' → ' : ''}${moneyPL(p.price)} · ${profit >= 0 ? '+' : ''}${moneyPL(profit).replace(' zł', '')}/szt.</span>` : ''}
                         ${link}
                     </div>
                     <div class="mxc-prog">

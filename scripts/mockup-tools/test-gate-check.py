@@ -241,6 +241,13 @@ class TestRegistration(unittest.TestCase):
         self.assertIs(d["kapitalizacja_deposit"], GC.check_kapitalizacja_deposit)
         self.assertIs(d["reuse_preflight"], GC.check_reuse_preflight)
 
+    def test_cena_panel_zarejestrowany(self):
+        names = [n for (n, _fn) in GC.CHECK_ORDER]
+        self.assertIn("cena_panel", names)
+        self.assertIs(dict(GC.CHECK_ORDER)["cena_panel"], GC.check_cena_panel)
+        # cena_panel po kapitalizacja_deposit -> NIE psuje asercji panel_sync+1 == kapitalizacja_deposit
+        self.assertEqual(names[names.index("panel_sync") + 1], "kapitalizacja_deposit")
+
 
 class TestExistingCtaRegression(unittest.TestCase):
     """Sanity-regresja: istniejacy check_cta nadal dziala (guard wspoldzielonych helperow
@@ -264,6 +271,100 @@ class TestExistingCtaRegression(unittest.TestCase):
         res = GC.Results()
         GC.check_cta(res, self.M, {"html": None, "sections": []})
         self.assertEqual(statuses(res, "cta"), ["SKIP"])
+
+
+class TestCenaPanel(unittest.TestCase):
+    """cena_panel — zgodnosc cen zapieczonych w HTML (data-price) z wf2_products.price po slug.
+       _pg_crm podmieniany na fake (bez sieci); parser cen PL testowany jednostkowo."""
+
+    def setUp(self):
+        self.M = load_manifest()
+        self.assertIn("cena_panel", self.M, "brak bloku cena_panel w gate-manifest.json")
+        self._orig_pg = GC._pg_crm
+
+    def tearDown(self):
+        GC._pg_crm = self._orig_pg
+
+    def _ctx(self, html, no_net=False, with_key=True):
+        env = {}
+        if with_key:
+            env[self.M["supabase"]["key_env"]] = "sb_secret_dummy"
+        return {"html": html, "slug": "foo", "sections": GC.parse_sections(html),
+                "env": env, "no_net": no_net, "timeout": 5}
+
+    def _fake_pg(self, rows):
+        def fake(M, env, table, params, timeout):
+            return rows
+        return fake
+
+    def test_price_parse_pl(self):
+        """Parser cen: '149,90 zł' -> 149.90, '149.90' -> 149.90, separator tysiecy, szum -> None."""
+        self.assertEqual(GC._parse_price_pl("149,90 zł"), 149.90)
+        self.assertEqual(GC._parse_price_pl("149.90"), 149.90)
+        self.assertEqual(GC._parse_price_pl("1 299,00 zł"), 1299.00)
+        self.assertIsNone(GC._parse_price_pl("zł"))
+        self.assertIsNone(GC._parse_price_pl(None))
+
+    def test_brak_html_skip(self):
+        res = GC.Results()
+        GC.check_cena_panel(res, self.M, {"html": None, "slug": "foo", "sections": []})
+        self.assertEqual(statuses(res, "cena_panel"), ["SKIP"])
+
+    def test_brak_dataprice_warn(self):
+        """Brak elementow data-price w HTML -> WARN (nie ma czego porownac), nigdy FAIL."""
+        html = '<section id="hero"><h1>Bez ceny</h1></section>'
+        res = GC.Results()
+        GC.check_cena_panel(res, self.M, self._ctx(html))
+        rows = rows_of(res, "cena_panel")
+        self.assertTrue(rows)
+        self.assertEqual(rows[0][0], "WARN")
+        self.assertNotIn("FAIL", statuses(res, "cena_panel"))
+
+    def test_no_net_skip(self):
+        """data-price obecne, ale --no-net -> SKIP panelu (bez sieci), nie FAIL."""
+        html = '<div data-price="149,90 zł">149,90 zł</div>'
+        res = GC.Results()
+        GC.check_cena_panel(res, self.M, self._ctx(html, no_net=True))
+        self.assertIn("SKIP", statuses(res, "cena_panel"))
+        self.assertNotIn("FAIL", statuses(res, "cena_panel"))
+
+    def test_zgodna_pass(self):
+        """Ceny data-price == wf2_products.price (tol) -> PASS, zero FAIL."""
+        html = '<div data-price="149,90 zł">149,90 zł</div><a data-price-raw="149.90">Kup</a>'
+        GC._pg_crm = self._fake_pg([{"price": 149.90, "slug": "foo"}])
+        res = GC.Results()
+        GC.check_cena_panel(res, self.M, self._ctx(html))
+        cmp_rows = [(st, det) for (st, nm, det) in rows_of(res, "cena_panel") if "==" in nm]
+        self.assertTrue(cmp_rows, "brak wiersza porownania HTML==panel")
+        self.assertEqual(cmp_rows[0][0], "PASS")
+        self.assertNotIn("FAIL", statuses(res, "cena_panel"))
+
+    def test_rozjazd_fail(self):
+        """Cena w HTML != cena w panelu -> FAIL (rozjazd landing<->panel)."""
+        html = '<div data-price="149,90 zł">149,90 zł</div>'
+        GC._pg_crm = self._fake_pg([{"price": 159.90, "slug": "foo"}])
+        res = GC.Results()
+        GC.check_cena_panel(res, self.M, self._ctx(html))
+        self.assertIn("FAIL", statuses(res, "cena_panel"))
+
+    def test_brak_ceny_w_panelu_fail(self):
+        """Produkt panelu istnieje, ale price NULL -> FAIL (kalkulacja niewykonana)."""
+        html = '<div data-price="149,90 zł">149,90 zł</div>'
+        GC._pg_crm = self._fake_pg([{"price": None, "slug": "foo"}])
+        res = GC.Results()
+        GC.check_cena_panel(res, self.M, self._ctx(html))
+        fail_rows = [(st, det) for (st, nm, det) in rows_of(res, "cena_panel") if st == "FAIL"]
+        self.assertTrue(fail_rows)
+        self.assertIn("kalkulacja niewykonana", fail_rows[0][1].lower())
+
+    def test_brak_wiersza_panelu_skip(self):
+        """Landing bez projektu panelu (brak wiersza wf2_products dla sluga) -> SKIP (jak panel_sync)."""
+        html = '<div data-price="149,90 zł">149,90 zł</div>'
+        GC._pg_crm = self._fake_pg([])
+        res = GC.Results()
+        GC.check_cena_panel(res, self.M, self._ctx(html))
+        self.assertIn("SKIP", statuses(res, "cena_panel"))
+        self.assertNotIn("FAIL", statuses(res, "cena_panel"))
 
 
 if __name__ == "__main__":

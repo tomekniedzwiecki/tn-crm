@@ -11,7 +11,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.2/src/index.js" integrity="sha384-J7cw2fbG1T4C5MirTVUxsZGaMfw2m0XsCgOQEqUvB1OF9VIsHWuZF1GmyVRzs7eu" crossorigin="anonymous"></script>
     <script src="../components/shared-sidebar.js"></script>
     <link rel="stylesheet" href="panel.css">
-    <script src="panel-core.js"></script>
+    <script src="panel-core.js?v=2026072101"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
@@ -355,7 +355,7 @@
                 <div><label class="text-xs text-zinc-500 block mb-1">Status</label><select id="pm-status" class="fld"></select></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Tryb marży</label>
                     <select id="pm-margin-mode" class="fld" onchange="recalcMargin()">
-                        <option value="test">TEST — marża ~15%</option>
+                        <option value="test">TEST — narzut 10–15%</option>
                         <option value="scale">SKALA — marża docelowa</option>
                     </select></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Nazwa na platformie (mapowanie zamówień)</label><input id="pm-platname" class="fld" placeholder="(ustawia krok Produkt + kasa)"></div>
@@ -371,7 +371,7 @@
                     <div class="text-xs text-zinc-400">Zysk na sztuce: <span id="pm-profit" class="font-mono font-semibold text-white">—</span></div>
                     <div class="flex items-center gap-3 flex-wrap">
                         <div id="pm-hint" class="text-[11px] text-zinc-500"></div>
-                        <button onclick="setTargetPrice()" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] border border-[#0070f3]/40 rounded-md px-2.5 py-1 transition-colors" title="Ustawia cenę sprzedaży z marżą testową ~15% (narzut na zakup + wysyłkę, z prowizjami)">Ustaw cenę docelową</button>
+                        <button onclick="setTargetPrice()" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] border border-[#0070f3]/40 rounded-md px-2.5 py-1 transition-colors" title="Ustawia cenę sprzedaży z narzutem testowym 10–15% (narzut na zakup + wysyłkę, z prowizjami)">Ustaw cenę docelową</button>
                     </div>
                 </div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Landing na platformie (URL)</label><input id="pm-pageurl" class="fld" placeholder="(ustawia krok Publikacja landinga)"></div>
@@ -472,7 +472,8 @@
         const PRODUCT_STATUSES = ['kandydat','zaakceptowany','w_budowie','gotowy','live','test','winner','kill','skala'];
         const STEP_CYCLE = { pending:'in_progress', in_progress:'done', done:'pending', skipped:'pending', blocked:'in_progress' };
         const NOTE_TAG_META = { uwaga:{l:'Uwaga',cls:'text-[#52a8ff] border-[#0070f3]/40'}, decyzja:{l:'Decyzja',cls:'text-[#62c073] border-[#45a557]/40'}, blokada:{l:'Blokada',cls:'text-[#f26d78] border-[#e5484d]/40'} };
-        const TEST_MARGIN_PCT = 15; // marża testowa ~15% narzutu (decyzja Tomka 2026-07-04)
+        // pasmo narzutu testowego — decyzja Tomka 2026-07-21: start 10–15% żeby zacząć sprzedawać i przejść testy
+        const TEST_MARGIN_MIN = 10, TEST_MARGIN_MAX = 15;
 
         async function logActivity(action, description) {
             try { await supabaseClient.from('wf2_activities').insert({ project_id: projectId, actor:'admin', action, description }); } catch(_) {}
@@ -879,7 +880,12 @@
             marka: { desc:'Marka PARASOLOWA sklepu (1 marka = 1 domena): storefront/checkout platformy i strona główna-galeria noszą parasol; produkty żyją na podstronach jako MINI-MARKI (osobny krok Styl+mini-marka per produkt). RUSZA PO WYBORZE PRODUKTÓW (decyzja Tomka 18.07) — portfel jest kontekstem nazwy. Nazwa POJEMNA na ROTUJĄCY asortyment — nigdy kategorii-specyficzna. Krok produkuje pełny kontrakt handoffu: nazwa→project.name (czyta ją KAŻDA paczka promptów fabryki), tagline+opis (strona główna), paleta+fonty (tokeny podstron parasola), logo lockup + favicon (pl_branding wgrywa je na platformę). Krok jest W PEŁNI AUTONOMICZNY — bramka wydatku (zakup domeny) żyje w kroku „Domena marki".',
                 fields:[{k:'nazwa',l:'Nazwa marki parasolowej', col:'project.name'},{k:'domena',l:'Domena (.pl, wolna)', col:'project.domain'},{k:'tagline',l:'Tagline', col:'project.tagline'},{k:'opis',l:'Opis marki (na stronę główną)', ta:true, col:'project.brand_opis'},{k:'kolory',l:'Paleta hex z rolami (primary, accent, neutrale — JASNE tła)', col:'project.palette'},{k:'fonty',l:'Fonty heading/body (latin-ext — polskie znaki)', col:'project.fonts'},{k:'logo_url',l:'Logo lockup PNG (URL Storage)', col:'project.logo_url'},{k:'favicon_url',l:'Favicon PNG (URL Storage)', col:'project.favicon_url'}],
                 check:['Shortlista nazw pojemnych z WOLNYMI domenami .pl (RDAP/WHOIS) + web-check kolizji','Nazwa wybrana → project.name (top-3 + rekomendacja w notatce)','Tagline + opis marki → pola projektu (zasilą stronę główną)','Paleta 6 hex (JASNE tła) + fonty latin-ext → pola projektu','Logo lockup + favicon (selektor @32px) wgrane do Storage brand/','Artefakty w wf2_artifacts (kind=brand) + koszty w wf2_costs','Domena wybrana i wolna → project.domain (zakup = krok Domena marki)','Werdykt rubryką 6×T/N (32/16/metafora/flat/zero liter/mono) — bez 6×T = FAIL','Kompozyt kontekstowy (favicon @16/32/64 jasne+ciemne, lockupy) → wf2_artifacts'], prompt:'marka' },
-            wybor: {},   // dedykowany warsztat wyborBody (ceny + marża + aukcja)
+            wybor: { desc:'Wybór produktu do portfela: losowanie z zatwierdzonych na /trendy (albo ręczny wybór z radaru), weryfikacja żywej aukcji dostawcy (link + zdjęcie) i dodanie karty produktu do portfela. Kalkulacja ceny to OSOBNY krok (dedykowany warsztat).',
+                check:['Produkt wylosowany z approved /trendy','Aukcja dostawcy zweryfikowana (link + zdjęcie)','Produkt dodany do portfela (karta produktu)'] },
+            // dedykowany warsztat kalkulacjaBody (cena zakupu + sprzedaż + marża 10–15% + drabinka + aukcja);
+            // checklistę odhacza fabryka przez panel-sync (VERBATIM — klucz deduplikacji ze stanem)
+            kalkulacja: { desc:'Kalkulacja ceny produktu: potwierdź cenę zakupu z żywej aukcji (source=detail), ustal cenę sprzedaży z narzutem 10–15% (cena psychologiczna) i zaakceptuj drabinkę cenową (TEST→SCALE→OPT). Bez zaakceptowanej drabinki silnik cen NIE rusza produktu.',
+                check:['Cena zakupu potwierdzona — żywa aukcja (source=detail)','Cena sprzedaży ustalona — narzut 10–15% (cena psychologiczna)','Drabinka cenowa zaakceptowana (TEST→SCALE→OPT)'], prompt:'kalkulacja' },
 
             // ── ETAP 2: LANDING (fabryka F0→F8) ──
             lp_dane: { desc:'Fundament danych produktu. Twardy GATE source=detail (search-galeria = inny produkt = STOP). Kuracja galerii i wideo AliExpress (werdykty per kadr), KARTA PRAWDY (jedyne źródło faktów, Z7) i PASZPORT produktu (wierność wizualna). Bez tego kroku żaden brief nie rusza.',
@@ -1048,9 +1054,9 @@
 
         function renderDrawerBody(st, d, p) {
             const ws = WS[d.key] || {};
-            // Krok „Wybór + kalkulacja": dedykowany warsztat cen
-            if (d.key === 'wybor' && p) {
-                document.getElementById('sd-body').innerHTML = wyborBody(p);
+            // WARSZTAT KALKULACJA CENY: dedykowany warsztat (cena zakupu + sprzedaż + marża + drabinka + aukcja)
+            if (d.key === 'kalkulacja' && p) {
+                document.getElementById('sd-body').innerHTML = kalkulacjaBody(p);
                 wyRecalc();
                 loadWyborTT(p);
                 renderDrawerFooter(st);
@@ -1687,6 +1693,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             const PID = p ? p.id : '<product_id>';
             const map = {
                 marka: `KROK MARKA PARASOLOWA (Etap 1 Fundament; scope=project — krok W PEŁNI AUTONOMICZNY, bramka wydatku żyje w kroku „Domena marki"). Parasol ≠ mini-marka produktu: 1 sklep = 1 domena; storefront/checkout i strona główna-galeria noszą parasol, produkty na podstronach mają WŁASNE mini-marki. KONTEKST: krok rusza PO wyborze produktów — przeczytaj portfel projektu (wf2_products, powinien być skompletowany); portfel to kontekst nazwy: musi być POJEMNA na rotujący asortyment (nigdy kategorii-specyficzna) i pasować stylem do rodziny mini-marek (Drapek/Chłodzik — ciepłe polskie słowa). WYKONAJ: (1) ~25 kandydatek nazw → domeny .pl: RDAP https://rdap.dns.pl/domain/<d> (404=WOLNA, 200=zajęta; sekwencyjnie ~3,5 s odstępu; po 429 → WHOIS whois.dns.pl:43; awaryjnie MCP Vercel check_domain_availability) + web-check kolizji z polskimi markami; top-3 z rekomendacją do notatki kroku. (2) Tagline + opis marki 2-3 zdania (zasilą stronę główną-galerię). (3) Paleta 6 hex Z ROLAMI (primary/accent/neutrale) — WYŁĄCZNIE jasne tła; fonty heading/body z latin-ext (pobierz plik .ttf — wordmark renderuje Pillow z fontu, NIGDY gpt-image). (4) Logo (pipeline R3, DIVERSITY-FIRST): NAJPIERW wymyśl 2-3 RÓŻNE metafory znaku (różne kategorie wizualne — nie warianty jednego pomysłu; N klonów 1 metafory = fixation), potem scripts/mockup-tools/brand-forge.py w trybie PARASOLOWYM: --project-id <projekt> (claim nazwy PRZED generacją) --slug parasol-<slug> --nazwa <Nazwa> --paleta <hexy> --metafory 'a;b;c' --font <plik.ttf> --count 6; skrypt sam: kanał LOKALNY OpenAI HIGH (bez limitu edge; gpt-image-2 NIE wspiera background:transparent — biel + defringe-alfa z próbki rogów) → selektor @32px (+ test mono, + bleed-guard) → favicon 512/256/32/16 + mono → wordmark Z FONTU (guard glifów PL) + wordmark-dark → lockupy jasny/ciemny → brand-context.png (DOWÓD @16/32/64 na obu tłach) → upload bud-assets/parasol-<slug>/brand/ + brand.json. Werdykt vision top-2 (skrypt wybiera z RÓŻNYCH konceptów) wykonaj SAM wg RUBRYKI 6×T/N, którą skrypt wypisuje — TAK bez 6×T = FAIL, frazy-wytrychy = FAIL; podaj jedną najsłabszą rzecz znaku. (5) ZAPIS: bezpośredni UPDATE wf2_projects (kolumny: name/domain/tagline/brand_opis/palette/fonts/logo_url/favicon_url — logo_url=lockup, favicon_url=favicon-512; panel czyta pola kroku Z TYCH kolumn przez bindingi col) + artefakty wf2_artifacts (kind='brand', product_id NULL) + koszty wf2_costs. (6) HANDOFF: INSERT do wf2_notes (tag='decyzja', status='open') „DO DECYZJI TOMKA: kup domenę <domena> w LH.pl" — zakup+DNS to krok „Domena marki" (ten sam etap, tor równoległy: po zakupie OD RAZU add_domain → rekordy do LH.pl → strażnik aktywuje); krok pl_branding (logo na platformę) może iść zaraz po tym kroku.`,
+                kalkulacja: `KROK KALKULACJA CENY dla ${S} (id ${PID}; Etap 1 Fundament, scope=product). Ustal ceny w warsztacie kroku i zapisz je na produkcie (wf2_products): (1) CENA ZAKUPU = żywa aukcja AliExpress (source='detail'; jeśli ≠detail — STOP, podmień link w pełnej edycji i odśwież snapshot, dopiero potem kalkuluj) → cost_purchase; (2) CENA SPRZEDAŻY = narzut 10–15% na koszt efektywny (koszt+wysyłka, z prowizjami), końcówka psychologiczna — przycisk „10–15%" liczy najwyższą cenę psych. w paśmie → price; (3) DRABINKA CENOWA zaakceptowana (TEST→SCALE→OPT) — bez akceptu silnik cen NIE rusza produktu. Zapis najlepiej komendą panel-sync (product_meta cost_purchase/price + step_update kalkulacja z checklistą VERBATIM z WS) albo bezpośrednio w warsztacie kroku. Marża testowa to PASMO 10–15% (decyzja Tomka 2026-07-21: start nisko, żeby zacząć sprzedawać i przejść testy).`,
                 lp_dane: `KROK DANE fabryki landingów dla produktu ${S} (wf2_products.id ${PID}). Wykonaj F0–F0.6 wg STANDARD-LANDING-SKLEPY.md §1 i GALERIA-ALI.md: najpierw GATE source='detail' (≠detail po force:true = STOP produktu, status kroku blocked + nota), potem kuracja galerii i wideo do bud_tt_products.gallery_curated/videos_curated, na końcu KARTA-PRAWDY.md (format §1a: cena z sku_prices + kurs NBP z datą, specs 1:1, destylacja FAKT/BEŁKOT, warianty) i PASZPORT.md w FABRYKA-*/${S}/. Zarezerwuj mini-markę w bud_brand_names (INSERT-or-fail). Puste pole = „brak danych", nigdy zmyślanie.`,
                 lp_plan: `KROK PLAN dla ${S} (id ${PID}). Wg STANDARD F1 + PRZEWODNIK-GRAFICZNY.md: wypuść plan gpt-5.6-sol (motyw przewodni = metafora korzyści pod TEN produkt, dobór i kolejność sekcji, paleta+font, lista grafik, funkcje konwersji) na bazie KARTA-PRAWDY.md; zrób tabelę anty-mismatch CLAIM→ŹRÓDŁO (korzyść bez kotwicy = CUT; claim o klasie produktu bez źródła = STOP planu); potem przewodnik graficzny z osiami różnorodności (≥3 konteksty/≥3 skale/≥2 światła/człowiek ≥30%) + gate krytyka przewodnika PRZED makietami. Zapisz PLAN.md i PRZEWODNIK-GRAFICZNY.md w FABRYKA-*/${S}/.`,
                 lp_styl_marka: `KROK STYL + MINI-MARKA dla ${S} (id ${PID}). Wg STANDARD F2 (styl-master) i F2.5 (branding) + scripts/mockup-tools/brand-forge.py (pipeline R3): wygeneruj styl-master (pełna scena z motywem z PLAN.md — referencja całej serii MAKIET; gate: motyw↔korzyść, jasno, produkt wierny). FAVICON: 2-3 RÓŻNE metafory (diversity-first, nie warianty jednego pomysłu) → brand-forge --product-id <tt_product_id> --metafory 'a;b;c' --count 6 (kanał lokalny HIGH; favicon NIE dostaje styl-mastera jako ref — /edits ze sceną bleeduje tło; selektor @32px + test mono + guard glifów PL) → werdykt vision top-2 RUBRYKĄ 6×T/N (skrypt ją wypisuje; bez 6×T = FAIL) + jedna najsłabsza rzecz. Wordmark Z FONTU landingu (NIGDY gpt-image). Lockupy jasny/ciemny + brand-context.png (dowód @16/32/64). Wgraj brand/ do Storage bud-assets/${S}/brand/ i zarejestruj artefakty w wf2_artifacts (kind branding/styl_master + brand-context jako dowód).`,
@@ -1759,9 +1766,9 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 .catch(() => showToast('Nie udało się skopiować', 'error'));
         }
 
-        // ============ WARSZTAT „WYBÓR + KALKULACJA" ============
+        // ============ WARSZTAT „KALKULACJA CENY" ============
         let wyTT = null, wySeq = 0;
-        function wyborBody(p) {
+        function kalkulacjaBody(p) {
             const img = p.cover_url || '';
             return `<div class="space-y-5">
                 <div>
@@ -1778,12 +1785,12 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                     <label class="text-xs text-zinc-500 block mb-1">Cena sprzedaży (zł)</label>
                     <div class="flex gap-2">
                         <input id="wy-price" type="number" step="0.01" class="fld" value="${p.price ?? ''}" oninput="wyRecalc()" onchange="wySave()">
-                        <button onclick="wySuggest()" class="text-[11px] text-[#52a8ff] border border-[#0070f3]/40 rounded-md px-3 flex-shrink-0 hover:bg-[#0070f3]/10 transition-colors" title="Cena zakupu + ${TEST_MARGIN_PCT}% (cena psychologiczna)">+${TEST_MARGIN_PCT}%</button>
+                        <button onclick="wySuggest()" class="text-[11px] text-[#52a8ff] border border-[#0070f3]/40 rounded-md px-3 flex-shrink-0 hover:bg-[#0070f3]/10 transition-colors" title="Cena zakupu + 10–15% narzutu (cena psychologiczna)">10–15%</button>
                     </div>
                 </div>
                 <div class="bg-[#111] border border-[#262626] rounded-md px-4 py-3 flex items-center justify-between flex-wrap gap-2">
                     <div class="text-xs text-zinc-400">Marża: <span id="wy-margin" class="font-mono font-semibold text-zinc-500">—</span></div>
-                    <div class="text-[11px] text-zinc-600">na testach celujemy w ~${TEST_MARGIN_PCT}%</div>
+                    <div class="text-[11px] text-zinc-600">na testach celujemy w 10–15% narzutu</div>
                 </div>
                 <!-- DRABINKA CENOWA (CENNIK-PLAN.md v2.0 §2): akcept = bramka startowa silnika cen -->
                 <div class="bg-[#0a0a0a] border border-[#262626] rounded-md px-4 py-3">
@@ -1805,7 +1812,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             const cost = Number(p.cost_purchase) || 0, ship = Number(p.cost_shipping) || 0;
             const scaleEst = cost > 0 ? psychPriceUp(Math.max((cost + ship) * 2.5, price || 0)) : null;
             return [
-                { phase: 'test', price: price ?? null, note: `koszt+${TEST_MARGIN_PCT}% · awans: WINNER = CP2 (ATC≥5%) + ≥3 zam. + spend 300` },
+                { phase: 'test', price: price ?? null, note: `koszt+10–15% · awans: WINNER = CP2 (ATC≥5%) + ≥3 zam. + spend 300` },
                 { phase: 'scale', price: null, source: 'ai', est: scaleEst, note: 'propozycja AI (bramka Tomka); ramp pod ścianą psych. → baza po ≥3 zam. na rampie' },
                 { phase: 'opt', step_pct: 15, note: 'jeden probe +15–20%; ocena: kontrybucja/zł spendu, okno 14 dni; przez 100/150 = decyzja Tomka' },
             ];
@@ -1887,7 +1894,25 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             for (const c of cands) if (c >= min - 0.001) return Math.round(c * 100) / 100;
             return Math.round((dec + 19.90) * 100) / 100;
         }
-        function suggestTestPrice(cost) { return psychPriceUp(Math.max(cost * (1 + TEST_MARGIN_PCT / 100), cost + 1)); }
+        // cena psychologiczna „w dół": najwyższa końcówka …4,90/…9,00 nie wyższa niż max
+        function psychPriceDown(max) {
+            if (!(max > 0)) return 0;
+            const dec = Math.floor(max / 10) * 10;
+            const cands = max >= 150 ? [dec + 19.00, dec + 9.00, dec - 1.00, dec - 11.00]
+                                     : [dec + 19.90, dec + 14.90, dec + 9.90, dec + 4.90, dec - 0.10, dec - 5.10, dec - 10.10];
+            for (const c of cands) if (c <= max + 0.001 && c > 0) return Math.round(c * 100) / 100;
+            return Math.round((dec + 4.90) * 100) / 100;
+        }
+        // pasmo narzutu testowego 10–15% (base = koszt efektywny): najwyższa cena psychologiczna ≤ base*(1+MAX%);
+        // jeśli spadłaby poniżej base*(1+MIN%) → w górę do MIN (narzut może przekroczyć MAX — świadome, byle zacząć sprzedawać)
+        function bandTestPrice(base) {
+            if (!(base > 0)) return null;
+            const pMax = base * (1 + TEST_MARGIN_MAX / 100);
+            const pMin = base * (1 + TEST_MARGIN_MIN / 100);
+            const p = psychPriceDown(pMax);
+            return p >= pMin - 0.001 ? p : psychPriceUp(pMin);
+        }
+        function suggestTestPrice(cost) { return bandTestPrice(cost); }
         function wySuggest() {
             const cost = parseFloat(document.getElementById('wy-cost').value);
             if (isNaN(cost) || cost <= 0) { showToast('Najpierw cena zakupu', 'error'); return; }
@@ -1897,7 +1922,8 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
         function wyInsertCost(pln) {
             document.getElementById('wy-cost').value = pln.toFixed(2);
             const priceEl = document.getElementById('wy-price');
-            if (!priceEl.value) priceEl.value = suggestTestPrice(pln).toFixed(2);
+            const sp = suggestTestPrice(pln);
+            if (!priceEl.value && sp != null) priceEl.value = sp.toFixed(2);
             wyRecalc(); wySave();
         }
         function wyAliprice() {
@@ -2247,8 +2273,8 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             ttProducts = null; ttCardCache = {};
         }
         function testPriceFor(cost, ship, fees) {
-            const base = (cost + ship) * (1 + TEST_MARGIN_PCT / 100) / (1 - fees);
-            return psychPriceUp(Math.max(base, cost + ship + 1));
+            // base = koszt efektywny (break-even po prowizjach); pasmo narzutu 10–15% na wierzchu
+            return bandTestPrice((cost + ship) / (1 - fees));
         }
         function setTargetPrice() {
             const cost = parseFloat(document.getElementById('pm-cost').value) || 0;
@@ -2302,7 +2328,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 profitEl.className = 'font-mono font-semibold ' + (profit > 0 ? 'text-[#4cb782]' : 'text-[#f5b955]');
             } else { profitEl.textContent = '—'; profitEl.className = 'font-mono font-semibold text-zinc-500'; }
             if (mode === 'test' && fees < 1 && (cost > 0 || ship > 0)) {
-                hintEl.textContent = `Cena dla ~${TEST_MARGIN_PCT}% marży: ${moneyPL(testPriceFor(cost, ship, fees))}`;
+                hintEl.textContent = `Cena dla narzutu 10–15%: ${moneyPL(testPriceFor(cost, ship, fees))}`;
             } else hintEl.textContent = mode==='scale' ? 'Tryb SKALA — marża docelowa wg decyzji przy winnerze.' : '';
         }
 

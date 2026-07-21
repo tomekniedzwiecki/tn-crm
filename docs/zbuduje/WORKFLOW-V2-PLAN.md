@@ -12,8 +12,13 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
 - **NOWA STRUKTURA ETAPÓW (7; rozbicie „Kampanii" 19.07 — migracja
   `20260719c_wf2_kampanie_rozbicie`; wcześniej korekta 18.07 — Etap 1 = „Fundament sklepu"):**
   **1 Fundament sklepu** (kolejność wg decyzji Tomka 18.07 wieczór, migracja
-  `20260718h_wf2_etap1_kolejnosc`: **wybor 🏁 [product] → marka 🏁 [project] → pl_domena 🏁**
-  — marka RUSZA PO wyborze produktów, portfel jest kontekstem nazwy; pusty portfel = baner
+  `20260718h_wf2_etap1_kolejnosc`; **rozbicie `wybor` na wybór + wycenę 2026-07-21**:
+  **wybor 🏁 [product] → kalkulacja 🏁 [product] → marka 🏁 [project] → pl_domena 🏁**
+  — `wybor` (sort 5) = sam wybór produktu; **`kalkulacja` (sort 7, „Kalkulacja ceny", per produkt)
+  WYKONUJE FABRYKA komendą `panel-sync.py kalkulacja`: potwierdza żywą cenę zakupu (source=detail),
+  ustala cenę sprzedaży w paśmie narzutu 10–15% (cena psychologiczna) i akceptuje drabinkę
+  TEST→SCALE→OPT (accepted_by='fabryka'); w blokadzie kolejności przed `lp_dane`**. Marka RUSZA
+  PO wyborze produktów, portfel jest kontekstem nazwy; pusty portfel = baner
   „Dobierz portfel" zamiast kroku. pl_domena PRZENIESIONA z Etapu 3 — tor domeny: zakup
   LH.pl → DNS → propagacja 24-48 h → weryfikacja w Meta BM to najdłuższa ścieżka projektu,
   MUSI biec równolegle do landingów)
@@ -50,7 +55,8 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   Konsumenci kontraktu: paczki promptów (name/domain), pl_branding (logo_url/favicon_url →
   upload_logo/upload_favicon, SUROWY base64 PNG), pl_glowna + pl_prawne (tagline/brand_opis/
   palette/fonts), ads_pixel (domain → weryfikacja w BM), pl_landing (canonical).
-  Kamień na 'wybor': „Kalkulacja zaakceptowana — produkt gotowy do fabryki".
+  Kamień na 'kalkulacja': „Kalkulacja zaakceptowana — produkt gotowy do fabryki"
+  (2026-07-21 przeniesiony z `wybor` na nowy krok `kalkulacja`).
   `nextStep()` w panelu: kroki wiszące u klienta/auto (in_progress) NIE blokują wskaźnika
   następnej roboty; sub-kroki (sub_of) pominięte.
 - **`wf2_artifacts`** (project_id, product_id, step_key, kind, label, url, storage, meta) —

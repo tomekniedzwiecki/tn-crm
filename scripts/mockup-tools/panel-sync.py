@@ -43,6 +43,7 @@ CLI: patrz `panel-sync.py -h`.
 import os
 import sys
 import json
+import math
 import argparse
 import mimetypes
 from datetime import datetime, timezone
@@ -96,6 +97,23 @@ def _load_key():
 KEY = _load_key()
 H = {"apikey": KEY, "Authorization": f"Bearer {KEY}"}
 HJSON = {**H, "Content-Type": "application/json"}
+
+
+def _env_val(name):
+    """Wartość dowolnej zmiennej z .env (TN_CRM_ENV) → fallback os.environ. None gdy brak.
+    Używane m.in. do opcjonalnego BUD_TOOLS_SECRET (realna bramka backendu edge bud-ali-snapshot)."""
+    try:
+        with open(ENV_PATH, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                if k.strip() == name:
+                    return v.strip().strip('"').strip("'")
+    except FileNotFoundError:
+        pass
+    return os.environ.get(name)
 
 
 def log(msg):
@@ -190,12 +208,29 @@ def link_product(project, tt, name, slug=None, sort=None, cover=None, supplier=N
     log(f"link_product: INSERT tt={tt} name={name!r} sort={sort} status={row['status']} → {pid}")
     _rpc("wf2_ensure_steps", {"p_project": project})
     log(f"link_product: wf2_ensure_steps({project}) → dosiane kroki produktu")
+    # Etap 1: produkt trafia do portfela WYŁĄCZNIE w wyniku dokonanego wyboru → krok 'wybor' = done.
+    # NIE nadpisuj, jeśli krok ma już status inny niż pending (świadoma decyzja Tomka w panelu).
+    try:
+        wrows = _get("wf2_steps", _scope_param(
+            {"project_id": f"eq.{project}", "step_key": "eq.wybor", "select": "id,status"}, pid))
+        cur = wrows[0]["status"] if wrows else None
+        if cur in (None, "pending"):
+            step_update(project, pid, "wybor", status="done")
+            log("link_product: krok 'wybor' → done (wybór dokonany = produkt w portfelu)")
+        else:
+            log(f"link_product: krok 'wybor' status={cur} — nie nadpisuję")
+    except Exception as e:
+        log(f"link_product: nie ustawiono 'wybor' done ({e})")
     return pid
 
 
 # ── 2. step_update ──
-# Kolejnosc faz landingu F0..F8 (MOST-PANEL.md). Sluzy blokadzie "dziury w fazach".
-LP_ORDER = ["lp_dane", "lp_plan", "lp_styl_marka", "lp_makiety", "lp_grafiki",
+# Kolejnosc krokow: Etap 1 'kalkulacja' (cena zakupu + sprzedazy + akcept drabinki) PRZED
+# faza landingu F0..F8 (MOST-PANEL.md). Sluzy blokadzie "dziury w fazach": 'kalkulacja' jest
+# na pozycji 0 (nigdy nie blokowana), a domkniecie 'lp_dane' (F0) wymaga wpierw domknietej
+# 'kalkulacja' z pelna checklista — produkt nie wchodzi do fabryki bez ustalonej ceny (mechanizm
+# _sprawdz_kolejnosc). Krok 'kalkulacja' wykonuje fabryka komenda `panel-sync.py kalkulacja`.
+LP_ORDER = ["kalkulacja", "lp_dane", "lp_plan", "lp_styl_marka", "lp_makiety", "lp_grafiki",
             "lp_kod", "lp_dopasowanie", "lp_zycie", "lp_finisz"]
 
 
@@ -311,6 +346,315 @@ def product_meta(product, patch):
     _patch("wf2_products", {"id": f"eq.{product}"}, clean)
     log(f"product_meta: PATCH {product} pola={sorted(clean)}")
     return clean
+
+
+# ── 4a. kalkulacja — krok Etapu 1: żywa cena zakupu (Ali) → cena sprzedaży (narzut) → drabinka ──
+def _r2(x):
+    """Zaokrąglenie do 2 miejsc HALF-UP (lustro JS Math.round(x*100)/100 dla dodatnich)."""
+    return math.floor(float(x) * 100 + 0.5) / 100.0
+
+
+def _money_pl(v):
+    try:
+        return ("%.2f" % float(v)).replace(".", ",") + " zł"
+    except Exception:
+        return str(v)
+
+
+def _nbp_usd_rate():
+    """Kurs USD z NBP tabela A (rates[0].mid). BEZ fallbacku — brak NBP = SystemExit (retry).
+    Panel liczy PLN tak samo (api.nbp.pl/api/exchangerates/rates/a/usd?format=json)."""
+    try:
+        r = requests.get("https://api.nbp.pl/api/exchangerates/rates/a/usd?format=json", timeout=20)
+        if r.status_code >= 300:
+            raise RuntimeError(f"HTTP {r.status_code}")
+        mid = ((r.json().get("rates") or [{}])[0]).get("mid")
+    except Exception as e:
+        raise SystemExit("kalkulacja: NBP niedostępny (%s) — kurs USD wymagany do przeliczenia ceny; "
+                         "powtórz za chwilę (brak fallbacku, cena musi być realna)." % str(e)[:120])
+    if not mid:
+        raise SystemExit("kalkulacja: NBP zwrócił pusty kurs (rates[0].mid) — powtórz.")
+    return float(mid)
+
+
+def _refresh_snapshot(tt_id):
+    """Odświeża bud_tt_products.ali_snapshot przez edge bud-ali-snapshot (force). Auth: service-role
+    jako Bearer (HJSON) + x-tools-secret gdy BUD_TOOLS_SECRET dostępny w .env (realna bramka backendu).
+    Deploy edge = --no-verify-jwt. Zwraca JSON odpowiedzi. RuntimeError na błędzie (wołający degraduje)."""
+    url = f"https://{PROJECT_REF}.supabase.co/functions/v1/bud-ali-snapshot"
+    hdr = dict(HJSON)
+    tools = _env_val("BUD_TOOLS_SECRET")
+    if tools:
+        hdr["x-tools-secret"] = tools
+    r = requests.post(url, headers=hdr, data=_body({"productKey": tt_id, "force": True}), timeout=120)
+    if r.status_code >= 300:
+        raise RuntimeError(f"edge {r.status_code}: {r.text[:200]}")
+    return r.json() if r.text.strip() else {}
+
+
+def _psych_price_up(minv):
+    """Najniższa cena psychologiczna NIE niższa niż `minv` (lustro panelu, projekt.html psychPriceUp).
+    Końcówki: <150 → dziesiątka+4,90/9,90/14,90/19,90; ≥150 → dziesiątka+9,00/19,00."""
+    dec = math.floor(minv / 10) * 10
+    cands = ([dec + 9.00, dec + 19.00] if minv >= 150
+             else [dec + 4.90, dec + 9.90, dec + 14.90, dec + 19.90])
+    for c in cands:
+        if c >= minv - 0.001:
+            return _r2(c)
+    return _r2(dec + 19.90)
+
+
+def _psych_price_down(maxv):
+    """Najwyższa cena psychologiczna NIE wyższa niż `maxv` (druga strona psychPriceUp). Końcówki wg
+    pasma ceny (≥150 → …9,00/…19,00; <150 → …4,90/…9,90/…14,90/…19,90). None gdy nic ≤ maxv."""
+    best = None
+    dec = math.floor(maxv / 10) * 10
+    for _ in range(0, 80):
+        for end in (4.90, 9.90, 14.90, 19.90, 9.00, 19.00):
+            c = _r2(dec + end)
+            valid = (end in (9.00, 19.00)) if c >= 150 else (end in (4.90, 9.90, 14.90, 19.90))
+            if not valid:
+                continue
+            if c <= maxv + 0.001 and (best is None or c > best):
+                best = c
+        dec -= 10
+        if dec < 0:
+            break
+    return best
+
+
+# checklista kroku 'kalkulacja' — VERBATIM z obiektu WS w tn-sklepy/projekt.html + migracja
+# 20260721_wf2_kalkulacja_krok.sql (panel merguje po dokładnym `t`; en-dash U+2013 w „10–15%",
+# em-dash U+2014 przy separatorach, strzałki U+2192 w „TEST→SCALE→OPT").
+KALKULACJA_CHECKLIST = [
+    {"t": "Cena zakupu potwierdzona — żywa aukcja (source=detail)", "done": True},
+    {"t": "Cena sprzedaży ustalona — narzut 10–15% (cena psychologiczna)", "done": True},
+    {"t": "Drabinka cenowa zaakceptowana (TEST→SCALE→OPT)", "done": True},
+]
+
+
+def kalkulacja(project, product, margin_min=10.0, margin_max=15.0, cost_usd=None,
+               refresh=None, force=False, dry_run=False):
+    """Krok Etapu 1 'kalkulacja' wykonywany przez FABRYKĘ. Potwierdza ŻYWĄ cenę zakupu z aukcji Ali
+    (source=detail — GATE), przelicza USD→PLN kursem NBP, ustala cenę sprzedaży z narzutem
+    margin_min–margin_max% (cena psychologiczna, lustro panelu), akceptuje drabinkę cenową
+    TEST→SCALE→OPT i zamyka krok 'kalkulacja' (done + checklista VERBATIM + fields + nota).
+    --dry-run = ZERO zapisów (podgląd JSON), --force = pełna rekalkulacja mimo zaakceptowanej drabinki."""
+    warns = []
+    # ── 1. produkt + bud_tt_products ──
+    prod_rows = _get("wf2_products", {
+        "id": f"eq.{product}", "project_id": f"eq.{project}",
+        "select": ("id,tt_product_id,name,slug,cost_purchase,cost_shipping,fees_pct,price,"
+                   "price_ladder,price_phase,phase_started_at,test_started_at,shipping_paid_by,margin_mode")})
+    if not prod_rows:
+        raise SystemExit(f"kalkulacja: produkt {product} nie należy do projektu {project} (albo nie istnieje).")
+    P = prod_rows[0]
+    tt = P.get("tt_product_id")
+    if not tt:
+        raise SystemExit("kalkulacja: produkt bez tt_product_id (brak powiązania z bud_tt_products) — "
+                         "kalkulacja opiera się na żywej aukcji Ali.")
+
+    def _load_tt():
+        rows = _get("bud_tt_products", {"id": f"eq.{tt}", "select": "id,ali_snapshot,chosen_link"})
+        return rows[0] if rows else None
+
+    tt_row = _load_tt()
+    if not tt_row:
+        raise SystemExit(f"kalkulacja: bud_tt_products {tt} nie istnieje.")
+    snap = tt_row.get("ali_snapshot") or {}
+
+    # ── 2. potwierdzenie ŻYWEJ ceny: refresh gdy --refresh LUB snapshot >24h ──
+    fetched_at = snap.get("fetched_at")
+    age_h = None
+    if fetched_at:
+        try:
+            dt = datetime.fromisoformat(str(fetched_at).replace("Z", "+00:00"))
+            age_h = (datetime.now(timezone.utc) - dt).total_seconds() / 3600.0
+        except Exception:
+            age_h = None
+    stale = (age_h is None) or (age_h > 24)
+    if refresh is True:
+        need_refresh = True
+    elif refresh is False:
+        need_refresh = False
+    else:
+        need_refresh = stale
+    snap_date = str(fetched_at)[:10] if fetched_at else "?"
+    if need_refresh and not dry_run:
+        try:
+            _refresh_snapshot(tt)
+            tt_row = _load_tt() or tt_row
+            snap = tt_row.get("ali_snapshot") or snap
+            fetched_at = snap.get("fetched_at") or fetched_at
+            snap_date = str(fetched_at)[:10] if fetched_at else "?"
+            log("kalkulacja: snapshot odświeżony (bud-ali-snapshot force)")
+        except Exception as e:
+            warns.append("cena z snapshotu z %s, refresh nieudany (%s)" % (snap_date, str(e)[:100]))
+            log(f"kalkulacja: refresh nieudany — kontynuuję ze starym snapshotem: {e}")
+    elif need_refresh and dry_run:
+        warns.append("dry-run: pominięto odświeżenie snapshotu (użyto istniejącego z %s)" % snap_date)
+
+    # ── 3. GATE: source musi być 'detail' (--force NIE omija; FAIL-FAST panelu / incydent Latarka) ──
+    source = snap.get("source")
+    if source != "detail":
+        raise SystemExit(
+            "kalkulacja: GATE STOP — aukcja NIEPOTWIERDZONA (source=%r, wymagane 'detail'). Podmień "
+            "link Ali / odśwież snapshot; --force NIE omija tego gate'u (incydent Latarka 17.07)." % source)
+
+    # ── 4. kurs NBP + cena zakupu USD → PLN ──
+    rate = _nbp_usd_rate()
+    price_obj = snap.get("price") or {}
+    snap_sale = price_obj.get("sale")
+    used_override = cost_usd is not None
+    if not used_override:
+        cost_usd = snap_sale
+    if cost_usd in (None, ""):
+        raise SystemExit("kalkulacja: brak ceny zakupu (snapshot.price.sale puste i brak --cost-usd).")
+    try:
+        cost_usd = float(cost_usd)
+    except Exception:
+        raise SystemExit(f"kalkulacja: cena zakupu USD nie jest liczbą: {cost_usd!r}")
+    if used_override:
+        warns.append("koszt USD z override (--cost-usd $%.2f), nie ze snapshotu" % cost_usd)
+    elif snap_sale is not None:
+        # warianty o różnych cenach a bierzemy price.sale (główną) → nota
+        vals = []
+        for s in (snap.get("sku_prices") or []):
+            try:
+                vals.append(round(float(s.get("price")), 2))
+            except Exception:
+                pass
+        distinct = sorted(set(vals))
+        if len(distinct) > 1:
+            warns.append("warianty mają różne ceny ($%.2f–$%.2f), użyto ceny głównej ($%.2f) — "
+                         "zweryfikuj sprzedawaną konfigurację" % (min(distinct), max(distinct), cost_usd))
+    cost_pln = _r2(cost_usd * rate)
+
+    # ── 5. detekcja zmiany ceny zakupu (>10% vs stara) ──
+    old_cost = P.get("cost_purchase")
+    cost_changed_pct = None
+    if old_cost not in (None, "") and float(old_cost) > 0:
+        oc = float(old_cost)
+        cost_changed_pct = abs(cost_pln - oc) / oc * 100.0
+        if cost_changed_pct > 10.0:
+            warns.append("cena zakupu zmieniła się %.0f%% (%s → %s)"
+                         % (cost_changed_pct, _money_pl(oc), _money_pl(cost_pln)))
+
+    # ── 6. cena sprzedaży: pasmo narzutu margin_min–margin_max%, preferuj wyżej ──
+    ship = float(P.get("cost_shipping") or 0)
+    fees = float(P.get("fees_pct") or 0)
+    shipping_shop = (P.get("shipping_paid_by") == "shop")
+    koszt_ef = cost_pln + (ship if shipping_shop else 0.0)
+    denom = 1.0 - fees / 100.0
+    if denom <= 0:
+        raise SystemExit(f"kalkulacja: fees_pct={fees} ≥ 100% — nie da się policzyć bazy ceny.")
+    base = koszt_ef / denom
+    p_max = base * (1.0 + margin_max / 100.0)
+    p_min = base * (1.0 + margin_min / 100.0)
+    over_max = False
+    price_sell = _psych_price_down(p_max)
+    if price_sell is None or price_sell < p_min - 0.001:
+        price_sell = _psych_price_up(p_min)
+        over_max = True
+
+    def _markup_pct(pr):
+        return (pr / base - 1.0) * 100.0 if base > 0 else 0.0
+    markup = _markup_pct(price_sell)
+    if over_max:
+        warns.append("brak ceny psychologicznej w paśmie %g–%g%% — użyto najniższej powyżej minimum "
+                     "(%s, narzut %.0f%% > max %g%%)" % (margin_min, margin_max, _money_pl(price_sell),
+                                                         markup, margin_max))
+
+    # ── 7. stan istniejący: zaakceptowana drabinka + brak --force = NIE zmieniaj ceny ──
+    existing_ladder = P.get("price_ladder") or {}
+    keep_price = bool(existing_ladder.get("accepted_at")) and not force
+    now = _now()
+    if keep_price:
+        fp = P.get("price")
+        final_price = float(fp) if fp not in (None, "") else None
+        if final_price is not None:
+            emarkup = _markup_pct(final_price)
+            in_band = (margin_min - 0.5) <= emarkup <= (margin_max + 0.5)
+            warns.append("drabinka już zaakceptowana (%s) — cena %s NIE zmieniona; narzut aktualny "
+                         "%.0f%% — %s pasmo %g–%g%%" % (str(existing_ladder.get("accepted_at"))[:10],
+                         _money_pl(final_price), emarkup, "w" if in_band else "POZA", margin_min, margin_max))
+            price_report, markup_report = final_price, emarkup
+        else:
+            warns.append("drabinka zaakceptowana, ale price=NULL — potwierdzam tylko koszt zakupu")
+            price_report, markup_report = price_sell, markup
+        patch = {"cost_purchase": cost_pln}
+    else:
+        final_price = price_sell
+        price_report, markup_report = price_sell, markup
+        scale_est = _psych_price_up(max((cost_pln + ship) * 2.5, price_sell or 0))
+        ladder = {
+            "mode": "cost_plus",
+            "accepted_at": now,
+            "accepted_by": "fabryka",
+            "rungs": [
+                {"phase": "test", "price": price_sell,
+                 "note": "koszt+10–15% · awans: WINNER = CP2 (ATC≥5%) + ≥3 zam. + spend 300"},
+                {"phase": "scale", "price": None, "source": "ai", "est": scale_est,
+                 "note": "propozycja AI (bramka Tomka); ramp pod ścianą psych. → baza po ≥3 zam. na rampie"},
+                {"phase": "opt", "step_pct": 15,
+                 "note": "jeden probe +15–20%; ocena: kontrybucja/zł spendu, okno 14 dni; przez 100/150 = decyzja Tomka"},
+            ],
+        }
+        patch = {"cost_purchase": cost_pln, "price": price_sell, "margin_mode": "test",
+                 "price_ladder": ladder}
+        if not P.get("price_phase"):
+            patch["price_phase"] = 1
+        if not P.get("phase_started_at"):
+            patch["phase_started_at"] = now
+        if not P.get("test_started_at"):
+            patch["test_started_at"] = now
+
+    # zysk/szt. = cena − koszt − (wysyłka gdy shop) − prowizja
+    profit = _r2((price_report or 0) - cost_pln - (ship if shipping_shop else 0.0)
+                 - (price_report or 0) * fees / 100.0)
+
+    # ── 9. fields + checklista + nota kroku ──
+    fields = {
+        "Cena zakupu": "$%.2f × kurs %.4f = %s (aukcja żywa, %s)" % (cost_usd, rate, _money_pl(cost_pln), snap_date),
+        "Cena sprzedaży": "%s (narzut %.0f%%)" % (_money_pl(price_report), markup_report),
+        "Zysk/szt.": "%s (po prowizji %g%%%s)" % (_money_pl(profit), fees,
+                                                   ", wysyłka: sklep" if shipping_shop else ""),
+    }
+    note = " · ".join(warns) if warns else "Kalkulacja OK — cena z żywej aukcji (source=detail)."
+
+    plan = {
+        "product": product, "tt_product_id": tt, "source": source,
+        "kurs_nbp_usd": rate, "cost_usd": cost_usd, "cost_pln": cost_pln,
+        "koszt_efektywny_pln": _r2(koszt_ef), "base_pln": _r2(base),
+        "pasmo": {"min_pct": margin_min, "max_pct": margin_max, "p_min": _r2(p_min), "p_max": _r2(p_max)},
+        "cena_sprzedazy_pln": price_report, "narzut_pct": _r2(markup_report), "zysk_szt_pln": profit,
+        "keep_price": keep_price, "over_max": over_max,
+        "patch_wf2_products": patch,
+        "step": {"step_key": "kalkulacja", "status": "done", "fields": fields,
+                 "checklist": KALKULACJA_CHECKLIST, "note": note},
+        "warns": warns,
+    }
+
+    # ── 10. dry-run: podgląd, zero zapisów ──
+    if dry_run:
+        log("kalkulacja: DRY-RUN (zero zapisów) — poniżej wyliczenia i payload")
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return plan
+
+    # ── 8. zapisy (bezpośredni PATCH — pola drabinki są POZA whitelistą product_meta) ──
+    _patch("wf2_products", {"id": f"eq.{product}"}, patch)
+    log("kalkulacja: PATCH wf2_products %s pola=%s" % (product, sorted(patch)))
+    if cost_changed_pct is not None and cost_changed_pct > 10.0:
+        try:
+            activity_add(project, "cost_updated", "Kalkulacja: cena zakupu %s (zmiana %.0f%%) — %s"
+                         % (_money_pl(cost_pln), cost_changed_pct, P.get("name") or product))
+        except Exception as e:
+            log(f"kalkulacja: activity_add pominięte ({e})")
+    sid = step_update(project, product, "kalkulacja", status="done",
+                      note=note, fields=fields, checklist=KALKULACJA_CHECKLIST)
+    log("kalkulacja: krok 'kalkulacja' done → %s · cena %s (narzut %.0f%%) · zysk %s"
+        % (sid, _money_pl(price_report), markup_report, _money_pl(profit)))
+    return plan
 
 
 # ── 4b. Fabryka wideo: koszty / oś czasu / rejestr kreacji ──
@@ -495,6 +839,23 @@ def main(argv=None):
     p.add_argument("--slug", required=True, help="slug landingu (folder w buckecie)")
     p.add_argument("--label"); p.add_argument("--kind", default="doc")
 
+    p = sub.add_parser("kalkulacja",
+                       help="krok Etapu 1: potwierdź żywą cenę zakupu (Ali) + ustal cenę sprzedaży "
+                            "(narzut 10–15%%, cena psychologiczna) + akcept drabinki TEST→SCALE→OPT")
+    p.add_argument("project"); p.add_argument("product", help="uuid produktu (wf2_products.id)")
+    p.add_argument("--margin-min", type=float, default=10.0, help="dolny narzut pasma %% (domyślnie 10)")
+    p.add_argument("--margin-max", type=float, default=15.0, help="górny narzut pasma %% (domyślnie 15)")
+    p.add_argument("--cost-usd", type=float, help="OVERRIDE ceny zakupu w USD (zamiast snapshot.price.sale)")
+    ref = p.add_mutually_exclusive_group()
+    ref.add_argument("--refresh", dest="refresh", action="store_true",
+                     help="wymuś odświeżenie snapshotu przez edge bud-ali-snapshot")
+    ref.add_argument("--no-refresh", dest="refresh", action="store_false",
+                     help="nie odświeżaj snapshotu nawet gdy >24h")
+    p.set_defaults(refresh=None)
+    p.add_argument("--force", action="store_true",
+                   help="pełna rekalkulacja + nowy akcept mimo zaakceptowanej drabinki (NIE omija GATE source)")
+    p.add_argument("--dry-run", action="store_true", help="pokaż wyliczenia (JSON), ZERO zapisów")
+
     a = ap.parse_args(argv)
     if a.cmd == "link":
         print(link_product(a.project, a.tt, a.name, slug=a.slug, sort=a.sort,
@@ -519,6 +880,9 @@ def main(argv=None):
     elif a.cmd == "doc":
         print(doc_add(a.project, _norm_product(a.product), a.step, a.local,
                       slug=a.slug, label=a.label, kind=a.kind))
+    elif a.cmd == "kalkulacja":
+        kalkulacja(a.project, a.product, margin_min=a.margin_min, margin_max=a.margin_max,
+                   cost_usd=a.cost_usd, refresh=a.refresh, force=a.force, dry_run=a.dry_run)
 
 
 if __name__ == "__main__":

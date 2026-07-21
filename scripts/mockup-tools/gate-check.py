@@ -1665,6 +1665,93 @@ def check_panel_sync(res, M, ctx):
                     "krok done bez opisu (data.fields puste) — warsztat pusty")
 
 
+# ================================================================== CENA_PANEL: zgodnosc ceny zapieczonej w HTML z wf2_products.price (kalkulacja Etapu 1)
+def _parse_price_pl(raw):
+    """'149,90 zł' / '149.90' / '1 299,00 zł' / '1\\u00a0299,00' -> float 149.90 / 1299.00.
+       None gdy brak liczby. Przecinek = dziesietny (PL), spacja/NBSP = separator tysiecy."""
+    if raw is None:
+        return None
+    s = re.sub(r"[^\d,.\-]", "", str(raw))  # zdejmij 'zl', spacje, NBSP, litery
+    if not s or s in ("-", ".", ","):
+        return None
+    if "," in s and "." in s:
+        s = s.replace(".", "").replace(",", ".")   # 1.299,00 -> 1299.00
+    elif "," in s:
+        s = s.replace(",", ".")                     # 149,90 -> 149.90
+    if s.count(".") > 1:                            # 1.299.00 -> 1299.00 (kropki = tysiace)
+        head, _, tail = s.rpartition(".")
+        s = head.replace(".", "") + "." + tail
+    try:
+        return round(float(s), 2)
+    except Exception:
+        return None
+
+def check_cena_panel(res, M, ctx):
+    """CENA_PANEL — zgodnosc cen zapieczonych w HTML landingu (atrybuty data-price/data-price-raw)
+       z wf2_products.price (po kolumnie slug). Rozjazd landing<->panel po zmianie kalkulacji = FAIL.
+       - KAZDA zapieczona cena != panel (tol) = FAIL (lista rozjazdow).
+       - produkt panelu istnieje ale price NULL/0 = FAIL (kalkulacja niewykonana — cena nieustalona).
+       - brak elementow data-price w HTML = WARN (nie ma czego porownac).
+       - brak wiersza wf2_products dla sluga = SKIP (landing bez projektu panelu, jak panel_sync).
+       Host CRM WYMUSZONY (panel_sync.host w _pg_crm) — NIE env SUPABASE_URL."""
+    m = M.get("cena_panel")
+    if not m:
+        res.add("cena_panel", "(config)", "SKIP", "brak cena_panel w manifescie")
+        return
+    sev = m["severity"]
+    html = ctx.get("html")
+    if not html:
+        res.add("cena_panel", "(brak html)", "SKIP", "brak kodu HTML")
+        return
+    markup = strip_scripts(html)  # atrybuty bez selektorow CSS/JS ze skryptow
+    # --- ceny zapieczone w HTML (data-price / data-price-raw) ---
+    prices = []
+    for attr in m.get("attr", ["data-price", "data-price-raw"]):
+        rx = re.compile(re.escape(attr) + r'(?![-\w])\s*=\s*"([^"]*)"', re.I)
+        for raw in rx.findall(markup):
+            v = _parse_price_pl(raw)
+            if v is not None:
+                prices.append((attr, raw.strip(), v))
+    if not prices:
+        res.add("cena_panel", "ceny zapieczone (data-price)", m.get("brak_html_severity", "WARN"),
+                "brak elementow [data-price]/[data-price-raw] w HTML — nie ma czego porownac z panelem")
+        return
+    # --- price z panelu po slug (host CRM wymuszony w _pg_crm) ---
+    env = ctx.get("env") or {}
+    if ctx.get("no_net") or not env.get(M["supabase"]["key_env"]):
+        res.add("cena_panel", "(panel wf2_products)", "SKIP", "brak SUPABASE_SERVICE_KEY / --no-net")
+        return
+    kol_cena = m.get("kolumna_ceny", "price"); kol_slug = m.get("slug_kolumna", "slug")
+    rows = _pg_crm(M, env, m.get("tabela", "wf2_products"),
+                   {kol_slug: "eq." + ctx["slug"], "select": "%s,%s" % (kol_cena, kol_slug)},
+                   ctx["timeout"])
+    if rows is None:
+        res.add("cena_panel", "(panel wf2_products)", "SKIP", "brak dostepu do bazy CRM")
+        return
+    if not rows:
+        res.add("cena_panel", "produkt panelu (slug=%s)" % ctx["slug"], "SKIP",
+                "brak wiersza wf2_products slug=%s — landing bez projektu panelu" % ctx["slug"])
+        return
+    db_price = rows[0].get(kol_cena)
+    try:
+        dbv = round(float(db_price), 2) if db_price not in (None, "") else None
+    except Exception:
+        dbv = None
+    if dbv is None or dbv == 0:
+        res.add("cena_panel", "cena ustalona w panelu", status_for(False, sev),
+                "kalkulacja niewykonana — cena nieustalona w panelu (wf2_products.price=%s)" % db_price)
+        return
+    tol = float(m.get("tolerancja", 0.01))
+    rozjazdy = [("%s=%.2f (\"%s\")" % (a, v, raw)) for (a, raw, v) in prices if abs(v - dbv) > tol]
+    if rozjazdy:
+        res.add("cena_panel", "HTML data-price == panel", status_for(False, sev),
+                "%d rozjazd(ow) vs panel %.2f zl: %s" % (len(rozjazdy), dbv, "; ".join(rozjazdy[:8])))
+    else:
+        uniq = sorted(set(v for (_a, _r, v) in prices))
+        res.add("cena_panel", "HTML data-price == panel", "PASS",
+                "%d cen(y) w HTML == panel %.2f zl (ceny: %s)" % (len(prices), dbv, uniq[:6]))
+
+
 # ================================================================== KAPITALIZACJA: egzekucja flywheel reuse (depozyt + preflight retrievalu)
 # Powod (dyrektywa Tomka 21.07): system kapitalizacji byl OPISANY w runbooku (KAPITALIZACJA-OPS),
 # ale reuse nie byl WYMUSZONY zadna bramka — flywheel dzialal na honor-system. Te dwa checki czynia
@@ -2059,6 +2146,7 @@ CHECK_ORDER = [
     ("cross_landing", check_cross_landing),
     ("panel_sync", check_panel_sync),
     ("kapitalizacja_deposit", check_kapitalizacja_deposit),
+    ("cena_panel", check_cena_panel),
     ("published", check_published),
     ("finalny_pass", check_finalny_pass),
 ]

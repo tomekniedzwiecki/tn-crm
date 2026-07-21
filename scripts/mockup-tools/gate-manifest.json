@@ -484,6 +484,18 @@
     "tokens_brak_msg": "brak bloku :root sluga w TOKEN-KONTRAKT (paleta dla cross_landing ΔE, KAPITALIZACJA-OPS §4.3)"
   },
 
+  "_opis_CENA_PANEL": "ZGODNOSC CENY landing<->panel (21.07). Powod: krok 'kalkulacja' (Etap 1) ustala cene sprzedazy w wf2_products.price, a landing pieczetuje ja w atrybutach data-price/data-price-raw. Zmiana kalkulacji (nowa cena w panelu) bez re-deployu landingu = klient widzi INNA cene niz kasa/panel. Ten check laczy dwa zrodla: cena zapieczona w HTML MUSI == wf2_products.price po slug (tolerancja groszowa). KAZDA cena w kodzie != panel = FAIL; produkt w panelu BEZ ceny (price NULL/0) = FAIL (kalkulacja niewykonana); brak data-price w HTML = WARN; brak wiersza panelu dla sluga = SKIP (landing bez projektu, jak panel_sync — loczek/odpalak). Host CRM WYMUSZONY (panel_sync.host w _pg_crm) — NIE env SUPABASE_URL (moze wskazywac sparing).",
+
+  "cena_panel": {
+    "severity": "FAIL",
+    "attr": ["data-price", "data-price-raw"],
+    "tabela": "wf2_products",
+    "slug_kolumna": "slug",
+    "kolumna_ceny": "price",
+    "tolerancja": 0.01,
+    "brak_html_severity": "WARN"
+  },
+
   "_opis_REUSE_PREFLIGHT": "F1 PREFLIGHT RETRIEVALU (21.07). Miekki nudge PRZED F1: PLAN.md landinga powinien deklarowac wzorce dobrane z EXEMPLARY-INDEX pod markerem '## WZORCE' (retrieval, KAPITALIZACJA-OPS §1). WARN, NIE FAIL — bo istniejace PLAN-y markera nie maja i FAIL zlamalby baseline. Brak PLAN.md = SKIP (landing sprzed reguly).",
 
   "reuse_preflight": {

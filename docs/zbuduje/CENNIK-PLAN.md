@@ -8,6 +8,12 @@ w §2/§2a/§7/§8**). Rozszerza `WORKFLOW-V2-PLAN.md` §0b i **NADPISUJE parame
 `WORKFLOW-V2-TESTY.md` §6** (jeden klucz settings — §8). `[P]` = default w
 `settings.wf2_price_config`. `[D]` = decyzja Tomka (lista §10).
 
+**Zmiana 21.07:** marża startowa = pasmo narzutu **10–15%** [D] (Tomek: „na początek robimy
+marżę 10–15%, aby tylko zacząć sprzedawać i przejść przez testy" — koniec sztywnego „~15%").
+Drabinka TEST→SCALE→OPT jest ustalana i akceptowana w **Etapie 1 krokiem `kalkulacja`**
+(`panel-sync.py kalkulacja`, wykonuje fabryka — potwierdza żywą cenę zakupu source=detail),
+nie w kroku `wybor` (który zwęził się do samego wyboru produktu).
+
 ---
 
 ## 0. ESENCJA
@@ -319,8 +325,9 @@ NIE rollback ceny · kierunek: silnik sam tylko w górę · zero A/B cen na user
 - **Drawer produktu**: drabinka, oś czasu cena×zamówienia/dzień, edycja drabinki
   (po akcepcie = nowy akcept), ręczna zmiana ceny (te same guardraile + „mimo to"),
   historia, miks pakietów 1/2/3-pak.
-- **Integracja projekt.html**: krok `wybor` = drabinka + akcept; `test_wynik` = werdykt
-  z rekomendacją silnika; etap 5 linkuje do drawera.
+- **Integracja projekt.html**: krok `wybor` = wybór produktu; krok `kalkulacja` (nowy, Etap 1)
+  = drabinka + akcept, **wykonywany przez FABRYKĘ komendą `panel-sync.py kalkulacja`** (akcept
+  ręczny w UI nadal możliwy); `test_wynik` = werdykt z rekomendacją silnika; etap 5 linkuje do drawera.
 
 ## 5b. KLIENT-WSPÓLNIK (nowe — ryzyko relacyjne automatu)
 

@@ -181,7 +181,11 @@ dla NOWYCH artefaktów = ZAKAZ.
 Jeden blok markdown, sekcje: **0. Tożsamość** (klasa z title+categories — kategoria Ali
 WEWNĘTRZNA, nie na stronę; mini-marka/slug) · **1. Cena** (koszt zakupu per wariant USD
 z `sku_prices`; kurs NBP ZAPISANY z datą — audytowalność; NASZA cena PL jedna dla wszystkich
-wariantów; końcówki wg reguły <150 →,90 / ≥150 → pełne/9,00) · **2. Specyfikacja** (`specs`
+wariantów; końcówki wg reguły <150 →,90 / ≥150 → pełne/9,00). **NASZA cena PL = ODCZYT
+z `wf2_products.price`** (panel /tn-sklepy, krok `kalkulacja` w Etapie 1 — done). Fabryka
+landingów NIE ustala i NIE modyfikuje ceny; brak ceny/kroku = wykonaj najpierw
+`panel-sync.py kalkulacja` (Etap 1), dopiero potem F0. Cena zapieczona w HTML musi być
+równa `wf2_products.price` (gate-check `cena_panel`). · **2. Specyfikacja** (`specs`
 1:1 VERBATIM, tabela; puste POMIŃ) · **3. Opis sprzedawcy — DESTYLACJA:** FAKTY (z kotwicą
 specs/tytuł/galeria — wolno użyć) / BEŁKOT (superlatywy, „premium", zdrowotne, pilność —
 ODRZUCONE) / oryginał jako referencja · **4. Warianty** (tabela: oryg. nazwa → PL → koszt USD

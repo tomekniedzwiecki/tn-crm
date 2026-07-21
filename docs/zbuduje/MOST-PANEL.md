@@ -58,10 +58,36 @@ i `import panel_sync as ps`. Każda funkcja loguje `insert/update/skip + id`.
 | `cost_add` | `(project, product, amount, kind='fal', currency='USD', step=None, stage=5, note=None) → id` | Koszt do `wf2_costs` (tabela BEZ uniku). Dedup po `(project, product, step, kind, note)` — **bez `note` NIE deduplikuje** (świadomie: kolejne pozycje). `step` = kolumna `step_key`. ⚠ Fabryka banerów: koszt fal loguje `ad-forge --finalize` sam (`kind='fal'`, `step='agr_generacja'`) — operator NIE woła własnego `cost_add` (noty się różnią → dublet w nagłówku bloku). Manus usunięty z modułu (19.07). |
 | `activity_add` | `(project, action, description, actor='auto') → id` | Wpis na oś czasu `wf2_activities` (log fabryki, kropka zielona `actor='auto'`). Bez dedup — każde wołanie = nowy wiersz. |
 
-**CLI:** `panel-sync.py {link|step|artifact|meta|projlink|upload} …` (`-h` po szczegóły).
+**CLI:** `panel-sync.py {link|step|artifact|meta|projlink|upload|kalkulacja} …` (`-h` po szczegóły).
 `step`/`artifact`: `product='-'`/`projekt` = krok projektu. `--fields/--checklist/--meta/patch` = JSON.
 `--checklist` przyjmuje listę stringów (owija w `{t,done:true}`) lub gotowe `{t,done}`.
 ⚠️ Polskie znaki przez CLI na Windows = ryzyko cp1250 — do backfillu z PL tekstem **importuj w Pythonie**.
+
+## Komenda fabryki `kalkulacja` (Etap 1 — wycena produktu; nowe 21.07)
+`panel-sync.py kalkulacja <projekt> <produkt> [--margin-min 10 --margin-max 15 | --cost-usd X | --refresh | --force | --dry-run]`
+— krok `kalkulacja` (Etap 1 „Fundament sklepu", scope=product, sort 7, między `wybor` a `marka`)
+**WYKONUJE FABRYKA** jak kroki `lp_*` (nie ręczna robota — akcept ręczny w UI nadal możliwy).
+Wcześniej wybór + kalkulacja były jednym krokiem `wybor`. Przebieg JEDNEJ komendy:
+1. **Odświeżenie snapshotu aukcji** — potwierdzenie ŻYWEJ ceny zakupu DOKŁADNIE w momencie
+   ustalania ceny sprzedaży (snapshot starszy niż 24 h = auto-refresh; `--refresh` wymusza).
+2. **Gate `source='detail'`** — twardy STOP (search-galeria ≠ żywa aukcja).
+3. Kurs NBP (zapis z datą) → `cost_purchase` w PLN.
+4. Cena sprzedaży = **NAJWYŻSZA cena psychologiczna w paśmie narzutu 10–15%** (poniżej pasma →
+   podniesienie do min. 10%).
+5. Drabinka `TEST→SCALE→OPT` zapisana i **zaakceptowana** (`price_ladder.accepted_by='fabryka'`).
+6. Krok `done` z checklistą (VERBATIM — trzy pozycje niżej).
+
+Jeżeli drabinka była JUŻ zaakceptowana → komenda BEZ `--force` tylko **POTWIERDZA koszt zakupu**
+(nie zmienia ceny live — zmiany cen to domena silnika cen, `CENNIK-PLAN.md`).
+Kolumny (`product_meta`): `price, cost_purchase, cost_shipping, fees_pct, margin_mode, status`
++ `price_ladder`. **Checklista VERBATIM** (z `WS['kalkulacja'].check` w `projekt.html`):
+- `Cena zakupu potwierdzona — żywa aukcja (source=detail)`
+- `Cena sprzedaży ustalona — narzut 10–15% (cena psychologiczna)`
+- `Drabinka cenowa zaakceptowana (TEST→SCALE→OPT)`
+
+**Blokada kolejności:** `kalkulacja` poprzedza `lp_dane` — F0 fabryki NIE zamknie się bez
+`kalkulacja=done` z odhaczoną checklistą (§Blokada kolejności faz). `link_product` (krok `wybor`)
+AUTO-DOMYKA krok `wybor`, więc pierwsza realna robota per produkt to `kalkulacja`.
 
 ## Jak panel renderuje (co warunkuje efekt)
 - **Krok**: kafel etapu czyta `status` + `data.fields` (mapowane na pola z `WS[step_key].fields`)
@@ -90,7 +116,8 @@ Egzekwuje `gate-check.py` blok `panel_sync` (severity FAIL) — kolumna „Gate"
 
 | Etap / artefakt fabryki | Krok panelu | kind artefaktu | Co w `data.fields` / kolumnach | Gate (`panel_sync`) |
 |---|---|---|---|---|
-| wybór/kalkulacja produktu | *(wiersz produktu)* | — | KOLUMNY `price, cost_purchase, cost_shipping, fees_pct, margin_mode, status, slug, repo_path` | `karta_kolumny_wymagane` |
+| wybór produktu (`wybor`) *(auto-domknięty przez `link_product`)* | *(wiersz produktu)* | — | KOLUMNY `slug, cover_url, sort, repo_path, cost_purchase` (wstępny koszt) | `karta_kolumny_wymagane` |
+| **kalkulacja ceny (`kalkulacja`)** *(nowe 21.07 — wykonuje fabryka: `panel-sync.py kalkulacja`)* | krok `kalkulacja` | checklist 3 poz. VERBATIM · fields `{cena_zakupu, kurs_nbp, cena_pl, narzut_pct}` | KOLUMNY `price, cost_purchase (potw.), cost_shipping, fees_pct, margin_mode, status` + `price_ladder{accepted_by:'fabryka'}` | `karta_kolumny_wymagane` + blokada kolejności (przed `lp_dane`) |
 | F0 kadry keep (galeria ref) | `lp_dane` | `gallery` | `{source_ok, cena_pl, koszt_landed, marza, ocena, zdjecia_keep, wideo_keep}` | `kroki_done[lp_dane]` |
 | F0 KARTA-PRAWDY.md / PASZPORT.md / GALERIA.md / WIDEO.md / LEDGER.md | `lp_dane` | `doc` (**`panel-sync doc` → wf2-docs, klikalny chip**) | `{karta_url, paszport_url}` (url = `wf2-docs/<slug>/…`) | `kroki_done[lp_dane]` |
 | F1 PLAN.md / PRZEWODNIK-GRAFICZNY.md | `lp_plan` | `doc` (wf2-docs) | `{motyw, sekcje, tor_i_demo, plan_url, przewodnik_url}` | `kroki_done[lp_plan]` |
@@ -158,9 +185,12 @@ lp_styl_marka/lp_makiety` = DONE (checklisty 7/6/6/8 zaznaczone), 26 artefaktów
 
 ## Blokada kolejności faz (20.07)
 `panel-sync step … --status done` **odmawia zamknięcia fazy**, gdy wcześniejsza faza landingu
-(`lp_dane → lp_plan → lp_styl_marka → lp_makiety → lp_grafiki → lp_kod → lp_dopasowanie →
-lp_zycie → lp_finisz`) nie jest `done` **albo jest `done` z niezaznaczoną checklistą**.
-Wypisuje konkretne braki i kończy się błędem.
+(`kalkulacja → lp_dane → lp_plan → lp_styl_marka → lp_makiety → lp_grafiki → lp_kod →
+lp_dopasowanie → lp_zycie → lp_finisz`) nie jest `done` **albo jest `done` z niezaznaczoną
+checklistą**. Wypisuje konkretne braki i kończy się błędem.
+
+**Nowe 21.07:** `kalkulacja` (Etap 1) poprzedza `lp_dane` — nie zamkniesz F0 bez
+`kalkulacja=done` z checklistą (cena landingu MUSI pochodzić z panelu, `wf2_products.price`).
 
 **Incydent źródłowy (mata, 20.07):** `lp_dane` stało na `in_progress` 5/7 — brakowało
 `PASZPORT.md` i rezerwacji mini-marki — a mimo to `lp_plan` zostało zamknięte jako `done`.

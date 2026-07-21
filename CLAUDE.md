@@ -44,7 +44,7 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   źródło postępu), sales, ad_stats, payments (UI ukryte), activities. RLS wyłącznie
   `team_members` — ZERO polityk anon (portal klienta pójdzie przez edge function).
 - **Etapy 1–7 (od 2026-07-19, migracja `20260719c_wf2_kampanie_rozbicie`; baza:
-  `20260718_wf2_fabryka_panel`):** 1 Fundament sklepu (wybor→marka→pl_domena)
+  `20260718_wf2_fabryka_panel`):** 1 Fundament sklepu (wybor→kalkulacja→marka→pl_domena)
   → **2 Landing** (lp_dane→lp_plan→lp_styl_marka→lp_makiety🏁→lp_grafiki→lp_kod→lp_dopasowanie→
   lp_zycie→lp_finisz🏁 = fabryka F0→F8) → **3 Sklep na platformie** (pl_* przez API Trevio,
   edge wf2-platform TYPED ACTIONS) → **4 Środowisko reklamowe** (project-scope:
@@ -58,7 +58,9 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   Zamówienia platformy = `wf2_orders` (cron wf2-orders-sync; licznik do 1000 = COUNT).
   Cena na landingu = publiczny edge `wf2-landing-api` + snippet
   `docs/zbuduje/assets/landing-runtime-snippet.html` (window.trevio + INIT-GUARD pixela).
-  Marża testowa = ~15% narzutu (`TEST_MARGIN_PCT`). Portfel: cel **3 produkty** (decyzja Tomka
+  Marża testowa = pasmo 10–15% narzutu (cena psychologiczna; `TEST_MARGIN_MIN/MAX`; krok
+  `kalkulacja` wykonuje fabryka: `panel-sync.py kalkulacja` — potwierdza żywą cenę zakupu
+  i ustala cenę sprzedaży). Portfel: cel **3 produkty** (decyzja Tomka
   19.07, wcześniej 5 — mniej produkcji, ~165 zł testu/produkt), dobór = **PRAWDZIWE losowanie**
   z approved /trendy (bez scoringu — decyzja Tomka 17.07).
 - **Etap 5 → `ads_grafiki` = FABRYKA statycznych grafik (rev2, 19.07; SSOT
@@ -152,7 +154,9 @@ README platforma-api). Referencja API: `docs/zbuduje/platforma-api/README.md`.
   **VERBATIM** z obiektu `WS` w `tn-sklepy/projekt.html` (panel merguje po dokładnym `t` = literówka daje sierotę) + artefakty (`wf2_artifacts`).
 - **Ceny/koszt/marża/status/slug/repo_path = KOLUMNY produktu** przez `product_meta` (whitelista; `unit_profit`
   GENERATED — nie pisać), NIE `data.fields`. Makiety/branding rehost → `bud-assets/<slug>/…` (WebP) = miniatury; lokalne `.md` z `storage='desktop'` = chip. Idempotentne (GET→PATCH|POST; wiązanie = `product_id`+`step_key`).
-- Funkcje/CLI: `link_product · step_update · artifact_add · product_meta · project_link_add · storage_upload`.
+- Funkcje/CLI: `link_product · step_update · artifact_add · product_meta · project_link_add · storage_upload`
+  + komenda `kalkulacja <projekt> <produkt>` (Etap 1 — fabryka potwierdza żywą cenę zakupu source=detail,
+  ustala cenę sprzedaży w paśmie narzutu 10–15%, akceptuje drabinkę TEST→SCALE→OPT; w blokadzie kolejności przed `lp_dane`).
 
 ## TN App — workflow budowy aplikacji SaaS (po pełnej płatności /aplikacja)
 
