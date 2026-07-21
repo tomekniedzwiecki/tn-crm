@@ -23,6 +23,10 @@
 //
 // CLI: node scripts/wfa-panel-sync.mjs <cmd> --project <uuid|slug> ...
 //   steps                          — lista kroków projektu (key, stage, label, status, X/Y).
+//   gaps                           — DETEKTOR luk (read-only, bramka końca sesji): wypisuje kroki
+//                                     niedomknięte / „done" z niepełną checklistą / bez noty; exit 1
+//                                     gdy istnieje choć jedna luka [BEZ-POWODU]. „Suma zwrotów
+//                                     subagentów ≠ stan projektu — prawdą jest panel" (L-053).
 //   step <key> [--status s] [--check "1,3"] [--check-all] [--check-match "frag"] [--note "..."]
 //                                   — upsert kroku: checklista z WS (VERBATIM), MERGE z done.
 //   activity --action slug --desc "..." [--actor nazwa]   — wpis do kroniki wfa_activities.
@@ -164,6 +168,84 @@ async function cmdSteps(opts) {
   for (const r of rows) {
     if (r.stage !== curStage) { curStage = r.stage; console.log(`  · Etap ${r.stage} — ${r.stage_label}`); }
     console.log(`  ${pad(r.key, 20)} ${pad(r.stage, 2)} ${pad(r.status, 12)} ${pad(r.checklist, 6)}  ${r.label}`);
+  }
+}
+
+// ── komenda: gaps (detektor luk — BRAMKA KOŃCA SESJI, read-only) ────────────
+// Prawda o postępie = panel, nie suma zwrotów subagentów (incydent 21.07, L-053).
+// Luka = krok NIE w pełni domknięty. Krok „w pełni domknięty" = status=done ORAZ
+// checklista pełna (done==total; szablon 0-pozycyjny = pełna). Warianty luki:
+//   (a) status != done                        → NIEDOMKNIĘTY
+//   (b) status == done, checklista < pełnej    → DONE-PUSTY (done z niepełną checklistą)
+// Klasyfikacja każdej luki wg noty (data.note):
+//   [MA-NOTĘ]    — nota istnieje i ma ≥ NOTE_MIN znaków (jawny powód: bramka ludzka, blokada…);
+//   [BEZ-POWODU] — brak noty (lub za krótka) = CICHA luka, ta klasa blokuje „wszystko zrobione".
+// Exit code: 0 gdy zero [BEZ-POWODU]; 1 gdy istnieje ≥1. --json dla maszyn.
+const GAP_NOTE_MIN = 10;
+async function cmdGaps(opts) {
+  const pid = await resolveProject(opts.project);
+  const WS = loadWS();
+  const defs = await sql(
+    `select d.key, d.stage, d.stage_label, d.label, d.owner,
+            s.status, s.data
+       from wfa_step_defs d
+       left join wfa_steps s on s.step_key = d.key and s.project_id = ${sqlStr(pid)}
+      where d.active = true
+      order by d.stage, d.sort`);
+  const items = [];
+  for (const d of defs) {
+    const tpl = (WS[d.key] && WS[d.key].check) || [];
+    const stored = (d.data && Array.isArray(d.data.checklist)) ? d.data.checklist : [];
+    const doneSet = new Set(stored.filter((c) => c && c.done).map((c) => c.t));
+    const total = tpl.length;
+    const done = tpl.filter((t) => doneSet.has(t)).length;
+    const status = d.status || '(brak)';
+    const isDone = status === 'done';
+    const checklistComplete = total === 0 ? true : done === total;
+    if (isDone && checklistComplete) continue; // krok w pełni domknięty — nie jest luką
+    const note = (d.data && typeof d.data.note === 'string') ? d.data.note.trim() : '';
+    const hasNote = note.length >= GAP_NOTE_MIN;
+    items.push({
+      key: d.key, stage: d.stage, stage_label: d.stage_label, status,
+      checklist: total ? `${done}/${total}` : '—',
+      reason: isDone ? 'DONE-PUSTY' : 'NIEDOMKNIĘTY',
+      klas: hasNote ? 'MA-NOTĘ' : 'BEZ-POWODU',
+      note,
+    });
+  }
+  // BEZ-POWODU na górze (najpilniejsze), potem MA-NOTĘ; w obrębie klasy wg etapu.
+  const order = { 'BEZ-POWODU': 0, 'MA-NOTĘ': 1 };
+  items.sort((a, b) => (order[a.klas] - order[b.klas]) || (a.stage - b.stage));
+  const bez = items.filter((i) => i.klas === 'BEZ-POWODU');
+  const mano = items.filter((i) => i.klas === 'MA-NOTĘ');
+  const verdictOk = bez.length === 0;
+  process.exitCode = verdictOk ? 0 : 1; // exit naturalny (stdout zdąży się opróżnić)
+
+  if (opts.json) {
+    console.log(JSON.stringify({
+      project: pid, total_steps: defs.length, gaps: items.length,
+      bez_powodu: bez.length, ma_note: mano.length, verdict_ok: verdictOk, items,
+    }, null, 2));
+    return;
+  }
+  const short = (s, n) => { const t = (s || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  log(`GAPS projektu ${pid} — ${items.length} luk (${bez.length} BEZ-POWODU, ${mano.length} MA-NOTĘ) z ${defs.length} kroków:`);
+  console.log('');
+  if (!items.length) {
+    console.log('  ✔ Zero luk — wszystkie aktywne kroki done z pełną checklistą.');
+  } else {
+    const pad = (s, n) => String(s).padEnd(n).slice(0, n);
+    console.log(`  ${pad('KLAS', 11)} ${pad('KEY', 20)} ${pad('ET', 2)} ${pad('STATUS', 12)} ${pad('✔', 6)} ${pad('POWÓD', 13)}  NOTA`);
+    console.log(`  ${'-'.repeat(11)} ${'-'.repeat(20)} -- ${'-'.repeat(12)} ${'-'.repeat(6)} ${'-'.repeat(13)}  ${'-'.repeat(30)}`);
+    for (const r of items) {
+      console.log(`  ${pad('[' + r.klas + ']', 11)} ${pad(r.key, 20)} ${pad(r.stage, 2)} ${pad(r.status, 12)} ${pad(r.checklist, 6)} ${pad(r.reason, 13)}  ${short(r.note, 80) || '—'}`);
+    }
+  }
+  console.log('');
+  if (verdictOk) {
+    log(`WERDYKT: zero [BEZ-POWODU] — raport końcowy DOZWOLONY. ${mano.length} kroków [MA-NOTĘ] wypisz w sekcji „Kroki niedomknięte i dlaczego" (bramki ludzkie jawnie: kto/co).`);
+  } else {
+    log(`WERDYKT: „wszystko zrobione" ZAKAZANE — ${bez.length} kroków [BEZ-POWODU] (ciche luki). Domknij lub dopisz notę z powodem, potem powtórz gaps.`);
   }
 }
 
@@ -331,6 +413,7 @@ async function main() {
 
 Komendy:
   steps --project <uuid|slug>
+  gaps  --project <uuid|slug>   [--json]   (read-only; exit 1 gdy istnieje luka [BEZ-POWODU])
   step <step_key> --project <p> [--status pending|in_progress|done|skipped|blocked]
        [--check "1,3,5" | --check-all | --check-match "fragment"] [--note "..."] [--actor nazwa]
   activity --project <p> --action <slug> --desc "..." [--actor nazwa]
@@ -343,10 +426,11 @@ Checklisty budowane VERBATIM z obiektu WS w tn-app/projekt.html (klucz dedup pan
   TOKEN = getToken(opts.token);
   try {
     if (cmd === 'steps') await cmdSteps(opts);
+    else if (cmd === 'gaps') await cmdGaps(opts);
     else if (cmd === 'step') await cmdStep(opts._[0], opts);
     else if (cmd === 'activity') await cmdActivity(opts);
     else if (cmd === 'note') await cmdNote(opts);
-    else die(`nieznana komenda: ${cmd} (steps|step|activity|note)`);
+    else die(`nieznana komenda: ${cmd} (steps|gaps|step|activity|note)`);
   } catch (e) {
     die(e && e.message ? e.message : String(e));
   }

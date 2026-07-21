@@ -175,6 +175,19 @@ kontraktów fan-out = tory zgadują interfejsy = konflikty i poprawki (drożej n
    który powinien być skryptem/gate'em) wypisuj ZAWSZE — to one historycznie ginęły. Drobny backport
    kodowy możesz zrobić od ręki (commit do saas-starter + wiersz w `LEKCJE-FABRYKI.md` ze statusem
    WDROŻONA); resztę zbiera krok `retro_fabryki`. Księga główna: `docs/stworze/LEKCJE-FABRYKI.md`.
+4.8. **DEFINICJA KOŃCA SESJI — bramka `gaps` (decyzja Tomka 21.07; incydent „nocna sesja: wszystko
+   zrobione, a panel dziurawy" — 2. raz ta klasa):** raport końcowy sesji wolno napisać DOPIERO po
+   przebiegu `node scripts/wfa-panel-sync.mjs gaps --project <p>`. Zdanie **„wszystko zrobione" jest
+   dozwolone WYŁĄCZNIE** gdy `gaps` zwraca ZERO pozycji **[BEZ-POWODU]** (exit 0). Raport MUSI zawierać
+   sekcję **„Kroki niedomknięte i dlaczego"** wygenerowaną z `gaps` — każda pozycja [MA-NOTĘ] wypisana
+   jawnie, a bramki ludzkie z rozwiązaniem KTO/CO czeka (np. „umowa — czeka na akcept Tomka",
+   „dane_operatora — czeka na materiały operatorki"). §4.6 pilnuje synchronu per-krok w trakcie; §4.8
+   jest jego domknięciem na końcu. Dwie żelazne zasady:
+   - **Suma zwrotów subagentów ≠ stan projektu.** Raport z tego, „nad czym pracowano", widzi tylko
+     podzbiór kroków — prawdą o postępie jest PANEL (`gaps` czyta całą tabelę `wfa_steps`), nie pamięć
+     orkiestratora ani sklejka zwrotek agentów tła.
+   - **`done` z niepełną checklistą = luka [BEZ-POWODU]** (klasa `DONE-PUSTY`), nawet jeśli status brzmi
+     „done". Krok „domknięty" = status=done ORAZ checklista pełna. `poprawki` done 0/3 to nie „zrobione".
 5. Jeśli utknąłeś na decyzji biznesowej — NIE zgaduj: zapisz pytanie w BUILDLOG „DO DECYZJI TOMKA" i zakończ sesję.
 
 ## 3b. Pad sesji i odzysk stanu (runbook — lekcja „aplikacja 3" 20.07)
