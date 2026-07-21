@@ -25,6 +25,11 @@ getBoundingClientRect), pobiera obrazy (PIL) i liczy:
     ciagly pas jednolitego --paper: >=25% wys. = MARTWY PAS (kadr/object-position slepy, tresc wisi
     pod pustka) = P1; top-tekstura wysoka przy zlym kadrze = bohater przy gornej krawedzi (heurystyka) = P2.
     Komplementarny do scrim_plateau (desktop) i img-fit (% uciecia, ale nie CO uciete).
+  - scene_seam: BACKSTOP "SZEW PELNOKADROWY" (desktop) — dwie SASIEDNIE sekcje z pelnokadrowa scena
+    (obraz full-bleed dochodzacy do krawedzi sekcji) po TEJ SAMEJ stronie, stykajace sie krawedz-w-krawedz
+    na granicy sekcji = twardy szew (dwa rozne zdjecia sklejone). Kolektor geometryczny (bounding rects
+    sekcji + najwiekszej sceny, side left/right/full), parowanie sasiadow DOM w Pythonie. Fix = ZIG-ZAG lub
+    sekcja rozdzielajaca (PRZEWODNIK-GRAFICZNY pkt 2 ANTY-SZEW PELNOKADROWY + STANDARD F1.7). P1.
 Wynik: lista findingow JSON {warstwa, lokalizacja, problem, severity, fix, wykryte_przez}.
 Wymaga: Chrome + numpy + Pillow.
 """
@@ -370,6 +375,57 @@ FADE_JS = r"""
 })()
 """
 
+# scene_seam (BACKSTOP renderowy 21.07) — defekt "SZEW PELNOKADROWY": dwie SASIEDNIE sekcje z
+# pelnokadrowa scena (obraz full-bleed dochodzacy do krawedzi sekcji) po TEJ SAMEJ stronie, stykajace
+# sie krawedz-w-krawedz na granicy sekcji => twardy SZEW (dwa rozne zdjecia sklejone). Doktryna:
+# docs/zbuduje/PRZEWODNIK-GRAFICZNY.md pkt 2 "ANTY-SZEW PELNOKADROWY" + STANDARD F1.7. Realny precedens
+# (naprawiony zig-zagiem): mata problem<->prawda. Kolektor GEOMETRYCZNY (bez pikseli): dla kazdej <section>
+# w kolejnosci DOM zbiera prostokat sekcji + NAJWIEKSZY kandydat-scena (img/picture/video LUB element z
+# background-image url()). Twarde progi + klasyfikacja strony (left/right/full) + parowanie sasiadow =
+# w Pythonie (check_scene_seam), gdzie STALE sa udokumentowane i strojalne. Wsp.: X klienta, Y stronicowe
+# (top/bottom + scrollY). Guardy: pomija position:fixed (overlay grain/scrim, rect=viewport nie sekcja) i
+# elementy o opacity<0.15 (dekoracyjne naloty). Sama <section> tez rozwazana (full-bleed bg-image sekcji).
+SEAM_JS = r"""
+(function(){
+  function clsOf(el){var c=el.className;return (c&&c.baseVal!==undefined)?c.baseVal:(typeof c==='string'?c:'');}
+  function vis(el){var cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden')return false;var r=el.getBoundingClientRect();return r.width>1&&r.height>1;}
+  function bgUrl(cs){var b=cs.backgroundImage;return !!b && b!=='none' && b.indexOf('url(')>-1;}
+  var SY=window.scrollY, out={secs:[], vw:window.innerWidth};
+  var secs=document.querySelectorAll('section');
+  Array.prototype.forEach.call(secs,function(sec,ord){
+    if(!vis(sec))return;
+    var sr=sec.getBoundingClientRect();
+    if(sr.width<=0||sr.height<=0)return;
+    var rec={sec:(sec.id||clsOf(sec).split(' ')[0]||('sec'+ord)), ord:ord,
+             secLeft:sr.left, secRight:sr.right, secTop:sr.top+SY, secBottom:sr.bottom+SY,
+             secW:sr.width, secH:sr.height};
+    var best=null, bestArea=0;
+    function consider(el,isSec){
+      var cs=getComputedStyle(el);
+      if(!isSec){
+        if(cs.position==='fixed')return;                 // overlay (grain/scrim) — rect=viewport, nie scena sekcji
+        if(parseFloat(cs.opacity||'1')<0.15)return;      // dekoracyjny nalot (grain 3%) — nie scena
+        if(cs.display==='none'||cs.visibility==='hidden')return;
+      }
+      var tag=el.tagName.toLowerCase();
+      var isMedia=(tag==='img'||tag==='picture'||tag==='video');
+      if(!isMedia && !bgUrl(cs))return;
+      var r=el.getBoundingClientRect();
+      if(r.width<=1||r.height<=1)return;
+      var covW=r.width/sr.width, covH=r.height/sr.height;
+      if(covW<0.30||covH<0.30)return;                     // luzny prefiltr; TWARDE progi w Pythonie
+      var area=r.width*r.height;
+      if(area>bestArea){bestArea=area; best=r;}
+    }
+    if(bgUrl(getComputedStyle(sec))) consider(sec,true); // sama sekcja: full-bleed bg-image
+    Array.prototype.forEach.call(sec.querySelectorAll('*'),function(el){consider(el,false);});
+    if(best){ rec.cand={left:best.left,right:best.right,top:best.top+SY,bottom:best.bottom+SY,w:best.width,h:best.height}; }
+    out.secs.push(rec);
+  });
+  return JSON.stringify(out);
+})()
+"""
+
 def _parse_rgb(s):
     s=(s or "").strip()
     m=re.match(r'#([0-9a-fA-F]{6})$', s)
@@ -507,7 +563,7 @@ def measure_fade(ws):
         out.append(m)
     return out
 
-def load_and_analyze(target, width, height, mobile, do_scrim=False, do_fade=False):
+def load_and_analyze(target, width, height, mobile, do_scrim=False, do_fade=False, do_seam=False):
     chrome=chrome_path(); port=free_port(); profile=tempfile.mkdtemp(prefix="lint-")
     url=target if target.startswith(("http://","https://")) else "file:///"+os.path.abspath(target).replace("\\","/")
     args=[chrome,"--headless=new","--disable-gpu","--hide-scrollbars","--no-first-run",
@@ -527,6 +583,15 @@ def load_and_analyze(target, width, height, mobile, do_scrim=False, do_fade=Fals
         time.sleep(0.5)
         res=ws.call("Runtime.evaluate",{"expression":ANALYZER,"returnByValue":True},timeout=40)
         val=json.loads(res.get("result",{}).get("value"))
+        # scene_seam (BACKSTOP renderowy) — geometria sekcji/scen; read-only, PRZED probe/scrim (mutuja DOM)
+        if do_seam:
+            try:
+                sres=ws.call("Runtime.evaluate",{"expression":SEAM_JS,"returnByValue":True},timeout=30)
+                val["seam"]=json.loads(sres.get("result",{}).get("value") or '{"secs":[]}')
+            except Exception:
+                val["seam"]={"secs":[]}
+        else:
+            val["seam"]={"secs":[]}
         # fade_line (PASS 4) — pasy scenowe mobile; PRZED probem (probe mutuje suwaki/scroll)
         if do_fade:
             try:
@@ -690,6 +755,58 @@ def check_fade_line(D, add):
                 "Bohater dochodzi do GORNEJ krawedzi boksa (top-tekstura std=%.0f, dev-do-paper=%.0f = foto/podmiot przy samej krawedzi) przy zle skadrowanym pasie kremu (~%.0f%%) — prawdopodobne uciecie glowy/podmiotu u gory. HEURYSTYKA — potwierdz zrzutem @390 (%%uciecia nie zastepuje oczu, §2)"%(m["top_std"],m["top_dev"],m["dead_frac"]*100),
                 "P2","Podnies object-position tak, by bohater (twarz/produkt) byl CALY w kadrze u gory; zweryfikuj zrzutem per viewport","skrypt")
 
+# progi scene_seam (BACKSTOP "SZEW PELNOKADROWY", 21.07 — PRZEWODNIK-GRAFICZNY pkt 2 + STANDARD F1.7).
+# Detekcja GEOMETRYCZNA (bounding rects, bez pikseli). Progi LUZNE, latwe do strojenia:
+SEAM_EDGE_TOL = 6      # px — obraz "dotyka" krawedzi sekcji (pionowej: left/right; poziomej: top/bottom) gdy odleglosc <= tego
+SEAM_W_MIN    = 0.50   # frakcja szer. sekcji — scena "pelnokadrowa" gdy szer. obrazu >= tego (split ~0.55, full ~1.0)
+SEAM_H_MIN    = 0.85   # frakcja wys. sekcji — full-bleed w pionie gdy wys. obrazu >= tego
+SEAM_SEAM_TOL = 6      # px — dolna krawedz GORNEGO obrazu ~= gorna krawedz DOLNEGO = realny styk (szew) na granicy sekcji
+SEAM_XOVL_MIN = 0.50   # frakcja mniejszej szer. obrazu — nachodzenie w poziomie (ta sama kolumna); zig-zag (prawo<->lewo) daje ~0
+
+def _seam_side(rec):
+    """Klasyfikacja sceny sekcji: 'left'|'right'|'full' gdy sekcja ma PELNOKADROWA scene (obraz dochodzacy
+    do gornej I dolnej krawedzi sekcji oraz do co najmniej jednej PIONOWEJ krawedzi), inaczej None.
+    Sekcja kontenerowana (karta z marginesem papieru: max-width+margin auto, demo-stage, zestaw-shell,
+    galeria) NIE dotyka pionowych krawedzi -> None (papier ja izoluje)."""
+    c=rec.get("cand")
+    if not c: return None
+    secW=rec["secW"]; secH=rec["secH"]
+    if secW<=0 or secH<=0: return None
+    if c["w"]/secW < SEAM_W_MIN or c["h"]/secH < SEAM_H_MIN: return None
+    touchL=(c["left"]-rec["secLeft"])<=SEAM_EDGE_TOL
+    touchR=(rec["secRight"]-c["right"])<=SEAM_EDGE_TOL
+    touchT=(c["top"]-rec["secTop"])<=SEAM_EDGE_TOL
+    touchB=(rec["secBottom"]-c["bottom"])<=SEAM_EDGE_TOL
+    if not (touchT and touchB): return None          # full-bleed w PIONIE: musi dochodzic do gornej I dolnej krawedzi
+    if touchL and touchR: return "full"              # pelna szerokosc (dotyka obu pionowych krawedzi)
+    if touchL: return "left"
+    if touchR: return "right"
+    return None                                       # nie dotyka zadnej pionowej krawedzi = kontenerowana
+
+def check_scene_seam(D, add):
+    """BACKSTOP renderowy 'SZEW PELNOKADROWY': dwie SASIEDNIE (w DOM) sekcje z pelnokadrowa scena po TEJ
+    SAMEJ stronie, stykajace sie krawedz-w-krawedz na granicy sekcji => twardy szew. Fix = ZIG-ZAG lub
+    sekcja rozdzielajaca (PRZEWODNIK-GRAFICZNY pkt 2 ANTY-SZEW PELNOKADROWY + STANDARD F1.7)."""
+    secs=D.get("seam",{}).get("secs",[])
+    scenes=[(rec, _seam_side(rec)) for rec in secs]   # kolejnosc DOM (SEAM_JS zwraca w kolejnosci dokumentu)
+    for i in range(len(scenes)-1):
+        recA,sideA=scenes[i]; recB,sideB=scenes[i+1]
+        if not sideA or not sideB: continue
+        # (1) ta sama strona (lub jedna 'full' pelnoszeroka — laczy sie z dowolna sasiednia po wspolnej kolumnie)
+        if not (sideA==sideB or sideA=="full" or sideB=="full"): continue
+        cA=recA["cand"]; cB=recB["cand"]
+        # (2) realny styk PIONOWY: dol GORNEGO obrazu ~= gora DOLNEGO (granica sekcji); gap = sekcja/margines rozdzielajacy -> brak szwu
+        up,lo=(cA,cB) if cA["top"]<=cB["top"] else (cB,cA)
+        if abs(up["bottom"]-lo["top"])>SEAM_SEAM_TOL: continue
+        # (3) nachodzenie w POZIOMIE (ta sama kolumna); zig-zag prawo<->lewo daje ~0 -> brak szwu
+        ovl=min(cA["right"],cB["right"])-max(cA["left"],cB["left"])
+        if ovl < SEAM_XOVL_MIN*min(cA["w"],cB["w"]): continue
+        side=sideA if sideA==sideB else ("full<->"+(sideB if sideA=="full" else sideA))
+        add("obrazy", recA["sec"]+" <-> "+recB["sec"],
+            "scene_seam: sekcje %s<->%s — pelnokadrowe sceny po tej samej stronie (%s) stykaja sie w szew (dwa rozne zdjecia sklejone krawedz-w-krawedz na granicy sekcji; spotegowane gdy sceny roznia sie swiatlem/skala). PRZEWODNIK-GRAFICZNY pkt 2 ANTY-SZEW PELNOKADROWY + STANDARD F1.7"
+              %(recA["sec"],recB["sec"],side),
+            "P1","ZIG-ZAG (obraz raz PRAWO raz LEWO — na granicy zawsze foto<->papier, nie foto<->foto) ALBO sekcja ROZDZIELAJACA (pasek zaufania/karta na papierze) miedzy nimi; ostatecznie skonteneruj jedna (rounded card + margines papieru). Karta sekcji zapisuje STRONE, przewodnik projektuje naprzemiennosc OD RAZU (pkt 2)","skrypt")
+
 def check_interactive(D, add, vw):
     """Hit-test + martwa interakcja per viewport."""
     for s in D.get("probe",{}).get("sliders",[]):
@@ -813,7 +930,7 @@ def main():
         nsw,notes=autoswap_paybadges(target)
         print("PAYBADGES --fix: podmieniono %d klastrow. %s"%(nsw,"; ".join(notes[:4])))
 
-    D_desk=load_and_analyze(target,1280,900,False,do_scrim=True)
+    D_desk=load_and_analyze(target,1280,900,False,do_scrim=True,do_seam=True)
     D_mob=load_and_analyze(target,390,844,True,do_fade=True)
 
     # ---- fonts ----
@@ -980,12 +1097,14 @@ def main():
     paybadges_guard(D_desk, add)
     check_scrim_plateau(D_desk, add)
     check_fade_line(D_mob, add)
+    check_scene_seam(D_desk, add)
 
     result={"findings":findings,"raw":{"fonts":D_desk["fonts"],"sizes":D_desk["sizes"],
             "n_imgs":len(D_desk["imgs"]),"sticky":D_desk.get("sticky"),
             "n_blocks":len(D_desk.get("blocks",[])),"n_paychips":len(D_desk.get("paychips",[])),
             "sliders":D_desk.get("probe",{}).get("sliders",[]),
-            "scrim":D_desk.get("scrim",[]),"fade":D_mob.get("fade",[])}}
+            "scrim":D_desk.get("scrim",[]),"fade":D_mob.get("fade",[]),
+            "n_seam_secs":len(D_desk.get("seam",{}).get("secs",[]))}}
     txt=json.dumps(result,ensure_ascii=False,indent=1)
     if out:
         io.open(out,"w",encoding="utf-8").write(txt)
