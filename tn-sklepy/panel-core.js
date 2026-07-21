@@ -519,7 +519,7 @@ function renderStageAxis(projDefs, containerId) {
 
         // podlinijki: kamień (zielony) + notatka (tylko admin)
         const note = admin && st.data && st.data.note ? String(st.data.note) : '';
-        const mileLine = isMile ? `<span class="proc-mile"><i class="ph ph-flag-checkered"></i>${escapeHtml(d.milestone_label)}</span>` : '';
+        const mileLine = isMile ? `<span class="proc-mile${mileDone ? '' : ' proc-mile-todo'}"><i class="ph ${mileDone ? 'ph-flag-checkered' : 'ph-flag'}"></i>${escapeHtml(d.milestone_label)}</span>` : '';
         const noteLine = note ? `<span class="proc-note"><i class="ph ph-note"></i>${escapeHtml(note)}</span>` : '';
         const sub = (mileLine || noteLine) ? `<div class="proc-subline">${mileLine}${noteLine}</div>` : '';
 
@@ -532,7 +532,7 @@ function renderStageAxis(projDefs, containerId) {
         const tip = admin
             ? `data-tip-title="${i+1}. ${escapeHtml(d.label)}${isMile ? ' 🏁' : ''}" data-tip-sub="${OWNER_LABEL[d.owner] || ''}${isMile ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}" data-tip-desc="${escapeHtml((P.WS[d.key] && P.WS[d.key].desc) ? String(P.WS[d.key].desc).slice(0,140) : '')}"`
             : '';
-        return `<div class="sbx${mileDone ? ' sbx-mile-done' : (isMile ? ' sbx-mile' : '')}" onclick="procOpen('${d.key}', null)">
+        return `<div class="sbx${st.status === 'done' ? ' sbx-done' : ''}" onclick="procOpen('${d.key}', null)">
             <div class="sbx-head">
                 <span class="proc-node ${nodeCls}${mileDone ? ' pn-big' : ''}" ${tip}>${nodeIcon ? `<i class="ph ${nodeIcon}"></i>` : ''}</span>
                 <div class="sbx-tt">
