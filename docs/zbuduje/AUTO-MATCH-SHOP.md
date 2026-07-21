@@ -161,6 +161,27 @@ Przykłady odrzuceń (odniesienie → co automat wpisał):
 - karmnik dla psa (podstawka) → kompletny karmnik dla kota z kamerą
 - saszetki podróżne na ubrania → organizer na tabletki
 
+### Po trzecim przebiegu (`{op:'verify_shop_tiebreak'}`)
+
+Trzeci głos rozstrzygający, decyzja większością 3 (do zatwierdzenia: ≥2× TAK,
+**zero** głosów NIE, średnia pewność TAK ≥ minConf):
+
+| wynik | ile |
+|---|---|
+| ✓ zatwierdzone | **22** |
+| ⛔ odrzucone (nagrobek) | **28** |
+| ~ jednogłośne 3× TAK, średnia < 0.9 | **16** |
+| ~ sporne (2× TAK, 1× NIE) | **6** |
+
+Czyli **28 z 72 dopasowań po tytule (39%) okazało się innym produktem.**
+
+Grupa „jednogłośne 3× TAK poniżej progu" to przypadki, gdzie trzy niezależne przebiegi
+zgadzają się co do TAK, ale pewność siedzi w paśmie 0.78–0.89 — zwykle znaczy to „ten sam
+typ rzeczy, inny model/wariant". Próg 0.9 był kalibrowany dla POJEDYNCZEGO przebiegu;
+przy jednogłośności trzech mierzy już co innego. **Decyzja o traktowaniu tej grupy należy
+do Tomka — nie obniżać progu samodzielnie** (dobieranie reguły pod pożądany wynik to
+dokładnie ten błąd, przez który 66 rekordów miało `score = 1.0` i cudze dane w środku).
+
 ### Nagrobek po odrzuceniu
 
 Odrzucone NIE mają `tt_shop = null`, tylko „nagrobek":
