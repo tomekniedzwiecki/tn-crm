@@ -62,7 +62,7 @@ console.log('=== Smoke test TN Sklepy (wf2) ===\n');
 }
 
 // ── 2. Gate'y edge functions (bez auth = 4xx, nigdy 200) ───────────────────
-for (const [fn, body] of [['wf2-platform', { action: 'stores' }], ['wf2-orders-sync', {}]]) {
+for (const [fn, body] of [['wf2-platform', { action: 'stores' }], ['wf2-orders-sync', {}], ['wf2-merchant', { action: 'list_accounts' }]]) {
   const st = await edge(fn, body);
   (st === 401 || st === 403) ? ok(`${fn} bez auth → ${st}`) : bad(`${fn} bez auth`, `status ${st} (oczekiwane 401/403)`);
 }
@@ -82,7 +82,7 @@ for (const [fn, body] of [['wf2-platform', { action: 'stores' }], ['wf2-orders-s
 }
 
 // ── 4. RLS: anon NIE widzi tabel wf2_* ─────────────────────────────────────
-for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2_artifacts', 'wf2_notes']) {
+for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2_artifacts', 'wf2_notes', 'wf2_merchant_accounts']) {
   const r = await rest(`${t}?select=id&limit=1`, ANON);
   const leak = r.status < 300 && Array.isArray(r.data) && r.data.length > 0;
   leak ? bad(`RLS anon ${t}`, 'anon widzi wiersze!') : ok(`RLS: anon nie widzi ${t}`);
@@ -164,6 +164,27 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   adapterSrc.includes('function pagesList(')
     ? ok('wf2-platform: pagesList (fix parsowania {pages:[…]} — unpublish/home działają)')
     : bad('wf2-platform pagesList', 'brak fixu parsowania odpowiedzi /pages (obiekt, nie tablica)');
+}
+
+// ── 9. Fabryka zakłada sklep merchanta (wf2-merchant) — kontrakt statyczny + RLS tabeli ──
+{
+  const fnPath = join(ROOT, 'supabase', 'functions', 'wf2-merchant', 'index.ts');
+  const src = existsSync(fnPath) ? readFileSync(fnPath, 'utf8') : '';
+  src ? ok('wf2-merchant/index.ts istnieje (fabryka zakłada sklep)') : bad('wf2-merchant', 'brak supabase/functions/wf2-merchant/index.ts');
+  const wantActions = ['create_store', 'token', 'list_accounts'];
+  const missAct = wantActions.filter((a) => !src.includes(`"${a}"`) && !src.includes(`'${a}'`));
+  missAct.length ? bad('wf2-merchant akcje', `brak: ${missAct.join(', ')}`) : ok(`wf2-merchant: komplet akcji (${wantActions.length})`);
+  // idempotencja + sygnał ręcznej obsługi zajętego e-maila (kontrakt paczki pl_sklep)
+  (src.includes('email_taken_no_creds') && src.includes('onConflict')) ? ok('wf2-merchant: idempotencja (upsert onConflict) + email_taken_no_creds') : bad('wf2-merchant idempotencja', 'brak email_taken_no_creds lub upsert onConflict');
+  // gate: x-wf2-secret + service-role, anon NIGDY (nie osłabiać)
+  (src.includes('WF2_GEN_SECRET') && src.includes('adminGate')) ? ok('wf2-merchant: gate x-wf2-secret/service/adminGate') : bad('wf2-merchant gate', 'brak WF2_GEN_SECRET/adminGate w gate');
+
+  const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
+  /"deploy:wf2-merchant"\s*:/.test(pkg) ? ok('package.json ma deploy:wf2-merchant') : bad('package.json', 'brak deploy:wf2-merchant');
+
+  existsSync(join(ROOT, 'supabase', 'migrations', '20260721d_wf2_merchant_accounts.sql'))
+    ? ok('migracja 20260721d_wf2_merchant_accounts.sql obecna')
+    : bad('migracja wf2_merchant_accounts', 'brak pliku migracji 20260721d_wf2_merchant_accounts.sql');
 }
 
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);

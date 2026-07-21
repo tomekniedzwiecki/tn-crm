@@ -8,6 +8,57 @@ Partner API platformy, na którą wystawiamy sklepy Workflow v2. Przetestowane e
 - **Rate limit:** 120 req/min per klucz → 429 + `Retry-After` (+ nagłówki `RateLimit-*`).
 - **Docs maszynowe:** `GET /docs` (wymaga klucza; bez klucza Cloudflare zwraca 403). Zrzut: [`docs-raw.json`](docs-raw.json).
 
+## MERCHANT API — tworzenie konta merchanta i sklepu (edge `wf2-merchant`, 2026-07-21)
+
+**Dwa RÓŻNE API Trevio.** Powyższy `partner/v1` (X-Api-Key) ZARZĄDZA istniejącymi sklepami, ale
+**NIE tworzy sklepu**. Zakładanie konta merchanta + utworzenie sklepu robi **API MERCHANTA**
+(`gateway.trevio.pl/auth/*` + `/organization/*`, auth per-konto Bearer JWT). Adapter: edge
+**`wf2-merchant`** (deploy `npm run deploy:wf2-merchant`, `--no-verify-jwt`; gate:
+`x-wf2-secret==WF2_GEN_SECRET` **lub** service-role key w Authorization **lub** team JWT — anon NIGDY).
+Tenant `panel.niedzwiecki.ai` = `019f1eb3-95d4-79e7-aa42-ca56ece13021` (env `TREVIO_TENANT_ID`, fallback stały).
+
+**KLUCZOWE (zweryfikowane 21.07): sklep założony przez API merchanta OD RAZU widnieje na liście
+`stores` API partnera** (test: nowy sklep Trafionka pojawił się na liście `wf2-platform stores`) →
+po utworzeniu całe zarządzanie idzie przez `wf2-platform`.
+
+**Kontrakt end-to-end** (nagłówki każdego żądania: `Content-Type: application/json`,
+`Origin: https://panel.niedzwiecki.ai`):
+1. `GET /auth/registration-documents?tenantId=<TENANT>` → ID regulaminu + polityki do akceptacji.
+   Kształt (21.07): `{ regulation:{id,...}, privacyPolicy:{id,...} }` — POBIERAĆ DYNAMICZNIE (mogą
+   rotować; edge zbiera WSZYSTKIE `id` z wartości-obiektów, fallback na tablicę `{documents|data|items:[...]}`).
+2. `POST /auth/register` (bez auth) `{firstName,email,password,acceptedDocumentIds:[reg,priv],tenantId}`
+   → 200 `{accessToken}`. **BEZ weryfikacji e-mail** (od razu ważny JWT, auto-tworzy organizację).
+   Hasło: min 8 zn., wielka+mała+cyfra. **Email zajęty = 409.** Puste `acceptedDocumentIds` = 400 (walidacja).
+3. `POST /auth/token` (bez auth) `{email,password,tenantId}` → 200 `{accessToken}` (re-login).
+4. `POST /organization/onboarding/setup/physical-product` (Bearer) `{name,isCompany:false}`
+   → 200 `{success,websiteId}` = **TWORZY SKLEP** fizyczny.
+5. (aktywacja trialu 0 zł, best-effort — błąd NIE przerywa, sklep i tak jest na trialu):
+   `GET /organization/payment-plan/website-pricing-payment-plans` (Bearer) → `internalOffer.id`
+   planu fizycznego; `POST /auth/refresh {}` → świeży token; `POST /organization/internal-order?organizationId=<ORG>`
+   `{internalOfferId,websiteId}`. `organizationId` = claim z JWT (register/refresh). Przy Trafionku
+   ten krok przeszedł bez ostrzeżeń (trial aktywny od razu).
+6. `GET /organization/website` (Bearer) → potwierdzenie: id, name, domena startowa
+   `<slug>.shop.tomekniedzwiecki.pl`.
+
+**Akcje `wf2-merchant`:**
+- `create_store {email, first_name, store_name, project_id?, is_company?, password?, link_project?}`
+  → pełny flow 1-6. **IDEMPOTENCJA**: konto już w `wf2_merchant_accounts` z hasłem → re-auth (`created:false`,
+  NIE zakłada drugiego). register 409 bez zapisanych creds → `{error:'email_taken_no_creds', needs_manual:true}`
+  (wołający ma użyć adresu systemowego `<slug>@tomekniedzwiecki.pl` i powtórzyć). Po sukcesie UPSERT do
+  `wf2_merchant_accounts` (trzyma HASŁO) + gdy `link_project` (default true) UPDATE
+  `wf2_projects.platform_shop_id` + `platform_merchant_email`. Zwraca `{website_id, subdomain, org_id, email, created, warnings}`.
+- `token {email}` → re-auth ze stored creds, zwraca `{access_token}` (debug/wewn.; hasła NIE loguje).
+- `list_accounts {project_id?}` → wiersze BEZ pola `password` (zredagowane).
+
+**Tabela `wf2_merchant_accounts`** (migracja `20260721d_wf2_merchant_accounts`): trzyma hasła kont
+merchanta → **RLS ENABLED, ZERO polityk** (service-role only — anon/authenticated nie widzą wiersza).
+Kolumna `wf2_projects.platform_merchant_email` = szybka referencja. WebAuthn/passkey na logowaniu
+wspierany — konto passkey-only może NIE mieć hasła (brak drogi API bez interakcji właściciela).
+
+**Pierwsze użycie produkcyjne (21.07): Trafionek** — sklep `019f847d-57bf-7a84-ba72-34bf870d1ddf`
+(`trafionek.shop.tomekniedzwiecki.pl`), adres systemowy `trafionek@tomekniedzwiecki.pl` (gmail klienta
+zajęty w Trevio → 409). Krok `pl_sklep` panelu zakłada sklep AUTONOMICZNIE (paczka `pl_sklep` pkt 0).
+
 ## Adapter: edge `wf2-platform` (JEDYNE miejsce znające API — plan §API platformy)
 
 Deploy: `npx supabase functions deploy wf2-platform --no-verify-jwt --project-ref yxmavwkwnfuphjqbelws`.

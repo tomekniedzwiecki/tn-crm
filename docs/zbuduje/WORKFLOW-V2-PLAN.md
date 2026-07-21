@@ -3,6 +3,31 @@
 **Status: F1 WDROŻONE + iteracje z odbioru (2026-07-03). Ten dokument = plan bazowy;
 poniższa sekcja „STAN WDROŻENIA" nadpisuje szczegóły, które zmieniły się przy odbiorze.**
 
+## 0a-sexies. MERCHANT API — FABRYKA ZAKŁADA SKLEP AUTONOMICZNIE (2026-07-21)
+
+**LUKA ZAMKNIĘTA:** wcześniej API partnera (`wf2-platform`, X-Api-Key) NIE tworzyło sklepu —
+konto i sklep na platformie „zakładał KLIENT" (provisioning po stronie developera platformy), a
+krok `pl_sklep` tylko PRZYPINAŁ istniejący sklep pickerem. Od 21.07 fabryka zakłada sklep SAMA
+przez **API MERCHANTA** Trevio (`gateway.trevio.pl/auth/*` + `/organization/*`, Bearer JWT
+per-konto) — adapter edge **`wf2-merchant`** (`npm run deploy:wf2-merchant`, `--no-verify-jwt`;
+gate `x-wf2-secret==WF2_GEN_SECRET` | service-role key | team JWT).
+
+- Kontrakt 1-6 (registration-documents → register bez weryfikacji e-mail → token → setup/physical-product
+  = TWORZY SKLEP → aktywacja trialu best-effort → GET website): pełna referencja
+  `platforma-api/README.md` §MERCHANT API. **Sklep założony przez merchant API OD RAZU widnieje na
+  liście `stores` API partnera** → dalej zarządzany przez `wf2-platform`.
+- Akcje `wf2-merchant`: `create_store` (IDEMPOTENTNE — konto w `wf2_merchant_accounts` z hasłem →
+  `created:false`; register 409 bez creds → `{needs_manual:true, error:'email_taken_no_creds'}` →
+  użyj adresu systemowego `<slug>@tomekniedzwiecki.pl`), `token`, `list_accounts` (bez hasła).
+- Migracja `20260721d_wf2_merchant_accounts`: tabela z hasłami kont (RLS ENABLED, ZERO polityk =
+  service-role only) + kolumna `wf2_projects.platform_merchant_email`.
+- Krok `pl_sklep` (paczka pl_sklep, pkt 0): jeśli projekt NIE ma `platform_shop_id` albo wskazuje
+  sklep współdzielony/testowy → `create_store` PRZED przypięciem; picker zostaje jako droga ręczna.
+- **Pierwsze użycie produkcyjne: Trafionek** (własny sklep `019f847d-57bf-7a84-ba72-34bf870d1ddf`,
+  `trafionek.shop.tomekniedzwiecki.pl`, adres systemowy `trafionek@tomekniedzwiecki.pl` bo gmail
+  klienta zajęty w Trevio) — przepięty ze sklepu współdzielonego „test", domena `trafionek.pl`
+  podpięta (add_domain + dns_set OK), produkty/kroki Etapu 3 cofnięte do republikacji na nowym sklepie.
+
 ## 0a-quinquies. KROK `wybor` PROJEKTOWY + LOSOWANIE PORTFELA (2026-07-21 wieczór)
 
 Krok `wybor` przebudowany z **per-produkt** na **project-scope** (migracja
