@@ -6,12 +6,15 @@
 // HASŁO first-visit (16.07): hash NULL = portal jeszcze bez hasła. KLIENT sam ustawia hasło
 // przy pierwszym wejściu — akcja `set_password` (gate: token OK ORAZ hash NULL; NIGDY nie
 // nadpisuje istniejącego). `portal_state` (bez hasła) mówi frontowi czy pokazać ekran „ustaw hasło"
-// czy logowanie. Reset = Tomek czyści hash do NULL w panelu → klient ustawia nowe.
+// czy logowanie. Reset: self-service `reset_request`/`reset_confirm` (link mailowy na customer_email,
+// 21.07) LUB Tomek czyści hash do NULL w panelu → klient ustawia nowe jak przy pierwszym wejściu.
 //
 // Body BEZ `action` = status projektu (postęp %, etapy, kamienie).
 // Body z `action`:
 //   'portal_state'   → { needs_setup, name } — czy portal wymaga ustawienia hasła (bez hasła)
 //   'set_password'   → ustaw hasło TYLKO gdy hash NULL (first-visit); { ok:true }
+//   'reset_request'  → mail z linkiem resetu na customer_email (TTL 60 min, cooldown 5 min); { ok:true }
+//   'reset_confirm'  → { reset_token, password } → nowe hasło z linku mailowego; { ok:true }
 //   'contract_meta'  → { contract_status, fields, has_final, final_url, name, customer_name, customer_email }
 //   'contract_data'  → zapis danych klienta (tylko gdy status='dane_klienta') → status='do_podpisu'
 //   'contract_html'  → render umowy W LOCIE (szablon/custom + podstawienie {{...}}); { html }
@@ -270,6 +273,7 @@ Deno.serve(async (req: Request) => {
   let body: {
     token?: string;
     password?: string;
+    reset_token?: string;
     action?: string;
     fields?: Record<string, unknown>;
     preview?: boolean;
@@ -316,7 +320,7 @@ Deno.serve(async (req: Request) => {
   const { data: p } = await sb
     .from("wfa_projects")
     .select(
-      "id, name, customer_name, customer_email, customer_phone, status, deadline_at, client_password_hash, app_url, domain, landing_url, fee_percent, unique_token, stripe_account_id, contract_status, contract_fields, contract_custom_html, contract_sent_at, contract_final_path, spar_session_id, changelog_seen_at",
+      "id, name, customer_name, customer_email, customer_phone, status, deadline_at, client_password_hash, password_reset_token_hash, password_reset_expires, app_url, domain, landing_url, fee_percent, unique_token, stripe_account_id, contract_status, contract_fields, contract_custom_html, contract_sent_at, contract_final_path, spar_session_id, changelog_seen_at",
     )
     .eq("unique_token", token)
     .maybeSingle();
@@ -382,6 +386,131 @@ Deno.serve(async (req: Request) => {
       actor: "client",
       action: "portal_set_password",
       description: "Klient ustawił własne hasło do portalu przy pierwszym wejściu.",
+    });
+    return json({ ok: true });
+  }
+
+  // ============ RESET HASŁA (self-service, decyzja Tomka 21.07): prośba o link mailowy ============
+  // Gate: token portalu (sprawdzony wyżej) + hasło JUŻ ustawione (hash NULL = ścieżka first-visit).
+  // Mail idzie WYŁĄCZNIE na customer_email z projektu — klient NIE podaje adresu, więc nie da się
+  // przejąć cudzego portalu własną skrzynką. Token resetu 64-hex: w bazie tylko SHA-256, TTL 60 min,
+  // jednorazowy. Cooldown 5 min między wysyłkami (liczony z password_reset_expires − 55 min).
+  if (action === "reset_request") {
+    if (preview) return json({ error: "preview_readonly" }, 403);
+    const gate = await throttleGate(sb, token);
+    if (gate.locked) {
+      return json({ error: "too_many_attempts", retry_after: gate.retryAfter }, 429, { "Retry-After": String(gate.retryAfter) });
+    }
+    const email = String(p.customer_email || "").trim();
+    // Bez ustawionego hasła albo bez adresu nie ma czego wysyłać — cichy sukces (front i tak
+    // pokazuje generyczny komunikat; token zna projekt, więc to nie jest kanał enumeracji).
+    if (!p.client_password_hash || !email) return json({ ok: true });
+    if (p.password_reset_expires) {
+      const cooldownEnd = new Date(String(p.password_reset_expires)).getTime() - 55 * 60 * 1000;
+      if (Date.now() < cooldownEnd) {
+        const retry = Math.max(1, Math.ceil((cooldownEnd - Date.now()) / 1000));
+        return json({ error: "cooldown", retry_after: retry }, 429, { "Retry-After": String(retry) });
+      }
+    }
+    const resetToken = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, ""); // 64 hex
+    const { error: rqErr } = await sb
+      .from("wfa_projects")
+      .update({
+        password_reset_token_hash: await sha256Hex(resetToken),
+        password_reset_expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      })
+      .eq("id", p.id);
+    if (rqErr) return json({ error: "save_failed" }, 500);
+    const resendKey = Deno.env.get("resend_api_key") || Deno.env.get("RESEND_API_KEY") || "";
+    if (!resendKey) {
+      console.error("[wfa-portal] reset_request: brak klucza Resend w env");
+      return json({ error: "mail_failed" }, 500);
+    }
+    // Query PRZED #hashem (poprawny URL); front zdejmuje ?rt= z paska adresu po wejściu.
+    const resetUrl = `https://crm.tomekniedzwiecki.pl/twoja-aplikacja?rt=${resetToken}#t=${token}`;
+    const firstName = String(p.customer_name || "").trim().split(/\s+/)[0] || "Cześć";
+    const appName = escHtml(String(p.name || "").trim() || "Twoja aplikacja");
+    const mailHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#000000;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#000000;padding:40px 20px;"><tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;border-radius:12px;border:1px solid #262626;"><tr><td style="padding:48px 40px 40px 40px;">
+<p style="margin:0 0 8px 0;color:#f59e0b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Reset hasła</p>
+<h1 style="margin:0 0 24px 0;color:#ffffff;font-size:28px;font-weight:600;line-height:1.3;">${escHtml(firstName)}, ustaw nowe hasło do portalu</h1>
+<p style="margin:0 0 20px 0;color:#a3a3a3;font-size:15px;line-height:1.6;">Dostaliśmy prośbę o reset hasła do portalu projektu <b style="color:#e5e5e5;">${appName}</b>.</p>
+<p style="margin:0 0 32px 0;color:#a3a3a3;font-size:15px;line-height:1.6;">Kliknij poniższy przycisk i ustaw nowe hasło. Link jest ważny przez 1 godzinę i działa jeden raz.</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr><td align="center">
+<a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);color:#ffffff;text-decoration:none;padding:16px 32px;border-radius:8px;font-size:14px;font-weight:600;text-align:center;">Ustaw nowe hasło →</a>
+</td></tr></table>
+<p style="margin:0;color:#737373;font-size:13px;line-height:1.5;">Jeśli ta prośba nie pochodzi od Ciebie, zignoruj tę wiadomość — hasło pozostaje bez zmian.</p>
+</td></tr><tr><td style="padding:20px 40px;border-top:1px solid #262626;text-align:center;">
+<a href="https://tomekniedzwiecki.pl" style="color:#525252;font-size:12px;text-decoration:none;">tomekniedzwiecki.pl</a>
+</td></tr></table></td></tr></table></body></html>`;
+    const mailRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+      body: JSON.stringify({
+        from: "Tomek Niedzwiecki <ceo@tomekniedzwiecki.pl>",
+        to: email,
+        subject: `Reset hasła do portalu — ${String(p.name || "Twoja aplikacja").trim()}`,
+        html: mailHtml,
+      }),
+    });
+    if (!mailRes.ok) {
+      console.error("[wfa-portal] reset_request: Resend", mailRes.status, await mailRes.text().catch(() => ""));
+      return json({ error: "mail_failed" }, 500);
+    }
+    await sb.from("wfa_activities").insert({
+      project_id: p.id,
+      actor: "client",
+      action: "portal_reset_request",
+      description: "Klient poprosił o mailowy reset hasła portalu (link 60 min).",
+    });
+    return json({ ok: true });
+  }
+
+  // ============ RESET HASŁA: ustawienie nowego hasła z linku mailowego ============
+  // Gate: token portalu + ważny (TTL, jednorazowy) token resetu. Błędne/wygasłe tokeny liczą się
+  // do throttlingu brute-force (ten sam licznik co hasło). Atomowość jednorazowości przez
+  // warunkowy UPDATE ...eq(password_reset_token_hash, <stary hash>).
+  if (action === "reset_confirm") {
+    if (preview) return json({ error: "preview_readonly" }, 403);
+    const gate = await throttleGate(sb, token);
+    if (gate.locked) {
+      return json({ error: "too_many_attempts", retry_after: gate.retryAfter }, 429, { "Retry-After": String(gate.retryAfter) });
+    }
+    const rt = String(body.reset_token || "").trim().toLowerCase();
+    const expiresMs = p.password_reset_expires ? new Date(String(p.password_reset_expires)).getTime() : 0;
+    if (!/^[0-9a-f]{64}$/.test(rt) || !p.password_reset_token_hash || expiresMs < Date.now()) {
+      await throttleFail(sb, token);
+      await sleep(300);
+      return json({ error: "reset_invalid" }, 401);
+    }
+    if ((await sha256Hex(rt)) !== String(p.password_reset_token_hash).toLowerCase()) {
+      await throttleFail(sb, token);
+      await sleep(300);
+      return json({ error: "reset_invalid" }, 401);
+    }
+    const np = (body.password || "").trim();
+    if (np.length < 8) return json({ error: "validation", messages: ["Hasło musi mieć min. 8 znaków."] }, 400);
+    if (np.length > 200) return json({ error: "validation", messages: ["Hasło jest za długie."] }, 400);
+    const { data: updated, error: upErr } = await sb
+      .from("wfa_projects")
+      .update({
+        client_password_hash: await sha256Hex(np),
+        password_reset_token_hash: null,
+        password_reset_expires: null,
+      })
+      .eq("id", p.id)
+      .eq("password_reset_token_hash", p.password_reset_token_hash)
+      .select("id");
+    if (upErr) return json({ error: "save_failed" }, 500);
+    if (!updated || (updated as unknown[]).length === 0) return json({ error: "reset_invalid" }, 401);
+    throttleClear(sb, token).catch(() => {});
+    await sb.from("wfa_activities").insert({
+      project_id: p.id,
+      actor: "client",
+      action: "portal_reset_done",
+      description: "Klient ustawił nowe hasło portalu przez mailowy reset.",
     });
     return json({ ok: true });
   }

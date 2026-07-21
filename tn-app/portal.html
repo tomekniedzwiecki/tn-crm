@@ -448,6 +448,20 @@
             <div id="err" class="err"></div>
             <input id="pw" type="password" placeholder="Hasło" autocomplete="current-password">
             <button id="go" onclick="load()">Pokaż postęp</button>
+            <p class="sub" style="margin:14px 0 0;font-size:13px"><a href="#" id="fpw-link" onclick="requestReset(event)" style="color:inherit">Nie pamiętam hasła</a></p>
+            <p class="sub" id="fpw-msg" style="margin:8px 0 0;font-size:13px;display:none"></p>
+        </div>
+    </div>
+
+    <!-- Nowe hasło z linku mailowego (?rt= w URL) -->
+    <div id="resetpw" class="hidden">
+        <h1>Ustaw nowe hasło</h1>
+        <p class="sub" style="margin-bottom:26px">Wpisz nowe hasło do portalu. Po zapisaniu wejdziesz od razu do podglądu postępu budowy.</p>
+        <div class="card" style="max-width:420px">
+            <div id="rpw-err" class="err"></div>
+            <input id="rpw1" type="password" placeholder="Nowe hasło (min. 8 znaków)" autocomplete="new-password">
+            <input id="rpw2" type="password" placeholder="Powtórz hasło" autocomplete="new-password">
+            <button id="rpw-go" onclick="confirmReset()">Zapisz nowe hasło i wejdź</button>
         </div>
     </div>
 
@@ -650,6 +664,12 @@
     if (!previewMode && qs.get('t') && token) {
         try { history.replaceState(null, '', location.pathname + '#t=' + encodeURIComponent(token)); } catch (e) {}
     }
+    // Reset hasła z maila: jednorazowy token w ?rt= (query PRZED #hashem). Zapamiętaj w zmiennej
+    // i zdejmij z paska adresu (logi/Referer/historia — ta sama zasada co token portalu).
+    const resetTok = (qs.get('rt') || '').trim();
+    if (!previewMode && resetTok && token) {
+        try { history.replaceState(null, '', location.pathname + '#t=' + encodeURIComponent(token)); } catch (e) {}
+    }
     const AJ_KEY = 'wfa_preview_jwt_' + token;
     let adminJwt = previewMode
         ? (new URLSearchParams((location.hash || '').replace(/^#/, '')).get('admintok') || '').trim()
@@ -702,7 +722,7 @@
     }
 
     function show(id) {
-        ['login','setpw','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+        ['login','setpw','resetpw','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
     }
 
     // ============ Faza 4: skeleton · empty-state · toast (dopieszczenie) ============
@@ -940,6 +960,46 @@
             load();
         } catch (e) { $('spw-err').textContent = 'Błąd połączenia — spróbuj ponownie.'; }
         finally { $('spw-go').disabled = false; }
+    }
+
+    // ============ Reset hasła (self-service): prośba o link mailowy + nowe hasło z linku ============
+    // Mail idzie na adres przypisany do projektu (serwer NIE przyjmuje adresu od klienta).
+    async function requestReset(e) {
+        if (e) e.preventDefault();
+        if (previewMode) return;
+        const link = $('fpw-link'), msg = $('fpw-msg');
+        msg.style.display = 'block'; msg.textContent = 'Wysyłam…';
+        link.style.pointerEvents = 'none';
+        try {
+            const res = await fetch(FN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token, action:'reset_request' }) });
+            if (res.ok) { msg.textContent = 'Wysłaliśmy link do ustawienia nowego hasła na adres e-mail przypisany do projektu. Sprawdź też folder spam.'; return; }
+            if (res.status === 429) { msg.textContent = 'Prośba o reset została już wysłana — sprawdź skrzynkę albo odczekaj kilka minut.'; return; }
+            msg.textContent = 'Nie udało się wysłać linku — spróbuj za chwilę.';
+        } catch (err) { msg.textContent = 'Błąd połączenia — spróbuj ponownie.'; }
+        finally { setTimeout(() => { link.style.pointerEvents = ''; }, 5000); }
+    }
+    async function confirmReset() {
+        const p1 = $('rpw1').value.trim(), p2 = $('rpw2').value.trim();
+        $('rpw-err').textContent = '';
+        if (p1.length < 8) { $('rpw-err').textContent = 'Hasło musi mieć min. 8 znaków.'; return; }
+        if (p1 !== p2) { $('rpw-err').textContent = 'Hasła nie są takie same.'; return; }
+        $('rpw-go').disabled = true;
+        try {
+            const res = await fetch(FN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token, action:'reset_confirm', reset_token: resetTok, password: p1 }) });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                if (res.status === 401) { $('rpw-err').textContent = 'Link do resetu wygasł lub został już użyty. Poproś o nowy na ekranie logowania.'; setTimeout(() => show('login'), 2500); }
+                else if (res.status === 429) { $('rpw-err').textContent = 'Zbyt wiele prób — spróbuj za chwilę.'; }
+                else { $('rpw-err').textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się zapisać hasła.'; }
+                return;
+            }
+            // Auto-wejście jak po set_password: zapamiętaj hasło tej karty i wejdź ścieżką logowania.
+            sessionStorage.setItem(PW_KEY, p1);
+            currentPw = p1;
+            show('loading');
+            load();
+        } catch (e) { $('rpw-err').textContent = 'Błąd połączenia — spróbuj ponownie.'; }
+        finally { $('rpw-go').disabled = false; }
     }
 
     async function load() {
@@ -1873,12 +1933,14 @@
         if (!adminJwt) { show('notoken'); $('notoken').innerHTML = '<h1>Podgląd niedostępny</h1><p class="sub">Otwórz podgląd z panelu, będąc zalogowanym.</p>'; }
         else { show('loading'); load(); }
     }
+    else if (resetTok) { show('resetpw'); }
     else if (sessionStorage.getItem(PW_KEY)) { show('loading'); load(); }
     else { bootstrapAuth(); }
     document.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return;
         if (!$('login').classList.contains('hidden')) load();
         else if (!$('setpw').classList.contains('hidden')) setPassword();
+        else if (!$('resetpw').classList.contains('hidden')) confirmReset();
     });
     // Lightbox makiet: zamknij klawiszem Escape (klik już zamyka przez inline onclick).
     document.addEventListener('keydown', e => {
