@@ -20,8 +20,16 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   TEST→SCALE→OPT (accepted_by='fabryka'); w blokadzie kolejności przed `lp_dane`**. Marka RUSZA
   PO wyborze produktów, portfel jest kontekstem nazwy; pusty portfel = baner
   „Dobierz portfel" zamiast kroku. pl_domena PRZENIESIONA z Etapu 3 — tor domeny: zakup
-  LH.pl → DNS → propagacja 24-48 h → weryfikacja w Meta BM to najdłuższa ścieżka projektu,
-  MUSI biec równolegle do landingów)
+  AUTOMATEM przez GoDaddy → rekordy DNS AUTOMATEM w strefie GoDaddy → propagacja 24-48 h →
+  weryfikacja w Meta BM to najdłuższa ścieżka projektu, MUSI biec równolegle do landingów.
+  **PRZEBUDOWA 2026-07-21 (decyzja Tomka):** koniec modelu „Tomek kupuje w LH.pl + ręczne
+  wklejanie rekordów". Domenę kupuje FABRYKA (owner 'client' → 'admin') przez edge `wfa-domain`
+  (GoDaddy Domains API; bramka wydatku = akcept Tomka, `confirm:true`; koszt auto → biznes_costs
+  + wf2_costs + activity), rekordy DNS wpisuje automat przez GoDaddy DNS API (nowe akcje
+  `dns_get`/`dns_set`/`dns_delete`). **NS zostają na GoDaddy** (default nsXX.domaincontrol.com) —
+  ZAKAZ `set_ns`/Vercel (ODWROTNIE niż w tn-app); sklep hostuje platforma Trevio. Podłączenie =
+  `wf2-platform add_domain`, aktywacja = strażnik `wf2-orders-sync` (oba bez zmian; migracja
+  `20260721b_wf2_pl_domena_godaddy`))
   · **2 Landing** (lp_dane → lp_plan → lp_styl_marka → lp_makiety 🏁 → lp_grafiki → lp_kod →
   lp_dopasowanie → lp_zycie → lp_finisz 🏁 — proces fabryki F0→F8 1:1, scope=product)
   · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →

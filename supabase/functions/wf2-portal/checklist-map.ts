@@ -154,11 +154,11 @@ export const CHECKLIST_MAP: Record<string, Record<string, string>> = {
       "Widoczne w koszyku",
   },
   pl_domena: {
-    "Domena kupiona przez Tomka w LH.pl":
+    "Domena kupiona przez GoDaddy (wfa-domain, akcept Tomka)":
       "Kupiona domena sklepu",
     "Domena dodana na platformie (add_domain) — rekordy zwrócone":
       "Domena dodana na platformie",
-    "Rekordy DNS wpisane w edytorze stref LH.pl (1:1 z API)":
+    "Rekordy DNS wpisane w strefie GoDaddy (dns_set, 1:1 z API)":
       "Ustawione wpisy kierujące domenę na sklep",
     "Weryfikacja przeszła → domena aktywowana (strażnik/auto)":
       "Domena aktywna i połączona ze sklepem",

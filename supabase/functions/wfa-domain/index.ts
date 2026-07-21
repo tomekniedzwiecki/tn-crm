@@ -8,16 +8,27 @@
 // Akcje (POST JSON):
 //  {action:'check', domain}                          → dostępność przez RDAP (dns.pl / rdap.org)
 //  {action:'validate', domain, email, phone, ns?}    → GoDaddy purchase/validate (nic nie kupuje)
-//  {action:'buy', domain, email, phone, ns?, confirm:true, project_id?}
+//  {action:'buy', domain, email, phone, ns?, confirm:true, project_id?, wf2_project_id?}
 //      → PRAWDZIWY zakup (karta konta GoDaddy!); bez confirm===true = 400.
-//        project_id (opcjonalnie) = wpis do wfa_activities.
+//        project_id (opcjonalnie) = wpis do wfa_activities (tor tn-app).
+//        wf2_project_id (opcjonalnie) = wpis do wf2_activities + wf2_costs (tor wf2/sklepy).
+//        Odpowiedź buy niesie też amount_pln / currency / total_micro (audyt kosztu).
 //  {action:'status', domain}                         → stan domeny (authCode REDAKTOWANY)
+//  {action:'set_ns', domain, ns?}                    → PATCH nameServers (default Vercel) — TOR tn-app
+//
+// TOR wf2 (sklepy) — zarządzanie strefą DNS na koncie GoDaddy (NS zostają na GoDaddy,
+// domena NIE idzie na Vercel — ZAKAZ set_ns w wf2; sklep hostuje platforma Trevio):
+//  {action:'dns_get', domain, type?, name?}          → GET rekordów strefy
+//  {action:'dns_set', domain, records:[{type,name,data,ttl?,priority?}]} → PUT rekordów (replace per typ+nazwa, idempotentne)
+//  {action:'dns_delete', domain, type, name}         → DELETE rekordu (sprzątanie po testach)
 //
 // GOTCHAS GoDaddy (empirycznie 20.07, projekt Sygno):
 //  - /available = 403 przy koncie <50 domen → check robimy RDAP-em, nie GoDaddy.
 //  - schemat .pl nie zna pola `privacy` (422) — nie wysyłamy go.
 //  - kontakty MUSZĄ być ASCII (wzorce odrzucają ź/ł/ó) — walidacja poniżej.
 //  - ceny przez API nie widać — buy zwraca total z ordera PO zakupie (micro-jednostki).
+//  - purchase .pl IGNORUJE nameServers z payloadu → NASK dostaje default nsXX.domaincontrol.com.
+//    W tn-app to wada (dlatego set_ns→Vercel); w wf2 to ZALETA (strefa zostaje w GoDaddy).
 
 const GD = "https://api.godaddy.com";
 const DEFAULT_NS = ["ns1.vercel-dns.com", "ns2.vercel-dns.com"];
@@ -165,6 +176,71 @@ Deno.serve(async (req) => {
       return json({ http: status, data }, status === 200 ? 200 : 502);
     }
 
+    // ── TOR wf2: zarządzanie strefą DNS na koncie GoDaddy (działa tylko gdy domena
+    // używa NS GoDaddy — nasz przypadek dla .pl, patrz GOTCHA nagłówka) ──
+    const DNS_TYPES = ["A", "AAAA", "CNAME", "TXT", "MX"];
+
+    if (action === "dns_get") {
+      const type = body.type ? String(body.type).toUpperCase().trim() : "";
+      const name = body.name ? String(body.name).trim() : "";
+      if (type && !DNS_TYPES.includes(type)) return json({ error: `zly_typ_rekordu: ${type}` }, 400);
+      let path = `/v1/domains/${domain}/records`;
+      if (type) path += `/${type}`;
+      if (type && name) path += `/${encodeURIComponent(name)}`;
+      const r = await gd("GET", path);
+      return json({ http: r.status, records: r.data }, r.status === 200 ? 200 : 502);
+    }
+
+    if (action === "dns_set") {
+      const recs = Array.isArray(body.records) ? (body.records as Array<Record<string, unknown>>) : [];
+      if (!recs.length) return json({ error: "brak_records" }, 400);
+      // walidacja: type z whitelisty, name i data niepuste
+      for (const rec of recs) {
+        const t = String(rec?.type || "").toUpperCase().trim();
+        const name = String(rec?.name ?? "").trim();
+        const data = String(rec?.data ?? "").trim();
+        if (!DNS_TYPES.includes(t)) return json({ error: `zly_typ_rekordu: ${t || "(brak)"}` }, 400);
+        if (!name || !data) return json({ error: "name_i_data_wymagane" }, 400);
+      }
+      // grupuj po (type,name) — GoDaddy PUT records/{type}/{name} zastępuje CAŁĄ tablicę tej pary
+      const groups = new Map<string, Array<Record<string, unknown>>>();
+      for (const rec of recs) {
+        const t = String(rec.type).toUpperCase().trim();
+        const name = String(rec.name).trim();
+        const key = `${t} ${name}`;
+        const ttlNum = Number(rec.ttl);
+        const entry: Record<string, unknown> = {
+          data: String(rec.data).trim(),
+          ttl: ttlNum > 0 ? ttlNum : 600,
+        };
+        if (t === "MX") {
+          const prio = Number(rec.priority);
+          entry.priority = Number.isFinite(prio) && prio >= 0 ? prio : 10;
+        }
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(entry);
+      }
+      const results: Array<{ type: string; name: string; http: number; ok: boolean }> = [];
+      for (const [key, arr] of groups) {
+        const [t, name] = key.split(" ");
+        const r = await gd("PUT", `/v1/domains/${domain}/records/${t}/${encodeURIComponent(name)}`, arr);
+        const okp = r.status >= 200 && r.status < 300;
+        results.push({ type: t, name, http: r.status, ok: okp });
+      }
+      const allOk = results.every((x) => x.ok);
+      return json({ results, ok: allOk }, allOk ? 200 : 502);
+    }
+
+    if (action === "dns_delete") {
+      const type = String(body.type || "").toUpperCase().trim();
+      const name = String(body.name || "").trim();
+      if (!DNS_TYPES.includes(type)) return json({ error: `zly_typ_rekordu: ${type || "(brak)"}` }, 400);
+      if (!name) return json({ error: "name_wymagane" }, 400);
+      const r = await gd("DELETE", `/v1/domains/${domain}/records/${type}/${encodeURIComponent(name)}`);
+      const okp = r.status >= 200 && r.status < 300;
+      return json({ http: r.status, ok: okp }, okp ? 200 : 502);
+    }
+
     if (action === "validate" || action === "buy") {
       const email = String(body.email || Deno.env.get("GODADDY_CONTACT_EMAIL") || "");
       const phone = String(body.phone || Deno.env.get("GODADDY_CONTACT_PHONE") || "");
@@ -195,20 +271,23 @@ Deno.serve(async (req) => {
       let costRecorded = false;
       let fxMissing = false;
       let priceAlert: string | null = null;
+      // Kwota audytowa — wyliczona raz, zwracana w odpowiedzi i reużyta w torze wf2 (wf2_costs).
+      let amountPln = 0;
+      let currency = "USD";
+      let totalMicro = 0;
       if (ok) {
         try {
           const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
           const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
           const order = r.data as Record<string, unknown>;
-          const totalMicro = Number(order?.total ?? 0);
-          const currency = String(order?.currency ?? "USD");
+          totalMicro = Number(order?.total ?? 0);
+          currency = String(order?.currency ?? "USD");
           // pułap ceny: powyżej progu głośny alert (blind-buy — ceny nie widać przed zakupem)
           const maxMicro = Number(Deno.env.get("GODADDY_MAX_PRICE_MICRO") || 200_000_000); // default $200
           if (totalMicro > maxMicro) {
             priceAlert = `UWAGA: cena ${totalMicro / 1_000_000} ${currency} przekracza próg ${maxMicro / 1_000_000} — sprawdź order!`;
             console.error(`[wfa-domain] PRICE ALERT ${domain}: ${priceAlert}`);
           }
-          let amountPln = 0;
           let kursNote = "";
           if (currency === "PLN") {
             amountPln = totalMicro / 1_000_000;
@@ -263,6 +342,38 @@ Deno.serve(async (req) => {
           }),
         }).catch(() => {});
       }
+      // TOR wf2 (sklepy) — kronika + koszt jednostkowy projektu (biznes_costs zostaje jak wyżej,
+      // tu duplikujemy tylko do księgowości modułu; kwota = ta sama amountPln, 0 przy fx_missing).
+      if (ok && body.wf2_project_id) {
+        const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
+        const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const orderId = (r.data as Record<string, unknown>)?.orderId ?? "?";
+        await fetch(`${SUPA_URL}/rest/v1/wf2_activities`, {
+          method: "POST",
+          headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            project_id: body.wf2_project_id,
+            actor: "wfa-domain",
+            action: "domena_kupiona",
+            description: `Kupiono ${domain} przez GoDaddy (order ${orderId}, ${amountPln} PLN). NS zostają na GoDaddy — strefą DNS zarządza dns_set.`,
+          }),
+        }).catch(() => {});
+        await fetch(`${SUPA_URL}/rest/v1/wf2_costs`, {
+          method: "POST",
+          headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            project_id: body.wf2_project_id,
+            product_id: null,
+            step_key: "pl_domena",
+            stage: 1,
+            amount: amountPln,
+            currency: "PLN",
+            kind: "inne",
+            note: `Domena ${domain} (GoDaddy order ${orderId})${fxMissing ? " — BRAK KURSU NBP, uzupełnij kwotę ręcznie" : ""}`,
+            created_by: "auto",
+          }),
+        }).catch(() => {});
+      }
       return json({
         http: r.status,
         ok,
@@ -270,6 +381,9 @@ Deno.serve(async (req) => {
         cost_recorded: costRecorded,
         fx_missing: fxMissing,
         price_alert: priceAlert,
+        amount_pln: amountPln,
+        currency,
+        total_micro: totalMicro,
       }, ok ? 200 : 502);
     }
 
