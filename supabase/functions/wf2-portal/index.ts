@@ -325,7 +325,7 @@ Deno.serve(async (req: Request) => {
   // ════════════════════════ DEFAULT: pełny stan (sanityzowany) ══════════════
   const [defsQ, stepsQ, prodsQ, artsQ, ordQ] = await Promise.all([
     sb.from("wf2_step_defs")
-      .select("key, stage, stage_label, label, icon, sort, owner, scope, milestone_label")
+      .select("key, stage, stage_label, label, icon, sort, owner, scope, milestone_label, sub_of")
       .eq("active", true).order("stage").order("sort"),
     sb.from("wf2_steps").select("step_key, product_id, status, completed_at, data")
       .eq("project_id", p.id).range(0, 999),
@@ -345,6 +345,7 @@ Deno.serve(async (req: Request) => {
   const step_defs = defs.map((d) => ({
     key: d.key, stage: d.stage, stage_label: d.stage_label, label: d.label,
     icon: d.icon, sort: d.sort, owner: d.owner, scope: d.scope, milestone_label: d.milestone_label || null,
+    sub_of: d.sub_of || null,
   }));
 
   // steps: client_fields = data.fields TYLKO dla kroków owner='client'; reszta bez data.

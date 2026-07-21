@@ -341,7 +341,10 @@ function renderPills() {
     const wrap = document.getElementById('stage-pills');
     const nums = stageNums();
     wrap.style.setProperty('--stages', nums.length);
-    wrap.innerHTML = nums.map(n => {
+    // Desktop (≥640px): pasek segmentów. Mobile (<640px): pager pojedynczego etapu.
+    // Oba warianty renderujemy zawsze; widoczność steruje media query w panel.css
+    // (sturdier niż matchMedia — działa na obrót ekranu bez nasłuchu resize).
+    const segs = nums.map(n => {
         const pr = stageProgress(n);
         const label = defsForStage(n)[0]?.stage_label || ('Etap ' + n);
         const complete = pr.total>0 && pr.done===pr.total;
@@ -356,6 +359,37 @@ function renderPills() {
             <div class="seg-bar"><div style="width:${pr.pct}%"></div></div>
         </button>`;
     }).join('');
+    wrap.innerHTML = segs + renderStagePager(nums);
+}
+// Mobile: karta aktywnego etapu — strzałki ‹ › (przełącz etap) + „Etap N z M" + nazwa
+// + licznik kroków + pasek postępu; pod spodem rząd klikalnych kropek (aktywna/ukończone).
+function renderStagePager(nums) {
+    if (!nums.length) return '';
+    const idx = Math.max(0, nums.indexOf(activeStage));
+    const n = nums[idx];
+    const pr = stageProgress(n);
+    const label = defsForStage(n)[0]?.stage_label || ('Etap ' + n);
+    const prevN = idx > 0 ? nums[idx - 1] : null;
+    const nextN = idx < nums.length - 1 ? nums[idx + 1] : null;
+    const mile = stageHasMilestone(n) ? '<i class="ph ph-flag-checkered sp-mileflag" title="kamień milowy osiągnięty"></i>' : '';
+    const dots = nums.map(k => {
+        const kp = stageProgress(k);
+        const done = kp.total > 0 && kp.done === kp.total;
+        const cls = k === n ? 'sp-dot sp-dot-active' : (done ? 'sp-dot sp-dot-done' : 'sp-dot');
+        return `<button type="button" class="${cls}" onclick="switchStage(${k})" aria-label="Etap ${k}${done ? ' — ukończony' : ''}" title="Etap ${k}: ${escapeHtml(defsForStage(k)[0]?.stage_label || ('Etap ' + k))}"><span></span></button>`;
+    }).join('');
+    return `<div class="stage-pager">
+        <div class="sp-main">
+            <button type="button" class="sp-arrow" ${prevN == null ? 'disabled' : `onclick="switchStage(${prevN})"`} aria-label="Poprzedni etap"><i class="ph ph-caret-left"></i></button>
+            <div class="sp-center">
+                <div class="sp-kicker">Etap ${n} z ${nums.length}${mile}</div>
+                <div class="sp-name">${escapeHtml(label)}</div>
+                <div class="sp-meta"><span class="sp-count">${pr.done}/${pr.total}</span> kroków<span class="sp-bar"><span style="width:${pr.pct}%"></span></span></div>
+            </div>
+            <button type="button" class="sp-arrow" ${nextN == null ? 'disabled' : `onclick="switchStage(${nextN})"`} aria-label="Następny etap"><i class="ph ph-caret-right"></i></button>
+        </div>
+        <div class="sp-dots">${dots}</div>
+    </div>`;
 }
 function switchStage(n) { activeStage = n; renderPills(); renderStage(); }
 
@@ -570,6 +604,89 @@ function renderMatrix(prodDefs) {
                 <button class="text-zinc-600 hover:text-white p-1" onclick="openProductModal('${p.id}')" title="Edycja"><i class="ph ph-pencil-simple"></i></button>
             </td>` : ''}
         </tr>`;
+    }).join('');
+
+    // ── Mobile (<640px): matryca tabelaryczna jest nieczytelna → lista kart produktów.
+    // Kontener #matrix-cards wstrzykujemy dynamicznie (sibling tabeli), więc działa w portalu,
+    // panelu admina i harnessie bez edycji HTML. Widoczność (tabela vs karty) steruje panel.css.
+    renderMatrixCards(prodDefs);
+}
+
+// karty produktów na mobile — cover + nazwa + status (+ admin: zysk) + pasek postępu etapu,
+// pod spodem rząd DUŻYCH kółek kroków bieżącego etapu (peek-glow + lupka, klik → drawer/peekOpen)
+function renderMatrixCards(prodDefs) {
+    const tbody = document.getElementById('matrix-body');
+    if (!tbody) return;
+    const table = tbody.closest('table');
+    const wrap = table ? table.parentElement : null;
+    if (!wrap) return;
+    wrap.classList.add('mx-tablewrap');           // marker do ukrycia na mobile (panel.css)
+    let cards = document.getElementById('matrix-cards');
+    if (!cards) {
+        cards = document.createElement('div');
+        cards.id = 'matrix-cards';
+        cards.className = 'mx-cards';
+        wrap.parentNode.insertBefore(cards, wrap.nextSibling);
+    }
+    const admin = P.mode === 'admin';
+    if (!P.products.length) { cards.innerHTML = ''; return; }
+    const stageLabel = defsForStage(activeStage)[0]?.stage_label || ('Etap ' + activeStage);
+
+    cards.innerHTML = P.products.map(p => {
+        const sm = PRODUCT_STATUS_META[p.status] || PRODUCT_STATUS_META.kandydat;
+        const profit = p.unit_profit;
+        const profitCls = profit === null || p.price === null ? 'text-zinc-600' : profit > 0 ? 'text-[#4cb782]' : 'text-[#f5b955]';
+        const pr = productProgress(p.id, prodDefs);
+        const prAll = productProgress(p.id, null);
+        const cover = p.cover_url
+            ? `<img src="${escapeHtml(p.cover_url)}" class="mxc-cover" onclick="openProductLB('${p.id}')" onerror="this.style.display='none'" alt="" title="Podgląd produktu">`
+            : `<button class="mxc-cover mxc-cover-empty" onclick="openProductLB('${p.id}')" title="Podgląd produktu"><i class="ph ph-package"></i></button>`;
+        const hasVid = Array.isArray(p.tiktoks) && p.tiktoks.length > 0;
+        const rowIcons = (p.supplier_url || hasVid) ? `<span class="mx-rowics">${
+            (p.supplier_url ? `<a href="${escapeHtml(p.supplier_url)}" target="_blank" rel="noopener" class="mx-rowic" onclick="event.stopPropagation()" title="Aukcja dostawcy"><i class="ph ph-shopping-cart"></i></a>` : '')
+            + (hasVid ? `<button class="mx-rowic" onclick="event.stopPropagation();openProductLB('${p.id}')" title="Wideo TikTok"><i class="ph ph-play-circle"></i></button>` : '')
+        }</span>` : '';
+        const nameInner = `${p.gen_session_id ? '<i class="ph ph-sparkle text-[#52a8ff] text-[10px]" title="ma generacje z rozmowy /sklep"></i> ' : ''}${escapeHtml(p.name || '(bez nazwy)')}`;
+        const nameCell = admin
+            ? `<button class="mxc-name mxc-name-btn" onclick="openCard('${p.id}')">${nameInner}</button>`
+            : `<span class="mxc-name">${nameInner}</span>`;
+        const link = p.platform_page_url
+            ? `<a href="${escapeHtml(p.platform_page_url)}" target="_blank" class="mxc-link" onclick="event.stopPropagation()">${admin ? 'landing' : 'zobacz stronę'} <i class="ph ph-arrow-square-out"></i></a>`
+            : '';
+        const adminActions = admin
+            ? `<div class="mxc-actions">
+                <button class="mxc-act" onclick="openCard('${p.id}')" title="Karta produktu"><i class="ph ph-identification-card"></i></button>
+                <button class="mxc-act" onclick="openProductModal('${p.id}')" title="Edycja"><i class="ph ph-pencil-simple"></i></button>
+            </div>` : '';
+        const circles = prodDefs.map(d => {
+            const st = stepFor(d.key, p.id) || { status: 'pending' };
+            const icon = st.status === 'done' ? 'ph-check' : st.status === 'in_progress' ? 'ph-circle-half' : st.status === 'skipped' ? 'ph-minus' : st.status === 'blocked' ? 'ph-x' : 'ph-circle';
+            const peek = st.status === 'done' && stepMediaCount(p.id, d.key) > 0 && !isPeekSeen(p.id, d.key);
+            return `<button class="mx-bigcell mx-${st.status}${peek ? ' mx-peek' : ''}" onclick="peekOpen('${d.key}', '${p.id}')"
+                title="${escapeHtml(d.label)} · ${STEP_LABELS[st.status]}${peek ? ' — Kliknij, aby zobaczyć' : ''}"><i class="ph ${icon}"></i>${peek ? '<span class="mx-peek-lupa"><i class="ph ph-magnifying-glass-plus"></i></span>' : ''}</button>`;
+        }).join('');
+        return `<div class="mx-card">
+            <div class="mx-card-top">
+                ${cover}
+                <div class="mxc-info">
+                    <div class="mxc-namerow">${nameCell}${rowIcons}</div>
+                    <div class="mxc-badges">
+                        <span class="mxc-status ${sm.cls}">${sm.label}</span>
+                        ${admin && p.price !== null && profit !== null ? `<span class="mxc-profit ${profitCls}">${moneyPL(profit)}/szt.</span>` : ''}
+                        ${link}
+                    </div>
+                    <div class="mxc-prog">
+                        <span class="pp-bar"><span style="width:${pr.pct}%"></span></span>
+                        <span class="mxc-prog-n">${pr.done}/${pr.total} · całość ${prAll.pct}%</span>
+                    </div>
+                </div>
+                ${adminActions}
+            </div>
+            ${prodDefs.length ? `<div class="mx-card-steps">
+                <div class="mxc-steps-label">Kroki etapu: <span>${escapeHtml(stageLabel)}</span></div>
+                <div class="mxc-circles">${circles}</div>
+            </div>` : ''}
+        </div>`;
     }).join('');
 }
 
