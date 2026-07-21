@@ -2140,24 +2140,29 @@ Kolejność mobile: makro → mata z góry → eyebrow → 210 → 29; wyrównan
   /* pay-badges "za pobraniem" (SLOT) — brak globalnego .pb--cod w macie → doskórowanie tokenami */
   #zamow.zc-checkout .pb--cod{font:800 12px/1 var(--font-text);letter-spacing:.04em;color:var(--ink);white-space:nowrap;gap:7px}
   #zamow.zc-checkout .pb--cod svg{height:14px;color:var(--cta)}
-  /* dekoracyjna scena hero (SKÓRKA) — <1200px: węższy baner u góry w układzie 1-kol */
-  #zamow.zc-checkout .zamow-visual{margin:0 auto clamp(20px,3vw,30px);max-width:560px;overflow:hidden;
-    border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--paper-2)}
+  /* dekoracyjna scena hero (SKÓRKA) — <900px: baner FULL-BLEED u góry (kontynuacja hero,
+     edge-to-edge bez ramki — decyzja Tomka 21.07 „na całą szerokość") */
+  #zamow.zc-checkout .zamow-visual{margin:0 0 clamp(20px,3vw,30px);max-width:none;overflow:hidden;
+    background:var(--paper-2)}
   #zamow.zc-checkout .zamow-image{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}
-  #zamow.zc-checkout .zamow-video{display:none} /* hero-loop wpinany JS-em tylko na desktopie */
-  /* ≥1200px: checkout NA TLE SCENY HERO (klamra z otwarciem strony — decyzja Tomka 21.07).
-     Scena = pełne tło sekcji (mata leży po PRAWEJ stronie kadru), karta idzie na LEWO nad pustą
-     podłogę; góra/dół sceny wtapiane gradientem w --paper (płynne przejście między sekcjami). */
-  @media (min-width:1200px){
+  #zamow.zc-checkout .zamow-video{display:none} /* hero-loop wpinany JS-em tylko ≥900px */
+  /* ≥900px: checkout NA TLE SCENY HERO (klamra z otwarciem strony — decyzja Tomka 21.07).
+     Scena = pełne tło sekcji (mata leży po PRAWEJ stronie kadru); 900–1199px karta wyśrodkowana
+     na scenie, ≥1200px karta na LEWO nad pustą podłogą; góra/dół sceny wtapiane gradientem
+     w --paper (płynne przejście między sekcjami). */
+  @media (min-width:900px){
     #zamow.zc-checkout{overflow:hidden}
-    #zamow.zc-checkout .zamow-visual{position:absolute;inset:0;margin:0;max-width:none;border:0;border-radius:0;z-index:0}
+    #zamow.zc-checkout .zamow-visual{position:absolute;inset:0;margin:0;z-index:0}
     #zamow.zc-checkout .zamow-visual::after{content:'';position:absolute;inset:0;
       background:linear-gradient(180deg,var(--paper) 0%,rgba(239,228,220,0) 14%,rgba(239,228,220,0) 86%,var(--paper) 100%)}
     #zamow.zc-checkout .zamow-image{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;object-position:right center}
     #zamow.zc-checkout .zamow-video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:right center;
       opacity:0;transition:opacity .8s var(--mo-ease,cubic-bezier(.22,1,.36,1));pointer-events:none}
     #zamow.zc-checkout .zamow-video.on{opacity:1}
-    #zamow.zc-checkout .zamow-split{position:relative;display:grid;grid-template-columns:minmax(0,66fr) minmax(0,34fr);
+    #zamow.zc-checkout .zamow-split{position:relative}
+  }
+  @media (min-width:1200px){
+    #zamow.zc-checkout .zamow-split{display:grid;grid-template-columns:minmax(0,66fr) minmax(0,34fr);
       gap:clamp(32px,3vw,56px);align-items:start;width:min(100%,var(--content-w));margin:0 auto;padding:0 var(--s3)}
     #zamow.zc-checkout .zc-wrap{grid-column:1;max-width:none;padding:0}
     #zamow.zc-checkout .zc-head{text-align:left}
@@ -3839,11 +3844,11 @@ Kolejność mobile: makro → mata z góry → eyebrow → 210 → 29; wyrównan
   if(mq.addEventListener)mq.addEventListener('change',apply);
   else if(mq.addListener)mq.addListener(apply);
 
-  // ── #zamow: TA SAMA scena hero W RUCHU jako tło checkoutu (klamra; desktop ≥1200px) ──
+  // ── #zamow: TA SAMA scena hero W RUCHU jako tło checkoutu (klamra; desktop ≥900px) ──
   // Ten sam plik hero-loop → z cache przeglądarki (zero dodatkowego transferu); IO gra tylko
-  // gdy sekcja na ekranie; <1200px baner statyczny (poster) — CSS chowa video.
+  // gdy sekcja na ekranie; <900px baner statyczny (poster) — CSS chowa video.
   var zslot=document.querySelector('#zamow .zamow-visual');
-  var zmq=mm('(min-width:1200px)');
+  var zmq=mm('(min-width:900px)');
   var zsec=document.getElementById('zamow');
   if(zslot&&zsec){
     var zv=null;
