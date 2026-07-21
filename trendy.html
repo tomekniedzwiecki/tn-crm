@@ -196,6 +196,8 @@
     border:1px solid rgba(245,166,35,.35);background:rgba(245,166,35,.07);border-radius:8px;
     font-size:11px;color:#f5a623;cursor:help}
   .autoWarn b{font-size:10px;letter-spacing:.05em}
+  .fchip .autoN{margin-left:5px;padding:1px 4px;border-radius:3px;font-size:9px;
+    background:rgba(245,166,35,.16);color:#f5a623}
   .autoWarn span{color:var(--dim);font-size:10.5px}
   .vtile .vthph svg{width:15px;height:15px}
   .vtile .vcap{font-size:8.5px;color:var(--dim);padding:3px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
@@ -827,11 +829,15 @@ function renderChips(){
     h+=`<button class="fchip fut ${FFUTURE?'on':''}" onclick="toggleFuture()">🌱 Na przyszły sezon${futN?` · ${futN}`:''}</button>`;
     h+=`<span class="chipsep"></span>`;
   }
-  const proofN=ROWS.filter(x=>rowInFunnel(x)&&x.tt_shop&&+x.tt_shop.sold_count>0).length;
+  const proofRows=ROWS.filter(x=>rowInFunnel(x)&&x.tt_shop&&+x.tt_shop.sold_count>0);
+  const proofN=proofRows.length;
+  // Ile z „dowodów sprzedaży" pochodzi z AUTO-dopasowania sklepu (tt_shop.auto_match).
+  // Bez tego licznik sugeruje więcej potwierdzonej sprzedaży, niż realnie ktoś sprawdził.
+  const proofAuto=proofRows.filter(x=>x.tt_shop.auto_match&&x.tt_shop.auto_match.is_auto).length;
   const soffN=ROWS.filter(x=>rowInFunnel(x)&&_seasonOff(x)).length;
   const ssoonN=ROWS.filter(x=>rowInFunnel(x)&&_seasonSoon(x)).length;
   const checkN=ROWS.filter(x=>rowInFunnel(x)&&_seasonUnverified(x)).length;
-  h+=`<button class="fchip ${FPROOF?'on':''}" onclick="toggleProof()">${I.cart} Dowód sprzedaży${proofN?` · ${proofN}`:''}</button>`;
+  h+=`<button class="fchip ${FPROOF?'on':''}" onclick="toggleProof()" title="${proofAuto?esc(proofAuto+' z nich ma sklep dopasowany AUTOMATEM — nie jest to sprawdzony dowód sprzedaży'):''}">${I.cart} Dowód sprzedaży${proofN?` · ${proofN}`:''}${proofAuto?`<span class="autoN">w tym ${proofAuto} auto</span>`:''}</button>`;
   h+=`<button class="fchip chk ${FSEASONCHECK?'on':''}" onclick="toggleSeasonCheck()">🔎 Sezon do sprawdzenia${checkN?` · ${checkN}`:''}</button>`;
   h+=`<button class="fchip soff ${FSEASONOFF?'on':''}" onclick="toggleSeasonOff()">⛔ Po sezonie${soffN?` · ${soffN}`:''}</button>`;
   h+=`<button class="fchip ssoon ${FSEASONSOON?'on':''}" onclick="toggleSeasonSoon()">⏳ Kończy się okno${ssoonN?` · ${ssoonN}`:''}</button>`;

@@ -100,6 +100,20 @@ where tt_shop->'auto_match'->>'is_auto' = 'true'
   and cover like '%/storage/v1/%';
 ```
 
+## Gotcha przy ponownym uruchomieniu
+
+Rekord, którego nie da się dopasować (`brak_wynikow`), zostaje z `tt_shop = null`, więc
+**każda kolejna runda bierze go znowu** — i za każdym razem kosztuje 1 kredyt. Przy
+przebiegu 21.07 z 28 pominięć realnie unikalnych było **3**; reszta to ten sam rekord
+mielony w kółko (~25 kredytów w błoto).
+
+Uruchamiając ponownie: albo celuj `keys:[...]`, albo przerwij pętlę, gdy runda zwróci
+`filled = 0`. Skrypt `scratchpad/match-shop.py` tego NIE robił.
+
+Wyszukiwarka TikToka bywa też **niedeterministyczna** — „flipper zero" wypadł w dwóch
+rundach jako `slabe_dopasowanie`, a w trzeciej trafił poprawnie (score 0.67). Pojedyncze
+`brak_wynikow` nie znaczy więc „nigdy się nie uda".
+
 ## Powiązane
 
 - Klipy z auto-dopasowania wideo: `videos_curated.mode = 'auto_match'`, każdy item
