@@ -141,11 +141,21 @@ ustawione (landing opublikowany — zero martwych linków) **ORAZ** okładka roz
 ## 4. PROCEDURA KROKU (wykonuje sesja fabryki / autopilot)
 
 ```
-python scripts/mockup-tools/home-forge.py build   <projekt>    # collect→brief→GPT→template→render
-python scripts/mockup-tools/home-forge.py og      <projekt>    # OG 1200×630 z logo (Pillow, $0) → Storage
-python scripts/mockup-tools/home-forge.py render  <projekt>    # re-render kart z bazy (aktualizacje)
-python scripts/mockup-tools/home-forge.py publish <projekt>    # platform-sync home + td_shop_url + panel-sync pl_glowna
+python scripts/mockup-tools/home-forge.py build      <projekt>  # collect→brief→GPT→template→render
+python scripts/mockup-tools/home-forge.py og         <projekt>  # OG 1200×630 z logo (Pillow, $0) → Storage
+python scripts/mockup-tools/cardloop-forge.py run    <projekt>  # klipy kafli: scan→gen card-loopów dla FADE→render+publish
+python scripts/mockup-tools/home-forge.py render     <projekt>  # re-render kart z bazy (aktualizacje)
+python scripts/mockup-tools/home-forge.py publish    <projekt>  # platform-sync home + td_shop_url + panel-sync pl_glowna
 ```
+
+**`cardloop-forge.py` (automat klipów kafli):** `scan` = stan klipów per produkt
+(card-loop ✅ / hero-loop ✅ / 🔴 FADE = potrzebny card-loop / ⚪ brak). `gen` = dla FADE:
+scene-brief (gpt-5.6-sol vision, effort high) → scena gpt-image HIGH 1024×1536 z refami
+packshot+hero → BRAMKA wierności vision 5×T/N (FAIL → regeneracja, max 2 → eskalacja) →
+Kling 2.5 i2v `tail_image_url`=first → kontrola pętli RMS <12 (retry 1×) → ffmpeg 720px
+mp4+webm → `bud-assets/<slug>/video/card-loop-m.*` + dowody QA (`video/qa/`). Werdykt
+vision = PIERWSZA para oczu; **sesja fabryki = DRUGA para oczu** (ogląda QA-klatki przed
+zamknięciem kroku). Koszt ~1,5 zł/klip. `run` = gen + home-forge render + publish.
 
 Nowy produkt gotowy (po jego `pl_landing`) → `render` + `publish`. To zdanie jest też
 częścią prompt-mapy `pl_landing`-następstw: krok `pl_glowna` pozostaje `done`, aktualizacja
@@ -195,6 +205,10 @@ brandowa intro) = wyjątek świadomie uzasadniony w nocie kroku, nadal w limicie
 
 ## CHANGELOG
 
+- **1.3 (2026-07-21 noc)** — AUTOMAT card-loopów: `cardloop-forge.py` (scan/gen/run) —
+  tor ręczny z v1.2 zamieniony w narzędzie fabryki (scene-brief GPT → scena z refami →
+  bramka wierności vision → Kling pętla → RMS → upload → dowody QA); prompt-mapa pl_glowna
+  z krokiem (2b); dyrektywa Tomka „fabryka ma tak działać".
 - **1.2 (2026-07-21 noc)** — korekta Tomka: wideo w KAFLACH kart (nie hero; rotator
   wycofany). Card-loopy dedykowane dla klipów z fade (masażer+drapek: scena fullframe →
   Kling, ~1,5 zł/klip); heurystyka `_fade_frame` blokuje fade-klipy automatycznie;
