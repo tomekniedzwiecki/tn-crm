@@ -119,6 +119,10 @@
         .pc-menu-it .lc-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
         .pc-menu-it .lc-check { margin-left:auto; color:#62c073; font-size:13px; opacity:0; }
         .pc-menu-it.is-cur .lc-check { opacity:1; }
+        .pc-menu-sep { height:1px; background:#1f1f1f; margin:5px 2px; }
+        .pc-menu-del { color:#f26d78; }
+        .pc-menu-del:hover { background:rgba(229,72,77,.12); color:#f26d78; }
+        .pc-menu-del i { font-size:14px; }
         /* chipy filtra widoku (stan) obok wyszukiwarki */
         .lc-filter { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
         .lc-chip { display:inline-flex; align-items:center; gap:7px; border:1px solid #232323; background:#0a0a0a; color:#8b8b94;
@@ -198,6 +202,26 @@
     </main>
 
     <!-- Modal: nowy projekt -->
+    <!-- Modal potwierdzenia usunięcia projektu -->
+    <div id="del-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeDelModal()">
+        <div class="w-full max-w-md bg-[#0a0a0a] border border-[#333] rounded-xl p-6" onclick="event.stopPropagation()">
+            <div class="flex items-start gap-3.5 mb-4">
+                <div class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                     style="background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4)"><i class="ph ph-warning text-[20px] text-[#f26d78]"></i></div>
+                <div class="min-w-0">
+                    <div class="text-white font-semibold text-[15.5px]">Usunąć projekt?</div>
+                    <div id="del-name" class="text-[#f5b955] text-[13px] mt-1 font-medium truncate"></div>
+                </div>
+            </div>
+            <p class="text-zinc-400 text-[13px] leading-relaxed mb-5">Ta operacja jest <b class="text-[#f26d78]">nieodwracalna</b>. Bezpowrotnie skasuje cały projekt razem z portfelem produktów, krokami i postępem, materiałami, historią aktywności i dostępem klienta do portalu.</p>
+            <div class="flex items-center justify-end gap-2.5">
+                <button onclick="closeDelModal()" class="px-4 py-2.5 rounded-lg border border-[#2e2e2e] bg-[#111] text-zinc-300 text-[13px] font-medium hover:bg-[#18181b] transition-colors">Anuluj</button>
+                <button id="del-confirm-btn" onclick="confirmDeleteProject()" class="px-4 py-2.5 rounded-lg text-[13px] font-semibold text-white transition-colors"
+                        style="background:#e5484d" onmouseover="this.style.background='#f26d78'" onmouseout="this.style.background='#e5484d'">Tak, usuń bezpowrotnie</button>
+            </div>
+        </div>
+    </div>
+
     <div id="new-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeNewModal()">
         <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-md p-6">
             <h3 class="text-white text-lg font-semibold mb-4">Nowy projekt</h3>
@@ -547,6 +571,32 @@
         }
         document.addEventListener('click', () => { document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open')); });
 
+        // ── usuwanie projektu (z modalem ostrzegawczym; kaskada FK skasuje wszystko powiązane) ──
+        let delTargetId = null;
+        function askDeleteProject(id) {
+            document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+            const p = projects.find(x => x.id === id); if (!p) return;
+            delTargetId = id;
+            const brand = (p.name || '').trim() || p.customer_name || '(bez marki)';
+            const who = p.customer_name && p.name ? ` — ${p.customer_name}` : '';
+            document.getElementById('del-name').textContent = `${brand}${who}`;
+            document.getElementById('del-modal').classList.remove('hidden');
+        }
+        function closeDelModal() { delTargetId = null; document.getElementById('del-modal').classList.add('hidden'); }
+        async function confirmDeleteProject() {
+            if (!delTargetId) return;
+            const id = delTargetId;
+            const btn = document.getElementById('del-confirm-btn');
+            btn.disabled = true; btn.textContent = 'Usuwam…';
+            const { error } = await supabaseClient.from('wf2_projects').delete().eq('id', id);
+            btn.disabled = false; btn.textContent = 'Tak, usuń bezpowrotnie';
+            if (error) { showToast('Błąd usuwania: ' + error.message, 'error'); return; }
+            projects = projects.filter(x => x.id !== id);
+            closeDelModal();
+            buildSearchIndex(); renderLifecycleChips(); renderCards();
+            showToast('Projekt usunięty', 'success');
+        }
+
         async function setLifecycle(id, lc) {
             const p = projects.find(x => x.id === id); if (!p) return;
             const prev = lifecycleOf(p);
@@ -597,6 +647,8 @@
                 <div class="pc-menu-dd">
                     <div class="pc-menu-hd">Stan projektu</div>
                     ${LC_ORDER.map(k => { const m = LC_META[k]; return `<button class="pc-menu-it ${lc === k ? 'is-cur' : ''}" onclick="setLifecycle('${p.id}','${k}')"><span class="lc-dot" style="background:${m.color}"></span>${m.label}<i class="ph ph-check lc-check"></i></button>`; }).join('')}
+                    <div class="pc-menu-sep"></div>
+                    <button class="pc-menu-it pc-menu-del" onclick="askDeleteProject('${p.id}')"><i class="ph ph-trash"></i>Usuń projekt</button>
                 </div></div>`;
             const brand = (p.name || '').trim() || p.customer_name || '(bez marki)';
             // linia klienta: unikaj powtórki gdy marka = nazwa klienta
