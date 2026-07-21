@@ -1823,6 +1823,8 @@
             showToast('Zapisano', 'success');
         }
         async function sdSaveChecklist(list) {
+            // ŚWIADOMY RMW: ręczny toggle admina (rzadki, pojedynczy operator) — ryzyko wyścigu zaakceptowane.
+            // Automaty (wf2-ads-connect/verify/portal) piszą stan przez atomowy rpc wf2_step_merge, NIE tędy.
             const st = drawerStep();
             const data = Object.assign({}, st.data || {}, { checklist: list });
             const { error } = await supabaseClient.from('wf2_steps').update({ data }).eq('id', st.id);

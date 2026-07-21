@@ -161,9 +161,15 @@ Deno.serve(async (req) => {
 
       // ATOMOWY MERGE (RPC): wstaw blok `leadsie` + unia checklisty w JEDNYM UPDATE pod blokadą
       // wiersza — zero read-modify-write (eliminuje lost-update z cronem verify/sweep o 06:40).
-      await supabase.rpc("wf2_step_merge", {
+      const { error: mergeErr } = await supabase.rpc("wf2_step_merge", {
         p_step_id: st.id, p_block_key: "leadsie", p_block: leadsieBlock, p_checks: toCheck,
       });
+      // błąd merge = stan kroku NIE zapisany → zwracamy 500. Leadsie ponowi webhook, a merge jest
+      // idempotentny (unia checklisty + nadpisanie bloku leadsie), więc retry domknie stan bez dubli.
+      if (mergeErr) {
+        console.error("[wf2-ads-connect] wf2_step_merge błąd:", stepKey, mergeErr.message ?? mergeErr);
+        return json({ error: "merge_failed", step: stepKey }, 500);
+      }
       // status pending→in_progress: osobny, monotoniczny UPDATE (nie dotyka bloba data → nie wyścig)
       const relevant = stepKey === "ads_konto" ? adAccountOk : pageOk;
       if (st.status === "pending" && (relevant || metaAssets.length > 0)) {

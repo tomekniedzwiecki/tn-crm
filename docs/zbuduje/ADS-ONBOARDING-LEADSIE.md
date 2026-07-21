@@ -214,6 +214,20 @@ wymaga odczytu przez **Graph API** (partner access do BM klientów). Robi to edg
 - **`account_status != 1`** (nieaktywne/ograniczone) = nota `blokada` „⚠️ AUTOMAT: środowisko — konto {act}
   ma status {n} (nieaktywne/ograniczone) — sprawdź Account Quality" (dedup) + **pomija** odhaczanie
   środowiska i ustawianie spend_cap dla tego projektu (środowisko niepewne).
+- **Heurystyka KARTY (runda 3):** „Środki WIDOCZNE" odhaczamy **wyłącznie gdy `funding_source_details`
+  (type/display_string) zawiera nazwę brandu/typu karty** (`visa|master|amex|american express|discover|
+  maestro|card|karta|credit|debit`). **Same ostatnie 4 cyfry / maska bez brandu NIE wystarczają** —
+  prepaid i inne źródła też bywają pokazane cyframi, a fałszywy ptaszek przy prepaid kłamie (saldo 0
+  nieczytelne przez Graph). Brak brandu ⇒ traktujemy jak prepaid: nota `info` „metoda płatności jest,
+  saldo nieczytelne API — potwierdź w Ads Managerze", **bez** odhaczenia. `[ŻYWO: kształt fundBlob
+  potwierdzić na 1. realnym funding_source_details — dopisać brakujące brandy]`.
+- **Odporność merge (RPC `wf2_step_merge`, runda 3):** oba automaty przechwytują `{ error }` z rpc.
+  **`wf2-ads-connect`**: błąd merge ⇒ `console.error` + **HTTP 500** (Leadsie ponawia webhook; merge jest
+  idempotentny — unia checklisty + nadpisanie bloku `leadsie` — więc retry domyka stan bez dubli).
+  **`wf2-ads-verify`**: błąd merge ⇒ `console.error` + **dopisek „⚠️ merge NIEUDANY: …" do opisu
+  `wf2_activities`** tego runu; **NIE** przerywa całego sweepa (pozostałe projekty muszą się doweryfikować).
+  Zapis pól klienta w portalu (`task_save` kroków `ads_*`) idzie **tym samym** atomowym merge
+  (`p_block_merge=true` → `data.fields || cleaned` pod blokadą wiersza) — nie wyściga się z verify/connect.
 - **Sweep** iteruje projekty **najstarzej weryfikowane najpierw** (`ads_konto.data.ads_verify.at` rosnąco,
   brak = najpierw — ogon nie głoduje pod deadline'em; stepy pobierane jednym zapytaniem, ⚠️ cap 1000 wierszy).
 - **Cron:** `wf2-ads-verify` (migracja `20260722i_wf2_ads_verify_cron.sql`, apply

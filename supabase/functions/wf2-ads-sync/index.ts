@@ -264,9 +264,11 @@ Deno.serve(async (req) => {
     seen.add(acc);
     if (Date.now() - t0 > DEADLINE_MS) break;
     try {
-      const r = await fetch(`${GRAPH}/act_${acc}?fields=account_status,disable_reason&access_token=${token}`);
-      const d = await r.json();
-      if (r.ok && d.account_status !== 1) {
+      // graphFetch = ten sam AbortController(20 s)+retry na przejściowe co reszta synca (goły fetch
+      // mógł wisieć bez deadline'u i zjeść budżet sweepu). Błąd (4xx/po retry) rzuca → catch niżej;
+      // health-scan pozostaje best-effort i nie blokuje synca.
+      const d = await graphFetch(`${GRAPH}/act_${acc}?fields=account_status,disable_reason&access_token=${token}`);
+      if (d.account_status !== 1) {
         out.alerts++;
         await sb.from("wf2_activities").insert({
           project_id: projectId, actor: "wf2-ads-sync", action: "ads_alert",

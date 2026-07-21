@@ -5,7 +5,7 @@
 // edge, dziura RLS) — bez dotykania produkcyjnych danych (wyłącznie odczyty i 4xx).
 // Sekrety: tn-crm/.env (SUPABASE_SERVICE_KEY). Klucz publiczny = ten sam co w panelu.
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -404,10 +404,17 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   }
   orphans.length ? bad('WS↔CHECKLIST_MAP (E5/E6)', 'klucze mapy bez odpowiednika w WS: ' + orphans.join(' | ')) : ok('WS↔CHECKLIST_MAP: klucze map ads_kampanie/preflight/start/opieka spójne z WS');
 
-  // ads_budzet: instructions_md rekomenduje KARTĘ jako pierwszą metodę (audyt płatności)
+  // ads_budzet: instructions_md rekomenduje KARTĘ jako pierwszą metodę (audyt płatności) — ŻYWA BAZA
   const kr = await rest("wf2_step_defs?select=instructions_md&key=eq.ads_budzet", SK);
   const im = Array.isArray(kr.data) && kr.data[0] ? String(kr.data[0].instructions_md || '') : '';
-  /ZALECAMY KART/i.test(im) ? ok('wf2_step_defs.ads_budzet.instructions_md: rekomendacja KARTY (klient)') : bad('ads_budzet instructions_md', 'brak rekomendacji KARTY (PATCH zaaplikowany?)');
+  /ZALECAMY KART/i.test(im) ? ok('wf2_step_defs.ads_budzet.instructions_md: rekomendacja KARTY (klient)') : bad('ads_budzet instructions_md', 'brak rekomendacji KARTY (migracja zaaplikowana?)');
+
+  // REPRODUKOWALNOŚĆ (P1): fraza „ZALECAMY KART" MUSI żyć w JAKIEJŚ migracji (nie tylko jako patch na
+  // żywej bazie) — inaczej powyższa asercja przechodzi dzięki prod, a repo NIE odtwarza stanu (§14 był
+  // taką dziurą do rundy 3: 20260722h mówił „prepaid", a KARTA żyła tylko patchem na bazie).
+  const migDir = join(ROOT, 'supabase', 'migrations');
+  const hasKarta = readdirSync(migDir).some((f) => f.endsWith('.sql') && /ZALECAMY KART/i.test(readFileSync(join(migDir, f), 'utf8')));
+  hasKarta ? ok('reprodukowalność: „ZALECAMY KART" obecne w migracji (nie tylko patch na prod)') : bad('reprodukowalność ads_budzet', 'żadna migracja nie zawiera „ZALECAMY KART" — patch tylko na żywej bazie?');
 }
 
 // ── 15. Etap 4 RUNDA 2 poprawek (atomowy merge, XSS, spend_cap LIFETIME, Leadsie-first portal) ──
@@ -505,6 +512,57 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   // (poz.12) checklist-map preflight: komentarz wspomina creative-probe
   /celowo POMINIĘTE[\s\S]{0,120}(creative-probe|ads_create_creative)/i.test(mapSrc) || /creative-probe/i.test(mapSrc)
     ? ok('checklist-map ads_preflight: komentarz wspomina pominięty creative-probe') : bad('checklist-map preflight', 'komentarz nie wspomina creative-probe');
+}
+
+// ── 16. Etap 4 RUNDA 3 (domknięcia krytyka: rpc-error handling, karta-brand, graphFetch, block-merge) ──
+{
+  const connectSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-connect', 'index.ts'), 'utf8');
+  const verifySrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-verify', 'index.ts'), 'utf8');
+  const syncSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-sync', 'index.ts'), 'utf8');
+  const portalSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
+
+  // (P2.1) connect: przechwytuje błąd rpc(wf2_step_merge) → console.error + 500 (Leadsie ponowi; idempotentne)
+  (connectSrc.includes('const { error: mergeErr } = await supabase.rpc("wf2_step_merge"') && /mergeErr[\s\S]{0,220}merge_failed[\s\S]{0,40}500/.test(connectSrc))
+    ? ok('wf2-ads-connect: błąd rpc(wf2_step_merge) → console.error + 500 (merge_failed)')
+    : bad('wf2-ads-connect rpc-error', 'brak przechwycenia { error } z merge / 500 merge_failed');
+
+  // (P2.1) verify: updateStepUnion przechwytuje błąd merge, dokleja do opisu wf2_activities (nie wywala sweepa)
+  (verifySrc.includes('const { error: mergeErr } = await sb.rpc("wf2_step_merge"') && verifySrc.includes('mergeErrors') && /merge NIEUDANY/.test(verifySrc))
+    ? ok('wf2-ads-verify: błąd merge → console.error + dopisek do wf2_activities (sweep żyje)')
+    : bad('wf2-ads-verify rpc-error', 'brak przechwycenia błędu merge / dopisu do activities');
+
+  // (P2.3) karta uznawana TYLKO po brandzie — regex paymentIsCard bez gołego matchera cyfr (\d{4}$/maski)
+  {
+    const m = verifySrc.match(/const paymentIsCard = paymentMethod && \/([^/]+)\/\.test\(fundBlob\)/);
+    const rx = m ? m[1] : '';
+    (rx && /visa|master|amex/.test(rx) && !rx.includes('\\d{4}') && !rx.includes('{2,}') && !rx.includes('x{4,}'))
+      ? ok('wf2-ads-verify: paymentIsCard tylko po brandzie (bez gołego \\d{4}$/maski cyfr)')
+      : bad('wf2-ads-verify karta-brand', rx ? 'regex nadal łapie same cyfry (\\d{4}$/maska) — fałszywa karta przy prepaid' : 'brak paymentIsCard');
+    verifySrc.includes('[ŻYWO:') ? ok('wf2-ads-verify: komentarz [ŻYWO: potwierdzić na 1. realnym funding_source_details]') : bad('wf2-ads-verify ŻYWO', 'brak komentarza [ŻYWO:…]');
+  }
+
+  // (P2.4) sync health-scan: graphFetch (AbortController+retry), nie goły fetch bez deadline'u
+  {
+    const hsStart = syncSrc.indexOf('health-scan kont');
+    const hsBlock = hsStart >= 0 ? syncSrc.slice(hsStart, hsStart + 1100) : '';
+    (hsBlock.includes('graphFetch(`${GRAPH}/act_${acc}?fields=account_status') && !/const r = await fetch\(`\$\{GRAPH\}\/act_\$\{acc\}/.test(hsBlock))
+      ? ok('wf2-ads-sync health-scan: graphFetch (AbortController+retry), bez gołego fetch')
+      : bad('wf2-ads-sync health-scan', 'health-scan nadal na gołym fetch bez deadline/retry');
+  }
+
+  // (P2.2) portal ads_* task_save: atomowy block-merge (p_block_merge=true), nie RMW całego data
+  (portalSrc.includes('step_key.startsWith("ads_")') && /p_block_key: "fields"[\s\S]{0,80}p_block_merge: true/.test(portalSrc))
+    ? ok('wf2-portal task_save ads_*: rpc wf2_step_merge block-merge (fields || cleaned), bez RMW')
+    : bad('wf2-portal ads_* task_save', 'brak gałęzi ads_* z p_block_merge=true');
+
+  // (P2.2) migracja rozszerzająca funkcję o p_block_merge + DROP starej 4-arg (bez ambiguity function)
+  {
+    const migPath = join(ROOT, 'supabase', 'migrations', '20260722l_wf2_step_merge_block.sql');
+    const mig = existsSync(migPath) ? readFileSync(migPath, 'utf8') : '';
+    (mig.includes('p_block_merge') && /DROP FUNCTION IF EXISTS public\.wf2_step_merge\(uuid, text, jsonb, text\[\]\)/.test(mig) && mig.includes('|| coalesce(p_block'))
+      ? ok('migracja 20260722l: p_block_merge (płytki merge) + DROP starej 4-arg (bez ambiguity)')
+      : bad('migracja 20260722l', 'brak p_block_merge / DROP 4-arg / płytkiego merge');
+  }
 }
 
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);

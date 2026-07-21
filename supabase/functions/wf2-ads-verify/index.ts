@@ -94,16 +94,23 @@ type SbClient = ReturnType<typeof createClient>;
 // Odhaczanie/zapis podbloku przez ATOMOWY MERGE (RPC wf2_step_merge): podblok + unia checklisty
 // w JEDNYM UPDATE pod blokadą wiersza — bez read-modify-write całego data (eliminuje lost-update
 // z webhookiem wf2-ads-connect działającym w tym samym oknie co sweep 06:40). Nic nie odznaczamy.
-async function updateStepUnion(sb: SbClient, projectId: string, stepKey: string, toCheck: string[], blockKey?: string, block?: Record<string, unknown>) {
+async function updateStepUnion(sb: SbClient, projectId: string, stepKey: string, toCheck: string[], blockKey?: string, block?: Record<string, unknown>, mergeErrors?: string[]) {
   const { data: st } = await sb.from("wf2_steps").select("id, status")
     .eq("project_id", projectId).eq("step_key", stepKey).is("product_id", null).maybeSingle();
   if (!st) return false; // stary projekt bez kroku — nie wywracamy
-  await sb.rpc("wf2_step_merge", {
+  const { error: mergeErr } = await sb.rpc("wf2_step_merge", {
     p_step_id: (st as { id: string }).id,
     p_block_key: blockKey ?? null,
     p_block: block ?? null,
     p_checks: toCheck,
   });
+  // błąd merge NIE wywala całego sweepa (inne projekty muszą się doweryfikować) — logujemy i dopisujemy
+  // do opisu wf2_activities tego runu (widoczne w kronice), a przy sweepie zbiera to licznik błędów.
+  if (mergeErr) {
+    console.error("[wf2-ads-verify] wf2_step_merge błąd:", stepKey, mergeErr.message ?? mergeErr);
+    mergeErrors?.push(`${stepKey}: ${mergeErr.message ?? mergeErr}`);
+    return false;
+  }
   // status pending→in_progress: osobny monotoniczny UPDATE (nie dotyka bloba data → nie wyścig)
   if ((st as { status: string }).status === "pending" && (toCheck.length || blockKey)) {
     await sb.from("wf2_steps").update({ status: "in_progress" }).eq("id", (st as { id: string }).id);
@@ -142,7 +149,12 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
   // „Środki WIDOCZNE" odhaczamy TYLKO gdy metoda = KARTA (prepaid = saldo 0 nieczytelne przez Graph
   // → zielony ptaszek wbrew treści pozycji). Rozpoznanie po type/display_string; brak pewności = NIE.
   const fundBlob = `${String(funding?.type ?? "")} ${String(funding?.display_string ?? "")}`.toLowerCase();
-  const paymentIsCard = paymentMethod && /visa|master|amex|american express|discover|maestro|\bcard\b|karta|credit|debit|\*{2,}\s*\d|•{2,}\s*\d|x{4,}\s*\d|\d{4}\s*$/.test(fundBlob);
+  // KARTA uznawana TYLKO gdy display_string/type zawiera nazwę brandu/typu karty. Samo „…1234"
+  // (ostatnie 4 cyfry lub maska bez brandu) NIE wystarcza — prepaid/inne źródła też bywają pokazane
+  // cyframi, a zielony ptaszek „Środki WIDOCZNE" przy prepaid kłamie (saldo 0 nieczytelne przez Graph).
+  // Brak brandu → traktujemy jak prepaid: nota info (niżej), bez odhaczenia środków.
+  // [ŻYWO: potwierdzić kształt fundBlob na 1. realnym funding_source_details — dopisać brakujące brandy].
+  const paymentIsCard = paymentMethod && /visa|master|amex|american express|discover|maestro|\bcard\b|karta|credit|debit/.test(fundBlob);
   const paymentUnknown = paymentMethod && !paymentIsCard; // metoda jest, ale typu nie rozpoznajemy
 
   // 2. strona przypięta do konta. promote_pages PUSTE [] (nie tylko rzucony błąd) → i tak spróbuj
@@ -201,21 +213,23 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
   };
 
   // ── auto-odhaczenie (unia; VERBATIM) ─────────────────────────────────────────
+  // Błędy atomowego merge zbieramy per projekt — nie wywalają sweepa, lądują w opisie wf2_activities.
+  const mergeErrors: string[] = [];
   // NIEAKTYWNE konto (account_status != 1): NIE odhaczamy niczego środowiskowego (środowisko
   // niepewne) — zapis tylko do data.ads_verify; blokadę zgłasza nota niżej.
   // ads_konto: waluta+strefa TYLKO gdy oba OK i konto aktywne. Rozjazd = nota blokada + BEZ odhaczenia.
   const kontoChecks = active && currencyOk && tzOk ? [CHECK_ADS_KONTO_WALUTA] : [];
-  await updateStepUnion(sb, projectId, "ads_konto", kontoChecks, "ads_verify", { at: new Date().toISOString(), wyniki: checks });
+  await updateStepUnion(sb, projectId, "ads_konto", kontoChecks, "ads_verify", { at: new Date().toISOString(), wyniki: checks }, mergeErrors);
 
   // ads_budzet: „środki" odhaczamy WYŁĄCZNIE gdy metoda = KARTA (prepaid = saldo nieczytelne przez
   //   Graph → nota informacyjna niżej); limit = po ustawieniu/potwierdzeniu spend_cap. Oba tylko aktywne.
   const budzetChecks: string[] = [];
   if (active && paymentIsCard) budzetChecks.push(CHECK_ADS_BUDZET_SRODKI);
   if (active && spendCapValue > 0) budzetChecks.push(CHECK_ADS_BUDZET_LIMIT);
-  await updateStepUnion(sb, projectId, "ads_budzet", budzetChecks);
+  await updateStepUnion(sb, projectId, "ads_budzet", budzetChecks, undefined, undefined, mergeErrors);
 
   // ads_strona: przypięcie strony do konta (wymóg create_ad) — tylko na aktywnym koncie
-  await updateStepUnion(sb, projectId, "ads_strona", active && pageAttached ? [CHECK_ADS_STRONA_PRZYPISANA] : []);
+  await updateStepUnion(sb, projectId, "ads_strona", active && pageAttached ? [CHECK_ADS_STRONA_PRZYPISANA] : [], undefined, undefined, mergeErrors);
 
   // ── noty automatu (każda z własnym wzorcem dedup po otwartej nocie) ───────────
   const noteOnce = async (likePattern: string, body: string, tag = "blokada") => {
@@ -246,9 +260,10 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
       `⚠️ AUTOMAT: konto zbliża się do limitu wydatków — podbij spend_cap konta ${act} (spend ${(amountSpent / 100).toFixed(0)} zł / cap ${(spendCap / 100).toFixed(0)} zł, LIFETIME).`, "info");
   }
 
+  const mergeNote = mergeErrors.length ? ` ⚠️ merge NIEUDANY: ${mergeErrors.join("; ")}` : "";
   await sb.from("wf2_activities").insert({
     project_id: projectId, actor: "wf2-ads-verify", action: "ads_verify",
-    description: `Weryfikacja środowiska ${act}: waluta ${currency}/${currencyOk ? "OK" : "ZŁA"}, strefa ${tz}/${tzOk ? "OK" : "ZŁA"}, status ${accountStatus}, metoda płatności ${paymentIsCard ? "karta" : paymentMethod ? "inna/prepaid" : "brak"}, strona ${pageAttached ? "przypięta" : "brak"}, spend_cap ${spendCapAction}${pixelId ? `, pixel ${pixelId}` : ""}`.slice(0, 2000),
+    description: `Weryfikacja środowiska ${act}: waluta ${currency}/${currencyOk ? "OK" : "ZŁA"}, strefa ${tz}/${tzOk ? "OK" : "ZŁA"}, status ${accountStatus}, metoda płatności ${paymentIsCard ? "karta" : paymentMethod ? "inna/prepaid" : "brak"}, strona ${pageAttached ? "przypięta" : "brak"}, spend_cap ${spendCapAction}${pixelId ? `, pixel ${pixelId}` : ""}${mergeNote}`.slice(0, 2000),
   });
 
   return { project_id: projectId, act, checks };

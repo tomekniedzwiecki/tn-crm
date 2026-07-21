@@ -573,7 +573,17 @@ Deno.serve(async (req: Request) => {
     const prevData = (stepRow?.data && typeof stepRow.data === "object") ? stepRow.data as Record<string, unknown> : {};
     const prevFields = (prevData.fields && typeof prevData.fields === "object") ? prevData.fields as Record<string, unknown> : {};
     const newData = { ...prevData, fields: { ...prevFields, ...cleaned } };
-    if (stepRow) {
+    // Kroki ads_* dzielą wiersz wf2_steps z automatami (wf2-ads-verify → blok ads_verify, wf2-ads-connect
+    // → blok leadsie + checklist). RMW całego data.fields wyścigałby się z nimi (lost update). Zapis pola
+    // idzie więc ATOMOWYM MERGE (rpc wf2_step_merge, p_block_merge=true → data.fields || cleaned pod
+    // blokadą wiersza) — gdy instancja kroku już istnieje. Reszta kroków (pl_dane/firma) nie koliduje
+    // z automatami → tańszy RMW zostaje. Nowy wiersz (brak instancji) = INSERT, też bez wyścigu.
+    if (stepRow && step_key.startsWith("ads_")) {
+      const { error } = await sb.rpc("wf2_step_merge", {
+        p_step_id: stepRow.id, p_block_key: "fields", p_block: cleaned, p_checks: [], p_block_merge: true,
+      });
+      if (error) return json({ error: "save_failed" }, 500);
+    } else if (stepRow) {
       const { error } = await sb.from("wf2_steps").update({ data: newData }).eq("id", stepRow.id);
       if (error) return json({ error: "save_failed" }, 500);
     } else {
