@@ -169,6 +169,79 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ op: "verify_shop_match", sprawdzone: out.length, potwierdzone, doPrzegladu, minConf, dryRun, wyniki: out }), { headers: { ...cors, "content-type": "application/json" } });
   }
 
+  // ── VERIFY_SHOP_TIEBREAK: trzeci, rozstrzygający głos dla rekordów w szarej strefie ──
+  // Wejście: rekordy z is_auto=true, które mają już 2 przebiegi. Dokłada trzeci i decyduje
+  // większością 3 głosów. Margines bezpieczeństwa: do zatwierdzenia ŻADEN głos nie może
+  // brzmieć NIE — sama obecność sprzeciwu wystarcza, żeby zostawić to człowiekowi.
+  //   ≥2× TAK, 0× NIE, średnia pewność TAK ≥ minConf → zatwierdzone
+  //   ≥2× NIE                                        → nagrobek (jak rollback 23)
+  //   reszta                                         → zostaje do rąk
+  if (body.op === "verify_shop_tiebreak") {
+    const limit = Math.min(Math.max(Number(body.limit ?? 10), 1), 60);
+    const minConf = Number(body.minConf ?? 0.9);
+    const dryRun = !!body.dryRun;
+    const { data: rows, error } = await supabase.from("bud_tt_products")
+      .select("id,key,pl_name,query,shop_url,tt_shop,ali_snapshot")
+      .filter("tt_shop->auto_match->>is_auto", "eq", "true")
+      .filter("tt_shop->auto_match->>vision", "not.is", null)
+      .filter("tt_shop->auto_match->'vision'->>przebieg3", "is", null)
+      .order("key").limit(limit);
+    if (error) return new Response(JSON.stringify({ error: "db_read", detail: String(error.message).slice(0, 200) }), { status: 500, headers: { ...cors, "content-type": "application/json" } });
+
+    const acc = { i: 0, c: 0, o: 0 };
+    // deno-lint-ignore no-explicit-any
+    const out: any[] = [];
+    let potwierdzone = 0, odrzucone = 0, doRak = 0;
+
+    for (const r of (rows || [])) {
+      // deno-lint-ignore no-explicit-any
+      const ts: any = r.tt_shop || {};
+      const am = ts.auto_match || {};
+      const vis = am.vision || {};
+      const shopImg = (ts.images_hosted || [])[0] || (ts.images || [])[0] || "";
+      const refs = ((r.ali_snapshot || {}).images || []).filter(Boolean);
+      if (!shopImg || !refs.length) { out.push({ key: r.key, skip: "brak_material" }); continue; }
+
+      const v3 = await gptShopMatch(String(r.pl_name || r.key), String(r.query || ""), refs, shopImg, String(ts.title || ""), acc);
+      if (!v3) { out.push({ key: r.key, skip: "vision_blad" }); continue; }
+
+      const glosy = [{ verdict: vis.verdict, confidence: vis.confidence }, vis.przebieg2 || {}, v3]
+        .filter((g) => g && g.verdict);
+      const tak = glosy.filter((g) => g.verdict === "TAK");
+      const nie = glosy.filter((g) => g.verdict === "NIE");
+      const srCon = tak.length ? tak.reduce((s, g) => s + (Number(g.confidence) || 0), 0) / tak.length : 0;
+
+      const potwierdz = tak.length >= 2 && nie.length === 0 && srCon >= minConf;
+      const odrzuc = nie.length >= 2;
+      const wynik = potwierdz ? "ZATWIERDZONE" : odrzuc ? "ODRZUCONE" : "DO_RAK";
+      if (dryRun) { out.push({ key: r.key, glosy: glosy.map((g) => `${g.verdict}/${g.confidence}`), srCon: Number(srCon.toFixed(2)), wynik }); continue; }
+
+      // deno-lint-ignore no-explicit-any
+      let patch: any;
+      if (odrzuc) {
+        patch = { tt_shop: { source: "auto_match_rejected", fetched_at: ts.fetched_at,
+          auto_match: { ...am, is_auto: false, rejected: true, confirmed_by: undefined,
+            vision: { ...vis, przebieg3: v3, glosy: glosy.length, tak: tak.length, nie: nie.length },
+            odrzucony_produkt: { title: ts.title, seo_url: am.picked_seo_url, sold_count: ts.sold_count, price_real: ts.price_real } } } };
+        if (am.set_shop_url) patch.shop_url = null;
+        odrzucone++;
+      } else {
+        const am2 = { ...am, is_auto: !potwierdz,
+          vision: { ...vis, przebieg3: v3, glosy: glosy.length, tak: tak.length, nie: nie.length, srednia_pewnosc: Number(srCon.toFixed(2)) } };
+        if (potwierdz) { am2.confirmed_by = "vision3"; potwierdzone++; } else { delete am2.confirmed_by; doRak++; }
+        patch = { tt_shop: { ...ts, auto_match: am2, source: potwierdz ? "vision_confirmed" : "auto_match" } };
+      }
+      const { error: uErr } = await supabase.from("bud_tt_products").update(patch).eq("id", r.id);
+      out.push(uErr ? { key: r.key, err: String(uErr.message).slice(0, 120) } : { key: r.key, glosy: glosy.map((g) => `${g.verdict}/${g.confidence}`), srCon: Number(srCon.toFixed(2)), wynik });
+    }
+
+    if (acc.i || acc.o) {
+      const cost = (acc.i - acc.c) / 1e6 * 1.25 + acc.c / 1e6 * 0.125 + acc.o / 1e6 * 10;
+      await supabase.from("bud_usage").insert({ session_id: null, kind: "img-verify", model: MODEL, input_tokens: acc.i, cached_tokens: acc.c, output_tokens: acc.o, cost_usd: cost, meta: { from: "verify_shop_tiebreak", n: out.length } });
+    }
+    return new Response(JSON.stringify({ op: "verify_shop_tiebreak", sprawdzone: out.length, potwierdzone, odrzucone, doRak, minConf, dryRun, wyniki: out }), { headers: { ...cors, "content-type": "application/json" } });
+  }
+
   const frame: string = body.frame_url || "";
   const name: string = body.name || "";
   const q: string = body.q || body.query || "";
