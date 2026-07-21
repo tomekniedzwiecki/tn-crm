@@ -184,7 +184,10 @@ Deno.serve(async (req) => {
       .select("id,key,pl_name,query,shop_url,tt_shop,ali_snapshot")
       .filter("tt_shop->auto_match->>is_auto", "eq", "true")
       .filter("tt_shop->auto_match->>vision", "not.is", null)
-      .filter("tt_shop->auto_match->'vision'->>przebieg3", "is", null)
+      // Ścieżka JSON w PostgREST: same strzałki, BEZ cudzysłowów wokół kluczy.
+      // Wersja z 'vision' w apostrofach cicho nie filtrowała — pętla mieliła w kółko
+      // te same 6 rekordów, a 22 nigdy nie dostały trzeciego głosu.
+      .filter("tt_shop->auto_match->vision->>przebieg3", "is", null)
       .order("key").limit(limit);
     if (error) return new Response(JSON.stringify({ error: "db_read", detail: String(error.message).slice(0, 200) }), { status: 500, headers: { ...cors, "content-type": "application/json" } });
 
