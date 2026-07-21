@@ -443,8 +443,6 @@ function renderStageAxis(projDefs, containerId) {
     if (!projDefs.length) { el.innerHTML = ''; return; }
 
     const rows = projDefs.map(d => ({ d, st: stepFor(d.key) || { status:'pending', data:{} } }));
-    let lastDone = -1;
-    rows.forEach((r, i) => { if (r.st.status === 'done') lastDone = i; });
 
     el.innerHTML = rows.map((r, i) => {
         const { d, st } = r;
@@ -453,9 +451,6 @@ function renderStageAxis(projDefs, containerId) {
         const mileDone = isMile && st.status === 'done';
         const isClient = d.owner === 'client';
         const clientPending = isClient && st.status !== 'done' && st.status !== 'skipped';
-
-        // segment osi: pełny success do ostatniego ukończonego; węzeł graniczny = split w węźle
-        const railCls = i < lastDone ? 'proc-rail-done' : (i === lastDone ? 'proc-rail-edge' : '');
 
         // węzeł statusu
         let nodeIcon = '', nodeCls;
@@ -473,7 +468,7 @@ function renderStageAxis(projDefs, containerId) {
         const dateEl = dateStr ? `<span class="proc-date">${dateStr}</span>` : '';
         const stBtn = admin
             ? `<button class="proc-statusbtn proc-st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}', null)" data-tip-title="Klik = przełącz status" data-tip-desc="do zrobienia → w trakcie → ukończone; pełna kontrola w warsztacie kroku"><i class="ph ${STEP_ICON[st.status]}"></i>${STEP_LABELS[st.status]}</button>`
-            : '';
+            : `<span class="proc-statusbtn proc-st-${st.status}" style="cursor:default"><i class="ph ${STEP_ICON[st.status]}"></i>${STEP_LABELS[st.status]}</span>`;
 
         // podlinijki: kamień (zielony) + notatka (tylko admin)
         const note = admin && st.data && st.data.note ? String(st.data.note) : '';
@@ -485,20 +480,19 @@ function renderStageAxis(projDefs, containerId) {
         const newDot = (media.length && !isPeekSeen(null, d.key)) ? '<span class="proc-newdot" title="nowe materiały"></span>' : '';
         const film = media.length ? stepFilmstrip(media, null, d.key) : '';
 
-        const denseCls = media.length ? '' : ' proc-dense';
         const tip = admin
             ? `data-tip-title="${i+1}. ${escapeHtml(d.label)}${isMile ? ' 🏁' : ''}" data-tip-sub="${OWNER_LABEL[d.owner] || ''}${isMile ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}" data-tip-desc="${escapeHtml((P.WS[d.key] && P.WS[d.key].desc) ? String(P.WS[d.key].desc).slice(0,140) : '')}"`
             : '';
-        return `<div class="proc-step${denseCls}${mileDone ? ' proc-mile-done' : ''}" onclick="procOpen('${d.key}', null)">
-            <div class="proc-rail ${railCls}"><span class="proc-node ${nodeCls}${mileDone ? ' pn-big' : ''}" ${tip}>${nodeIcon ? `<i class="ph ${nodeIcon}"></i>` : ''}</span></div>
-            <div class="proc-content">
-                <div class="proc-row">
-                    <div class="proc-headline"><span class="proc-idx">${i+1}</span><span class="proc-title">${escapeHtml(d.label)}</span>${newDot}</div>
-                    <div class="proc-meta">${clientChip}${dateEl}${stBtn}<i class="ph ph-caret-right proc-caret"></i></div>
+        return `<div class="sbx${mileDone ? ' sbx-mile-done' : (isMile ? ' sbx-mile' : '')}" onclick="procOpen('${d.key}', null)">
+            <div class="sbx-head">
+                <span class="proc-node ${nodeCls}${mileDone ? ' pn-big' : ''}" ${tip}>${nodeIcon ? `<i class="ph ${nodeIcon}"></i>` : ''}</span>
+                <div class="sbx-tt">
+                    <div class="sbx-title-row"><span class="sbx-idx">${i+1}</span><span class="sbx-title">${escapeHtml(d.label)}</span>${newDot}</div>
+                    ${sub}
                 </div>
-                ${sub}
-                ${film}
+                <div class="sbx-meta">${clientChip}${dateEl}${stBtn}<i class="ph ph-caret-right proc-caret"></i></div>
             </div>
+            ${film}
         </div>`;
     }).join('');
 }
@@ -712,6 +706,22 @@ function renderDrawer() {
 function renderDrawerClient(ws, st, d, p) {
     let h = '';
     if (ws.desc) h += `<p class="text-zinc-300 text-[13px] leading-relaxed">${escapeHtml(ws.desc)}</p>`;
+    // checklista kroku (dostarczana przez serwer już po filtrze treści) — klient widzi,
+    // co konkretnie jest zrobione, a co jeszcze przed nami
+    const cl = Array.isArray(st.checklist) ? st.checklist : [];
+    if (cl.length) {
+        const doneN = cl.filter(c => c.done).length;
+        h += `<div class="mt-4 border border-[#1f1f1f] rounded-lg bg-[#0d0d0d] p-4">
+            <div class="flex items-center gap-2.5 mb-2.5">
+                <span class="text-[10.5px] font-mono uppercase tracking-[.07em] text-zinc-400">Co robimy w tym kroku</span>
+                <span class="text-[10.5px] font-mono text-[#52a8ff]">${doneN}/${cl.length}</span>
+                <div class="pp-bar flex-1 max-w-[120px]"><div style="width:${cl.length ? Math.round(doneN / cl.length * 100) : 0}%"></div></div>
+            </div>
+            <ul class="space-y-1.5">${cl.map(c => `<li class="flex items-start gap-2 text-[12.5px] leading-snug ${c.done ? 'text-zinc-300' : 'text-zinc-500'}">
+                <i class="ph ${c.done ? 'ph-check-circle-fill text-[#4cb782]' : 'ph-circle text-[#3f3f46]'} text-[15px] mt-px flex-shrink-0"></i>
+                <span>${escapeHtml(c.t)}</span></li>`).join('')}</ul>
+        </div>`;
+    }
     const arts = artifactsFor(drawerCtx.productId, d.key);
     const gal = artifactsGallery(arts);
     if (gal) h += gal;

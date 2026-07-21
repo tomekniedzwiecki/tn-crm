@@ -24,6 +24,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { verifyTeamMember } from "../_shared/admin-files.ts";
 import { throttleClear, throttleFail, throttleGate } from "../_shared/portal-throttle.ts";
+import { CHECKLIST_MAP } from "./checklist-map.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -347,13 +348,33 @@ Deno.serve(async (req: Request) => {
   }));
 
   // steps: client_fields = data.fields TYLKO dla kroków owner='client'; reszta bez data.
+  // checklist: pozycje TŁUMACZONE na język kliencki przez CHECKLIST_MAP (step_key → {tekst_adminowy → tekst_kliencki}).
+  // FAIL-CLOSED: pozycja bez tłumaczenia w mapie ODPADA (nie wycieka wewnętrzny slang produkcyjny).
+  // CHECK_BLOCK = druga siatka bezpieczeństwa: przetłumaczony tekst też musi ją przejść (gdyby tłumaczenie było niedbałe).
+  const CHECK_BLOCK = /gate|sync|forge|phash|p-hash|prompt|sql|\.py\b|\.mjs\b|\.sh\b|\.ts\b|rytua|claude|gpt|manus|\bfal\b|agent|deploy|\bapi\b|verbatim|ocr|ssim|\bqa\b|\bf\d(?:\.\d)?\b|\bir\b|panel|storage|bucket|\brls\b|edge|cron|token|backfill|\brepo\b|commit|best-of|vision|blueprint|typed|snippet|noindex|slug|webhook|endpoint|curl|\brest\b|json|jwt|uuid|\benv\b|sekret|automat|sesj|fabryk|pipeline|batch|regen|render/i;
+  const clientChecklist = (step_key: string, data: unknown): Array<{ t: string; done: boolean }> | null => {
+    const d = (data && typeof data === "object") ? data as Record<string, unknown> : {};
+    const list = Array.isArray(d.checklist) ? d.checklist : [];
+    const map = CHECKLIST_MAP[step_key] || {};
+    const out: Array<{ t: string; done: boolean }> = [];
+    for (const it of list) {
+      if (!it || typeof it !== "object") continue;
+      const raw = (it as Record<string, unknown>).t;
+      if (typeof raw !== "string") continue;
+      const translated = map[raw];
+      if (!translated) continue;                 // brak tłumaczenia = pozycja niewidoczna dla klienta
+      if (CHECK_BLOCK.test(translated)) continue; // druga siatka: żargon w tłumaczeniu = odpada
+      out.push({ t: translated.slice(0, 200), done: !!(it as Record<string, unknown>).done });
+    }
+    return out.length ? out : null;
+  };
   const steps = ((stepsQ.data || []) as Array<Record<string, any>>).map((s) => {
     let client_fields: Record<string, unknown> | null = null;
     if (ownerByKey[s.step_key] === "client") {
       const d = (s.data && typeof s.data === "object") ? s.data : {};
       client_fields = (d.fields && typeof d.fields === "object") ? d.fields : {};
     }
-    return { step_key: s.step_key, product_id: s.product_id, status: s.status, completed_at: s.completed_at, client_fields };
+    return { step_key: s.step_key, product_id: s.product_id, status: s.status, completed_at: s.completed_at, client_fields, checklist: clientChecklist(s.step_key, s.data) };
   });
 
   // produkty + tiktoks (jedno zapytanie do bud_tt_products)
