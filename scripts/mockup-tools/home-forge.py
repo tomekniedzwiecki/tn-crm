@@ -102,14 +102,39 @@ def _hover_img(slug, cover):
     return cover
 
 
+def _fade_frame(mp4_url):
+    """Detekcja klipów „pod copy hero" (dolny pas = jednolity fade — decyzja Tomka 21.07:
+    takie NIE nadają się na kafel karty). True = klip ma fade. Brak ffmpeg/PIL → False (przepuść)."""
+    try:
+        import subprocess, tempfile
+        from PIL import Image, ImageStat
+        with tempfile.TemporaryDirectory() as td:
+            fp = os.path.join(td, "f.png")
+            r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", "2.5", "-i", mp4_url,
+                                "-vframes", "1", fp], capture_output=True, timeout=60)
+            if r.returncode != 0 or not os.path.isfile(fp):
+                return False
+            im = Image.open(fp).convert("L")
+            w, h = im.size
+            band = im.crop((0, int(h * 0.72), w, h))
+            return ImageStat.Stat(band).stddev[0] < 12
+    except Exception:
+        return False
+
+
 def _hero_video(slug):
-    """Hero-loop landingu do karty produktu na home (decyzja Tomka 21.07: wideo = kafel
-    karty, NIE hero). Preferencja wariantu -m (mniejszy, pionowy — lepszy crop 1:1)."""
-    for base in ("hero-loop-m", "hero-loop"):
+    """Klip do karty produktu na home (decyzja Tomka 21.07: wideo = kafel karty, NIE hero).
+    Preferencja: card-loop (dedykowany, fullframe) → hero-loop TYLKO gdy bez fade pod copy.
+    Warianty -m (pionowe, lżejsze) przed desktopowymi."""
+    for base in ("card-loop-m", "card-loop", "hero-loop-m", "hero-loop"):
         mp4 = f"{PUB}/bud-assets/{slug}/video/{base}.mp4"
-        if _url_ok(mp4):
-            webm = f"{PUB}/bud-assets/{slug}/video/{base}.webm"
-            return {"mp4": mp4, "webm": webm if _url_ok(webm) else None}
+        if not _url_ok(mp4):
+            continue
+        if base.startswith("hero-loop") and _fade_frame(mp4):
+            log(f"⚠️ {slug}: {base} ma fade pod copy — NIE nadaje się na kafel (wygeneruj card-loop); karta zostaje na obrazie")
+            return None
+        webm = f"{PUB}/bud-assets/{slug}/video/{base}.webm"
+        return {"mp4": mp4, "webm": webm if _url_ok(webm) else None}
     return None
 
 

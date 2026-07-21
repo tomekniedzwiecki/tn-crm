@@ -68,16 +68,24 @@ DOKŁADNIE JEDEN akcent UI, para fontów z kontrastem, jeden radius, touch-targe
 fonty latin-ext, `prefers-reduced-motion`, brak h-scrolla 320-1920.
 
 **Życie z materiałów landingów (v1.1 — gdy assety istnieją, reuse za 0 zł):**
-- **Rotator hero-video (desktop ≥980px)** — gdy ≥1 produkt ma `video/hero-loop.mp4`:
-  karta ~4:5 w miejscu wizualu intro, klipy WSZYSTKICH produktów po kolei (równe szanse,
-  bez losowania), crossfade ~6 s, chip z nazwą mini-marki = link do landingu klipu.
-  `preload="none"` + start po IntersectionObserver; mobile = ukryty; reduced-motion =
-  statyczny medalion fallback. Dane wstrzykuje render przez marker
-  `<!--HEROVIDS:START/END-->` (`window.__HOME_VIDS`). ⚠️ Crossfade = miękki
-  double-exposure — bezpieczny przy spójnej palecie klipów; klipy o kontrastowych
-  paletach → rozważ cięcie zamiast fade.
+- **Wideo w KAFLU KARTY (v1.2, decyzja Tomka: wideo = zdjęcie produktu, NIE hero)** —
+  `<video>` w kontenerze mediów karty (poster=cover, muted+playsinline+loop,
+  `preload="none"`, start/pauza przez IntersectionObserver; reduced-motion = obraz;
+  blok `<!--IFVID-->…<!--/IFVID-->` wycinany przez render gdy brak klipu).
+  Dobór klipu (home-forge `_hero_video`): `card-loop-m` → `card-loop` → `hero-loop-m`/
+  `hero-loop` **TYLKO po detekcji fade** (`_fade_frame`: stddev dolnych 28% klatki @2,5 s
+  < 12 = klip „pod copy hero" — ODRZUCONY, karta zostaje na packshocie).
+  ⛔ Hero-loopy typu fade (kremowa strefa pod copy landingu) NIGDY do kafla.
+  **card-loop = generacja dedykowana** (gdy hero-loop odpada): scena FULLFRAME pion 2:3
+  z refami packshot+hero (wierność! 2 pary oczu), zaprojektowana pod animację
+  (DOMINUJĄCY fizyczny nośnik ruchu — firana/zwierzę/tkanina, nie światło), gpt-image
+  HIGH → Kling 2.5 i2v `tail_image_url`=first (pętla; kontrola RMS first↔last <12) →
+  ffmpeg 720px mp4+webm → `bud-assets/<slug>/video/card-loop-m.*`. Koszt ~1,5 zł/klip.
+- **Hero intro** = statyczny medalion z sygnaturą marki (⛔ rotator wideo w hero —
+  wycofany decyzją Tomka 21.07; wideo żyje w kartach).
 - **Hover-swap kart** — drugi kadr `{{CARD_IMG2}}` (hero-d → demo-a → demo-01, różny od
-  covera) nakładany opacity na hover/focus; tylko `@media (hover:hover)`.
+  covera) nakładany opacity na hover/focus; tylko `@media (hover:hover)` i tylko karty
+  BEZ wideo (`.has-vid` wyłącza swap).
 
 ## 2. PARTYTURA (per marka parasolowa — z kontraktu marki `wf2_projects`)
 
@@ -187,6 +195,11 @@ brandowa intro) = wyjątek świadomie uzasadniony w nocie kroku, nadal w limicie
 
 ## CHANGELOG
 
+- **1.2 (2026-07-21 noc)** — korekta Tomka: wideo w KAFLACH kart (nie hero; rotator
+  wycofany). Card-loopy dedykowane dla klipów z fade (masażer+drapek: scena fullframe →
+  Kling, ~1,5 zł/klip); heurystyka `_fade_frame` blokuje fade-klipy automatycznie;
+  fix wycieku szablonu (render wycina referencyjny CARD-TEMPLATE — komentarze HTML
+  się nie zagnieżdżają).
 - **1.1 (2026-07-21 wieczór)** — decyzja Tomka „wykorzystać hero-video z landingów":
   rotator hero-video (desktop, klipy portfela po kolei, chip-link) + hover-swap kart;
   marker HEROVIDS + {{CARD_IMG2}} w kontrakcie; home-forge collect zbiera hero_video/cover2.
