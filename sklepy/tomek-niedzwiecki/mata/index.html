@@ -542,13 +542,18 @@
 }
 #prawda {
   display: grid;
-  grid-template-columns: minmax(0, 38.5%) minmax(0, 61.5%);
+  /* ZIG-ZAG (21.07): scena LEWA / kopia PRAWA — problem ma zdjęcie po PRAWEJ, więc gdyby
+     prawda też miała zdjęcie po prawej, dwa pełnokadrowe (i bardzo różne) kadry stykałyby się
+     twardym szwem na granicy sekcji. Odwrócenie łamie styk (foto↔papier po obu stronach) i daje rytm. */
+  grid-template-columns: minmax(0, 61.5%) minmax(0, 38.5%);
+  grid-template-areas: "scene copy";
   min-height: 720px;
   overflow: hidden;
   background: var(--paper);
   color: var(--ink);
 }
 #prawda .prawda-copy {
+  grid-area: copy;
   position: relative;
   z-index: 1;
   display: flex;
@@ -557,7 +562,7 @@
 }
 #prawda .prawda-copy-inner {
   width: min(100%, 590px);
-  margin-left: auto;
+  margin-right: auto;
   padding: var(--sect-pad-d) clamp(var(--s3), 4vw, var(--s6));
 }
 #prawda .prawda-eyebrow {
@@ -648,6 +653,7 @@
   outline-offset: 3px;
 }
 #prawda .prawda-scene {
+  grid-area: scene;
   position: relative;
   min-width: 0;
   min-height: 720px;
@@ -668,6 +674,7 @@
 @media (max-width: 767px) {
   #prawda {
     grid-template-columns: 1fr;
+    grid-template-areas: "scene" "copy";
     grid-template-rows: minmax(420px, 45vh) auto;
   }
   #prawda .prawda-scene {
