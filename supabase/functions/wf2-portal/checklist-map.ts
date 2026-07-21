@@ -154,7 +154,7 @@ export const CHECKLIST_MAP: Record<string, Record<string, string>> = {
       "Widoczne w koszyku",
   },
   pl_domena: {
-    "Domena kupiona przez GoDaddy (wfa-domain, akcept Tomka)":
+    "Domena kupiona przez GoDaddy (wfa-domain, automat)":
       "Kupiona domena sklepu",
     "Domena dodana na platformie (add_domain) — rekordy zwrócone":
       "Domena dodana na platformie",
