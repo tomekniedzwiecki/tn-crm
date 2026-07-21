@@ -242,8 +242,10 @@
         .consent-box { flex-shrink:0; width:22px; height:22px; border-radius:6px; border:1.5px solid #3a3a42; background:#0a0a0a; display:flex; align-items:center; justify-content:center; color:transparent; font-size:13px; margin-top:1px; transition:all .15s; }
         .consent-check.on .consent-box { background:#45a557; border-color:#45a557; color:#fff; }
         .consent-txt { color:#c7c7cd; font-size:12.5px; line-height:1.62; }
-        .consent-btn { margin-top:14px; background:#45a557; color:#fff; }
+        .consent-btn { margin-top:14px; background:#45a557; color:#fff; transition:background .15s, color .15s; }
         .consent-btn:hover:not(:disabled) { background:#3f9a4f; }
+        /* disabled = jednoznacznie nieaktywny (nie „zielony=akcja"): szare, zdesaturowane tło */
+        .consent-btn:disabled { background:#26312a; color:#5f6f64; opacity:1; cursor:default; }
         .consent-more { margin-top:16px; }
         .consent-more summary { color:#8b8b94; font-size:12.5px; cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:6px; user-select:none; }
         .consent-more summary::-webkit-details-marker { display:none; }
@@ -252,18 +254,7 @@
         .consent-more-body { color:#8b8b94; font-size:12.5px; line-height:1.65; margin-top:9px; padding-left:2px; }
         .consent-more-body a { color:#52a8ff; text-decoration:none; margin-left:2px; white-space:nowrap; }
         .consent-more-body a:hover { text-decoration:underline; }
-        .consent-wait { display:block; width:100%; margin-top:12px; background:none; border:none; color:#8b8b94; font-size:12.5px; cursor:pointer; text-align:center; padding:7px; line-height:1.5; }
-        .consent-wait:hover:not(:disabled) { color:#c4c4ca; text-decoration:underline; }
-        .consent-wait:disabled { opacity:.5; cursor:default; }
-        /* baner: klient wybrał start po 14 dniach */
-        .cw-banner { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
-            background:rgba(245,166,35,.07); border:1px solid rgba(245,166,35,.28); border-radius:11px; padding:12px 15px; margin:0 0 16px; }
-        .cw-banner-txt { color:#f5deb0; font-size:12.5px; line-height:1.55; display:flex; align-items:center; gap:8px; min-width:0; }
-        .cw-banner-txt i { color:#f5a623; font-size:16px; flex-shrink:0; }
-        .cw-banner-btn { flex-shrink:0; background:#45a557; color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
-        .cw-banner-btn:hover:not(:disabled) { background:#3f9a4f; }
-        .cw-banner-btn:disabled { opacity:.5; cursor:default; }
-        @media (max-width:560px){ .cw-banner { flex-direction:column; align-items:stretch; } .cw-banner-btn { width:100%; } }
+        .consent-note { margin-top:12px; color:#7c7c85; font-size:12px; line-height:1.55; text-align:center; }
     </style>
 </head>
 <body>
@@ -310,8 +301,8 @@
                 <span class="consent-txt" id="consent-txt">…</span>
             </label>
             <div id="consent-err" class="err" style="margin:8px 0 2px;text-align:center"></div>
-            <button class="btn auth-btn consent-btn" id="consent-btn" onclick="submitConsent('accept')" disabled>Zaczynamy — ruszajcie z pracami <i class="ph ph-arrow-right"></i></button>
-            <button class="consent-wait" id="consent-wait" onclick="submitConsent('wait14')">Wolę poczekać — zacznijcie po upływie 14 dni od zawarcia umowy</button>
+            <button class="btn auth-btn consent-btn" id="consent-btn" onclick="submitConsent()" disabled>Zaczynamy — ruszajcie z pracami <i class="ph ph-arrow-right"></i></button>
+            <div class="consent-note">Nie chcesz zaczynać przed upływem 14 dni? Po prostu jeszcze nie potwierdzaj — zgodnie z regulaminem ruszymy po tym terminie, a Twój projekt czeka.</div>
             <details class="consent-more">
                 <summary><i class="ph ph-caret-right"></i> Co to dla mnie znaczy?</summary>
                 <div class="consent-more-body">Bez tej zgody nie możemy rozpocząć prac — Twój projekt czeka, a Ty w każdej chwili możesz odstąpić od umowy i odzyskać całą wpłatę. <a id="consent-reg-link" href="https://tomekniedzwiecki.pl/sklep/regulamin/" target="_blank" rel="noopener">Regulamin →</a></div>
@@ -336,11 +327,6 @@
 
     <!-- Treść -->
     <div id="content" class="hidden">
-        <!-- Baner: klient wybrał start po upływie 14 dni (może w każdej chwili ruszyć wcześniej) -->
-        <div id="consent-wait-banner" class="cw-banner hidden">
-            <span class="cw-banner-txt"><i class="ph ph-clock-countdown"></i><span id="cw-banner-date">Prace ruszą po upływie terminu odstąpienia od umowy.</span></span>
-            <button class="cw-banner-btn" id="cw-banner-btn" onclick="submitConsent('accept')">Zaczynamy od razu</button>
-        </div>
         <div class="p-head">
             <div class="p-logo" id="p-logo">·</div>
             <div class="min-w-0">
@@ -686,7 +672,6 @@
         if (r.status >= 400 || !r.json || !r.json.project) {
             $('loading').innerHTML = '<div style="color:#f26d78">Chwilowa przerwa techniczna — spróbuj za moment.</div>'; return;
         }
-        wcInfo = r.json.work_consent || null;
         buildState(r.json);
         renderAll();
         // BRAMKA ZGODY: prace nie ruszają, dopóki klient nie podejmie decyzji — pełnoekranowy
@@ -699,24 +684,21 @@
         }
         enterPortal();
     }
-    // wejście do treści portalu — wspólny ogon: po logowaniu ALBO po decyzji zgody (bez re-logowania)
+    // wejście do treści portalu — wspólny ogon: po logowaniu ALBO po zgodzie (bez re-logowania)
     function enterPortal() {
         show('content');
-        renderConsentBanner();
         if (previewMode) $('preview-banner').classList.remove('hidden');
         // deep-link #…v=zadania → od razu ekran zadań
         if (tasksHashOn()) { syncTasksView(); tasksScreenTracked = true; track('open_step', 'Twoje zadania'); }
         trackVisit();
     }
-    // ── Bramka zgody na rozpoczęcie prac ──────────────────────────────────────
-    let wcInfo = null; // { granted, source, start_after } — do banera wait14
+    // ── Bramka zgody na rozpoczęcie prac (jedna decyzja: potwierdzam) ──────────
     function buildConsent(prompt) {
         $('consent-txt').textContent = (prompt && prompt.text) ? prompt.text : '';
         if (prompt && prompt.regulamin_url) $('consent-reg-link').href = prompt.regulamin_url;
         $('consent-cb').checked = false;
         $('consent-check-wrap').classList.remove('on');
         $('consent-btn').disabled = true;
-        $('consent-wait').disabled = false;
         $('consent-err').textContent = '';
     }
     function onConsentToggle() {
@@ -724,51 +706,19 @@
         $('consent-check-wrap').classList.toggle('on', on);
         $('consent-btn').disabled = !on;
     }
-    // Baner w treści: klient wybrał start PO 14 dniach — może w każdej chwili ruszyć wcześniej.
-    function renderConsentBanner() {
-        const el = $('consent-wait-banner');
-        if (!el) return;
-        const wc = wcInfo || {};
-        if (!previewMode && wc.source === 'wait14' && !wc.granted) {
-            let dtxt = 'po upływie terminu odstąpienia od umowy';
-            if (wc.start_after) {
-                const d = new Date(wc.start_after);
-                if (!isNaN(d)) dtxt = 'od ' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
-            }
-            $('cw-banner-date').textContent = 'Prace ruszą ' + dtxt + '. Chcesz zacząć wcześniej?';
-            el.classList.remove('hidden');
-        } else {
-            el.classList.add('hidden');
-        }
-    }
-    // choice: 'accept' (żądanie startu teraz) | 'wait14' (poczekać do upływu 14 dni).
-    // Na ekranie bramki accept wymaga zaznaczenia checkboxa (jawne żądanie); z banera treści
-    // (klient widział już pełną treść i wybrał „poczekać") — bezpośrednie żądanie.
-    async function submitConsent(choice) {
-        choice = choice === 'wait14' ? 'wait14' : 'accept';
-        const onGate = !$('consent').classList.contains('hidden');
-        if (choice === 'accept' && onGate && !$('consent-cb').checked) return;
-        const btns = ['consent-btn', 'consent-wait', 'cw-banner-btn'].map(id => document.getElementById(id)).filter(Boolean);
-        btns.forEach(b => b.disabled = true);
-        $('consent-err').textContent = '';
-        const reEnable = () => { btns.forEach(b => b.disabled = false); if (onGate) $('consent-btn').disabled = !$('consent-cb').checked; };
+    async function submitConsent() {
+        if (!$('consent-cb').checked) return; // przycisk aktywny dopiero po zaznaczeniu
+        const btn = $('consent-btn');
+        btn.disabled = true; $('consent-err').textContent = '';
         try {
-            const r = await api({ token, password: currentPw, action: 'work_consent', choice });
+            const r = await api({ token, password: currentPw, action: 'work_consent', choice: 'accept' });
             if (r.status === 401 || r.status === 403) {
                 try { sessionStorage.removeItem(PW_KEY); } catch (e) {}
                 currentPw = ''; $('login-err').textContent = 'Sesja wygasła — zaloguj się ponownie.'; show('login'); return;
             }
-            if (r.status >= 400 || !r.json.ok) {
-                const msg = 'Nie udało się zapisać. Spróbuj ponownie.';
-                if (onGate) $('consent-err').textContent = msg; else showToast(msg, 'error');
-                reEnable(); return;
-            }
-            await load(); // przeładuj stan: bramka znika; baner (wait14) wyliczy się z work_consent
-        } catch (e) {
-            const msg = 'Chwilowa przerwa techniczna — spróbuj za moment.';
-            if (onGate) $('consent-err').textContent = msg; else showToast(msg, 'error');
-            reEnable();
-        }
+            if (r.status >= 400 || !r.json.ok) { $('consent-err').textContent = 'Nie udało się zapisać. Spróbuj ponownie.'; btn.disabled = false; return; }
+            enterPortal();
+        } catch (e) { $('consent-err').textContent = 'Chwilowa przerwa techniczna — spróbuj za moment.'; btn.disabled = false; }
     }
 
     // ── Mapowanie odpowiedzi edge → stan rdzenia P ─────────────────────────

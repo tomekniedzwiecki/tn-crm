@@ -131,11 +131,15 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
 - **⛔ BRAMKA ZGODY KONSUMENCKIEJ (21.07.2026, migracja `20260722c_wf2_work_consent`):**
   prace nad projektem NIE startują, dopóki `wf2_projects.work_consent_at` IS NULL i
   `work_consent_source` IS NULL — fabryka przed startem Etapu 1 MUSI to sprawdzić (⛔ brak =
-  STOP; wyjątek: source='pre-regulamin' = grandfathering, source='wait14' = start dozwolony
-  dopiero po dacie utworzenia projektu +15 dni). Portal /twoj-biznes wymusza wybór po
-  zalogowaniu: „Zaczynamy od razu" (żądanie z art. 21 ust. 2 UoPK; treść = stałe
-  `CONSENT_VERSION`/`CONSENT_TEXT` w wf2-portal, obecnie v2-2026-07-21; mail potwierdzający
-  przez send-email — trwały nośnik) albo „wait14". Zgoda z checkoutu
+  STOP; wyjątki: source='pre-regulamin' = grandfathering ORAZ okno minęło — po dacie
+  utworzenia projektu +15 dni prace dozwolone bez zgody [termin odstąpienia upłynął],
+  edge zwraca wtedy needs_work_consent=false + work_start_after). Portal /twoj-biznes po
+  zalogowaniu pokazuje pełnoekranową bramkę z JEDNĄ decyzją: „Zaczynamy — ruszajcie z
+  pracami" (żądanie z art. 21 ust. 2 UoPK; treść = stałe `CONSENT_VERSION`/`CONSENT_TEXT`
+  w wf2-portal, obecnie v2-2026-07-21; mail potwierdzający przez send-email — trwały
+  nośnik; akcja work_consent przyjmuje TYLKO choice='accept' — wariant „wait14" USUNIĘTY
+  decyzją Tomka 21.07: alternatywa „poczekam 14 dni" żyje wyłącznie w regulaminie, przez
+  niepotwierdzanie). Zgoda z checkoutu
   (`orders.consent_digital_service`, checkbox OPCJONALNY dla ofert sklepu) przenoszona przez
   tpay-webhook (+ `customer_nip`/`customer_company` → wf2_projects). Badge w projekt.html
   (✓/⏳/⛔). Kanon prawny usługi = https://tomekniedzwiecki.pl/sklep/regulamin/ (źródło:

@@ -1,6 +1,6 @@
 # Bramka zgody na rozpoczęcie prac — Portal Klienta (/twoj-biznes)
 
-> **Status: WDROŻONE 21.07.2026** (migracja `20260722c_wf2_work_consent`, edge wf2-portal akcja `work_consent {choice:'accept'|'wait14'}`, wersja oświadczenia **v2-2026-07-21** — po konsultacji gpt-5.6-sol treść uproszczona do reżimu usługowego [art. 35/38 pkt 1, bez „treści cyfrowych"] + dodany wariant „wait14" [start po 14 dniach, bez zgody] jako realna alternatywa; checkbox w checkoucie OPCJONALNY). Sekcje poniżej = pierwotny plan; przy rozjazdach wygrywa kod + CLAUDE.md.
+> **Status: WDROŻONE 21.07.2026** (migracja `20260722c_wf2_work_consent`, edge wf2-portal akcja `work_consent` TYLKO `{choice:'accept'}`, wersja oświadczenia **v2-2026-07-21** — po konsultacji gpt-5.6-sol treść uproszczona do reżimu usługowego [art. 35/38 pkt 1, bez „treści cyfrowych"]; checkbox w checkoucie OPCJONALNY). **Wariant UI „wait14" WYCOFANY dyspozycją Tomka 21.07 wieczór** — bramka ma JEDNĄ decyzję, a alternatywa („nie potwierdzaj → prace po upływie 14 dni") żyje wyłącznie w regulaminie (§11 ust. 4); po utworzeniu projektu +15 dni bramka znika sama (needs_work_consent=false, payload niesie work_start_after). Sekcje poniżej = pierwotny plan; przy rozjazdach wygrywa kod + CLAUDE.md.
 > Podstawa prawna: art. 21 ust. 2, art. 35, art. 38 ust. 1 pkt 1 ustawy o prawach konsumenta.
 > Cel: żaden projekt konsumencki nie rusza, dopóki klient nie złoży skutecznego żądania rozpoczęcia prac przed upływem 14-dniowego terminu odstąpienia.
 

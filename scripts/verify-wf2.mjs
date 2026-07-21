@@ -231,14 +231,21 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   // jawne kolumny na service-role (bez .select('*') = ryzyko wycieku)
   (!ac.includes(".select('*')") && !ac.includes('.select("*")')) ? ok('wf2-ads-connect: jawna lista kolumn (bez .select(*))') : bad('wf2-ads-connect', '.select(*) na service-role');
 
-  // KONTRAKT DEDUP: VERBATIM „Partner access…" identyczny w webhooku, WS panelu i CHECKLIST_MAP
-  const m = ac.match(/const CHECK_PARTNER_ACCESS = "([^"]+)"/);
-  const verbatim = m ? m[1] : null;
+  // KONTRAKT DEDUP: 3 stałe VERBATIM (partner access, konto, strona) identyczne w webhooku,
+  // WS panelu i CHECKLIST_MAP. Rozjazd = „duch" checklisty (odhaczenie nie trafia w stan bazy).
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
   const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
-  (verbatim && panelSrc.includes(verbatim) && mapSrc.includes(verbatim))
-    ? ok('checklista „Partner access…" VERBATIM zgodna (webhook ↔ WS ↔ CHECKLIST_MAP)')
-    : bad('checklista Partner access dedup', verbatim ? 'VERBATIM rozjechany między webhookiem, panelem i mapą' : 'brak CHECK_PARTNER_ACCESS w webhooku');
+  for (const cst of ['CHECK_PARTNER_ACCESS', 'CHECK_KONTO', 'CHECK_STRONA']) {
+    const m = ac.match(new RegExp(`const ${cst} = "([^"]+)"`));
+    const verbatim = m ? m[1] : null;
+    (verbatim && panelSrc.includes(verbatim) && mapSrc.includes(verbatim))
+      ? ok(`checklista ${cst} VERBATIM zgodna (webhook ↔ WS ↔ CHECKLIST_MAP)`)
+      : bad(`checklista ${cst} dedup`, verbatim ? 'VERBATIM rozjechany między webhookiem, panelem i mapą' : `brak ${cst} w webhooku`);
+  }
+  // MODEL: WS.ads_budzet pilnuje, że limit wydatków ustawia FABRYKA po WF2_META_TOKEN (nie klient)
+  panelSrc.includes('Limit wydatków konta ustawiony (fabryka, po WF2_META_TOKEN)')
+    ? ok('WS.ads_budzet: limit wydatków = fabryka po WF2_META_TOKEN')
+    : bad('WS.ads_budzet model', 'brak pozycji „Limit wydatków konta ustawiony (fabryka, po WF2_META_TOKEN)"');
 
   // wf2-portal: buduje leadsie (connect_url z customUserId + minimalne flagi)
   const portalSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
@@ -281,15 +288,22 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   portalTs.includes("v2-2026-07-21") ? ok('wf2-portal: CONSENT_VERSION v2 (delta prawna)') : bad('wf2-portal wersja', 'brak wersji v2-2026-07-21');
   (portalTs.includes('sendConsentEmail') && portalTs.includes('work_consent_mail_failed'))
     ? ok('wf2-portal: mail potwierdzający + fallback work_consent_mail_failed') : bad('wf2-portal mail zgody', 'brak sendConsentEmail / work_consent_mail_failed');
-  (portalTs.includes('"wait14"') || portalTs.includes("'wait14'")) ? ok('wf2-portal: druga opcja wait14 (dobrowolność)') : bad('wf2-portal wait14', 'brak obsługi wait14');
-  portalTs.includes('preview_readonly') && portalTs.match(/action === "work_consent"[\s\S]{0,120}readonly/)
+  // wait14 USUNIĘTE z UI (decyzja Tomka): edge odrzuca choice≠'accept' (400), nie jest ścieżką akceptowaną
+  (portalTs.includes('bad_choice') && /body\.choice\s*&&\s*body\.choice\s*!==\s*"accept"/.test(portalTs) && !/"wait14"/.test(portalTs))
+    ? ok('wf2-portal: work_consent tylko choice=accept (wait14 → 400, brak w kodzie)') : bad('wf2-portal choice', 'edge nadal obsługuje wait14 albo brak odrzucenia choice≠accept');
+  // warunek okna odstąpienia: needs_work_consent wygasa po created_at + 15 dni
+  (portalTs.includes('windowOpen') && portalTs.includes('15 * 24 * 3600'))
+    ? ok('wf2-portal: needs_work_consent z warunkiem okna 15 dni (created_at+15d)') : bad('wf2-portal okno', 'brak warunku okna 15 dni w needs_work_consent');
+  portalTs.includes('work_start_after')
+    ? ok('wf2-portal: payload zwraca work_start_after (koniec okna odstąpienia)') : bad('wf2-portal work_start_after', 'brak work_start_after w payloadzie');
+  portalTs.includes('preview_readonly') && portalTs.match(/action === "work_consent"[\s\S]{0,160}readonly/)
     ? ok('wf2-portal: work_consent w podglądzie admina = 403') : bad('wf2-portal work_consent readonly', 'brak gate readonly na work_consent');
 
   const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
   (portalHtml.includes("id=\"consent\"") && portalHtml.includes('submitConsent') && portalHtml.includes("'consent'"))
     ? ok('portal.html: ekran consent + submitConsent + show(consent)') : bad('portal.html ekran zgody', 'brak ekranu consent / submitConsent');
-  portalHtml.includes('consent-wait') && portalHtml.includes('consent-wait-banner')
-    ? ok('portal.html: opcja „poczekać 14 dni" + baner wait14') : bad('portal.html wait14', 'brak przycisku/banera wait14');
+  (!/Wolę poczekać/.test(portalHtml) && !portalHtml.includes('consent-wait-banner') && !portalHtml.includes('renderConsentBanner'))
+    ? ok('portal.html: bez „Wolę poczekać" i banera wait14 (jedna decyzja)') : bad('portal.html wait14 usunięcie', 'pozostałości wariantu „Wolę poczekać"/banera wait14');
 
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
   (panelSrc.includes('renderConsentWarn') && panelSrc.includes('Zgoda na start prac'))

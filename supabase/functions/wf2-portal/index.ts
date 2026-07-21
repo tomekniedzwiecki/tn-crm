@@ -37,10 +37,11 @@ const MERCHANT_LOGIN_URL = "https://panel.niedzwiecki.ai/";
 const MERCHANT_PW_SETUP_URL = "https://panel.niedzwiecki.ai/auth/forgot-password";
 
 // ── BRAMKA ZGODY KONSUMENCKIEJ (żądanie rozpoczęcia prac przed upływem 14 dni) ──
-// Prace nad projektem NIE ruszają, dopóki klient nie złoży żądania (akcja work_consent
-// choice='accept'). Alternatywa (dobrowolność): choice='wait14' — klient woli poczekać do
-// upływu terminu odstąpienia. Treść oświadczenia (v2, konsultacja prawna gpt-5.6-sol):
-// traktujemy CAŁOŚĆ jako usługę (art. 35/38 pkt 1) — usunięta część o treściach cyfrowych.
+// Prace nad projektem NIE ruszają, dopóki klient nie złoży żądania (akcja work_consent,
+// jedyna decyzja: choice='accept'). Alternatywa „poczekać" NIE jest osobną akcją (decyzja
+// Tomka 21.07): kto nie potwierdzi — ruszamy PO upływie terminu (regulamin), a okno
+// odstąpienia (created_at + 15 dni) kontroluje needs_work_consent. Treść oświadczenia (v2,
+// konsultacja prawna gpt-5.6-sol): traktujemy CAŁOŚĆ jako usługę (art. 35/38 pkt 1).
 // Snapshot treści (work_consent_text) trafia do wf2_projects + maila = trwały nośnik.
 const CONSENT_VERSION = "v2-2026-07-21";
 const CONSENT_TEXT =
@@ -418,7 +419,7 @@ Deno.serve(async (req: Request) => {
   let body: {
     token?: string; password?: string; action?: string; preview?: boolean;
     step_key?: string; fields?: Record<string, unknown>; done?: boolean;
-    choice?: string; // work_consent: 'accept' | 'wait14'
+    choice?: string; // work_consent: tylko 'accept' (inne → 400)
     events?: Array<{ action?: string; description?: string; product_id?: string }>;
     // CENY 3.2 — akcja set_client_cost
     product_id?: string; amount?: number | null; is_net?: boolean; source?: string; note?: string;
@@ -691,37 +692,21 @@ Deno.serve(async (req: Request) => {
   }
 
   // ════════════════════════ WORK_CONSENT (bramka zgody konsumenckiej) ═══════
-  // Dwie DOBROWOLNE ścieżki (dowód swobody decyzji — konsultacja prawna):
-  //   choice='accept' → żądanie rozpoczęcia prac przed upływem 14 dni (work_consent_at=now,
-  //                     source='portal') + mail potwierdzający (trwały nośnik).
-  //   choice='wait14' → klient woli poczekać do upływu terminu (work_consent_at ZOSTAJE NULL,
-  //                     source='wait14' → bramka się nie powtarza; prace ruszą po 14 dniach).
-  // Wzorzec set_password: atomowy UPDATE tylko gdy jeszcze bez decyzji (idempotentne).
+  // Jedyna decyzja: choice='accept' (albo brak choice) = żądanie rozpoczęcia prac przed upływem
+  // 14-dniowego terminu odstąpienia (work_consent_at=now, source='portal') + mail potwierdzający
+  // (trwały nośnik). Alternatywa „poczekać" NIE jest odrębną akcją (decyzja Tomka 21.07): kto nie
+  // potwierdzi — ruszamy po upływie terminu (regulamin); okno kontroluje needs_work_consent.
+  // Jawne choice≠'accept' → 400. Wzorzec set_password: atomowy UPDATE tylko gdy NULL (idempotentne).
   // Dowody (art. 21 ust. 2): IP (pierwszy wpis x-forwarded-for — kolejne = infra) + user-agent → meta.
   if (action === "work_consent") {
     if (readonly) return json({ error: "preview_readonly" }, 403); // podgląd admina = readonly
-    const choice = body.choice === "wait14" ? "wait14" : "accept";
+    if (body.choice && body.choice !== "accept") {
+      return json({ error: "bad_choice", message: "Dozwolone tylko choice='accept'. Brak potwierdzenia = start po upływie 14 dni (regulamin)." }, 400);
+    }
     const xff = req.headers.get("x-forwarded-for") || "";
     const ip = (xff.split(",")[0] || "").trim() || null;   // pierwszy = klient; kolejne = infra
     const ua = (req.headers.get("user-agent") || "").slice(0, 300) || null;
 
-    if (choice === "wait14") {
-      const { data: updated, error: upErr } = await sb
-        .from("wf2_projects")
-        .update({ work_consent_source: "wait14", work_consent_version: CONSENT_VERSION })
-        .eq("id", p.id).is("work_consent_at", null).is("work_consent_source", null).select("id");
-      if (upErr) return json({ error: "save_failed" }, 500);
-      if (Array.isArray(updated) && updated.length > 0) {
-        await sb.from("wf2_activities").insert({
-          project_id: p.id, actor: "client", action: "work_consent_wait",
-          description: `Klient wybrał rozpoczęcie prac PO upływie 14-dniowego terminu odstąpienia (wersja ${CONSENT_VERSION}).`,
-          meta: { ip, ua, choice: "wait14", version: CONSENT_VERSION },
-        });
-      }
-      return json({ ok: true, choice: "wait14" });
-    }
-
-    // choice === 'accept'
     const nowIso = new Date().toISOString();
     const { data: updated, error: upErr } = await sb
       .from("wf2_projects")
@@ -957,26 +942,26 @@ Deno.serve(async (req: Request) => {
     if (connect_url || connected) leadsie = { connect_url, connected };
   }
 
-  // BRAMKA ZGODY: pełnoekranowy ekran zgody, gdy klient jeszcze nie podjął decyzji
-  // (ani 'accept' → work_consent_at, ani 'wait14' → source). W podglądzie admina ZAWSZE
-  // false. work_consent_prompt = single-source treści (front nie dubluje CONSENT_TEXT).
-  // work_consent.start_after (tylko wait14): utworzenie projektu + 15 dni = po upływie terminu.
-  const needs_work_consent = !readonly && !p.work_consent_at && !p.work_consent_source;
-  let wcStartAfter: string | null = null;
-  if (p.work_consent_source === "wait14" && !p.work_consent_at && p.created_at) {
+  // BRAMKA ZGODY: pełnoekranowy ekran zgody, gdy klient nie potwierdził (work_consent_at IS NULL)
+  // I okno odstąpienia jeszcze biegnie (now < created_at + 15 dni = 14 dni + doba buforu). Po 15.
+  // dniu od utworzenia projektu (= zawarcia Umowy Głównej) okno minęło — bramka bezprzedmiotowa,
+  // portal wpuszcza bez pytania. Rekordy source='wait14' (tylko testy) mają work_consent_at NULL →
+  // traktowane jak brak zgody (wpadają w warunek okna). W podglądzie admina ZAWSZE false.
+  // work_consent_prompt = single-source treści (front nie dubluje CONSENT_TEXT).
+  let workStartAfter: string | null = null;
+  if (p.created_at) {
     const t = new Date(p.created_at).getTime();
-    if (Number.isFinite(t)) wcStartAfter = new Date(t + 15 * 24 * 3600 * 1000).toISOString();
+    if (Number.isFinite(t)) workStartAfter = new Date(t + 15 * 24 * 3600 * 1000).toISOString();
   }
+  const windowOpen = !!workStartAfter && Date.now() < new Date(workStartAfter).getTime();
+  const needs_work_consent = !readonly && !p.work_consent_at && windowOpen;
 
   return json({
     mode: readonly ? "preview" : "client",
     needs_work_consent,
     work_consent_prompt: { version: CONSENT_VERSION, text: CONSENT_TEXT, regulamin_url: REGULAMIN_URL },
-    work_consent: {
-      granted: !!p.work_consent_at,
-      source: p.work_consent_source || null,
-      start_after: wcStartAfter,
-    },
+    // brak zgody → data, od której prace ruszą bez potwierdzenia (koniec okna odstąpienia)
+    work_start_after: p.work_consent_at ? null : workStartAfter,
     merchant_panel,
     leadsie,
     project: {
