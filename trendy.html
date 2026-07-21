@@ -198,6 +198,12 @@
   .autoWarn b{font-size:10px;letter-spacing:.05em}
   .fchip .autoN{margin-left:5px;padding:1px 4px;border-radius:3px;font-size:9px;
     background:rgba(245,166,35,.16);color:#f5a623}
+  .autoWarn.bad{border-color:rgba(229,72,77,.45);background:rgba(229,72,77,.09);color:#e5484d}
+  .autoOk{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px;padding:6px 10px;
+    border:1px solid rgba(69,165,87,.3);background:rgba(69,165,87,.07);border-radius:8px;
+    font-size:11px;color:#45a557;cursor:help}
+  .autoOk b{font-size:10px;letter-spacing:.05em}
+  .autoOk span{color:var(--dim);font-size:10.5px}
   .autoWarn span{color:var(--dim);font-size:10.5px}
   .vtile .vthph svg{width:15px;height:15px}
   .vtile .vcap{font-size:8.5px;color:var(--dim);padding:3px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
@@ -1079,10 +1085,21 @@ function metricsHtml(x){
   // sprzedaży, a powstały z dopasowania TYTUŁU do zapytania — nikt tego produktu nie oglądał.
   // Wycofanie i zatwierdzanie: docs/zbuduje/AUTO-MATCH-SHOP.md
   const am=shop&&shop.auto_match;
-  const autoBar=(am&&am.is_auto)?`<div class="autoWarn" title="${esc('zapytanie: '+(am.query||'')+'\ndopasowany tytuł: '+(am.picked_title||'')+'\n'+((am.candidates||[]).length)+' innych kandydatów w danych')}">
-    ${I.warn||'⚠'} <b>SKLEP DOPASOWANY AUTOMATEM</b>
-    <span>zgodność tytułu ${am.score!=null?Math.round(am.score*100)+'%':'—'} · niepotwierdzone · dane sprzedaży traktuj ostrożnie</span>
-  </div>`:'';
+  const vis=am&&am.vision;
+  let autoBar='';
+  if(am&&am.is_auto){
+    // Werdykt oczu ważniejszy niż zgodność tytułu: 'NIE' = dane sprzedaży są CUDZE.
+    const zle=vis&&vis.verdict==='NIE';
+    const tyt=zle?'OCZY: TO INNY PRODUKT':(vis?'SKLEP NIEPOTWIERDZONY':'SKLEP DOPASOWANY AUTOMATEM');
+    const opis=vis
+      ? `${esc(vis.verdict)} · pewność ${Math.round((vis.confidence||0)*100)}% · ${esc(vis.reason||'')}`
+      : `zgodność tytułu ${am.score!=null?Math.round(am.score*100)+'%':'—'} · niesprawdzone wizualnie`;
+    autoBar=`<div class="autoWarn${zle?' bad':''}" title="${esc('zapytanie: '+(am.query||'')+'\ndopasowany tytuł: '+(am.picked_title||'')+'\n'+((am.candidates||[]).length)+' innych kandydatów w danych')}">
+      ${zle?'⛔':(I.warn||'⚠')} <b>${tyt}</b><span>${opis}</span>
+    </div>`;
+  } else if(vis&&am&&am.confirmed_by==='vision'){
+    autoBar=`<div class="autoOk" title="${esc(vis.reason||'')}">✓ <b>SKLEP POTWIERDZONY WIZUALNIE</b><span>pewność ${Math.round((vis.confidence||0)*100)}% · dopasowany automatem, zaakceptowany po oględzinach</span></div>`;
+  }
   return `${autoBar}<div class="detMetrics">${items.join('')}</div>`;
 }
 function mediaHtml(x,vid){

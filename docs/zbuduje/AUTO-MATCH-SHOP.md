@@ -100,6 +100,45 @@ where tt_shop->'auto_match'->>'is_auto' = 'true'
   and cover like '%/storage/v1/%';
 ```
 
+## Warstwa 2 — weryfikacja wizualna (decyzja Tomka 21.07: „blisko 100% → zatwierdzaj")
+
+`bud-img-verify {op:'verify_shop_match', limit?:25, minConf?:0.9, dryRun?}` porównuje
+**packshot z TikTok Shop** ze **zdjęciami aukcji z `ali_snapshot`** + nazwą PL. To łapie
+dokładnie to, czego tekst nie umie: „karmnik dla psa" ze `score = 1.0` okazał się
+**podstawką pod karmnik** kontra kompletny karmnik z kamerą (werdykt NIE, pewność 0.99).
+
+- `TAK` i `confidence ≥ minConf` → `auto_match.is_auto = false`, `confirmed_by = 'vision'`,
+  `tt_shop.source = 'vision_confirmed'` — **zatwierdzone automatycznie**
+- cokolwiek innego → zostaje `is_auto = true` + zapisany `auto_match.vision`
+
+Model ma instrukcję: **przy wątpliwości odpowiadaj NIEPEWNE, nie zgaduj**. Lepiej zostawić
+do przeglądu niż zatwierdzić błąd. Funkcja pomija rekordy, które mają już `vision` — ponowne
+uruchomienie nie płaci drugi raz. Koszt idzie do `bud_usage` (`kind='img-verify'`).
+
+**Ważne dla wycofania:** `auto_match.by` NIE znika przy zatwierdzeniu. Rollback po
+`is_auto = 'true'` obejmuje tylko niezatwierdzone; żeby cofnąć **wszystko**, czego dotknął
+automat (łącznie z potwierdzonym wizualnie), filtruj po:
+
+```sql
+where tt_shop->'auto_match'->>'by' = 'bud-shop-radar/match_existing'
+```
+
+Przegląd werdyktów:
+
+```sql
+select key, pl_name,
+       tt_shop->'auto_match'->'vision'->>'verdict'    as werdykt,
+       tt_shop->'auto_match'->'vision'->>'confidence' as pewnosc,
+       tt_shop->'auto_match'->'vision'->>'reason'     as powod
+from bud_tt_products
+where tt_shop->'auto_match'->'vision' is not null
+order by (tt_shop->'auto_match'->'vision'->>'verdict'),
+         (tt_shop->'auto_match'->'vision'->>'confidence')::numeric desc;
+```
+
+Werdykt `NIE` = w rekordzie siedzą **cudze** dane sprzedaży. To kandydaci do rollbacku
+w pierwszej kolejności, nie do przeglądu „kiedyś".
+
 ## Gotcha przy ponownym uruchomieniu
 
 Rekord, którego nie da się dopasować (`brak_wynikow`), zostaje z `tt_shop = null`, więc

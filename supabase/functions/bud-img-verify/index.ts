@@ -54,6 +54,47 @@ async function gptMatches(frame: string, name: string, q: string, cands: any[], 
   }
 }
 
+// Weryfikacja AUTO-dopasowania TikTok Shop: czy produkt ze sklepu to ta sama rzecz,
+// co aukcja, którą realnie sprzedajemy. Dopasowanie po tytule (match_existing) daje
+// score=1 także dla „karmnik dla PSA" → „Cat Feeder" — tego tekst nie odróżni, oczy tak.
+// deno-lint-ignore no-explicit-any
+async function gptShopMatch(name: string, q: string, refImgs: string[], shopImg: string, shopTitle: string, acc?: { i: number; c: number; o: number }): Promise<any | null> {
+  // deno-lint-ignore no-explicit-any
+  const content: any[] = [
+    { type: "text", text: `Sprawdzamy, czy produkt znaleziony w TikTok Shop to TEN SAM produkt, co nasza aukcja.\nNAZWA (PL): "${name}"${q ? `\nZAPYTANIE (EN): "${q}"` : ""}\n\nODNIESIENIE — zdjęcia aukcji, którą realnie sprzedajemy:` },
+  ];
+  refImgs.slice(0, 3).forEach((u) => content.push({ type: "image_url", image_url: { url: normImg(u) } }));
+  content.push({ type: "text", text: `KANDYDAT z TikTok Shop — tytuł: "${(shopTitle || "").slice(0, 140)}"` });
+  content.push({ type: "image_url", image_url: { url: shopImg } });
+  content.push({
+    type: "text",
+    text: `Czy KANDYDAT to ten sam produkt co ODNIESIENIE (ten sam typ rzeczy i ta sama funkcja)?
+Inny kolor, wariant, marka czy opakowanie = nadal TAK.
+BĄDŹ RYGORYSTYCZNY — odpowiedz NIE, gdy:
+- to inna kategoria rzeczy (akcesorium zamiast urządzenia, część zamiast kompletu),
+- produkt jest dla innego odbiorcy niż mówi NAZWA (nazwa „dla psa", kandydat to sprzęt dla kota),
+- kandydat to dodatek/etui/zestaw DO produktu, a nie sam produkt.
+Gdy masz jakąkolwiek wątpliwość — odpowiedz NIEPEWNE. NIE zgaduj: lepiej NIEPEWNE niż błędne TAK.
+Zwróć JSON: {"verdict":"TAK"|"NIE"|"NIEPEWNE","confidence":0..1,"reason":"jedno zdanie po polsku"}`,
+  });
+  try {
+    const res = await openaiFetchRetry("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { authorization: `Bearer ${OPENAI_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify({ model: MODEL, reasoning_effort: "low", response_format: { type: "json_object" }, messages: [{ role: "user", content }] }),
+    }, "img-verify-shop");
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (acc && j?.usage) { acc.i += j.usage.prompt_tokens || 0; acc.c += j.usage.prompt_tokens_details?.cached_tokens || 0; acc.o += j.usage.completion_tokens || 0; }
+    const o = JSON.parse(j.choices[0].message.content);
+    const v = String(o?.verdict || "").toUpperCase();
+    if (!["TAK", "NIE", "NIEPEWNE"].includes(v)) return null;
+    return { verdict: v, confidence: Math.max(0, Math.min(1, Number(o?.confidence) || 0)), reason: String(o?.reason || "").slice(0, 240) };
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return new Response("method", { status: 405, headers: cors });
@@ -62,6 +103,57 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "wymagane_logowanie_admin" }), { status: 403, headers: { ...cors, "content-type": "application/json" } });
 
   const body = await req.json().catch(() => ({}));
+
+  // ── VERIFY_SHOP_MATCH: obejrzyj AUTO-dopasowane sklepy i zatwierdź tylko pewniaki ──
+  // Porównuje packshot z TikTok Shop ze zdjęciami aukcji (ali_snapshot) + nazwą PL.
+  //   TAK + confidence ≥ minConf (domyślnie 0.9) → auto_match.is_auto = false (zatwierdzone)
+  //   cokolwiek innego                          → zostaje is_auto = true + zapisany werdykt
+  // `auto_match.by` NIE znika przy zatwierdzeniu — to trwały ślad pochodzenia, więc nawet
+  // zatwierdzone da się później odnaleźć i wycofać. Patrz docs/zbuduje/AUTO-MATCH-SHOP.md
+  if (body.op === "verify_shop_match") {
+    const limit = Math.min(Math.max(Number(body.limit ?? 25), 1), 100);
+    const minConf = Number(body.minConf ?? 0.9);
+    const dryRun = !!body.dryRun;
+    const { data: rows, error } = await supabase.from("bud_tt_products")
+      .select("id,key,pl_name,query,tt_shop,ali_snapshot")
+      .filter("tt_shop->auto_match->>is_auto", "eq", "true")
+      .order("key").limit(limit);
+    if (error) return new Response(JSON.stringify({ error: "db_read", detail: String(error.message).slice(0, 200) }), { status: 500, headers: { ...cors, "content-type": "application/json" } });
+
+    const acc = { i: 0, c: 0, o: 0 };
+    // deno-lint-ignore no-explicit-any
+    const out: any[] = [];
+    let potwierdzone = 0, doPrzegladu = 0;
+
+    for (const r of (rows || [])) {
+      // deno-lint-ignore no-explicit-any
+      const ts: any = r.tt_shop || {};
+      if (ts?.auto_match?.vision) continue;                       // już obejrzane — nie płacimy 2×
+      const shopImg = (ts.images_hosted || [])[0] || (ts.images || [])[0] || "";
+      const refs = ((r.ali_snapshot || {}).images || []).filter(Boolean);
+      if (!shopImg || !refs.length) { out.push({ key: r.key, skip: "brak_material" }); continue; }
+
+      const v = await gptShopMatch(String(r.pl_name || r.key), String(r.query || ""), refs, shopImg, String(ts.title || ""), acc);
+      if (!v) { out.push({ key: r.key, skip: "vision_blad" }); continue; }
+
+      const pewne = v.verdict === "TAK" && v.confidence >= minConf;
+      if (dryRun) { out.push({ key: r.key, ...v, potwierdzi: pewne }); continue; }
+
+      const am = { ...(ts.auto_match || {}), vision: { ...v, at: new Date().toISOString(), min_conf: minConf } };
+      if (pewne) { am.is_auto = false; am.confirmed_by = "vision"; potwierdzone++; } else doPrzegladu++;
+      const { error: uErr } = await supabase.from("bud_tt_products")
+        .update({ tt_shop: { ...ts, auto_match: am, source: pewne ? "vision_confirmed" : ts.source } })
+        .eq("id", r.id);
+      out.push(uErr ? { key: r.key, err: String(uErr.message).slice(0, 120) } : { key: r.key, ...v, potwierdzone: pewne });
+    }
+
+    if (acc.i || acc.o) {
+      const cost = (acc.i - acc.c) / 1e6 * 1.25 + acc.c / 1e6 * 0.125 + acc.o / 1e6 * 10;
+      await supabase.from("bud_usage").insert({ session_id: null, kind: "img-verify", model: MODEL, input_tokens: acc.i, cached_tokens: acc.c, output_tokens: acc.o, cost_usd: cost, meta: { from: "verify_shop_match", n: out.length } });
+    }
+    return new Response(JSON.stringify({ op: "verify_shop_match", sprawdzone: out.length, potwierdzone, doPrzegladu, minConf, dryRun, wyniki: out }), { headers: { ...cors, "content-type": "application/json" } });
+  }
+
   const frame: string = body.frame_url || "";
   const name: string = body.name || "";
   const q: string = body.q || body.query || "";
