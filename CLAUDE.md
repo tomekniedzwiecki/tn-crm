@@ -64,21 +64,35 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   `kalkulacja` wykonuje fabryka: `panel-sync.py kalkulacja` — potwierdza żywą cenę zakupu
   i ustala cenę STARTOWĄ; od v3.1 drabinka w kalkulacji = tylko zapis ceny startowej,
   NIE plan trajektorii).
-- **CENY 3.0 (21.07; SSOT `docs/zbuduje/CENNIK-PLAN.md` v3.1):** życie ceny PO starcie
+- **CENY 3.0 (21.07; SSOT `docs/zbuduje/CENNIK-PLAN.md` v3.2):** życie ceny PO starcie
   sprzedaży prowadzi **silnik `wf2-price-engine`** (edge, cron `*/10` — sweep co 10 min,
-  decyzje 1×/dzień po `decision_hour`; migracja `20260721d_wf2_ceny3`, aplikacja:
-  `node scripts/apply-wf2-ceny3.mjs`). Reżimy `price_phase` 1–6 (START/RAMP/BASE/PROBE/
-  HARVEST/LOCKED), cele liczone NA BIEŻĄCO (nie z `price_ladder.rungs` — zdeprecjonowane).
+  decyzje 1×/dzień po `decision_hour`; migracje `20260721d_wf2_ceny3` + `20260722_wf2_ceny32`,
+  aplikacja: `node scripts/apply-wf2-ceny3.mjs` / `apply-wf2-ceny32.mjs`). Reżimy
+  `price_phase` 1–6 (START/RAMP/BASE/PROBE/HARVEST/LOCKED), cele liczone NA BIEŻĄCO
+  (nie z `price_ladder.rungs` — zdeprecjonowane).
   Autonomia: globalnie `settings.wf2_price_config` (**FAIL-CLOSED**: `engine_enabled`,
-  `dry_run`, `config_version='3.1'` — silnik czyta TYLKO klucze kanoniczne v3.1) + per
+  `dry_run`, `config_version='3.2'` — silnik czyta TYLKO klucze kanoniczne) + per
   produkt `pricing_autonomy` (auto/propose/off) + `landing_price_contract` (auto-wykonanie
-  TYLKO 'hydrated'). Sekwencje kierunkowe: podwyżka = DB→`platform_apply_after`
-  (+cache_grace)→sweep: `set_price`→`verify_price` (nowa akcja wf2-platform)→confirmed;
+  TYLKO 'hydrated'). **TWARDY PRÓG `hard_min_orders 5`**: poniżej 5 zamówień
+  opłaconych-lub-COD na produkcie silnik nie wykonuje ŻADNEJ akcji cenowej ani nie
+  tworzy kart (wyjątek: obrona — collapse/DQ). **Marże liczone NETTO** (§2g SSOT):
+  dropship Ali = koszt brutto nieodliczalny + cło ryczałt 13 zł/szt. (reforma UE od
+  1.07.2026); hurt = netto z VAT odliczalnym; cena zakupu podana przez klienta w portalu
+  (sanity band 0.4–1.6×) NADPISUJE cost_purchase w effective_cost, poza pasmem = karta
+  `client_cost_review`. ⚠️ pasmo narzutu testowego 10–15% = ujemny zysk netto
+  (breakeven ≈ 40% narzutu) — świadome; silnik winduje do rentowności po potwierdzeniu
+  popytu. Sekwencje kierunkowe: podwyżka = DB→`platform_apply_after`
+  (+cache_grace)→sweep: `set_price`→`verify_price` (akcja wf2-platform)→confirmed;
   obniżka = kasa PIERWSZA. Atomic claim na `price_phase`+`price_state='ok'`; runy w
   `wf2_engine_runs` (UNIQUE aktywny run; `decisions` jsonb = log per produkt). Panel
   `tn-sklepy/ceny.html` = centrum dowodzenia (karty Do decyzji DZIAŁAJĄCE — akcept
-  wykonuje silnik w ≤10 min; wykres SVG; log automatu; sterowanie autonomią). Bez
-  `WF2_META_TOKEN` silnik w trybie no-ads = propose-only (karty po ≥5 zam./30 dni).
+  wykonuje silnik w ≤10 min; wykres SVG; log automatu; sterowanie autonomią; sekcja
+  „Koszty i potencjał" z prognozą hurtu). Portal klienta `tn-sklepy/portal.html` =
+  sekcja „Wasze ceny i zyski" (rozbicie marży netto, potencjał hurtowy, pole ceny
+  zakupu klienta; ZERO żargonu, `reason_pl` NIGDY do klienta). Silnik zwalidowany
+  symulacją Monte Carlo (`docs/zbuduje/assets/sim-engine-v3.py`, wyniki
+  SIM-ENGINE-V3-WYNIKI.md) — poprawki S1–S9 w SSOT. Bez `WF2_META_TOKEN` silnik
+  w trybie no-ads = propose-only.
   ⛔ Warunki zdjęcia `dry_run` = checklista w SSOT §9 (m.in. weryfikacja COD `is_paid`
   na żywych danych, kontrakt landingu, notify wspólnika, WF2_META_TOKEN). Portfel: cel **3 produkty** (decyzja Tomka
   19.07, wcześniej 5 — mniej produkcji, ~165 zł testu/produkt), dobór = **PRAWDZIWE losowanie**
