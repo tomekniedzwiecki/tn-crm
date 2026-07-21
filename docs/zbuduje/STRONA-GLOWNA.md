@@ -180,8 +180,10 @@ brandowa intro) = wyjątek świadomie uzasadniony w nocie kroku, nadal w limicie
 5. **GEO-grzechy** — zmyślony aggregateRating, ton promocyjny, fakty tylko w JS,
    zapomniany noindex na starterze / niezdjęty na domenie.
 6. **Utrata idempotencji** — ręczne tweaki w index.html; edycje = template lub baza.
-7. **Cache Trevio** — PUT na istniejącej ścieżce propaguje się >10 min; weryfikację treści
-   po re-publish robić z tego świadomością (bytes z odpowiedzi = prawda).
+7. **Cache Trevio (domena custom)** — starter świeży od razu, domena custom trzyma snapshot
+   >2h po PUT. **Flush = `unpublish` → `publish`** na tej samej ścieżce (propagacja do ~2 min;
+   dla home path:"" w oknie flushu platforma chwilowo pokazuje default). Po każdym re-publish
+   na domenie custom — flush. Szczegóły: platforma-api/README „CACHE DOMENY CUSTOM".
 
 ## CHANGELOG
 

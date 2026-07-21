@@ -144,6 +144,14 @@ order_detail{order_id} · order_attribution{order_id} · set_price{product_id,va
 Retry na 429 (Retry-After) wbudowany. Cena na landingu: publiczny edge **`wf2-landing-api`**
 (GET ?product=<wf2_products.id> → {price, checkout_url}; cache 5 min; DB = źródło prawdy).
 
+**⚠️ CACHE DOMENY CUSTOM (empirycznie 21.07, trafionek.pl):** subdomena starter serwuje
+świeży HTML od razu po PUT; **domena custom trzyma snapshot per host >2h** (query-param
+z MISS też daje starą wersję — cache origin Trevio, nie edge). **FLUSH = `unpublish` →
+`publish` na tej samej ścieżce** (propagacja kilka sekund–2 min; działa też dla home
+path:"" — w oknie flushu platforma chwilowo pokazuje swój default). Po każdym re-publish
+na domenie custom rób flush albo licz się z wielogodzinnym opóźnieniem. DO ADRIANA:
+revalidate przy PUT.
+
 **⚠️ REGUŁA ZMIANY CENY (test→scale, audyt 19.07):** hydratacja runtime nadpisuje TYLKO
 widoczny DOM (`data-price`). Zapieczone w HTML zostają: `<title>`, meta/OG description
 i **JSON-LD `"price"`** — a to czytają boty bez JS (wymóg GEO: cena feed↔strona 1:1).
