@@ -135,6 +135,17 @@ kontraktów fan-out = tory zgadują interfejsy = konflikty i poprawki (drożej n
    przegląd E5 (holistyczny — patrzy na CAŁOŚĆ, więc po scaleniu wszystkich torów) → demo klienta →
    start. Również: moduły rdzenia między sobą (S4a→S4b→…) i wszystko, co dotyka płatności realnych.
 7. **Tor = pełny rytuał §3 poza BUILDLOG-iem/pushem** (dowody, commity per faza, czas ścienny w zwrocie).
+8. **Runbook uruchamiania suity (lekcja L-048 — port-squat).** PRZED `npx playwright test` na serwerze
+   lokalnym: zabij obce listenery na porcie testowym (np. `5500`) i zweryfikuj, że serwer robi cleanUrls
+   (`/auth`→200 z formularzem logowania, nie 404). Leftover `python -m http.server 5500` (bez cleanUrls)
+   SQUATUJE port → cała suita fałszywie czerwona (Sygno: 8 „failed" na brakujących formularzach — nie
+   regres kodu, tylko zły serwer). Sygnatura: masowe FAIL-e na „element/form nie istnieje", a nie na logice.
+9. **Orkiestracja współbieżna (lekcja L-049 — subagent NIE czeka na notyfikację).** Subagent kończy turę =
+   wraca do rodzica; NIE ma pętli „poczekaj aż X" (czekanie = TaskOutput blokująco). Pracę współbieżną
+   (weryfikacja live w przeglądarce, hałaśliwy przegląd) odpalaj jako subagenta W TLE i KONTYNUUJ własne
+   kroki niezależne (audyt Management API, retro) — zbierzesz wynik z notyfikacji o zakończeniu. Nie zlecaj
+   subagentowi „poczekaj/dopilnuj/odezwij się później". Walidacja E5 Sygno: live-verify (visual-verify) w tle
+   + audyt bazy równolegle w orkiestratorze.
 
 ## 3. Rytuał każdej sesji budowlanej
 
