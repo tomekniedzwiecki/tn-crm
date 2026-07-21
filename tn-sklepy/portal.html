@@ -233,6 +233,25 @@
         .auth-btn { width:100%; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
         .auth-foot { margin-top:26px; color:#6b6b74; font-size:12px; display:flex; align-items:center; gap:7px; justify-content:center; text-align:center; }
         #loading.skel { min-height:70dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        /* ── bramka zgody na rozpoczęcie prac ── */
+        .consent-card { max-width:480px; }
+        .consent-check { display:flex; gap:12px; align-items:flex-start; cursor:pointer; background:#0d0d0d; border:1px solid #222226; border-radius:11px; padding:15px 16px; margin:4px 0 2px; transition:border-color .15s, background .15s; }
+        .consent-check:hover { border-color:#2f2f36; }
+        .consent-check.on { border-color:#45a557; background:rgba(69,165,87,.06); }
+        .consent-check input { position:absolute; opacity:0; width:0; height:0; }
+        .consent-box { flex-shrink:0; width:22px; height:22px; border-radius:6px; border:1.5px solid #3a3a42; background:#0a0a0a; display:flex; align-items:center; justify-content:center; color:transparent; font-size:13px; margin-top:1px; transition:all .15s; }
+        .consent-check.on .consent-box { background:#45a557; border-color:#45a557; color:#fff; }
+        .consent-txt { color:#c7c7cd; font-size:12.5px; line-height:1.62; }
+        .consent-btn { margin-top:14px; background:#45a557; color:#fff; }
+        .consent-btn:hover:not(:disabled) { background:#3f9a4f; }
+        .consent-more { margin-top:16px; }
+        .consent-more summary { color:#8b8b94; font-size:12.5px; cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:6px; user-select:none; }
+        .consent-more summary::-webkit-details-marker { display:none; }
+        .consent-more summary i { transition:transform .15s; font-size:12px; }
+        .consent-more[open] summary i { transform:rotate(90deg); }
+        .consent-more-body { color:#8b8b94; font-size:12.5px; line-height:1.65; margin-top:9px; padding-left:2px; }
+        .consent-more-body a { color:#52a8ff; text-decoration:none; margin-left:2px; white-space:nowrap; }
+        .consent-more-body a:hover { text-decoration:underline; }
     </style>
 </head>
 <body>
@@ -265,6 +284,27 @@
             <button class="btn auth-btn" onclick="setPassword()">Ustaw hasło i wejdź <i class="ph ph-arrow-right"></i></button>
         </div>
         <div class="auth-foot"><i class="ph ph-lock-simple"></i> Hasło znasz tylko Ty — zapisz je w bezpiecznym miejscu</div>
+    </div>
+
+    <!-- Bramka zgody na rozpoczęcie prac (przed treścią portalu) -->
+    <div id="consent" class="auth hidden">
+        <div class="auth-card consent-card">
+            <div class="auth-logo" data-authlogo>·</div>
+            <div class="auth-t">Zanim ruszymy z budową</div>
+            <div class="auth-s">Nie czekamy 14 dni — chcę zacząć od razu. Żeby ruszyć przed upływem terminu odstąpienia od umowy, potrzebuję Twojej zgody.</div>
+            <label class="consent-check" id="consent-check-wrap">
+                <input type="checkbox" id="consent-cb" onchange="onConsentToggle()">
+                <span class="consent-box"><i class="ph ph-check"></i></span>
+                <span class="consent-txt" id="consent-txt">…</span>
+            </label>
+            <div id="consent-err" class="err" style="margin:8px 0 2px;text-align:center"></div>
+            <button class="btn auth-btn consent-btn" id="consent-btn" onclick="submitConsent()" disabled>Zaczynamy — ruszajcie z pracami <i class="ph ph-arrow-right"></i></button>
+            <details class="consent-more">
+                <summary><i class="ph ph-caret-right"></i> Co to dla mnie znaczy?</summary>
+                <div class="consent-more-body">Bez tej zgody nie możemy rozpocząć prac — Twój projekt czeka, a Ty w każdej chwili możesz odstąpić od umowy i odzyskać całą wpłatę. <a id="consent-reg-link" href="https://tomekniedzwiecki.pl/sklep/regulamin/" target="_blank" rel="noopener">Regulamin →</a></div>
+            </details>
+        </div>
+        <div class="auth-foot"><i class="ph ph-shield-check"></i> Zgoda jest dobrowolna — składasz ją tylko, jeśli chcesz, byśmy zaczęli już teraz</div>
     </div>
 
     <!-- Brak tokenu -->
@@ -428,7 +468,7 @@
     const trackedMedia = new Set();
     let visitTracked = false;
 
-    function show(id) { ['login','setpw','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id)); }
+    function show(id) { ['login','setpw','consent','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id)); }
     function authHeaders() { const h = { 'Content-Type': 'application/json' }; if (previewMode && adminJwt) h['Authorization'] = 'Bearer ' + adminJwt; return h; }
     async function api(body) {
         const r = await fetch(FN_URL, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body || {}) });
@@ -451,10 +491,10 @@
         // filtruje def+instancję poza preview (PREVIEW_ONLY_STEPS). Research i decyzje:
         // docs/zbuduje/FIRMA-KLIENTA.md. Zero doradztwa podatkowego — decyzje z księgowym.
         firma: {
-            desc: 'Zakładasz własną firmę — poprowadzę Cię za rękę. Rejestracja jest bezpłatna, w całości online i zajmuje ok. 15 minut.',
-            why: 'Firma otwiera Ci wszystko: wypłaty z zamówień na Twoje konto, faktury, dostęp do hurtowni i skalowanie bez limitów. Rejestracja kosztuje 0 zł, a przez pierwsze pół roku płacisz tylko ok. 433 zł miesięcznie (samą składkę zdrowotną) — państwo zwalnia nowe firmy z reszty składek.',
+            desc: 'Środowisko reklamowe masz gotowe — został ostatni fundament przed startem sprzedaży: Twoja własna firma. Poprowadzę Cię za rękę, rejestracja jest bezpłatna i zajmuje ok. 15 minut.',
+            why: 'Sklep i kampanie są gotowe — firma domyka całość: wypłaty z zamówień na Twoje konto, faktury, dostęp do hurtowni i skalowanie bez limitów. Rejestracja kosztuje 0 zł, a przez pierwsze pół roku płacisz tylko ok. 433 zł miesięcznie (samą składkę zdrowotną) — państwo zwalnia nowe firmy z reszty składek.',
             time: 'ok. 15–40 min',
-            guide: `<p><b>Spokojnie — to prostsze, niż brzmi.</b> Firmę zakłada się dziś w całości przez internet, za darmo, w kwadrans. Wszystko masz tu przygotowane, a na końcu Ty tylko podpisujesz wniosek swoim Profilem Zaufanym. Nikt nie może zrobić tego za Ciebie — i dobrze, bo od pierwszego dnia wszystko należy do Ciebie i masz pełną kontrolę.</p>
+            guide: `<p><b>Wszystko po Twojej stronie jest już skonfigurowane — zostało domknięcie formalności, żeby pieniądze ze sprzedaży mogły trafiać do Ciebie.</b> Spokojnie, to prostsze, niż brzmi: firmę zakłada się dziś w całości przez internet, za darmo, w kwadrans. Wszystko masz tu przygotowane, a na końcu Ty tylko podpisujesz wniosek swoim Profilem Zaufanym. Nikt nie może zrobić tego za Ciebie — i dobrze, bo od pierwszego dnia wszystko należy do Ciebie i masz pełną kontrolę.</p>
                 <p style="margin-top:12px"><b>Krok 1 — przygotuj się (5 minut)</b></p>
                 <ol>
                 <li>Załóż <b>Profil Zaufany</b>, jeśli jeszcze nie masz — najszybciej przez swój bank na <a href="https://www.gov.pl/web/profilzaufany" target="_blank" rel="noopener" onclick="track('link_click','profil zaufany')">gov.pl/web/profilzaufany</a>. To Twój bezpieczny podpis w sprawach urzędowych.</li>
@@ -630,11 +670,51 @@
         }
         buildState(r.json);
         renderAll();
+        // BRAMKA ZGODY: prace nie ruszają bez żądania klienta — pełnoekranowy ekran przed
+        // treścią portalu. Podgląd admina (previewMode) NIGDY nie widzi bramki (edge zwraca
+        // needs_work_consent=false w trybie preview).
+        if (!previewMode && r.json.needs_work_consent) {
+            buildConsent(r.json.work_consent_prompt || {});
+            show('consent');
+            return;
+        }
+        enterPortal();
+    }
+    // wejście do treści portalu — wspólny ogon: po logowaniu ALBO po złożeniu zgody (bez re-logowania)
+    function enterPortal() {
         show('content');
         if (previewMode) $('preview-banner').classList.remove('hidden');
         // deep-link #…v=zadania → od razu ekran zadań
         if (tasksHashOn()) { syncTasksView(); tasksScreenTracked = true; track('open_step', 'Twoje zadania'); }
         trackVisit();
+    }
+    // ── Bramka zgody na rozpoczęcie prac ──────────────────────────────────────
+    function buildConsent(prompt) {
+        $('consent-txt').textContent = (prompt && prompt.text) ? prompt.text : '';
+        if (prompt && prompt.regulamin_url) $('consent-reg-link').href = prompt.regulamin_url;
+        $('consent-cb').checked = false;
+        $('consent-check-wrap').classList.remove('on');
+        $('consent-btn').disabled = true;
+        $('consent-err').textContent = '';
+    }
+    function onConsentToggle() {
+        const on = $('consent-cb').checked;
+        $('consent-check-wrap').classList.toggle('on', on);
+        $('consent-btn').disabled = !on;
+    }
+    async function submitConsent() {
+        if (!$('consent-cb').checked) return;
+        const btn = $('consent-btn');
+        btn.disabled = true; $('consent-err').textContent = '';
+        try {
+            const r = await api({ token, password: currentPw, action: 'work_consent' });
+            if (r.status === 401 || r.status === 403) {
+                try { sessionStorage.removeItem(PW_KEY); } catch (e) {}
+                currentPw = ''; $('login-err').textContent = 'Sesja wygasła — zaloguj się ponownie.'; show('login'); return;
+            }
+            if (r.status >= 400 || !r.json.ok) { $('consent-err').textContent = 'Nie udało się zapisać zgody. Spróbuj ponownie.'; btn.disabled = false; return; }
+            enterPortal();
+        } catch (e) { $('consent-err').textContent = 'Chwilowa przerwa techniczna — spróbuj za moment.'; btn.disabled = false; }
     }
 
     // ── Mapowanie odpowiedzi edge → stan rdzenia P ─────────────────────────
@@ -668,6 +748,17 @@
             id: a.id, product_id: a.product_id || null, step_key: a.step_key, kind: a.kind,
             url: a.url, meta: a.meta || {}, created_at: a.created_at,
         }));
+        // „Twoja firma" pojawia się DOPIERO po skonfigurowaniu kampanii (decyzja Tomka 22.07:
+        // „nie chcę ich przestraszyć") — wcześniej krok dla klienta NIE ISTNIEJE (nie „zablokowany
+        // z kłódką": znika z zadań, osi procesu, „Twojego ruchu" i paska postępu). Filtr u źródła
+        // stanu = jeden punkt prawdy dla wszystkich widoków. Podgląd admina widzi krok zawsze.
+        const FIRMA_AFTER = ['ads_strona', 'ads_konto', 'ads_budzet'];
+        const stepDoneKey = k => P.steps.some(s => s.step_key === k && !s.product_id && s.status === 'done');
+        const firmaOn = previewMode || stepDoneKey('firma') || FIRMA_AFTER.every(stepDoneKey);
+        if (!firmaOn) {
+            P.stepDefs = P.stepDefs.filter(d => d.key !== 'firma');
+            P.steps = P.steps.filter(s => s.step_key !== 'firma');
+        }
         P.notes = []; P.sales = []; P.adStats = []; P.costs = []; P.genMap = {};
         P.ordersCount = data.orders_count || 0;
         P.merchantPanel = data.merchant_panel || null;
@@ -745,7 +836,7 @@
     // ── Model zadań klienta ─────────────────────────────────────────────────
     // Kolejność JAWNA (decyzja Tomka: strona FB+IG przed kontem reklamowym; „przejęcia"
     // z ostatniego etapu w ogóle poza listą — wrócą, gdy się nimi zajmiemy).
-    const TASK_ORDER = ['firma', 'pl_dane', 'ads_strona', 'ads_konto', 'ads_budzet'];
+    const TASK_ORDER = ['pl_dane', 'ads_strona', 'ads_konto', 'ads_budzet', 'firma'];
     const TASK_HIDDEN = ['przejecie_kampanii', 'przejecie_operacji'];
     function tvTasks() {
         return P.stepDefs.filter(d => d.owner === 'client' && d.scope === 'project' && !TASK_HIDDEN.includes(d.key))
@@ -762,7 +853,7 @@
     // wszystkie zadania od razu; „przejęcia" czekają do końcówki (frontStage>=6). Zrobione = zawsze widoczne.
     function taskUnlocked(d) {
         if (isTaskDone(d)) return true;
-        if (d.key === 'firma') return true; // firma dostępna od pierwszego dnia (przygotowanie i rejestracja trwają)
+        if (d.key === 'firma') return true; // widoczność steruje buildState (po konfiguracji kampanii); gdy już jest — od razu odblokowane
         if (d.key === 'przejecie_kampanii' || d.key === 'przejecie_operacji') return frontStage() >= 6;
         const marka = stepFor('marka', null);
         return (marka && marka.status === 'done') || frontStage() >= 2;

@@ -67,17 +67,19 @@ async function sql(query) {
 }
 
 (async () => {
-  const mig = readFileSync(join(ROOT, 'supabase', 'migrations', '20260722e_wf2_krok_firma.sql'), 'utf8');
-  log('Aplikuję 20260722e_wf2_krok_firma.sql …');
-  await sql(mig);
-  log('  ✓ zastosowana');
+  for (const f of ['20260722e_wf2_krok_firma.sql', '20260722f_wf2_firma_po_kampaniach.sql']) {
+    const mig = readFileSync(join(ROOT, 'supabase', 'migrations', f), 'utf8');
+    log(`Aplikuję ${f} …`);
+    await sql(mig);
+    log('  ✓ zastosowana');
+  }
 
   const step = await sql(
     `SELECT key, stage, stage_label, sort, owner, scope, milestone_label, active
        FROM public.wf2_step_defs WHERE key='firma'`);
   const inst = await sql(`SELECT count(*) c FROM public.wf2_steps WHERE step_key='firma'`);
   const neigh = await sql(
-    `SELECT key, sort, owner FROM public.wf2_step_defs WHERE stage=3 AND active ORDER BY sort LIMIT 6`);
+    `SELECT key, sort, owner FROM public.wf2_step_defs WHERE stage=4 AND active ORDER BY sort LIMIT 8`);
 
   console.log('\n=== WERYFIKACJA ===');
   console.log('krok firma:', JSON.stringify(step[0] || null));
