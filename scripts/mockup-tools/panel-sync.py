@@ -656,20 +656,20 @@ def kalkulacja(project, product, margin_min=10.0, margin_max=15.0, cost_usd=None
     return plan
 
 
-# ── 4c. wybor — krok PROJEKTOWY Etapu 1: fabryka LOSUJE portfel z całej puli approved ──
-# Krok „Wybór produktów" (project-scope od 20260721c) = DO ZREALIZOWANIA: fabryka sama
-# losuje produkty z CAŁEJ puli approved (/trendy) i od razu dodaje je do projektu. Cel
-# portfela = 3 produkty (decyzja 19.07). Dobór = PRAWDZIWE losowanie (decyzja 17.07): ZERO
-# scoringu/ważenia (żadnego heat, plays, dat) — RÓWNE SZANSE. Jedyne kryterium struktury to
-# różnorodność kategorii (szerokie testy): pula losowana w całości (SystemRandom.shuffle),
-# a przy przechodzeniu bierzemy produkt, którego kategoria nie jest jeszcze w portfelu; gdy
-# to nie wystarczy do celu — druga runda bez filtra kategorii (dopuszczamy duplikat kategorii
-# zamiast zawężać bazę). checklista VERBATIM z WS['wybor'] w tn-sklepy/projekt.html.
+# ── 4c. wybor — krok PROJEKTOWY Etapu 1: ⛔ BRAMKA TOMKA (dyrektywa 21.07 wieczór) ──
+# Krok „Wybór produktów" = DECYZJA TOMKA W PANELU: dodaje produkty ręcznie z radaru
+# i/lub dopełnia losowaniem (przycisk „Produkty"); „Przelosuj" wymienia wyłącznie
+# produkty BEZ pinezki (wf2_products.pinned). FABRYKA NIE STARTUJE i NICZEGO nie losuje
+# sama, dopóki portfel nie jest skompletowany przez Tomka — sesja autonomiczna NIE
+# odpala tej komendy (guard: --od-tomka). Losowanie (gdy zlecone): PRAWDZIWY random
+# (SystemRandom, równe szanse, zero scoringu — decyzja 17.07), różnorodność kategorii
+# (druga runda bez filtra gdy pula wąska). Cel portfela = 3 (decyzja 19.07).
+# checklista VERBATIM z WS['wybor'] w tn-sklepy/projekt.html.
 PORTFEL_CEL = 3
 WYBOR_CHECKLIST = [
-    {"t": "Pula approved z /trendy pobrana (cała baza, równe szanse)", "done": True},
-    {"t": "Produkty wylosowane bez preferencji (różnorodność kategorii)", "done": True},
-    {"t": "Portfel skompletowany — produkty dodane do projektu", "done": True},
+    {"t": "Produkty wybrane przez Tomka (ręcznie i/lub losowaniem w panelu)", "done": True},
+    {"t": "Niechciane wymienione przez „Przelosuj" (pinezka chroni zaznaczone)", "done": True},
+    {"t": "Portfel skompletowany — fabryka może startować", "done": True},
 ]
 
 
@@ -705,10 +705,17 @@ def _approved_pool(project):
     return pool
 
 
-def wybor_portfel(project, count=None, dry_run=False):
-    """Krok projektowy 'wybor' — fabryka losuje portfel z całej puli approved RÓWNYMI SZANSAMI.
-    count = ile wylosować; domyślnie dopełnij portfel do PORTFEL_CEL (3). count==0 → tylko
-    domknij krok (portfel już skompletowany). --dry-run = zero zapisów (podgląd puli + wylosowanych)."""
+def wybor_portfel(project, count=None, dry_run=False, od_tomka=False):
+    """Krok projektowy 'wybor' = BRAMKA TOMKA (21.07): produkty wybiera Tomek w panelu.
+    Komenda działa WYŁĄCZNIE na jego jawne zlecenie (--od-tomka); sesja autonomiczna jej
+    nie odpala. count = ile wylosować; domyślnie dopełnij portfel do PORTFEL_CEL (3).
+    --dry-run = zero zapisów (podgląd puli + wylosowanych, bez guardu)."""
+    if not dry_run and not od_tomka:
+        raise SystemExit(
+            "wybor: ⛔ BRAMKA TOMKA (dyrektywa 21.07) — produkty do portfela wybiera Tomek "
+            "w panelu (Dodaj produkty / Wylosuj / Przelosuj z pinezką). Fabryka nie startuje "
+            "bez skompletowanego portfela i NICZEGO nie losuje sama. Jeśli Tomek jawnie "
+            "zlecił losowanie z CLI — powtórz z flagą --od-tomka.")
     existing = _get("wf2_products", {"project_id": f"eq.{project}", "select": "id,tt_product_id,name"})
     have_cats = set()
     tt_ids = [e["tt_product_id"] for e in existing if e.get("tt_product_id")]
@@ -998,11 +1005,14 @@ def main(argv=None):
     p.add_argument("--dry-run", action="store_true", help="pokaż wyliczenia (JSON), ZERO zapisów")
 
     p = sub.add_parser("wybor",
-                       help="krok projektowy Etapu 1: fabryka LOSUJE portfel z całej puli approved "
-                            "(równe szanse, bez scoringu; różnorodność kategorii; cel 3 produkty)")
+                       help="⛔ BRAMKA TOMKA: produkty wybiera Tomek w panelu; losowanie CLI "
+                            "tylko na jego jawne zlecenie (--od-tomka). Równe szanse, bez "
+                            "scoringu; różnorodność kategorii; cel 3 produkty")
     p.add_argument("project", help="uuid projektu (wf2_projects.id)")
     p.add_argument("--count", type=int,
                    help="ile produktów wylosować (domyślnie dopełnij portfel do 3)")
+    p.add_argument("--od-tomka", action="store_true",
+                   help="potwierdzenie: losowanie jawnie zlecone przez Tomka (bez tego = STOP)")
     p.add_argument("--dry-run", action="store_true", help="pokaż pulę + wylosowane, ZERO zapisów")
 
     a = ap.parse_args(argv)
@@ -1033,7 +1043,7 @@ def main(argv=None):
         kalkulacja(a.project, a.product, margin_min=a.margin_min, margin_max=a.margin_max,
                    cost_usd=a.cost_usd, refresh=a.refresh, force=a.force, dry_run=a.dry_run)
     elif a.cmd == "wybor":
-        wybor_portfel(a.project, count=a.count, dry_run=a.dry_run)
+        wybor_portfel(a.project, count=a.count, dry_run=a.dry_run, od_tomka=a.od_tomka)
 
 
 if __name__ == "__main__":

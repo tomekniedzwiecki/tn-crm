@@ -28,13 +28,34 @@ gate `x-wf2-secret==WF2_GEN_SECRET` | service-role key | team JWT).
   klienta zajęty w Trevio) — przepięty ze sklepu współdzielonego „test", domena `trafionek.pl`
   podpięta (add_domain + dns_set OK), produkty/kroki Etapu 3 cofnięte do republikacji na nowym sklepie.
 
-## 0a-quinquies. KROK `wybor` PROJEKTOWY + LOSOWANIE PORTFELA (2026-07-21 wieczór)
+## 0a-sexies. ⛔ WYBÓR PRODUKTÓW = BRAMKA TOMKA + PINEZKI/„PRZELOSUJ" (2026-07-21 późny wieczór — NADPISUJE 0a-quinquies!)
+
+Dyrektywa Tomka (przy projekcie Hoffy; migracja `20260722b_wf2_products_pinned.sql` WDROŻONA):
+**produkty do portfela wybiera SAM Tomek w panelu — fabryka NIE startuje, dopóki portfel nie
+jest skompletowany, i NICZEGO nie losuje z własnej inicjatywy.**
+- **Panel (`projekt.html` + `panel-core.js`):** „Produkty" = picker (ręczny wybór z radaru
+  i/lub „Wylosuj" dopełniające do celu 3); **„Przelosuj" wymienia WYŁĄCZNIE produkty BEZ
+  pinezki** (`wf2_products.pinned`, toggle 📌 w macierzy desktop+mobile; zaznaczone zostają);
+  losowanie/przelosowanie = czysty los (Fisher-Yates, równe szanse, zero scoringu) z puli
+  approved MINUS produkty zajęte w JAKIMKOLWIEK projekcie (pkTakenGlobal — także w panelu,
+  wcześniej tylko CLI) MINUS obecny portfel (wymieniane nie wracają w tym samym losowaniu).
+- **Krok `wybor` auto-podąża za portfelem** (`syncWyborStep()` po każdej zmianie): pusty=
+  `pending` · częściowy=`in_progress` · ≥3=`done` (+checklista VERBATIM odhaczona — wymóg
+  blokady kolejności faz). `milestone_label='Portfel skompletowany — produkty wybrane przez
+  Tomka'`.
+- **CLI:** `panel-sync.py wybor` ma guard `--od-tomka` — bez flagi STOP z komunikatem doktryny;
+  losowanie z CLI wyłącznie na jawne zlecenie Tomka. Sesja autonomiczna fabryki go NIE odpala.
+- Kontekst decyzji: pierwsze losowanie fabryki (drukarka 3D za 869 zł, glebogryzarka poza
+  sezonem) Tomek odrzucił — wybór produktów to decyzja biznesowa właściciela, nie fabryki.
+
+## 0a-quinquies. KROK `wybor` PROJEKTOWY + LOSOWANIE PORTFELA (2026-07-21 wieczór — CZĘŚCIOWO NADPISANE przez 0a-sexies)
 
 Krok `wybor` przebudowany z **per-produkt** na **project-scope** (migracja
 `20260721c_wf2_wybor_project_scope.sql`, WDROŻONA). Decyzja Tomka 21.07: „Wybór produktu" per
 produkt był bez sensu — produkt w portfelu = wybór z definicji dokonany (chip zawsze done, krok
-bez roboty). Teraz to krok **DO ZREALIZOWANIA** na poziomie projektu: fabryka SAMA losuje produkty
-z całej puli approved (/trendy) i od razu dodaje je do portfela.
+bez roboty). ~~Teraz to krok **DO ZREALIZOWANIA** na poziomie projektu: fabryka SAMA losuje produkty
+z całej puli approved (/trendy) i od razu dodaje je do portfela.~~ **(NADPISANE 0a-sexies: losowanie
+tylko z panelu przez Tomka albo CLI na jego jawne zlecenie.)**
 - **def:** `scope=project`, `label='Wybór produktów'`, `milestone_label='Portfel skompletowany —
   produkty wylosowane z całej puli'` (stage/sort/owner bez zmian: Etap 1, sort 5, admin).
 - **migracja:** usunęła 38 osieroconych instancji per-produkt `wybor`, dosiała 9 projektowych,

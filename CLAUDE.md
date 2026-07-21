@@ -44,9 +44,12 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   źródło postępu), sales, ad_stats, payments (UI ukryte), activities. RLS wyłącznie
   `team_members` — ZERO polityk anon (portal klienta pójdzie przez edge function).
 - **Etapy 1–7 (od 2026-07-19, migracja `20260719c_wf2_kampanie_rozbicie`; baza:
-  `20260718_wf2_fabryka_panel`):** 1 Fundament sklepu (wybor→kalkulacja→marka→pl_domena; **wybor**
-  = project-scope od 21.07, fabryka LOSUJE portfel: `panel-sync.py wybor` — cała pula approved,
-  równe szanse, bez scoringu)
+  `20260718_wf2_fabryka_panel`):** 1 Fundament sklepu (wybor→kalkulacja→marka→pl_domena; **wybor
+  = ⛔ BRAMKA TOMKA od 21.07 wieczór (migracja `20260722b_wf2_products_pinned`): produkty wybiera
+  TOMEK w panelu** — Dodaj produkty (picker) / Wylosuj (dopełnia) / **„Przelosuj" wymienia
+  WYŁĄCZNIE produkty bez pinezki** (`wf2_products.pinned`); krok 'wybor' auto-podąża za stanem
+  portfela (syncWyborStep). **Fabryka NIE startuje bez skompletowanego portfela i NICZEGO nie
+  losuje sama** — `panel-sync.py wybor` tylko na jawne zlecenie Tomka, guard `--od-tomka`)
   → **2 Landing** (lp_dane→lp_plan→lp_styl_marka→lp_makiety🏁→lp_grafiki→lp_kod→lp_dopasowanie→
   lp_zycie→lp_finisz🏁 = fabryka F0→F8) → **3 Sklep na platformie** (pl_* przez API Trevio,
   edge wf2-platform TYPED ACTIONS) → **4 Środowisko reklamowe** (project-scope:

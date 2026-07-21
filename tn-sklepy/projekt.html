@@ -124,6 +124,7 @@
                         <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-stack text-[#3291ff]"></i> Portfel produktów <span id="portfolio-count" class="text-zinc-500 font-normal text-xs"></span></h3>
                         <div class="flex items-center gap-2">
                             <span class="text-zinc-600 text-[11px] hidden sm:inline">cel: 3 produkty na testy</span>
+                            <button id="reroll-btn" onclick="rerollPortfolio()" class="hidden items-center gap-1.5 border border-[#333] text-zinc-300 hover:text-white hover:border-[#555] rounded-md px-3 py-1.5 text-xs font-semibold transition-colors" data-tip-title="Przelosuj portfel" data-tip-desc="Wymienia WYŁĄCZNIE produkty bez pinezki — zaznaczone (📌) zostają. Losowanie z całej puli zatwierdzonych, równe szanse."><i class="ph ph-shuffle"></i> Przelosuj</button>
                             <button onclick="openPicker()" class="inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors"><i class="ph ph-plus"></i> Produkty</button>
                         </div>
                     </div>
@@ -133,7 +134,7 @@
                             <tbody id="matrix-body"></tbody>
                         </table>
                     </div>
-                    <div id="matrix-empty" class="hidden py-10 text-center text-zinc-500 text-xs">Portfel pusty — wylosuj 3 produkty z zatwierdzonych na /trendy (przycisk „Produkty").</div>
+                    <div id="matrix-empty" class="hidden py-10 text-center text-zinc-500 text-xs">Portfel pusty — dodaj produkty ręcznie lub wylosuj (przycisk „Produkty"). Fabryka nie startuje, dopóki portfel nie jest skompletowany.</div>
                 </div>
 
                 <!-- Zakładki sekcji -->
@@ -305,7 +306,7 @@
             <!-- losowanie: prawdziwy random z całej puli zatwierdzonych -->
             <div id="pk-auto" class="hidden flex-col min-h-0 flex-1">
                 <div class="flex items-center justify-between gap-3 mb-3 flex-shrink-0 flex-wrap">
-                    <div class="text-[11.5px] text-zinc-500">Czysty los z WSZYSTKICH zatwierdzonych na /trendy (bez scoringu) — pomija produkty już w portfelu.</div>
+                    <div class="text-[11.5px] text-zinc-500">Czysty los z WSZYSTKICH zatwierdzonych na /trendy (bez scoringu) — pomija produkty już w portfelu i zajęte w innych sklepach fabryki.</div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <input id="pk-auto-n" type="number" min="1" max="30" class="fld" style="width:64px;padding:6px 8px" onchange="pkAutoRefresh()">
                         <button onclick="pkAutoRefresh()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] border border-[#0070f3]/40 rounded-md px-2.5 py-1.5"><i class="ph ph-shuffle"></i> Przelosuj</button>
@@ -926,8 +927,8 @@
                 check:['Shortlista nazw pojemnych z WOLNYMI domenami .pl (RDAP/WHOIS) + web-check kolizji','Nazwa wybrana → project.name (top-3 + rekomendacja w notatce)','Tagline + opis marki → pola projektu (zasilą stronę główną)','Paleta 6 hex (JASNE tła) + fonty latin-ext → pola projektu','Logo lockup + favicon (selektor @32px) wgrane do Storage brand/','Artefakty w wf2_artifacts (kind=brand) + koszty w wf2_costs','Domena wybrana i wolna → project.domain (zakup = krok Domena marki)','Werdykt rubryką 6×T/N (32/16/metafora/flat/zero liter/mono) — bez 6×T = FAIL','Kompozyt kontekstowy (favicon @16/32/64 jasne+ciemne, lockupy) → wf2_artifacts'], prompt:'marka' },
             // krok PROJEKTOWY (21.07): fabryka LOSUJE portfel komendą panel-sync.py wybor —
             // cała pula approved z /trendy, równe szanse (SystemRandom, ZERO scoringu), różnorodność kategorii
-            wybor: { desc:'Wybór produktów do portfela (krok projektowy — DO ZREALIZOWANIA przez fabrykę): losowanie z CAŁEJ puli zatwierdzonych na /trendy z równymi szansami (bez scoringu i preferencji — korzystamy z całej bazy), z dbałością o różnorodność kategorii (szerokie testy). Wylosowane produkty są od razu dodawane do portfela. Kalkulacja ceny = OSOBNY krok per produkt.',
-                check:['Pula approved z /trendy pobrana (cała baza, równe szanse)','Produkty wylosowane bez preferencji (różnorodność kategorii)','Portfel skompletowany — produkty dodane do projektu'], prompt:'wybor' },
+            wybor: { desc:'Wybór produktów do portfela = DECYZJA TOMKA w panelu (BRAMKA startu fabryki — fabryka NICZEGO nie losuje sama i nie startuje, dopóki portfel nie jest skompletowany). Tomek dodaje produkty ręcznie z radaru (/trendy) i/lub dopełnia losowaniem (przycisk „Produkty"); „Przelosuj" wymienia wyłącznie produkty BEZ pinezki (zaznaczone zostają). Losowanie zawsze z całej puli zatwierdzonych, równe szanse, bez scoringu. Kalkulacja ceny = OSOBNY krok per produkt.',
+                check:['Produkty wybrane przez Tomka (ręcznie i/lub losowaniem w panelu)','Niechciane wymienione przez „Przelosuj" (pinezka chroni zaznaczone)','Portfel skompletowany — fabryka może startować'], prompt:'wybor' },
             // dedykowany warsztat kalkulacjaBody (cena zakupu + sprzedaż + marża 10–15% + drabinka + aukcja);
             // checklistę odhacza fabryka przez panel-sync (VERBATIM — klucz deduplikacji ze stanem)
             kalkulacja: { desc:'Kalkulacja ceny produktu: potwierdź cenę zakupu z żywej aukcji (source=detail), ustal cenę sprzedaży z narzutem 10–15% (cena psychologiczna) i zaakceptuj drabinkę cenową (TEST→SCALE→OPT). Bez zaakceptowanej drabinki silnik cen NIE rusza produktu.',
@@ -2017,20 +2018,31 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
         // Losowanie = PRAWDZIWY RANDOM (Fisher-Yates) z WSZYSTKICH zatwierdzonych na /trendy,
         // bez scoringu i dywersyfikacji (decyzja Tomka 2026-07-17). Domyślnie dopełnia portfel do 5.
         let pkProposal = [];
+        // tt_product_id zajęte w INNYCH projektach fabryki — żaden produkt nie trafia
+        // do dwóch sklepów naraz (zasada z panel-sync.py wybor, 22.07 także w panelu)
+        let pkTakenGlobal = new Set();
+        async function pkLoadData() {
+            const [takenQ] = await Promise.all([
+                supabaseClient.from('wf2_products').select('tt_product_id, project_id').not('tt_product_id', 'is', null).range(0, 4999),
+                (async () => {
+                    if (ttProducts) return;
+                    const [{ data }] = await Promise.all([
+                        supabaseClient.from('bud_tt_products')
+                            .select('id, pl_name, category, curated_image, chosen_link, heat, ali_main:ali_snapshot->>main_image, ali_price:ali_snapshot->price->>sale, ali_src:ali_snapshot->>source')
+                            .eq('status', 'approved').order('heat', { ascending: false }).range(0, 499),
+                        getUsdRate(),
+                    ]);
+                    ttProducts = data || [];
+                })(),
+            ]);
+            pkTakenGlobal = new Set((takenQ.data || []).filter(r => r.project_id !== projectId).map(r => r.tt_product_id));
+        }
         async function openPicker() {
             document.getElementById('picker-modal').classList.remove('hidden');
             pkShow('choice');
-            if (!ttProducts) {
-                const [{ data }] = await Promise.all([
-                    supabaseClient.from('bud_tt_products')
-                        .select('id, pl_name, category, curated_image, chosen_link, heat, ali_main:ali_snapshot->>main_image, ali_price:ali_snapshot->price->>sale, ali_src:ali_snapshot->>source')
-                        .eq('status', 'approved').order('heat', { ascending: false }).range(0, 499),
-                    getUsdRate(),
-                ]);
-                ttProducts = data || [];
-                if (!document.getElementById('pk-manual').classList.contains('hidden')) renderPicker();
-                if (!document.getElementById('pk-auto').classList.contains('hidden')) pkAutoRefresh();
-            }
+            await pkLoadData();
+            if (!document.getElementById('pk-manual').classList.contains('hidden')) renderPicker();
+            if (!document.getElementById('pk-auto').classList.contains('hidden')) pkAutoRefresh();
         }
         function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
         function pkShow(view) {
@@ -2052,9 +2064,10 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
         }
         function pkAutoDefaultCount() { return Math.max(0, PORTFOLIO_TARGET - products.length); }
         // Fisher-Yates na kopii puli — każdy zatwierdzony produkt ma RÓWNĄ szansę
+        // (pomija produkty tego portfela ORAZ zajęte w innych projektach fabryki)
         function pkAutoPropose(n) {
             const inIds = new Set(products.map(p => p.tt_product_id).filter(Boolean));
-            const pool = (ttProducts || []).filter(t => !inIds.has(t.id));
+            const pool = (ttProducts || []).filter(t => !inIds.has(t.id) && !pkTakenGlobal.has(t.id));
             const arr = pool.slice();
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -2107,6 +2120,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             logActivity('products_random_added', `Wylosowano do portfela: +${rows.length} — ${rows.map(r => r.name).join(', ')}`);
             closePicker();
             await loadAll();
+            await syncWyborStep();
             showToast(`Dodano ${rows.length} produktów do portfela`, 'success');
         }
         function renderPicker() {
@@ -2115,13 +2129,15 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             document.getElementById('pk-grid').innerHTML = items.map(t => {
                 const img = t.curated_image || t.ali_main;
                 const inPortfolio = products.some(p => p.tt_product_id === t.id);
+                const takenElse = !inPortfolio && pkTakenGlobal.has(t.id);
+                const dead = inPortfolio || takenElse;
                 const ref = t.curated_image ? '<i class="ph ph-image text-[#62c073]" title="referencja kurowana"></i> ' : (t.ali_src === 'detail' ? '<i class="ph ph-check-circle text-[#62c073]" title="snapshot z aukcji (pewny)"></i> ' : '');
                 const price = t.ali_price ? `<span class="text-[#52a8ff] font-mono">$${escapeHtml(t.ali_price)}</span>` : '';
-                return `<div class="border border-[#2a2a2a] ${inPortfolio ? 'opacity-40' : 'hover:border-[#0070f3]/60 cursor-pointer'} rounded-md p-2.5 transition-colors" ${inPortfolio ? '' : `onclick="pickTT('${t.id}')"`}>
+                return `<div class="border border-[#2a2a2a] ${dead ? 'opacity-40' : 'hover:border-[#0070f3]/60 cursor-pointer'} rounded-md p-2.5 transition-colors" ${dead ? '' : `onclick="pickTT('${t.id}')"`}>
                     ${img ? `<img src="${escapeHtml(img)}" class="w-full aspect-square object-cover rounded mb-2" loading="lazy" onerror="this.style.display='none'">` : '<div class="w-full aspect-square bg-[#111] rounded mb-2 flex flex-col items-center justify-center gap-1"><i class="ph ph-package text-zinc-700 text-xl"></i><span class="text-[8.5px] text-zinc-600">brak zdjęcia z aukcji</span></div>'}
                     <div class="text-white text-[12px] font-medium leading-tight mb-1">${escapeHtml(t.pl_name)}</div>
                     <div class="flex items-center justify-between text-[10px] text-zinc-500"><span>${escapeHtml(t.category || '')}${price ? ' · ' + price : ''}</span><span class="font-mono">${ref}heat ${t.heat ?? '—'}</span></div>
-                    ${inPortfolio ? '<div class="text-[10px] text-[#52a8ff] mt-1">już w portfelu</div>' : ''}
+                    ${inPortfolio ? '<div class="text-[10px] text-[#52a8ff] mt-1">już w portfelu</div>' : takenElse ? '<div class="text-[10px] text-[#f5b955] mt-1">w innym sklepie fabryki</div>' : ''}
                 </div>`;
             }).join('') || '<div class="col-span-full text-center text-zinc-600 text-xs py-8">Brak wyników</div>';
         }
@@ -2461,6 +2477,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 }
                 closeProductModal();
                 await loadAll();
+                await syncWyborStep();
                 showToast('Zapisano','success');
             } catch(e) { showToast('Błąd: '+(e.message||e),'error'); }
         }
@@ -2476,7 +2493,77 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             logActivity('product_deleted', 'Usunięto produkt: ' + nm);
             if (id === editingProductId) closeProductModal();
             await loadAll();
+            await syncWyborStep();
             showToast('Produkt usunięty','success');
+        }
+
+        // ── Krok 'wybor' = BRAMKA TOMKA (22.07): status wynika WPROST ze stanu portfela.
+        // Pusty = pending · częściowy = in_progress · skompletowany (≥ cel) = done.
+        // Wołane po KAŻDEJ zmianie portfela; fabryka nie startuje, dopóki krok nie jest done.
+        async function syncWyborStep() {
+            const st = stepFor('wybor', null);
+            if (!st || st.status === 'skipped') return;
+            const n = products.length;
+            const target = n === 0 ? 'pending' : n >= PORTFOLIO_TARGET ? 'done' : 'in_progress';
+            if (st.status === target) return;
+            const upd = { status: target, completed_at: target === 'done' ? new Date().toISOString() : null, completed_by: target === 'done' ? 'admin' : null };
+            // checklista podąża za statusem (done = odhaczona VERBATIM z WS — blokada
+            // kolejności faz w panel-sync wymaga done Z odhaczoną checklistą)
+            upd.data = Object.assign({}, st.data || {}, { checklist: target === 'done' ? (WS.wybor.check || []).map(t => ({ t, done: true })) : [] });
+            const { error } = await supabaseClient.from('wf2_steps').update(upd).eq('id', st.id);
+            if (error) { showToast('Krok „Wybór produktów": ' + error.message, 'error'); return; }
+            Object.assign(st, upd);
+            if (target === 'done') showToast('🏁 Portfel skompletowany — fabryka może startować', 'success');
+            renderPills(); renderNextStep(); renderStage(); renderHeader();
+        }
+
+        // ── Pinezka: zaznaczony produkt NIE podlega wymianie przy „Przelosuj" (22.07)
+        async function togglePin(pid) {
+            const p = products.find(x => x.id === pid); if (!p) return;
+            const next = !p.pinned;
+            const { error } = await supabaseClient.from('wf2_products').update({ pinned: next }).eq('id', pid);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            p.pinned = next;
+            renderStage();
+            showToast(next ? `📌 „${p.name}" zostaje przy przelosowaniu` : `„${p.name}" — może zostać wymieniony`, 'success');
+        }
+
+        // ── „Przelosuj" (22.07, dyrektywa Tomka): wymienia WYŁĄCZNIE produkty bez pinezki.
+        // Nowe = czysty los (Fisher-Yates, równe szanse) z całej puli zatwierdzonych,
+        // minus produkty zajęte w JAKIMKOLWIEK projekcie i minus obecny portfel
+        // (wymieniane nie wracają w tym samym losowaniu).
+        async function rerollPortfolio() {
+            const out = products.filter(p => !p.pinned);
+            if (!out.length) { showToast('Wszystkie produkty są zaznaczone pinezką — odepnij te, które mam wymienić', 'error'); return; }
+            const adv = out.filter(p => !['kandydat', 'w_budowie'].includes(p.status));
+            if (!confirm(`Przelosować ${out.length} z ${products.length} produktów portfela?\n\nWymienione zostaną:\n${out.map(p => '· ' + p.name).join('\n')}\n${adv.length ? '\n⚠️ UWAGA: ' + adv.map(p => `„${p.name}" (status: ${(PRODUCT_STATUS_META[p.status]?.label) || p.status})`).join(', ') + ' — postęp przepadnie!\n' : ''}\nZaznaczone pinezką zostają. Usunięcie kasuje kroki, artefakty i koszty wymienianych (radar /trendy nietknięty).`)) return;
+            const btn = document.getElementById('reroll-btn'); if (btn) btn.disabled = true;
+            try {
+                await pkLoadData();
+                await getUsdRate();
+                const curIds = new Set(products.map(p => p.tt_product_id).filter(Boolean));
+                const pool = (ttProducts || []).filter(t => !curIds.has(t.id) && !pkTakenGlobal.has(t.id));
+                for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+                const fresh = pool.slice(0, out.length);
+                if (!fresh.length) { showToast('Pula zatwierdzonych wyczerpana — nie mam czym wymienić', 'error'); return; }
+                const { error: delErr } = await supabaseClient.from('wf2_products').delete().in('id', out.map(p => p.id));
+                if (delErr) { showToast('Błąd usuwania: ' + delErr.message, 'error'); return; }
+                const baseSort = Math.max(-1, ...products.filter(p => p.pinned).map(p => p.sort ?? 0));
+                const rows = fresh.map((t, i) => {
+                    const usd = parseFloat(t.ali_price);
+                    const cost = isNaN(usd) ? null : Math.round(usd * usdRate * 100) / 100;
+                    return { project_id: projectId, sort: baseSort + 1 + i, name: t.pl_name, status: 'kandydat',
+                        margin_mode: 'test', tt_product_id: t.id, supplier_url: t.chosen_link || null,
+                        cover_url: t.curated_image || t.ali_main || null,
+                        cost_purchase: cost, price: cost != null ? suggestTestPrice(cost) : null, fees_pct: 2 };
+                });
+                const { error: insErr } = await supabaseClient.from('wf2_products').insert(rows);
+                if (insErr) { showToast('Błąd dodawania: ' + insErr.message, 'error'); await loadAll(); return; }
+                logActivity('products_rerolled', `Przelosowano portfel (pinezki zostały): −${out.length} (${out.map(p => p.name).join(', ')}) → +${rows.length} (${rows.map(r => r.name).join(', ')})`);
+                await loadAll();
+                await syncWyborStep();
+                showToast(fresh.length < out.length ? `Wymieniono tylko ${fresh.length}/${out.length} — pula zatwierdzonych wyczerpana` : `Przelosowano ${fresh.length} — zaznaczone zostały`, fresh.length < out.length ? 'error' : 'success');
+            } finally { if (btn) btn.disabled = false; }
         }
 
         // ============ AKCJE: projekt ============
