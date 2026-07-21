@@ -820,7 +820,7 @@ function renderDrawer() {
     document.getElementById('sd-title').innerHTML = `<i class="ph ${escapeHtml(d.icon)} text-[#3291ff]"></i> ${escapeHtml(d.label)}`;
     const sub = document.getElementById('sd-sub');
     if (sub) sub.innerHTML = `<span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span> <span class="ml-1 text-zinc-600">Etap ${d.stage} · ${escapeHtml(d.stage_label || '')}</span>`
-        + (d.milestone_label ? ` <span class="mile-badge ml-1"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</span>` : '');
+        + (d.milestone_label ? ` <span class="mile-badge${st.status === 'done' ? '' : ' mile-badge-todo'} ml-1"><i class="ph ${st.status === 'done' ? 'ph-flag-checkered' : 'ph-flag'}"></i> ${escapeHtml(d.milestone_label)}</span>` : '');
 
     const prodEl = document.getElementById('sd-product');
     if (prodEl) {
