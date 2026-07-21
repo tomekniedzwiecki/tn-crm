@@ -22,7 +22,7 @@
         .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
         @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
         .animate-enter { animation: fadeIn .4s ease-out forwards; }
-        /* chip kroku (jak taby v1 ze screena) */
+        /* chip kroku (badge = ilu projektów czeka na tym kroku) */
         .step-chip { display:inline-flex; align-items:center; gap:7px; position:relative;
             border:1px solid #2a2a2a; background:#0a0a0a; color:#a1a1aa;
             border-radius:6px; padding:8px 14px; font-size:12.5px; cursor:pointer; transition:all .15s ease; }
@@ -31,6 +31,68 @@
         .step-badge { position:absolute; top:-7px; right:-7px; min-width:18px; height:18px; padding:0 5px;
             border-radius:6px; font-size:10.5px; font-weight:600; display:flex; align-items:center; justify-content:center; color:#fff; }
         .owner-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
+        /* ── SIATKA KART PROJEKTÓW ─────────────────────────────────────────── */
+        .proj-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+        @media (min-width:768px){ .proj-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+        @media (min-width:1280px){ .proj-grid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+        .pcard { position:relative; display:flex; flex-direction:column; gap:13px; min-width:0;
+            background:#0a0a0a; border:1px solid #1f1f1f; border-radius:12px; padding:16px 16px 14px;
+            cursor:pointer; transition:border-color .15s ease, background .15s ease, transform .12s ease; }
+        .pcard:hover { border-color:#2e2e2e; background:#0d0d0d; transform:translateY(-1px); }
+        .pcard.is-demo { background:#080808; border-color:#171717; }
+        .pcard.is-demo:hover { border-color:#232323; }
+        .pcard.is-demo .pc-title { color:#c4c4c4; }
+        /* nagłówek */
+        .pc-head { display:flex; align-items:flex-start; gap:11px; min-width:0; }
+        .pc-mono { width:38px; height:38px; border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+            font:600 15px/1 'Inter',sans-serif; color:#fff; background:linear-gradient(135deg,#1a1a1a,#111); border:1px solid #262626; }
+        .pc-tt { flex:1; min-width:0; }
+        .pc-title { color:#fff; font-weight:600; font-size:15px; letter-spacing:-.01em; line-height:1.25;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .pc-client { color:#71717a; font-size:11.5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .pc-badge { flex-shrink:0; display:inline-block; padding:3px 8px; border-radius:6px; border:1px solid; font-size:10.5px; font-weight:500; white-space:nowrap; }
+        .demo-tag { position:absolute; top:12px; right:12px; font:600 9px/1 ui-monospace,monospace; letter-spacing:.08em;
+            color:#52525b; border:1px solid #232323; border-radius:5px; padding:3px 6px; background:#0a0a0a; }
+        /* proces: 7 segmentów etapów */
+        .pc-seg { display:flex; gap:4px; }
+        .pc-seg > span { flex:1; height:6px; border-radius:3px; background:#1c1c1c; overflow:hidden; position:relative; }
+        .pc-seg > span.s-done { background:#45a557; }
+        .pc-seg > span.s-prog { background:#0070f3; }
+        .pc-metarow { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        .pc-stage { color:#a1a1aa; font-size:11.5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .pc-stage b { color:#e4e4e7; font-weight:600; }
+        .pc-pct { font:500 11px/1 'JetBrains Mono',monospace; color:#71717a; flex-shrink:0; }
+        /* licznik tempa 14 dni */
+        .pc-tempo { border-top:1px solid #161616; padding-top:12px; }
+        .tempo-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
+        .tempo-lbl { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#71717a; }
+        .tempo-day { font:500 12px/1 'JetBrains Mono',monospace; }
+        .tempo-bar { height:5px; border-radius:3px; background:#161616; overflow:hidden; }
+        .tempo-bar > span { display:block; height:100%; border-radius:3px; transition:width .3s ease; }
+        .tempo-over { display:inline-flex; align-items:center; gap:4px; font:600 9.5px/1 ui-monospace,monospace; letter-spacing:.03em;
+            color:#e5484d; border:1px solid rgba(229,72,77,.4); background:rgba(229,72,77,.1); border-radius:5px; padding:3px 6px; }
+        .tempo-built { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; }
+        .tempo-closed { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:#52525b; }
+        /* stopka: portfel + zamówienia + aktywność */
+        .pc-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .pc-stack { display:flex; align-items:center; }
+        .pc-thumb { width:28px; height:28px; border-radius:7px; border:1.5px solid #0a0a0a; margin-left:-9px; object-fit:cover;
+            background:#141414; flex-shrink:0; box-shadow:0 0 0 1px #232323; }
+        .pc-thumb:first-child { margin-left:0; }
+        .pc-thumb-mono { display:flex; align-items:center; justify-content:center; font:600 11px/1 'Inter',sans-serif; color:#a1a1aa;
+            background:linear-gradient(135deg,#1c1c1c,#121212); }
+        .pc-thumb-more { display:flex; align-items:center; justify-content:center; font:600 10px/1 'JetBrains Mono',monospace; color:#a1a1aa;
+            background:#151515; }
+        .pc-portlabel { font-size:11px; color:#71717a; white-space:nowrap; }
+        .pc-orders { display:inline-flex; align-items:center; gap:4px; font:500 11px/1 'JetBrains Mono',monospace; color:#62c073;
+            border:1px solid rgba(69,165,87,.3); background:rgba(69,165,87,.08); border-radius:6px; padding:4px 7px; }
+        .pc-act { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; color:#52525b; white-space:nowrap; }
+        /* pole wyszukiwania */
+        .searchbox { display:flex; align-items:center; gap:8px; background:#0a0a0a; border:1px solid #1f1f1f; border-radius:8px; padding:7px 11px; }
+        .searchbox:focus-within { border-color:rgba(0,112,243,.5); }
+        .searchbox input { background:transparent; border:none; outline:none; color:#fff; font-size:13px; width:210px; }
+        .searchbox input::placeholder { color:#52525b; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -49,50 +111,44 @@
         </header>
 
         <div class="flex-1 overflow-y-auto p-6 lg:p-10">
-            <div class="max-w-7xl mx-auto animate-enter">
+            <div class="max-w-[1400px] mx-auto animate-enter">
 
                 <div class="mb-8">
                     <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Sklepy — wspólne biznesy</h1>
-                    <p class="text-zinc-500">Fabryka sprzedaży: portfel 3 produktów → landing (fabryka F0→F8) → sklep na platformie → środowisko reklamowe → materiały i kampania → testy → 1000 zamówień → stery.</p>
+                    <p class="text-zinc-500">Fabryka sprzedaży: portfel produktów → landing → sklep na platformie → środowisko reklamowe → materiały i kampania → testy → stery. Cel budowy: <span class="text-zinc-300">≤ 14 dni</span> na etapy 1–5.</p>
                 </div>
 
-                <!-- Etapy z chipami kroków (badge = ilu projektów czeka na tym kroku) -->
-                <div id="stages-wrap" class="space-y-5 mb-10"></div>
-
-                <!-- Pasek nad listą: rozwiń wszystkie + filtr -->
-                <div class="flex items-center gap-3 mb-4">
-                    <button id="expand-all-btn" onclick="toggleAll()" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors">
-                        <i class="ph ph-caret-double-down"></i> <span id="expand-all-label">Rozwiń wszystkie</span>
+                <!-- Etapy z chipami kroków (badge = ilu projektów czeka na tym kroku; klik = filtr kart).
+                     Zwinięte domyślnie — karty są bohaterem, panel kroków rozwija się na żądanie. -->
+                <div class="mb-9">
+                    <button id="stages-toggle" onclick="toggleStages()" class="w-full flex items-center gap-3 text-left border border-[#1f1f1f] hover:border-[#2e2e2e] bg-[#0a0a0a] rounded-lg px-4 py-2.5 transition-colors">
+                        <i class="ph ph-squares-four text-zinc-400"></i>
+                        <span class="text-zinc-200 text-sm font-medium">Kroki i filtry etapów</span>
+                        <span id="stages-summary" class="text-zinc-500 text-xs font-mono"></span>
+                        <i id="stages-caret" class="ph ph-caret-down text-zinc-500 ml-auto transition-transform"></i>
                     </button>
+                    <div id="stages-wrap" class="space-y-5 mt-5 hidden"></div>
+                </div>
+
+                <!-- Pasek nad listą: wyszukiwarka + aktywny filtr + licznik -->
+                <div class="flex flex-wrap items-center gap-3 mb-5">
+                    <label class="searchbox">
+                        <i class="ph ph-magnifying-glass text-zinc-500"></i>
+                        <input id="search" type="text" placeholder="Szukaj marki lub klienta…" oninput="renderCards()">
+                    </label>
                     <div id="filter-bar" class="hidden items-center gap-2">
                         <span class="text-zinc-500 text-xs">Filtr:</span>
                         <span id="filter-label" class="text-[#52a8ff] text-xs font-medium"></span>
                         <button onclick="clearFilter()" class="text-zinc-500 hover:text-white text-xs underline">wyczyść</button>
                     </div>
+                    <span id="count-label" class="text-zinc-600 text-xs font-mono ml-auto"></span>
                 </div>
 
-                <!-- Lista projektów -->
-                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="border-b border-[#1f1f1f] text-[11px] font-mono uppercase tracking-wider text-zinc-500">
-                                    <th class="px-5 py-3">Klient</th>
-                                    <th class="px-5 py-3">Status</th>
-                                    <th class="px-5 py-3">Postęp</th>
-                                    <th class="px-5 py-3">Aktualny krok</th>
-                                    <th class="px-5 py-3 text-center">Produkty</th>
-                                    <th class="px-5 py-3">Utworzony</th>
-                                    <th class="px-5 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="projects-tbody"></tbody>
-                        </table>
-                    </div>
-                    <div id="empty-state" class="hidden py-16 text-center text-zinc-500">
-                        <i class="ph ph-storefront text-4xl mb-3 block text-zinc-700"></i>
-                        Brak projektów. Nowy projekt powstaje automatycznie po opłaceniu rezerwacji — albo dodaj ręcznie.
-                    </div>
+                <!-- Siatka kart projektów -->
+                <div id="proj-grid" class="proj-grid"></div>
+                <div id="empty-state" class="hidden py-16 text-center text-zinc-500">
+                    <i class="ph ph-storefront text-4xl mb-3 block text-zinc-700"></i>
+                    Brak projektów. Nowy projekt powstaje automatycznie po opłaceniu rezerwacji — albo dodaj ręcznie.
                 </div>
 
             </div>
@@ -129,13 +185,19 @@
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
 
+        const DAY = 86400000;
+        const BUILD_MAX_STAGE = 5;   // etapy 1–5 = budowa (licznik tempa)
+        const BUILD_DAYS = 14;
+
         let stepDefs = [];        // wf2_step_defs (active, sorted)
-        let projects = [];        // wf2_projects
-        let productsByProj = {};  // project_id -> [wf2_products skrót]
-        let stepsByProj = {};     // project_id -> [wf2_steps skrót]
-        let aggByProj = {};       // project_id -> {total, done, currentKey, currentLabel}
+        let defByKey = {};        // key -> def
+        let buildKeys = new Set();// klucze kroków etapów 1–5 (bez sub_of) — cel licznika tempa
+        let maxStage = 7;
+        let projects = [];        // wf2_projects (bez is_test)
+        let productsByProj = {};  // project_id -> [wf2_products]
+        let stepsByProj = {};     // project_id -> [wf2_steps]
+        let aggByProj = {};       // project_id -> {pct, done, total, currentKey, currentStage, currentStageLabel, segs[], tempo, orders, lastAct}
         let filterStepKey = null;
-        const openRows = new Set(); // rozwinięte podglądy projektów
 
         const STATUS_META = {
             start:     { label: 'Start',      cls: 'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40' },
@@ -157,8 +219,31 @@
         function relDate(iso) {
             if (!iso) return '—';
             const d = new Date(iso); if (isNaN(d.getTime())) return '—';
-            const diff = Math.round((new Date().setHours(0,0,0,0) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
-            if (diff <= 0) return 'dziś'; if (diff === 1) return 'wczoraj'; return diff + ' dni temu';
+            const diff = Math.round((new Date().setHours(0,0,0,0) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / DAY);
+            if (diff <= 0) return 'dziś'; if (diff === 1) return 'wczoraj';
+            if (diff < 7) return diff + ' dni temu';
+            if (diff < 30) return Math.floor(diff/7) + ' tyg. temu';
+            return Math.floor(diff/30) + ' mies. temu';
+        }
+        function dayNumber(createdIso, ref) {
+            const c = new Date(createdIso).getTime();
+            if (isNaN(c)) return 1;
+            return Math.max(1, Math.floor(((ref || Date.now()) - c) / DAY) + 1);
+        }
+        function daysSpan(aIso, bIso) {
+            const a = new Date(aIso).getTime(), b = new Date(bIso).getTime();
+            if (isNaN(a) || isNaN(b)) return null;
+            return Math.max(1, Math.ceil((b - a) / DAY));
+        }
+        function isDemo(p) {
+            const s = ((p.name || '') + ' ' + (p.customer_name || '')).trim().toUpperCase();
+            return s.startsWith('DEMO');
+        }
+        function initials(str) {
+            const s = (str || '').replace(/^DEMO\s+/i, '').trim();
+            if (!s) return '?';
+            const parts = s.split(/\s+/).filter(Boolean);
+            return ((parts[0]?.[0] || '') + (parts.length > 1 ? parts[1][0] : '')).toUpperCase() || s[0].toUpperCase();
         }
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
@@ -181,56 +266,130 @@
         }
 
         // ============ DANE ============
-        async function loadAll() {
-            const [defsQ, projQ, prodQ, stepsQ] = await Promise.all([
-                supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
-                supabaseClient.from('wf2_projects').select('*').order('created_at', { ascending: false }).range(0, 999),
-                supabaseClient.from('wf2_products').select('id, project_id, name, status').range(0, 4999),
-                // GOTCHA PostgREST: default 1000 wierszy — przy 30+ projektach instancje kroków
-                // przekroczą limit, stąd jawny range (feedback-postgrest-1000-row-default)
-                supabaseClient.from('wf2_steps').select('project_id, product_id, step_key, status').range(0, 9999),
-            ]);
-            stepDefs = defsQ.data || [];
-            projects = (projQ.data || []).filter(p => !p.is_test);
-            productsByProj = {}; (prodQ.data || []).forEach(p => { (productsByProj[p.project_id] = productsByProj[p.project_id] || []).push(p); });
-            stepsByProj = {}; (stepsQ.data || []).forEach(s => { (stepsByProj[s.project_id] = stepsByProj[s.project_id] || []).push(s); });
-            computeAgg();
-            renderStages();
-            renderTable();
+        // wf2_steps przekroczyło już 1000 wierszy — serwer (max-rows) tnie KAŻDE zapytanie do 1000
+        // niezależnie od range/limit (Content-Range .../1327). Stąd jawna paginacja stronami po 1000,
+        // inaczej postęp części projektów liczyłby się z uciętych danych (feedback-postgrest-1000-row-default).
+        async function fetchAllSteps() {
+            const all = []; const PAGE = 1000;
+            for (let from = 0; ; from += PAGE) {
+                const { data, error } = await supabaseClient.from('wf2_steps')
+                    .select('project_id, product_id, step_key, status, completed_at')
+                    .order('project_id', { ascending: true }).range(from, from + PAGE - 1);
+                if (error) { console.error('wf2_steps page', from, error); break; }
+                all.push(...(data || []));
+                if (!data || data.length < PAGE) break;
+            }
+            return all;
         }
 
-        // Postęp + „aktualny krok" projektu: pierwszy nie-done krok wg kolejności definicji
-        // (etap → sort); krok scope=product liczy się, jeśli JAKAKOLWIEK instancja produktowa otwarta.
-        function computeAgg() {
+        async function loadAll() {
+            const [defsQ, projQ, prodQ, steps, actQ, ordQ] = await Promise.all([
+                supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
+                supabaseClient.from('wf2_projects').select('*').order('created_at', { ascending: false }).range(0, 999),
+                supabaseClient.from('wf2_products').select('id, project_id, name, cover_url, sort, status').order('sort', { ascending: true }).range(0, 4999),
+                fetchAllSteps(),
+                supabaseClient.from('wf2_activities').select('project_id, created_at, action, description').order('created_at', { ascending: false }).range(0, 499),
+                supabaseClient.from('wf2_orders').select('project_id').range(0, 4999),
+            ]);
+            stepDefs = defsQ.data || [];
+            defByKey = {}; buildKeys = new Set(); maxStage = 1;
+            stepDefs.forEach(d => {
+                defByKey[d.key] = d;
+                maxStage = Math.max(maxStage, d.stage);
+                if (d.stage <= BUILD_MAX_STAGE && !d.sub_of) buildKeys.add(d.key);
+            });
+            projects = (projQ.data || []).filter(p => !p.is_test);
+
+            productsByProj = {};
+            (prodQ.data || []).forEach(p => { (productsByProj[p.project_id] = productsByProj[p.project_id] || []).push(p); });
+            stepsByProj = {};
+            (steps || []).forEach(s => { (stepsByProj[s.project_id] = stepsByProj[s.project_id] || []).push(s); });
+
+            // ostatnia aktywność per projekt (lista jest desc → pierwsza napotkana = najnowsza)
+            const lastAct = {};
+            (actQ.data || []).forEach(a => { if (!lastAct[a.project_id]) lastAct[a.project_id] = a; });
+            // liczba zamówień per projekt
+            const orders = {};
+            (ordQ.data || []).forEach(o => { orders[o.project_id] = (orders[o.project_id] || 0) + 1; });
+
+            computeAgg(lastAct, orders);
+            renderStages();
+            renderCards();
+        }
+
+        // Postęp, segmenty etapów, aktualny krok, licznik tempa — wszystko z jednego przebiegu.
+        function computeAgg(lastAct, orders) {
             const defOrder = stepDefs.map(d => d.key);
-            const defMap = {}; stepDefs.forEach(d => defMap[d.key] = d);
             aggByProj = {};
             projects.forEach(p => {
                 const steps = stepsByProj[p.id] || [];
-                const countable = steps.filter(s => s.status !== 'skipped');
+
+                // postęp globalny (bez skipped w mianowniku, bez sub_of — spójne z paskiem 7 segmentów)
+                const countable = steps.filter(s => s.status !== 'skipped' && defByKey[s.step_key] && !defByKey[s.step_key].sub_of);
                 const done = countable.filter(s => s.status === 'done').length;
+                const pct = countable.length ? Math.round(done / countable.length * 100) : 0;
+
+                // aktualny krok = pierwszy niezamknięty wg kolejności definicji
                 let currentKey = null;
                 for (const key of defOrder) {
-                    const open = steps.some(s => s.step_key === key && s.status !== 'done' && s.status !== 'skipped');
-                    if (open) { currentKey = key; break; }
+                    if (steps.some(s => s.step_key === key && s.status !== 'done' && s.status !== 'skipped')) { currentKey = key; break; }
                 }
+                const cur = currentKey ? defByKey[currentKey] : null;
+
+                // segmenty etapów 1..maxStage (bez sub_of): done=zielony, started=niebieski
+                const segs = [];
+                for (let n = 1; n <= maxStage; n++) {
+                    const inst = steps.filter(s => { const d = defByKey[s.step_key]; return d && d.stage === n && !d.sub_of; });
+                    if (!inst.length) { segs.push(''); continue; }
+                    const full = inst.every(s => s.status === 'done' || s.status === 'skipped');
+                    const started = full || inst.some(s => s.status === 'done' || s.status === 'in_progress');
+                    segs.push(full ? 's-done' : started ? 's-prog' : '');
+                }
+
                 aggByProj[p.id] = {
-                    total: countable.length, done,
-                    pct: countable.length ? Math.round(done / countable.length * 100) : 0,
+                    pct, done, total: countable.length,
                     currentKey,
-                    currentLabel: currentKey ? (defMap[currentKey]?.label || currentKey) : 'Wszystko ukończone',
+                    currentStage: cur ? cur.stage : null,
+                    currentStageLabel: cur ? cur.stage_label : 'Ukończono',
+                    currentStepLabel: cur ? cur.label : 'Wszystko ukończone',
+                    segs,
+                    orders: orders[p.id] || 0,
+                    lastAct: lastAct[p.id] || null,
+                    tempo: computeTempo(p, steps),
                 };
             });
         }
 
-        // ============ RENDER: etapy + chipy ============
+        // LICZNIK TEMPA „14 dni": cel = wszystkie kroki etapów 1–5 (scope project+product, bez sub_of)
+        // ukończone (done|skipped) w ≤14 dni od created_at. Zamknięty = bez licznika.
+        function computeTempo(p, steps) {
+            if (p.status === 'zamkniety') return { kind: 'closed' };
+            const build = steps.filter(s => buildKeys.has(s.step_key));
+            const buildAll = build.length;
+            const completed = build.filter(s => s.status === 'done' || s.status === 'skipped').length;
+            const buildComplete = buildAll > 0 && completed === buildAll;
+            let maxC = null;
+            build.forEach(s => { if (s.completed_at && (!maxC || s.completed_at > maxC)) maxC = s.completed_at; });
+
+            if (buildComplete) {
+                const n = maxC ? daysSpan(p.created_at, maxC) : null;
+                return { kind: 'built', n, onTime: n == null ? true : n <= BUILD_DAYS, slack: 1000 };
+            }
+            const day = dayNumber(p.created_at);
+            const overdue = day > BUILD_DAYS;
+            return { kind: 'active', day, overdue, overdueBy: overdue ? day - BUILD_DAYS : 0, slack: BUILD_DAYS - day };
+        }
+
+        // ============ RENDER: etapy + chipy (badge = ilu aktywnych projektów czeka na tym kroku) ============
         function renderStages() {
             const wrap = document.getElementById('stages-wrap');
             const stages = {};
-            stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, defs: [] }).defs.push(d); });
+            stepDefs.filter(d => !d.sub_of).forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, defs: [] }).defs.push(d); });
             const activeProjects = projects.filter(p => p.status !== 'zamkniety');
             const countByKey = {};
             activeProjects.forEach(p => { const k = aggByProj[p.id]?.currentKey; if (k) countByKey[k] = (countByKey[k] || 0) + 1; });
+            const sum = document.getElementById('stages-summary');
+            if (sum) sum.textContent = activeProjects.length ? `${activeProjects.length} aktywnych w toku` : '';
 
             wrap.innerHTML = Object.keys(stages).sort((a, b) => a - b).map(num => {
                 const st = stages[num];
@@ -238,10 +397,7 @@
                     const cnt = countByKey[d.key] || 0;
                     const badge = cnt > 0 ? `<span class="step-badge" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}">${cnt}</span>` : '';
                     const scopeMark = d.scope === 'product' ? '<i class="ph ph-stack text-[10px] opacity-60"></i>' : '';
-                    return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="toggleFilter('${d.key}')"
-                        data-tip-title="${escapeHtml(d.label)}${d.milestone_label ? ' 🏁' : ''}"
-                        data-tip-sub="Etap ${d.stage} · ${OWNER_LABEL[d.owner]}${d.scope === 'product' ? ' · per produkt' : ''}${d.milestone_label ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}"
-                        data-tip-desc="${cnt > 0 ? cnt + ' projekt(y) czekają na tym kroku · ' : ''}klik = filtr listy po tym kroku">
+                    return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="toggleFilter('${d.key}')">
                         <span class="owner-dot" style="background:${BADGE_COLORS[d.owner]}"></span>
                         <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${scopeMark}${badge}</button>`;
                 }).join('');
@@ -255,99 +411,140 @@
             }).join('');
         }
 
+        function toggleStages() {
+            const w = document.getElementById('stages-wrap');
+            const open = w.classList.toggle('hidden') === false;
+            document.getElementById('stages-caret').style.transform = open ? 'rotate(180deg)' : '';
+        }
+
         function toggleFilter(key) {
+            // klik chipa w rozwiniętym panelu ustawia filtr; przy aktywnym filtrze panel zostaje otwarty
             filterStepKey = filterStepKey === key ? null : key;
             const bar = document.getElementById('filter-bar');
             if (filterStepKey) {
-                const d = stepDefs.find(x => x.key === filterStepKey);
-                document.getElementById('filter-label').textContent = 'projekty na kroku „' + (d?.label || key) + '"';
+                const d = defByKey[filterStepKey];
+                document.getElementById('filter-label').textContent = 'krok „' + (d?.label || key) + '"';
                 bar.classList.remove('hidden'); bar.classList.add('flex');
             } else { bar.classList.add('hidden'); bar.classList.remove('flex'); }
-            renderStages(); renderTable();
+            renderStages(); renderCards();
         }
         function clearFilter() { toggleFilter(filterStepKey); }
 
-        // ============ RENDER: tabela ============
-        function renderTable() {
-            const tbody = document.getElementById('projects-tbody');
-            let rows = projects;
-            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
-            document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
-            tbody.innerHTML = rows.map(p => {
-                const agg = aggByProj[p.id] || { pct: 0, done: 0, total: 0, currentLabel: '—' };
-                const sm = STATUS_META[p.status] || STATUS_META.start;
-                const prods = (productsByProj[p.id] || []).length;
-                const open = openRows.has(p.id);
-                return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.03] cursor-pointer transition-colors" onclick="toggleRow('${p.id}')">
-                    <td class="px-5 py-3.5">
-                        <div class="flex items-center gap-2.5">
-                            <i class="ph ${open ? 'ph-caret-down text-[#3291ff]' : 'ph-caret-right text-zinc-600'} text-xs flex-shrink-0"></i>
-                            <div>
-                                <div class="text-white font-medium">${escapeHtml(p.customer_name || '(bez klienta)')}</div>
-                                <div class="text-zinc-600 text-[11px]">${escapeHtml(p.customer_email || '')}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-5 py-3.5"><span class="inline-block px-2 py-0.5 rounded-md border text-[11px] font-medium ${sm.cls}">${sm.label}</span></td>
-                    <td class="px-5 py-3.5 min-w-[130px]">
-                        <div class="flex items-center gap-2">
-                            <div class="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div class="h-full bg-[#0070f3] rounded-full" style="width:${agg.pct}%"></div></div>
-                            <span class="text-zinc-400 text-[11px] font-mono">${agg.pct}%</span>
-                        </div>
-                        <div class="text-zinc-600 text-[10px] mt-0.5">${agg.done}/${agg.total} kroków</div>
-                    </td>
-                    <td class="px-5 py-3.5 text-zinc-300 text-xs">${escapeHtml(agg.currentLabel)}</td>
-                    <td class="px-5 py-3.5 text-center text-zinc-300 font-mono">${prods}</td>
-                    <td class="px-5 py-3.5 text-zinc-500 text-xs">${relDate(p.created_at)}</td>
-                    <td class="px-5 py-3.5 text-right"><button onclick="event.stopPropagation();location.href='projekt.html?id=${p.id}'" class="inline-flex items-center gap-1 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-2.5 py-1 text-[11px] transition-colors">Otwórz <i class="ph ph-arrow-right"></i></button></td>
-                </tr>` + (open ? renderRowPreview(p) : '');
-            }).join('');
+        // bucket sortowania: 0 = realne aktywne (palące się na górze), 2 = demo, 3 = zamknięte (na końcu)
+        function sortBucket(p) {
+            if (p.status === 'zamkniety') return 3;
+            if (isDemo(p)) return 2;
+            return 0;
         }
 
-        // Rozwijany podgląd projektu: postęp etapów + portfel produktów bez wchodzenia w projekt
-        function renderRowPreview(p) {
-            const stages = {};
-            stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, keys: [] }).keys.push(d.key); });
-            const steps = stepsByProj[p.id] || [];
-            const stageHtml = Object.keys(stages).sort((a, b) => a - b).map(n => {
-                const inst = steps.filter(s => stages[n].keys.includes(s.step_key) && s.status !== 'skipped');
-                const done = inst.filter(s => s.status === 'done').length;
-                const full = inst.length > 0 && done === inst.length;
-                const started = done > 0 || inst.some(s => s.status === 'in_progress');
-                const cls = full ? 'border-[#45a557]/50 text-[#62c073]' : started ? 'border-[#0070f3]/50 text-[#52a8ff]' : 'border-[#2a2a2a] text-zinc-500';
-                return `<span class="inline-flex items-center gap-1.5 border ${cls} rounded-md px-2.5 py-1 text-[11px]">
-                    ${full ? '<i class="ph ph-check"></i>' : `<span class="font-mono">${done}/${inst.length}</span>`} ${escapeHtml(stages[n].label)}</span>`;
+        // ============ RENDER: karty ============
+        function renderCards() {
+            const grid = document.getElementById('proj-grid');
+            const q = (document.getElementById('search')?.value || '').trim().toLowerCase();
+            let rows = projects.slice();
+            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
+            if (q) rows = rows.filter(p => ((p.name || '') + ' ' + (p.customer_name || '') + ' ' + (p.customer_email || '')).toLowerCase().includes(q));
+
+            rows.sort((a, b) => {
+                const ba = sortBucket(a), bb = sortBucket(b);
+                if (ba !== bb) return ba - bb;
+                if (ba === 0) return (aggByProj[a.id]?.tempo?.slack ?? 999) - (aggByProj[b.id]?.tempo?.slack ?? 999); // najmniejszy zapas = najpilniejsze na górze
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
+            document.getElementById('count-label').textContent = rows.length
+                ? `${rows.length} ${rows.length === 1 ? 'projekt' : (rows.length < 5 ? 'projekty' : 'projektów')}` : '';
+            grid.innerHTML = rows.map(renderCard).join('');
+        }
+
+        function renderCard(p) {
+            const agg = aggByProj[p.id] || {};
+            const sm = STATUS_META[p.status] || STATUS_META.start;
+            const demo = isDemo(p);
+            const brand = (p.name || '').trim() || p.customer_name || '(bez marki)';
+            // linia klienta: unikaj powtórki gdy marka = nazwa klienta
+            const clientLine = (p.name && p.name.trim() && p.customer_name) ? p.customer_name : (p.customer_email || p.customer_name || '');
+
+            // segmenty etapów
+            const segHtml = (agg.segs || []).map(c => `<span class="${c}"></span>`).join('');
+            const stageTxt = agg.currentStage
+                ? `Etap ${agg.currentStage} · <b>${escapeHtml(agg.currentStageLabel)}</b>`
+                : `<b class="text-[#62c073]">Ukończono</b>`;
+
+            // portfel — stack coverów
+            const prods = productsByProj[p.id] || [];
+            const shown = prods.slice(0, 4);
+            const more = prods.length - shown.length;
+            let stackHtml = shown.map(pr => {
+                if (pr.cover_url) {
+                    return `<img class="pc-thumb" src="${escapeHtml(pr.cover_url)}" alt="" loading="lazy"
+                        onerror="this.outerHTML='<div class=\\'pc-thumb pc-thumb-mono\\'>${escapeHtml(initials(pr.name)).replace(/'/g,'')}</div>'">`;
+                }
+                return `<div class="pc-thumb pc-thumb-mono">${escapeHtml(initials(pr.name))}</div>`;
             }).join('');
-            const PS = { kandydat:['Kandydat','text-zinc-500'], zaakceptowany:['Zaakcept.','text-[#52a8ff]'], w_budowie:['W budowie','text-[#52a8ff]'], gotowy:['Gotowy','text-[#52a8ff]'], live:['LIVE','text-[#62c073]'], test:['Test','text-[#f5b955]'], winner:['WINNER','text-[#62c073]'], kill:['KILL','text-[#f26d78]'], skala:['Skala','text-[#62c073]'] };
-            const prods = (productsByProj[p.id] || []);
-            const prodHtml = prods.length ? prods.map(pr => {
-                const m = PS[pr.status] || PS.kandydat;
-                return `<span class="inline-flex items-center gap-1.5 border border-[#2a2a2a] rounded-md px-2.5 py-1 text-[11px] text-zinc-300">${escapeHtml(pr.name)}<span class="border-l border-[#2a2a2a] pl-1.5 ${m[1]}">${m[0]}</span></span>`;
-            }).join('') : '<span class="text-zinc-600 text-[11px]">brak produktów w portfelu</span>';
-            return `<tr class="border-b border-[#1f1f1f] bg-[#050505]" onclick="event.stopPropagation()"><td colspan="7" class="px-5 py-4 cursor-default">
-                <div class="flex flex-wrap gap-1.5 mb-3">${stageHtml}</div>
-                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-600 mb-1.5">Portfel</div>
-                <div class="flex flex-wrap gap-1.5">${prodHtml}</div>
-            </td></tr>`;
+            if (more > 0) stackHtml += `<div class="pc-thumb pc-thumb-more">+${more}</div>`;
+            const portfel = prods.length
+                ? `<div class="pc-stack">${stackHtml}</div><span class="pc-portlabel">${prods.length} ${prods.length === 1 ? 'produkt' : (prods.length < 5 ? 'produkty' : 'produktów')}</span>`
+                : `<span class="pc-portlabel text-zinc-700">Brak portfela</span>`;
+
+            const ordersHtml = agg.orders > 0 ? `<span class="pc-orders"><i class="ph ph-shopping-cart"></i>${agg.orders}</span>` : '';
+            const actHtml = agg.lastAct ? `<span class="pc-act"><i class="ph ph-clock-countdown"></i>${escapeHtml(relDate(agg.lastAct.created_at))}</span>` : '';
+
+            return `<div class="pcard${demo ? ' is-demo' : ''}" onclick="location.href='projekt.html?id=${p.id}'">
+                ${demo ? '<span class="demo-tag">DEMO</span>' : ''}
+                <div class="pc-head">
+                    <div class="pc-mono">${escapeHtml(initials(brand))}</div>
+                    <div class="pc-tt">
+                        <div class="pc-title" style="${demo ? 'padding-right:44px' : ''}">${escapeHtml(brand)}</div>
+                        <div class="pc-client">${escapeHtml(clientLine) || '&nbsp;'}</div>
+                    </div>
+                    ${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}
+                </div>
+
+                <div>
+                    <div class="pc-seg mb-2">${segHtml}</div>
+                    <div class="pc-metarow">
+                        <span class="pc-stage">${stageTxt}</span>
+                        <span class="pc-pct">${agg.pct || 0}% · ${agg.done || 0}/${agg.total || 0}</span>
+                    </div>
+                </div>
+
+                <div class="pc-tempo">${renderTempo(agg.tempo)}</div>
+
+                <div class="pc-foot">
+                    <div class="flex items-center gap-2.5 min-w-0">${portfel}</div>
+                    <div class="flex items-center gap-2.5 flex-shrink-0">${ordersHtml}${actHtml}</div>
+                </div>
+            </div>`;
         }
-        function toggleRow(id) {
-            if (openRows.has(id)) openRows.delete(id); else openRows.add(id);
-            renderTable(); updateExpandAllLabel();
-        }
-        function toggleAll() {
-            let rows = projects;
-            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
-            const allOpen = rows.length > 0 && rows.every(p => openRows.has(p.id));
-            if (allOpen) rows.forEach(p => openRows.delete(p.id));
-            else rows.forEach(p => openRows.add(p.id));
-            renderTable(); updateExpandAllLabel();
-        }
-        function updateExpandAllLabel() {
-            let rows = projects;
-            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
-            const allOpen = rows.length > 0 && rows.every(p => openRows.has(p.id));
-            const lbl = document.getElementById('expand-all-label');
-            if (lbl) lbl.textContent = allOpen ? 'Zwiń wszystkie' : 'Rozwiń wszystkie';
+
+        // widżet licznika tempa 14 dni
+        function renderTempo(t) {
+            if (!t || t.kind === 'closed') {
+                return `<div class="tempo-closed"><i class="ph ph-lock-simple"></i>Projekt zamknięty — bez licznika</div>`;
+            }
+            if (t.kind === 'built') {
+                const col = t.onTime ? '#45a557' : '#e5484d';
+                const txt = t.n == null
+                    ? 'Zbudowany'
+                    : `Zbudowany w <span style="font-family:'JetBrains Mono',monospace">${t.n}</span> ${t.n === 1 ? 'dzień' : 'dni'}`;
+                return `<div class="tempo-top">
+                        <span class="tempo-lbl"><i class="ph ph-flag-checkered"></i>Etapy 1–5</span>
+                        <span class="tempo-built" style="color:${col}"><i class="ph ph-${t.onTime ? 'check-circle' : 'warning-circle'}"></i>${txt}</span>
+                    </div>
+                    <div class="tempo-bar"><span style="width:100%;background:${col}"></span></div>`;
+            }
+            // active
+            const day = t.day;
+            const col = t.overdue ? '#e5484d' : (day <= 9 ? '#0070f3' : '#f5a623');
+            const w = t.overdue ? 100 : Math.round(Math.min(day, BUILD_DAYS) / BUILD_DAYS * 100);
+            const over = t.overdue ? `<span class="tempo-over"><i class="ph ph-warning"></i>OPÓŹNIONY +${t.overdueBy} ${t.overdueBy === 1 ? 'dzień' : 'dni'}</span>` : '';
+            return `<div class="tempo-top">
+                    <span class="tempo-lbl"><i class="ph ph-timer"></i>Tempo budowy</span>
+                    ${over || `<span class="tempo-day" style="color:${col}">Dzień ${day} z ${BUILD_DAYS}</span>`}
+                </div>
+                <div class="tempo-bar"><span style="width:${w}%;background:${col}"></span></div>`;
         }
 
         // ============ NOWY PROJEKT ============
@@ -355,7 +552,6 @@
         async function openNewModal() {
             document.getElementById('new-modal').classList.remove('hidden');
             document.getElementById('np-customer').focus();
-            // Typ B: klient przenoszony ze starego workflow — prefill danych, budowa od zera
             if (!v1Workflows.length) {
                 const { data } = await supabaseClient.from('workflows')
                     .select('id, customer_name, customer_email, customer_phone, offer_name')
