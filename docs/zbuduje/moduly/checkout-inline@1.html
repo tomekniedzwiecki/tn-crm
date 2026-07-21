@@ -296,6 +296,10 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
   .zc-checkout[data-zc-layout="steps"] .zc-step-title{font-weight:800;font-size:15px;color:var(--zc-text);letter-spacing:-.01em}
   .zc-checkout[data-zc-layout="steps"] .zc-step-summary{font-size:13px;color:var(--zc-muted);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-next{display:inline-block;margin-top:10px;padding:10px 22px;
+    border:1px solid var(--zc-border);border-radius:calc(var(--zc-radius) * .6);background:transparent;
+    color:var(--zc-text);font-weight:700;font-size:14px;cursor:pointer;min-height:44px}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-next:hover{border-color:var(--zc-accent);color:var(--zc-accent)}
   .zc-checkout[data-zc-layout="steps"] .zc-step-edit{flex:0 0 auto;font-size:13px;font-weight:700;
     color:var(--zc-accent);text-decoration:underline;display:none}
   .zc-checkout[data-zc-layout="steps"] .zc-step-body{display:flex;flex-direction:column;gap:15px;padding:0 16px 16px}
@@ -711,20 +715,23 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
       return;
     }
     var dateTxt = deliveryDateText();
+    // domyślnie zaznaczamy NAJTAŃSZĄ metodę (nie pierwszą): wejściowy total = najniższy uczciwy (E2E 21.07)
+    var defIdx = 0;
+    list.forEach(function (m, i) { if (num(m.price) < num(list[defIdx].price)) defIdx = i; });
     list.forEach(function (m, idx) {
       var priceTxt = m.price > 0 ? fmtPln(m.price) : 'gratis';
       var id = 'zc-del-' + idx;
       var lab = document.createElement('label');
-      lab.className = 'zc-opt' + (idx === 0 ? ' is-sel' : '');
+      lab.className = 'zc-opt' + (idx === defIdx ? ' is-sel' : '');
       lab.setAttribute('for', id);
       lab.innerHTML =
-        '<input type="radio" name="zc-delivery" id="' + id + '" value="' + m.id + '"' + (idx === 0 ? ' checked' : '') + '>' +
+        '<input type="radio" name="zc-delivery" id="' + id + '" value="' + m.id + '"' + (idx === defIdx ? ' checked' : '') + '>' +
         '<span class="zc-opt-body"><span class="zc-opt-top"><span class="zc-opt-name">' + escapeHtml(m.name) + '</span>' +
         '<span class="zc-opt-price">' + priceTxt + '</span></span>' +
         '<span class="zc-opt-sub">Dostawa do ' + dateTxt + '</span></span>';
       box.appendChild(lab);
     });
-    delivery.selectedId = list[0].id;
+    delivery.selectedId = list[defIdx].id;
     $all('input[name="zc-delivery"]', box).forEach(function (r) {
       r.addEventListener('change', function () {
         delivery.selectedId = r.value;
@@ -969,11 +976,12 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
     if (!window.trevio || typeof window.trevio.identify !== 'function') return; // preview poza platformą
     identified[key] = true;
     try {
-      // forma pól wg guide GET /docs: identify{EmailHash|PhoneHash|CustomerId}
-      var o = {}; o[type] = value; window.trevio.identify(o);
+      // beacon platformy ma pola identityType/identityValue → primary = {type, value} (E2E 21.07:
+      // wariant {EmailHash: v} przechodził bez błędu, ale identityValue zostawał null)
+      window.trevio.identify({ type: type, value: value });
     } catch (e) {
-      // fallback defensywny na wariant {type, value}
-      try { window.trevio.identify({ type: type, value: value }); } catch (e2) {}
+      // fallback defensywny na formę pól z guide: identify{EmailHash|PhoneHash}
+      try { var o = {}; o[type] = value; window.trevio.identify(o); } catch (e2) {}
     }
   }
   function maybeIdentify(name, rawVal) {
@@ -1256,7 +1264,10 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
     }
     if (key === 'address') {
       var loc = (normPost(val('postCode')) + ' ' + val('city')).trim();
-      return '✓ ' + [val('name'), loc].filter(function (x) { return x && x.trim(); }).join(' · ');
+      // imię skracane do „Jan K." — kod+miasto+ulica muszą się zmieścić bez ucięcia (E2E 21.07)
+      var nm = val('name').trim().split(/\s+/);
+      var nmShort = nm.length > 1 ? nm[0] + ' ' + nm[nm.length - 1].charAt(0) + '.' : (nm[0] || '');
+      return '✓ ' + [nmShort, val('street').trim(), loc].filter(function (x) { return x; }).join(' · ');
     }
     if (key === 'delivery') { var dm = currentDelivery(); return '✓ ' + (dm ? dm.name : 'wybrano'); }
     if (key === 'payment') {
@@ -1360,6 +1371,27 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
       if (!t || t.name !== 'zc-delivery') return;
       if (STEP_EL.delivery && STEP_EL.delivery.classList.contains('is-active')) advanceFrom('delivery');
     });
+    // pułapka E2E 21.07: klik w JUŻ zaznaczone radio nie emituje change — przechodź też po kliku
+    root.addEventListener('click', function (e) {
+      var lab = e.target && e.target.closest ? e.target.closest('.zc-delivery .zc-opt') : null;
+      if (!lab) return;
+      var el = STEP_EL.delivery;
+      if (!el || !el.classList.contains('is-active')) return;
+      setTimeout(function () {
+        var r = lab.querySelector('input[name="zc-delivery"]');
+        if (r && r.checked && el.classList.contains('is-active')) advanceFrom('delivery');
+      }, 0);
+    });
+    // jawna affordancja „Dalej" w kroku dostawy (user zadowolony z domyślnej metody nie może utknąć)
+    (function () {
+      var el = STEP_EL.delivery; if (!el) return;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'zc-step-next';
+      btn.textContent = 'Dalej';
+      btn.addEventListener('click', function () { if (stepComplete('delivery')) advanceFrom('delivery'); });
+      el.querySelector('.zc-step-body').appendChild(btn);
+    })();
 
     // submit z niekompletnym krokiem → rozwiń pierwszy niekompletny (rdzeń pokaże komunikaty)
     $('.zc-form').addEventListener('submit', function () {
