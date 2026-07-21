@@ -2109,7 +2109,7 @@
           <!-- (7) CTA — BRZMIENIE USTAWOWE, NIE ZMIENIAĆ -->
           <button type="submit" class="zc-cta" data-zc-cta>
             <span class="zc-spin" aria-hidden="true"></span>
-            <span class="zc-cta-label">Zamawiam z obowiązkiem zapłaty</span><span class="zc-cta-amt" data-zc-cta-amt></span>
+            <span class="zc-cta-label">Zamawiam i płacę</span><span class="zc-cta-amt" data-zc-cta-amt></span>
           </button>
           <p class="zc-microcopy" data-zc-microcopy>Płacisz dopiero przy odbiorze.</p>
           <p class="zc-legal">Masz prawo odstąpić od umowy w ciągu 14 dni.</p>
@@ -2498,6 +2498,10 @@
     for (var i = 0; i < delivery.methods.length; i++) if (delivery.methods[i].id === delivery.selectedId) return delivery.methods[i];
     return null;
   }
+  // CTA = obowiązek zapłaty (art. 17 UoPK): „Zamawiam i płacę", przy COD „…przy odbiorze" (decyzja Tomka 21.07)
+  function ctaLabelText() {
+    return (selectedPayment && selectedPayment.mode === 'cod') ? 'Zamawiam i płacę przy odbiorze' : 'Zamawiam i płacę';
+  }
   function recalcTotal() {
     var unit = CFG.price != null ? CFG.price : 0;
     var dm = currentDelivery();
@@ -2515,6 +2519,7 @@
     $('[data-zc-line-total]').textContent = fmtPln(total);
     $('[data-zc-total]').textContent = fmtPln(total);
     $('[data-zc-cta-amt]').textContent = fmtPln(total);   // kwota w osobnej linii — bez bulletu
+    var ctaLab = $('.zc-cta-label'); if (ctaLab && !$('[data-zc-cta]').classList.contains('is-busy')) ctaLab.textContent = ctaLabelText();
     return total;
   }
 
@@ -2634,7 +2639,7 @@
     var cta = $('[data-zc-cta]');
     cta.disabled = !!on;
     cta.classList.toggle('is-busy', !!on);
-    $('.zc-cta-label', cta).textContent = on ? 'Przetwarzamy…' : 'Zamawiam z obowiązkiem zapłaty';
+    $('.zc-cta-label', cta).textContent = on ? 'Przetwarzamy…' : ctaLabelText();
     $('[data-zc-cta-amt]').style.display = on ? 'none' : '';
   }
   function showOrderError(msg) {

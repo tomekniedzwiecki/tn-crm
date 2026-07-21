@@ -828,6 +828,11 @@ modułu. **Skórka = mapowanie tokenów `--zc-*` na tokeny landinga ALIASAMI** (
 itd. — nie dublować hexów; hex wolno tylko gdy landing nie ma zmiennej). Konfig przez
 `data-zc-product="{{WF2_PRODUCT_ID}}"` (ten sam placeholder co runtime-snippet; publish
 podmienia). Wariant layout (flat/steps) = decyzja per landing do czasu rozstrzygnięcia A/B.
+**CTA submitu modułu (STANDARD FABRYKI, decyzja Tomka 21.07): „Zamawiam i płacę", a przy
+wybranym COD dynamicznie „Zamawiam i płacę przy odbiorze"** (`ctaLabelText()` w mechanice —
+NIE nadpisywać w skórce). To jedyny wyjątek od reguły „⛔ NIGDY COD na przycisku" (ta reguła
+dalej obowiązuje dla scrollujących CTA `[data-checkout]` na landingu — tam „Zamawiam <Produkt>");
+submit modułu to przycisk prawny (art. 17 UoPK) i mówi o płatności wprost.
 Skórowanie = TYLKO tokeny/kolory/promienie/cienie/treść (kontrakt w
 nagłówku pliku modułu). **Z6 (design per projekt) dotyczy WYGLĄDU, nie MECHANIKI** — mechanika
 jest wspólna i sprawdzona; proporcje i JS = nietykalne (np. wideo desktop = `repeat(N,1fr)`,
