@@ -515,8 +515,12 @@ async function runGuard(
         const isVerified = (d: Record<string, unknown>) => {
           const v = pick(d, ['isVerified', 'verified', 'isDnsVerified', 'dnsVerified', 'isConfirmed']);
           if (typeof v === 'boolean') return v;
-          const st = str(pick(d, ['status', 'verificationStatus', 'state'])).toLowerCase();
-          return ['verified', 'active', 'ok', 'confirmed', 'ready'].includes(st);
+          const st = str(pick(d, ['status', 'verificationStatus', 'state', 'configurationStatus'])).toLowerCase();
+          if (['verified', 'active', 'ok', 'confirmed', 'ready', 'fullyconfigured'].includes(st)) return true;
+          // Trevio: weryfikacja żyje na rekordach DNS (dnsRecords[].isVerified), nie na domenie
+          const recs = extractList(d, ['dnsRecords', 'records']);
+          const req = recs.filter((r) => isTruthy(pick(r, ['isRequired', 'required'])));
+          return req.length > 0 && req.every((r) => isTruthy(pick(r, ['isVerified', 'verified'])));
         };
         const isActiveDomain = (d: Record<string, unknown>) => {
           const a = pick(d, ['isActive', 'active', 'isPrimary', 'isCurrent']);
@@ -524,7 +528,9 @@ async function runGuard(
           const nm = normDomain(pick(d, ['domain', 'name', 'host', 'hostname']));
           return !!nm && !!activeDomain && nm === activeDomain;
         };
-        const cand = list.find((d) => isVerified(d) && !isActiveDomain(d));
+        // preferuj apex (nie-www) — aktywacja StorefrontRoot; www jest opcjonalnym aliasem
+        const cands = list.filter((d) => isVerified(d) && !isActiveDomain(d));
+        const cand = cands.find((d) => !str(pick(d, ['domain', 'name', 'host', 'hostname'])).toLowerCase().startsWith('www.')) || cands[0];
         const domainId = cand ? str(pick(cand, ['id', 'domainId', 'websiteDomainId'])) : '';
         if (cand && domainId) {
           const act = await platformCall(baseUrl, wf2, { action: 'activate_domain', shop_id: shopId, domain_id: domainId });
