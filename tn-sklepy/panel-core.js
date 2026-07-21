@@ -512,7 +512,9 @@ function renderStageAxis(projDefs, containerId) {
 
         // badge „nowe" na krokach z mediami nieobejrzanymi
         const newDot = (media.length && !isPeekSeen(null, d.key)) ? '<span class="proc-newdot" title="nowe materiały"></span>' : '';
-        const film = media.length ? stepFilmstrip(media, null, d.key) : '';
+        // 'marka': bez paska kafli logo w boxie (decyzja Tomka 21.07) — pełny lockup żyje
+        // na karcie tożsamości projektu (p-brand); warianty nadal w warsztacie kroku
+        const film = (media.length && d.key !== 'marka') ? stepFilmstrip(media, null, d.key) : '';
 
         const tip = admin
             ? `data-tip-title="${i+1}. ${escapeHtml(d.label)}${isMile ? ' 🏁' : ''}" data-tip-sub="${OWNER_LABEL[d.owner] || ''}${isMile ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}" data-tip-desc="${escapeHtml((P.WS[d.key] && P.WS[d.key].desc) ? String(P.WS[d.key].desc).slice(0,140) : '')}"`
