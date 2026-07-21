@@ -201,7 +201,7 @@
         .ceny-clear:disabled { opacity:.5; cursor:default; text-decoration:none; }
         .ceny-note-small { margin-top:12px; color:#5c5c64; font-size:11.5px; line-height:1.55; }
         .ceny-seg button:disabled { opacity:.5; cursor:default; }
-        @media (max-width:560px){ .ceny-form-row { flex-direction:column; } .ceny-seg { width:100%; } .ceny-seg button { flex:1; } }
+        @media (max-width:560px){ .ceny-form-row { flex-direction:column; } .ceny-seg { width:100%; } .ceny-seg button { flex:1; } .ceny-amount { flex-basis:auto; } }
         /* Mobile: pola 16px = brak auto-zoomu iOS; główne przyciski pełnej szerokości */
         @media (max-width:560px){
             input[type=password], input[type=text], input[type=email], textarea { font-size:16px; }
@@ -814,13 +814,16 @@
     // Sekcja pokazuje TYLKO produkty z ceną i statusem live/test/winner/skala.
     // Ton ciepły, zero żargonu (BEROAS/CPA/spend/faza = zakazane). Wszystkie liczby
     // przychodzą wyliczone z edge; „Twoja cena zakupu" zapisuje się przez set_client_cost.
-    const CENY_STATUSES = new Set(['live', 'test', 'winner', 'skala']);
+    // Produkty pokazywane w sekcji cen: każdy z ustaloną ceną poza odrzuconymi
+    // (kill) i jeszcze-niewybranymi (kandydat) — statusy portfela bywają 'gotowy'
+    // zanim panel przełączy na 'test'/'live', a klient ma widzieć ceny od startu.
+    const CENY_EXCLUDED = new Set(['kill', 'kandydat']);
     const cenyState = {};          // id → { net:'brutto'|'netto', src:'dropship'|'wholesale' }
     const cenySaveTimers = {};
     let cenyTrackObs = null, cenyTracked = false;
 
     function cenyProducts() {
-        return (P.products || []).filter(p => CENY_STATUSES.has(p.status) && Number(p.price) > 0)
+        return (P.products || []).filter(p => !CENY_EXCLUDED.has(p.status) && Number(p.price) > 0)
             .sort((a, b) => (a.sort || 0) - (b.sort || 0));
     }
     function fmtZl(n) { return (Number(n) || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -836,7 +839,7 @@
             if (start != null) pts.push(Number(start));
             history.forEach(ev => { if (ev.new_price != null) pts.push(Number(ev.new_price)); });
         }
-        if (pts.length < 2) { const v = Number(price) || 0; pts = [v, v]; }
+        if (pts.length < 2) return ''; // brak historii zmian = brak wykresu (płaska linia nie niesie informacji)
         const min = Math.min(...pts), max = Math.max(...pts), span = (max - min) || 1, n = pts.length;
         const x = i => pad + (W - 2 * pad) * (n === 1 ? 0 : i / (n - 1));
         const y = v => (max === min) ? H / 2 : (H - pad) - (H - 2 * pad) * ((v - min) / span);

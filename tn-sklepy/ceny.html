@@ -806,7 +806,8 @@
         function landingOf(p) { return p.landing_price_contract || 'legacy'; }
         function contrib14(p) {
             const rows = dailyByProduct[p.id] || [];
-            const cut = isoDaysAgo(14), unit = num(p.unit_profit);
+            const un = unitProfitNet(p, num(p.price), costModel());
+            const cut = isoDaysAgo(14), unit = un && un.unit_profit_net != null ? un.unit_profit_net : num(p.unit_profit);
             let has = false, sum = 0;
             rows.forEach(r => { if (r.date >= cut) { has = true; sum += unit * num(r.orders) - num(r.spend); } });
             return has ? sum : null;
@@ -934,7 +935,8 @@
             const dmap = {}; rows.forEach(r => { dmap[r.date] = r; });
             const spend = days.map(d => num(dmap[d]?.spend));
             const orders = days.map(d => num(dmap[d]?.orders));
-            const unit = num(p.unit_profit);
+            const unNet = unitProfitNet(p, num(p.price), costModel());
+            const unit = unNet && unNet.unit_profit_net != null ? unNet.unit_profit_net : num(p.unit_profit);
             let cum = 0; const contrib = days.map((d, i) => { cum += unit * orders[i] - spend[i]; return cum; });
 
             const ev = evs.filter(e => e.new_price != null || e.old_price != null).slice().sort((a, b) => new Date(a.at) - new Date(b.at));
@@ -1007,7 +1009,8 @@
             document.getElementById('dr-stats').innerHTML =
                 stat('Cena', money(p.price)) +
                 stat('Kontryb. 14d', c14 == null ? '—' : money(c14), c14 == null ? 'text-zinc-500' : c14 >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]') +
-                stat('Zysk/szt.', money(p.unit_profit), num(p.unit_profit) > 0 ? 'text-[#62c073]' : 'text-[#f26d78]') +
+                (() => { const un = unitProfitNet(p, num(p.price), cm); const v = un ? un.unit_profit_net : null;
+                    return stat('Zysk/szt. netto', money(v), v != null && v > 0 ? 'text-[#62c073]' : 'text-[#f26d78]'); })() +
                 stat('Przychód (all-time)', money(rev)) +
                 stat('Spend (all-time)', money(spend)) +
                 stat('Autonomia', `<span class="mini-badge ${am.cls}">${am.label}</span> <span class="mini-badge ${lm.cls} ml-1">${lm.label}</span>`);
