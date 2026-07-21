@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sklepy workflow · Ceny</title>
+    <title>Sklepy workflow · Centrum cen</title>
     <link rel="icon" type="image/svg+xml" href="/tn-sklepy/favicon.svg?v=2">
     <meta name="theme-color" content="#050505">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,12 +23,21 @@
         @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
         .animate-enter { animation: fadeIn .4s ease-out forwards; }
         .phase-badge { display:inline-flex; align-items:center; gap:5px; border:1px solid; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:600; }
-        .drawer { position:fixed; top:0; right:0; bottom:0; width:min(560px,100vw); background:#0a0a0a; border-left:1px solid #1f1f1f;
+        .mini-badge { display:inline-flex; align-items:center; gap:4px; border:1px solid; border-radius:5px; padding:1px 7px; font-size:10.5px; font-weight:600; line-height:1.5; }
+        .drawer { position:fixed; top:0; right:0; bottom:0; width:min(620px,100vw); background:#0a0a0a; border-left:1px solid #1f1f1f;
                   transform:translateX(100%); transition:transform .25s ease; z-index:60; overflow-y:auto; }
         .drawer.open { transform:translateX(0); }
-        .rung { border:1px solid #1f1f1f; border-radius:8px; padding:10px 14px; }
-        .rung.active { border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.07); }
-        .rung.done { border-color:rgba(69,165,87,.5); }
+        .decwrap { border:1px solid #262626; border-radius:8px; background:#0a0a0a; }
+        .st-btn { border-radius:6px; padding:4px 12px; font-weight:600; border:1px solid; transition:all .15s; }
+        .st-accept { background:rgba(69,165,87,.12); border-color:rgba(69,165,87,.5); color:#62c073; }
+        .st-accept:hover { background:rgba(69,165,87,.22); }
+        .st-reject { background:transparent; border-color:#333; color:#a1a1aa; }
+        .st-reject:hover { border-color:#52525b; color:#d4d4d8; }
+        .cfg-input { background:#000; border:1px solid #262626; border-radius:6px; padding:5px 9px; font-size:12px; color:#fff; font-family:'JetBrains Mono',monospace; }
+        .cfg-input:focus { outline:none; border-color:rgba(0,112,243,.6); }
+        .toggle { width:38px; height:20px; border-radius:999px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; border:1px solid #262626; }
+        .toggle .knob { position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .2s; }
+        .toggle.on .knob { transform:translateX(18px); }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -41,7 +50,7 @@
                 <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
                 <span class="text-zinc-500 text-xs font-mono">tn-sklepy / <span class="text-zinc-300">ceny</span></span>
             </div>
-            <div id="engine-chip" class="inline-flex items-center gap-2 border border-[#333] rounded-md px-3 py-1.5 text-[11px] text-zinc-400">
+            <div id="engine-chip" class="inline-flex items-center gap-2 border border-[#333] rounded-md px-3 py-1.5 text-[11px] text-zinc-400 cursor-pointer" onclick="document.getElementById('engine-bar').scrollIntoView({behavior:'smooth'})">
                 <span class="w-2 h-2 rounded-full bg-zinc-600" id="engine-dot"></span><span id="engine-label">silnik: …</span>
             </div>
         </header>
@@ -49,21 +58,28 @@
         <div class="flex-1 overflow-y-auto p-6 lg:p-10">
             <div class="max-w-7xl mx-auto animate-enter">
 
-                <div class="mb-8">
-                    <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Ceny — silnik decyzji produktowych</h1>
-                    <p class="text-zinc-500">Drabinka TEST → SCALE → OPT per produkt · prawda o zamówieniach = API platformy · SSOT: <span class="font-mono text-zinc-400">docs/zbuduje/CENNIK-PLAN.md</span></p>
+                <div class="mb-6">
+                    <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Centrum dowodzenia cenami</h1>
+                    <p class="text-zinc-500">Silnik decyzji cenowych stan + polityka · metryka nadrzędna = kontrybucja zł/dzień · SSOT: <span class="font-mono text-zinc-400">docs/zbuduje/CENNIK-PLAN.md</span></p>
                 </div>
 
-                <!-- STREFA: DO DECYZJI -->
+                <!-- ========== PASEK STATUSU SILNIKA ========== -->
+                <div id="engine-bar" class="mb-8"></div>
+
+                <!-- ========== STEROWANIE AUTONOMIĄ (admin) ========== -->
+                <div id="autonomy-wrap" class="mb-8 hidden"></div>
+
+                <!-- ========== DO DECYZJI ========== -->
                 <div id="decisions-wrap" class="mb-8 hidden">
                     <div class="flex items-baseline gap-2 mb-3">
                         <span class="text-[11px] font-mono font-semibold tracking-wider text-[#f5b955]">DO DECYZJI</span>
                         <span id="decisions-count" class="text-[11px] text-zinc-500"></span>
                     </div>
                     <div id="decisions-cards" class="grid gap-3 md:grid-cols-2"></div>
+                    <div class="text-zinc-600 text-[10.5px] mt-2.5 flex items-center gap-1.5"><i class="ph ph-info"></i> Akcept = zapis decyzji — wykona ją silnik przy najbliższym przebiegu (≤10 min). Sort wg wpływu w zł.</div>
                 </div>
                 <div id="decisions-empty" class="mb-8 border border-[#1f1f1f] rounded-lg px-5 py-4 text-zinc-500 text-xs flex items-center gap-2">
-                    <i class="ph ph-check-circle text-[#62c073] text-base"></i> Brak decyzji do podjęcia — wszystko działa samo.
+                    <i class="ph ph-check-circle text-[#62c073] text-base"></i> Brak decyzji do podjęcia — silnik działa w granicach guardrails.
                 </div>
 
                 <!-- Filtry -->
@@ -72,9 +88,14 @@
                         <option value="">Wszystkie projekty</option>
                     </select>
                     <select id="f-phase" onchange="renderTable()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#0070f3]/60">
-                        <option value="">Wszystkie fazy</option>
-                        <option value="1">TEST</option><option value="2">RAMP</option>
-                        <option value="3">SCALE</option><option value="4">OPT</option>
+                        <option value="">Wszystkie reżimy</option>
+                        <option value="1">START/TEST</option><option value="2">RAMP</option>
+                        <option value="3">BASE/SCALE</option><option value="4">PROBE/OPT</option>
+                        <option value="5">HARVEST</option><option value="6">LOCKED</option>
+                    </select>
+                    <select id="f-autonomy" onchange="renderTable()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#0070f3]/60">
+                        <option value="">Każda autonomia</option>
+                        <option value="auto">auto</option><option value="propose">propose</option><option value="off">off</option>
                     </select>
                     <label class="inline-flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
                         <input id="f-attention" type="checkbox" onchange="renderTable()" class="accent-[#0070f3]"> wymaga uwagi
@@ -88,15 +109,16 @@
                             <thead>
                                 <tr class="border-b border-[#1f1f1f] text-[11px] font-mono uppercase tracking-wider text-zinc-500">
                                     <th class="px-4 py-3">Produkt</th>
-                                    <th class="px-4 py-3">Faza</th>
+                                    <th class="px-4 py-3">Reżim</th>
+                                    <th class="px-4 py-3">Autonomia</th>
                                     <th class="px-4 py-3 text-right">Cena</th>
                                     <th class="px-4 py-3 text-right">Platforma</th>
-                                    <th class="px-4 py-3">Awans</th>
+                                    <th class="px-4 py-3">Landing</th>
                                     <th class="px-4 py-3 text-right">Zysk/szt.</th>
-                                    <th class="px-4 py-3 text-right">BEROAS</th>
+                                    <th class="px-4 py-3 text-right">Kontryb. 14d</th>
+                                    <th class="px-4 py-3">Ost. decyzja</th>
                                     <th class="px-4 py-3 text-right">Spend</th>
                                     <th class="px-4 py-3 text-right">Przychód</th>
-                                    <th class="px-4 py-3">Drabinka</th>
                                 </tr>
                             </thead>
                             <tbody id="rows"></tbody>
@@ -109,14 +131,29 @@
                 </div>
 
                 <p class="text-zinc-600 text-[11px] mt-4">
-                    Sprzedaż = zamówienia z API platformy (bez statusu płatności do czasu <span class="font-mono">paymentStatus</span> — progi liczone z korektą
-                    <span class="font-mono" id="eff-factor-note"></span>). Spend/przychód: kampania <span class="font-mono">level='campaign'</span> + wf2_sales.
+                    Sprzedaż = zamówienia z API platformy (bramki na SUROWYCH zam.; haircut COD tylko w P&amp;L). Kontrybucja 14d = Σ(zysk/szt.×zam. − spend) z widoku
+                    <span class="font-mono">wf2_product_daily</span>. Spend/przychód all-time: kampania <span class="font-mono">level='campaign'</span> + wf2_sales.
                 </p>
+
+                <!-- ========== LOG AUTOMATU ========== -->
+                <div class="mt-10">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-[11px] font-mono font-semibold tracking-wider text-zinc-400">LOG AUTOMATU</span>
+                            <span id="runs-count" class="text-[11px] text-zinc-600"></span>
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                            <input id="f-decision-only" type="checkbox" onchange="renderRuns()" class="accent-[#0070f3]"> tylko decyzyjne
+                        </label>
+                    </div>
+                    <div id="runs-list" class="space-y-1.5"></div>
+                </div>
+
             </div>
         </div>
     </main>
 
-    <!-- Drawer produktu (read-only W1) -->
+    <!-- ========== DRAWER PRODUKTU ========== -->
     <div id="drawer" class="drawer">
         <div class="sticky top-0 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1f1f1f] px-6 py-4 flex items-center justify-between z-10">
             <div class="flex items-center gap-3 min-w-0">
@@ -130,17 +167,55 @@
         </div>
         <div class="p-6 space-y-6">
             <div id="dr-stats" class="grid grid-cols-3 gap-3"></div>
+
             <div>
-                <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Drabinka cenowa</div>
-                <div id="dr-ladder" class="space-y-2"></div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Trajektoria 30 dni</div>
+                <div id="dr-chart" class="border border-[#1f1f1f] rounded-lg p-3 bg-black"></div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[10px] text-zinc-500">
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#52a8ff] inline-block"></span> cena</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-[1px] bg-[#f5a623]/40 inline-block"></span> spend/dzień</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#4cb782] inline-block"></span> zamówienia</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#62c073] inline-block"></span> kontrybucja skum.</span>
+                </div>
             </div>
+
+            <div id="dr-admin-actions" class="hidden">
+                <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Sterowanie (admin)</div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="dr-pause-btn" class="st-btn st-reject text-xs"></button>
+                    <div class="inline-flex items-center gap-1.5 text-xs text-zinc-400">Autonomia:
+                        <select id="dr-autonomy" class="cfg-input py-1 text-xs">
+                            <option value="auto">auto</option><option value="propose">propose</option><option value="off">off</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Decyzje silnika (ostatnie 7)</div>
+                <div id="dr-decisions" class="space-y-1.5"></div>
+            </div>
+
             <div>
                 <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Historia zmian cen</div>
                 <div id="dr-events" class="space-y-1.5"></div>
             </div>
+
             <a id="dr-open-project" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors" href="#">
                 Otwórz projekt <i class="ph ph-arrow-right"></i>
             </a>
+        </div>
+    </div>
+
+    <!-- ========== MODAL POTWIERDZENIA ========== -->
+    <div id="confirm-modal" class="fixed inset-0 z-[80] hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-[#0a0a0a] border border-[#262626] rounded-lg max-w-md w-full p-6">
+            <div id="cm-title" class="text-white font-semibold text-base mb-2"></div>
+            <div id="cm-body" class="text-zinc-400 text-sm leading-relaxed mb-5"></div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeConfirm()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Anuluj</button>
+                <button id="cm-ok" onclick="confirmProceed()" class="px-4 py-2 text-xs font-semibold rounded-md bg-white text-black hover:bg-zinc-200">Potwierdź</button>
+            </div>
         </div>
     </div>
 
@@ -151,14 +226,18 @@
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
 
-        let projects = [], products = [], events = [], proposals = [], cfg = {};
+        let me = null;
+        let projects = [], products = [], events = [], proposals = [], runs = [], cfg = {};
         let spendByProduct = {}, revenueByProduct = {}, ordersByProduct = {};
+        let dailyByProduct = {}, lastDecisionByProduct = {};
 
         const PHASES = {
-            1: { label: 'TEST',  cls: 'border-[#f5a623]/50 text-[#f5b955]' },
-            2: { label: 'RAMP',  cls: 'border-[#0070f3]/50 text-[#52a8ff]' },
-            3: { label: 'SCALE', cls: 'border-[#45a557]/50 text-[#62c073]' },
-            4: { label: 'OPT',   cls: 'border-[#45a557]/50 text-[#62c073]' },
+            1: { label: 'TEST',    cls: 'border-[#f5a623]/50 text-[#f5b955]' },
+            2: { label: 'RAMP',    cls: 'border-[#0070f3]/50 text-[#52a8ff]' },
+            3: { label: 'SCALE',   cls: 'border-[#45a557]/50 text-[#62c073]' },
+            4: { label: 'OPT',     cls: 'border-[#45a557]/50 text-[#62c073]' },
+            5: { label: 'HARVEST', cls: 'border-[#f5a623]/50 text-[#f5b955]' },
+            6: { label: 'LOCKED',  cls: 'border-[#52a8ff]/40 text-[#52a8ff]' },
         };
         const STATE_ICON = {
             ok:               '<i class="ph ph-check-circle text-[#62c073]" title="cena zgodna z platformą"></i>',
@@ -166,11 +245,27 @@
             mismatch:         '<i class="ph ph-warning-circle text-[#f26d78]" title="ROZJAZD: platforma ≠ panel"></i>',
             paused:           '<i class="ph ph-pause-circle text-zinc-400" title="silnik wstrzymany na produkcie"></i>',
         };
+        const AUTONOMY_META = {
+            auto:    { label: 'auto',    cls: 'border-[#45a557]/50 text-[#62c073]' },
+            propose: { label: 'propose', cls: 'border-[#0070f3]/40 text-[#52a8ff]' },
+            off:     { label: 'off',     cls: 'border-[#333] text-zinc-500' },
+        };
+        const LANDING_META = {
+            hydrated: { label: 'hydrated', cls: 'border-[#45a557]/50 text-[#62c073]' },
+            legacy:   { label: 'legacy',   cls: 'border-[#f5a623]/50 text-[#f5b955]' },
+            none:     { label: 'none',     cls: 'border-[#e5484d]/50 text-[#f26d78]' },
+        };
         const KIND_LABEL = {
-            winner_reco: 'Rekomendacja WINNER', price_scale: 'Cena SCALE (propozycja AI)',
-            price_opt_over_ceiling: 'Krok OPT ponad widełkami', rollback: 'Propozycja rollbacku',
+            winner_reco: 'Rekomendacja WINNER', price_scale: 'Cena BASE (propozycja silnika)',
+            price_opt_over_ceiling: 'Krok PROBE ponad widełkami', rollback: 'Propozycja rollbacku',
             campaign_kill: 'Kampania: KILL / wymiana kreacji', creative_refresh: 'Odświeżenie kreacji',
-            budget_scale: 'Skalowanie budżetu', budget_realloc: 'Realokacja budżetu', manual_price_platform: 'Ręczna zmiana ceny na platformie',
+            budget_scale: 'Skalowanie budżetu', budget_realloc: 'Realokacja budżetu',
+            manual_price_platform: 'Ręczna zmiana ceny na platformie', landing_republish: 'Re-publish landingu (cena)',
+        };
+        const ACTION_META = {
+            hold: ['#71717a', 'trzymaj'], step_up: ['#62c073', 'podnieś'], probe: ['#52a8ff', 'probe'],
+            rollback: ['#f26d78', 'rollback'], freeze: ['#f5b955', 'zamroź'], flag: ['#f5b955', 'flaga'],
+            card: ['#f5b955', 'karta'], skip: ['#52525b', 'pomiń'], hold_no_spend: ['#71717a', 'hold (bez spendu)'],
         };
 
         function escapeHtml(str) {
@@ -184,34 +279,72 @@
             const d = new Date(iso); if (isNaN(d.getTime())) return '—';
             return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
         }
+        function relAgo(iso) {
+            if (!iso) return 'nigdy';
+            const d = new Date(iso); if (isNaN(d.getTime())) return '—';
+            const mins = Math.round((Date.now() - d.getTime()) / 60000);
+            if (mins < 1) return 'przed chwilą';
+            if (mins < 60) return mins + ' min temu';
+            if (mins < 1440) return Math.round(mins / 60) + ' godz. temu';
+            return Math.round(mins / 1440) + ' dni temu';
+        }
+        function isoDaysAgo(n) { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - n); return d.toISOString().slice(0,10); }
+        function showToast(message, type = 'info') {
+            const t = document.createElement('div');
+            const bg = type === 'success' ? '#45a557' : type === 'error' ? '#e5484d' : '#0070f3';
+            t.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};color:#fff;padding:10px 18px;border-radius:6px;font:13px/1.3 Inter,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);transition:opacity .3s`;
+            t.textContent = message;
+            document.body.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2400);
+        }
+
+        // ============ MODAL POTWIERDZENIA ============
+        let _confirmCb = null;
+        function confirmModal(title, bodyHtml, okLabel, danger, cb) {
+            document.getElementById('cm-title').textContent = title;
+            document.getElementById('cm-body').innerHTML = bodyHtml;
+            const ok = document.getElementById('cm-ok');
+            ok.textContent = okLabel;
+            ok.className = 'px-4 py-2 text-xs font-semibold rounded-md ' + (danger ? 'bg-[#e5484d] text-white hover:bg-[#f2555b]' : 'bg-white text-black hover:bg-zinc-200');
+            _confirmCb = cb;
+            const m = document.getElementById('confirm-modal'); m.classList.remove('hidden'); m.classList.add('flex');
+        }
+        function closeConfirm() { const m = document.getElementById('confirm-modal'); m.classList.add('hidden'); m.classList.remove('flex'); _confirmCb = null; }
+        function confirmProceed() { const cb = _confirmCb; closeConfirm(); if (cb) cb(); }
 
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
             Sidebar.setUserEmail(session.user.email.split('@')[0]);
             const { data } = await supabaseClient.from('team_members').select('*');
-            const me = (data || []).find(m => m.user_id === session.user.id);
+            me = (data || []).find(m => m.user_id === session.user.id) || null;
             if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
             Sidebar.showAdminNav(me?.role === 'admin');
             return session;
         }
+        const isAdmin = () => me?.role === 'admin';
 
         // ============ DANE ============
         async function loadAll() {
-            const [projQ, prodQ, evQ, propQ, adsQ, salesQ, cfgQ] = await Promise.all([
-                supabaseClient.from('wf2_projects').select('id, customer_name, status').range(0, 999),
-                supabaseClient.from('wf2_products').select('id, project_id, name, status, cover_url, cost_purchase, cost_shipping, fees_pct, price, unit_profit, shipping_paid_by, margin_mode, price_phase, phase_started_at, price_ladder, price_state, orders_paid, platform_price, platform_synced_at, platform_product_id, campaign_id').range(0, 4999),
+            const d30 = isoDaysAgo(30);
+            const [projQ, prodQ, evQ, propQ, adsQ, salesQ, cfgQ, runsQ, dailyQ] = await Promise.all([
+                supabaseClient.from('wf2_projects').select('*').range(0, 999),
+                supabaseClient.from('wf2_products').select('*').range(0, 4999),
                 supabaseClient.from('wf2_price_events').select('*').order('at', { ascending: false }).range(0, 499),
-                supabaseClient.from('wf2_proposals').select('*').eq('status', 'proposed').order('created_at', { ascending: false }).range(0, 99),
+                supabaseClient.from('wf2_proposals').select('*').eq('status', 'proposed').order('created_at', { ascending: false }).range(0, 199),
                 // ANTY-PODWÓJNE LICZENIE (TESTY.md §7.1): P&L wyłącznie level='campaign'
                 supabaseClient.from('wf2_ad_stats').select('product_id, spend, level').eq('level', 'campaign').range(0, 9999),
-                supabaseClient.from('wf2_sales').select('product_id, orders, revenue, source').eq('source', 'takedrop').range(0, 9999),
+                supabaseClient.from('wf2_sales').select('product_id, orders, revenue, source').in('source', ['takedrop', 'platform']).range(0, 9999),
                 supabaseClient.from('settings').select('value').eq('key', 'wf2_price_config').maybeSingle(),
+                // wf2_engine_runs / wf2_product_daily — migracja 20260721d; brak = {data:null} → [] (supabase-js nie rzuca)
+                supabaseClient.from('wf2_engine_runs').select('*').order('started_at', { ascending: false }).range(0, 19),
+                supabaseClient.from('wf2_product_daily').select('*').gte('date', d30).range(0, 9999),
             ]);
             projects = projQ.data || [];
             products = (prodQ.data || []).filter(p => p.status !== 'kill');
             events = evQ.data || [];
             proposals = propQ.data || [];
+            runs = runsQ.data || [];
             try { cfg = JSON.parse(cfgQ.data?.value || '{}'); } catch { cfg = {}; }
 
             spendByProduct = {}; (adsQ.data || []).forEach(r => { if (r.product_id) spendByProduct[r.product_id] = (spendByProduct[r.product_id] || 0) + num(r.spend); });
@@ -221,19 +354,177 @@
                 revenueByProduct[r.product_id] = (revenueByProduct[r.product_id] || 0) + num(r.revenue);
                 ordersByProduct[r.product_id] = (ordersByProduct[r.product_id] || 0) + num(r.orders);
             });
+            dailyByProduct = {}; (dailyQ.data || []).forEach(r => { if (r.product_id) (dailyByProduct[r.product_id] = dailyByProduct[r.product_id] || []).push(r); });
+
+            // ostatnia decyzja silnika per produkt (runs już malejąco po started_at → pierwszy wpis = najnowszy)
+            lastDecisionByProduct = {};
+            runs.forEach(r => (r.decisions || []).forEach(d => {
+                if (d && d.product_id && !lastDecisionByProduct[d.product_id]) lastDecisionByProduct[d.product_id] = Object.assign({ run_at: r.started_at }, d);
+            }));
 
             renderEngineChip();
+            renderEngineBar();
+            renderAutonomyControl();
             renderProjectFilter();
             renderDecisions();
             renderTable();
-            document.getElementById('eff-factor-note').textContent = '×' + (cfg.effective_factor ?? 0.9);
+            renderRuns();
         }
 
         function renderEngineChip() {
             const dot = document.getElementById('engine-dot'), lbl = document.getElementById('engine-label');
             if (cfg.engine_enabled && !cfg.dry_run) { dot.style.background = '#45a557'; lbl.textContent = 'silnik: AKTYWNY'; }
             else if (cfg.engine_enabled && cfg.dry_run) { dot.style.background = '#f5a623'; lbl.textContent = 'silnik: DRY-RUN'; }
-            else { dot.style.background = '#52525b'; lbl.textContent = 'silnik: wyłączony (W2)'; }
+            else { dot.style.background = '#52525b'; lbl.textContent = 'silnik: wyłączony'; }
+        }
+
+        // ============ PASEK STATUSU SILNIKA ============
+        function renderEngineBar() {
+            const el = document.getElementById('engine-bar');
+            const lastDecision = runs.find(r => r.kind === 'decision' && r.ok === true);
+            const lastAny = runs[0];
+            const staleDecision = !lastDecision || (Date.now() - new Date(lastDecision.started_at).getTime()) > 26 * 3600 * 1000;
+            const stuck = products.filter(p => {
+                if (p.price_state !== 'pending_platform') return false;
+                const t = p.platform_apply_after || p.last_price_change_at || p.phase_started_at;
+                return t && (Date.now() - new Date(t).getTime()) > 20 * 60 * 1000;
+            });
+            const alertOn = staleDecision || stuck.length > 0;
+
+            let stateCls, stateTxt, stateDot;
+            if (cfg.engine_enabled && !cfg.dry_run) { stateCls = 'text-[#62c073]'; stateTxt = 'AKTYWNY (realne zmiany)'; stateDot = '#45a557'; }
+            else if (cfg.engine_enabled && cfg.dry_run) { stateCls = 'text-[#f5b955]'; stateTxt = 'DRY-RUN (tylko log)'; stateDot = '#f5a623'; }
+            else { stateCls = 'text-zinc-400'; stateTxt = 'WYŁĄCZONY (fail-closed)'; stateDot = '#52525b'; }
+
+            const runInfo = lastAny ? `
+                <span class="mini-badge border-[#262626] text-zinc-400">${escapeHtml(lastAny.kind || 'sweep')}</span>
+                <span class="text-zinc-500">${escapeHtml(relAgo(lastAny.started_at))}</span>
+                <span class="${lastAny.ok === true ? 'text-[#62c073]' : lastAny.ok === false ? 'text-[#f26d78]' : 'text-zinc-500'}">${lastAny.ok === true ? 'OK' : lastAny.ok === false ? 'FAIL' : (lastAny.finished_at ? '—' : 'w toku')}</span>
+                <span class="text-zinc-500">· ocen. <b class="text-zinc-300 font-mono">${num(lastAny.products_evaluated)}</b> · akcje <b class="text-zinc-300 font-mono">${num(lastAny.actions_executed)}</b> · karty <b class="text-zinc-300 font-mono">${num(lastAny.cards_created)}</b></span>`
+                : '<span class="text-zinc-500">brak przebiegów silnika (czeka na cron / migrację)</span>';
+
+            el.innerHTML = `
+            <div class="rounded-lg border ${alertOn ? 'border-[#e5484d]/50 bg-[#e5484d]/[.04]' : 'border-[#1f1f1f] bg-[#0a0a0a]'} p-5">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${stateDot}"></span>
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Silnik cen</div>
+                            <div class="font-semibold ${stateCls}">${stateTxt}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap text-xs">${runInfo}</div>
+                    ${isAdmin() ? `<button onclick="runEngineNow(this)" class="st-btn st-accept text-xs inline-flex items-center gap-1.5 flex-shrink-0"><i class="ph ph-play"></i> Uruchom teraz</button>` : ''}
+                </div>
+                ${alertOn ? `<div class="mt-4 pt-4 border-t border-[#e5484d]/25 space-y-1.5 text-xs">
+                    ${staleDecision ? `<div class="text-[#f26d78] flex items-center gap-1.5"><i class="ph ph-warning-circle"></i> Ostatni udany przebieg DECYZYJNY ${lastDecision ? relAgo(lastDecision.started_at) : 'nigdy'} — silnik nie policzył decyzji w ostatnich 26h.</div>` : ''}
+                    ${stuck.length ? `<div class="text-[#f26d78] flex items-center gap-1.5"><i class="ph ph-warning-circle"></i> ${stuck.length} ${stuck.length === 1 ? 'produkt utknął' : 'produkt(y) utknęły'} w <span class="font-mono">pending_platform</span> &gt; 20 min: ${stuck.slice(0,4).map(p => escapeHtml(p.name)).join(', ')}${stuck.length > 4 ? '…' : ''}</div>` : ''}
+                </div>` : ''}
+                <div class="mt-3 text-[10.5px] text-zinc-600">Sweep co 10 min (dokańcza zmiany + wykonuje karty) · decyzje raz dziennie ok. godz. <b class="text-zinc-500">${num(cfg.decision_hour ?? 7)}:00</b> · cooldown ${num(cfg.cooldown_days ?? 7)} dni.</div>
+            </div>`;
+        }
+
+        async function runEngineNow(btn) {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { showToast('Sesja wygasła', 'error'); return; }
+            if (btn) btn.disabled = true;
+            showToast('Uruchamiam silnik…');
+            try {
+                const res = await fetch(SUPABASE_URL + '/functions/v1/wf2-price-engine', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ trigger: 'manual', kind: 'manual' }),
+                });
+                let j = {}; try { j = await res.json(); } catch (_) {}
+                if (j.status === 'already_running') { showToast('Silnik już pracuje — spróbuj za chwilę', 'info'); }
+                else if (!res.ok) { showToast('Silnik zwrócił błąd: ' + (j.error || res.status), 'error'); }
+                else { showToast('Silnik uruchomiony — odświeżam za chwilę', 'success'); setTimeout(loadAll, 2000); }
+            } catch (e) {
+                showToast('Nie udało się połączyć z silnikiem: ' + (e.message || e), 'error');
+            } finally { if (btn) btn.disabled = false; }
+        }
+
+        // ============ STEROWANIE AUTONOMIĄ (admin) ============
+        async function saveConfig(partial) {
+            // re-read aktualnej wartości → merge TYLKO edytowanych kluczy (nie gubimy pozostałych)
+            const { data } = await supabaseClient.from('settings').select('value').eq('key', 'wf2_price_config').maybeSingle();
+            let current = {}; try { current = JSON.parse(data?.value || '{}'); } catch { current = {}; }
+            const merged = Object.assign({}, current, partial);
+            const { error } = await supabaseClient.from('settings').upsert({ key: 'wf2_price_config', value: JSON.stringify(merged) }, { onConflict: 'key' });
+            if (error) { showToast('Błąd zapisu konfiguracji: ' + error.message, 'error'); return false; }
+            cfg = merged;
+            renderEngineChip(); renderEngineBar(); renderAutonomyControl();
+            return true;
+        }
+        function saveNum(key, val, isInt) {
+            const n = isInt ? parseInt(val, 10) : parseFloat(val);
+            if (isNaN(n)) { showToast('Nieprawidłowa liczba', 'error'); return; }
+            saveConfig({ [key]: n }).then(ok => { if (ok) showToast('Zapisano', 'success'); });
+        }
+        function saveSelectCfg(key, val) { saveConfig({ [key]: val }).then(ok => { if (ok) showToast('Zapisano', 'success'); }); }
+        function savePilots(val) {
+            const arr = val.split(',').map(s => s.trim()).filter(Boolean);
+            saveConfig({ pilot_project_ids: arr }).then(ok => { if (ok) showToast('Zapisano pilot: ' + (arr.length ? arr.length + ' projekt(y)' : 'wszystkie projekty'), 'success'); });
+        }
+        function onToggleEngine() {
+            if (!cfg.engine_enabled) {
+                confirmModal('Włączyć silnik cen?',
+                    'Silnik przestanie być w trybie heartbeat i zacznie liczyć decyzje. ' + (cfg.dry_run ? 'DRY-RUN jest WŁĄCZONY — decyzje tylko trafią do logu, ceny się nie zmienią.' : '<b class="text-[#f26d78]">DRY-RUN jest WYŁĄCZONY — silnik będzie realnie zmieniał ceny.</b>'),
+                    'Włącz silnik', false, () => saveConfig({ engine_enabled: true }).then(ok => { if (ok) showToast('Silnik włączony', 'success'); }));
+            } else {
+                saveConfig({ engine_enabled: false }).then(ok => { if (ok) showToast('Silnik wyłączony (fail-closed)', 'success'); });
+            }
+        }
+        function onToggleDryRun() {
+            if (cfg.dry_run) {
+                confirmModal('Wyłączyć DRY-RUN?',
+                    '<b class="text-[#f26d78]">Silnik zacznie REALNIE zmieniać ceny</b> na platformie Trevio i landingach — nie tylko logować decyzje. Rób to dopiero po pilocie i potwierdzeniu progów autonomii (SSOT §9, warunki zdjęcia dry_run).',
+                    'Wyłącz dry-run (realne zmiany)', true, () => saveConfig({ dry_run: false }).then(ok => { if (ok) showToast('DRY-RUN wyłączony — realne zmiany aktywne', 'success'); }));
+            } else {
+                saveConfig({ dry_run: true }).then(ok => { if (ok) showToast('DRY-RUN włączony', 'success'); });
+            }
+        }
+        function renderAutonomyControl() {
+            const wrap = document.getElementById('autonomy-wrap');
+            if (!isAdmin()) { wrap.classList.add('hidden'); return; }
+            wrap.classList.remove('hidden');
+            const pilots = Array.isArray(cfg.pilot_project_ids) ? cfg.pilot_project_ids.join(', ') : '';
+            const sel = (key, val, opts) => `<select class="cfg-input" onchange="saveSelectCfg('${key}', this.value)">` +
+                opts.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('') + '</select>';
+            wrap.innerHTML = `
+            <div class="rounded-lg border border-[#1f1f1f] bg-[#0a0a0a]">
+                <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('i').classList.toggle('ph-caret-down'); this.querySelector('i').classList.toggle('ph-caret-right')" class="w-full flex items-center justify-between px-5 py-3.5 text-left">
+                    <span class="text-[11px] font-mono font-semibold tracking-wider text-zinc-400 inline-flex items-center gap-2"><i class="ph ph-sliders-horizontal text-[#52a8ff]"></i> STEROWANIE AUTONOMIĄ (admin)</span>
+                    <i class="ph ph-caret-right text-zinc-500"></i>
+                </button>
+                <div class="hidden border-t border-[#1f1f1f] p-5 space-y-5">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="flex items-center justify-between border border-[#1f1f1f] rounded-md px-4 py-3">
+                            <div><div class="text-sm text-white font-medium">Silnik włączony</div><div class="text-[10.5px] text-zinc-500">fail-closed: wyłączony = tylko heartbeat</div></div>
+                            <div class="toggle ${cfg.engine_enabled ? 'on' : ''}" style="background:${cfg.engine_enabled ? '#45a557' : '#262626'}" onclick="onToggleEngine()"><span class="knob"></span></div>
+                        </div>
+                        <div class="flex items-center justify-between border border-[#1f1f1f] rounded-md px-4 py-3">
+                            <div><div class="text-sm text-white font-medium">Dry-run</div><div class="text-[10.5px] text-zinc-500">WŁ = tylko log; WYŁ = realne zmiany cen</div></div>
+                            <div class="toggle ${cfg.dry_run ? 'on' : ''}" style="background:${cfg.dry_run ? '#f5a623' : '#262626'}" onclick="onToggleDryRun()"><span class="knob"></span></div>
+                        </div>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">decision_hour</span>
+                            <input type="number" min="0" max="23" class="cfg-input w-full" value="${num(cfg.decision_hour ?? 7)}" onchange="saveNum('decision_hour', this.value, true)"></label>
+                        <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">autonomy_default</span>
+                            ${sel('autonomy_default', cfg.autonomy_default || 'propose', ['auto', 'propose', 'off'])}</label>
+                        <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">auto_step_max_pct</span>
+                            <input type="number" step="1" class="cfg-input w-full" value="${num(cfg.auto_step_max_pct ?? 20)}" onchange="saveNum('auto_step_max_pct', this.value)"></label>
+                        <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">cooldown_days</span>
+                            <input type="number" step="1" class="cfg-input w-full" value="${num(cfg.cooldown_days ?? 7)}" onchange="saveNum('cooldown_days', this.value, true)"></label>
+                        <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">max_price_changes_per_run</span>
+                            <input type="number" step="1" class="cfg-input w-full" value="${num(cfg.max_price_changes_per_run ?? 5)}" onchange="saveNum('max_price_changes_per_run', this.value, true)"></label>
+                    </div>
+                    <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">pilot_project_ids (CSV — pusto = wszystkie projekty)</span>
+                        <textarea rows="2" class="cfg-input w-full resize-y" onchange="savePilots(this.value)" placeholder="baacc66f-…, …">${escapeHtml(pilots)}</textarea></label>
+                    <div class="text-[10.5px] text-zinc-600 flex items-center gap-1.5"><i class="ph ph-info"></i> Zapis merguje TYLKO edytowane klucze do <span class="font-mono">settings.wf2_price_config</span> — pozostałe progi (§8 SSOT) nietknięte. config_version: <span class="font-mono text-zinc-500">${escapeHtml(cfg.config_version || '—')}</span></div>
+                </div>
+            </div>`;
         }
 
         function renderProjectFilter() {
@@ -244,80 +535,268 @@
         }
 
         // ============ DO DECYZJI ============
+        function effOf(pr) {
+            const pl = pr.payload || {};
+            const e = pl.expected_effect_zl;
+            if (e && typeof e === 'object') return Math.abs(num(e.contribution != null ? e.contribution : e.revenue));
+            if (typeof pl.expected_effect === 'string') { const m = pl.expected_effect.match(/-?\d+([.,]\d+)?/); return m ? Math.abs(parseFloat(m[0].replace(',', '.'))) : 0; }
+            return 0;
+        }
+        function expiresLabel(iso) {
+            if (!iso) return '';
+            const ms = new Date(iso).getTime() - Date.now();
+            if (isNaN(ms)) return '';
+            if (ms <= 0) return 'wygasła';
+            const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000);
+            return d > 0 ? `wygasa za ${d}d` : `wygasa za ${h}h`;
+        }
+        function cardBody(pr) {
+            const pl = pr.payload || {};
+            const row = (label, val) => `<div class="text-xs mb-0.5"><span class="text-zinc-600">${label}:</span> <span class="text-zinc-300">${escapeHtml(val)}</span></div>`;
+            // KONTRAKT §3.4
+            if (pl.observation || pl.recommendation || (pl.expected_effect_zl && typeof pl.expected_effect_zl === 'object')) {
+                const eff = pl.expected_effect_zl || {};
+                let h = '';
+                if (pl.observation) h += row('Obserwacja', pl.observation);
+                if (pl.recommendation) h += row('Rekomendacja', pl.recommendation);
+                if (eff.contribution != null || eff.revenue != null) {
+                    h += `<div class="text-xs mb-0.5"><span class="text-zinc-600">Efekt:</span> <span class="font-mono ${num(eff.contribution) >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]'}">${money(eff.contribution)}</span> <span class="text-zinc-600">kontryb.</span> · <span class="font-mono text-zinc-300">${money(eff.revenue)}</span> <span class="text-zinc-600">przychód</span></div>`;
+                }
+                if (pl.confidence) h += row('Pewność', pl.confidence);
+                return h || '<div class="text-zinc-500 text-xs">szczegóły w payload</div>';
+            }
+            // stary kształt string
+            if (pl.expected_effect || pl.deadline) {
+                return ['observation', 'recommendation', 'expected_effect', 'deadline'].filter(k => pl[k])
+                    .map(k => `<div class="text-zinc-400 text-xs">${escapeHtml(pl[k])}</div>`).join('');
+            }
+            // kampanijne (rule + nums)
+            const nums = Object.entries(pl).filter(([k]) => !['rule', 'creative_id', 'kind'].includes(k))
+                .map(([k, v]) => `${escapeHtml(k)}: <b class="text-zinc-300">${escapeHtml(String(v))}</b>`).join(' · ');
+            return `<div class="text-zinc-400 text-xs">${escapeHtml(pl.rule || '')}${nums ? '<br>' + nums : ''}</div>`;
+        }
         function renderDecisions() {
             const wrap = document.getElementById('decisions-wrap');
             const empty = document.getElementById('decisions-empty');
             if (!proposals.length) { wrap.classList.add('hidden'); empty.classList.remove('hidden'); return; }
             wrap.classList.remove('hidden'); empty.classList.add('hidden');
-            document.getElementById('decisions-count').textContent = proposals.length + ' propozycji czeka';
-            document.getElementById('decisions-cards').innerHTML = proposals.map(pr => {
+            const sorted = proposals.slice().sort((a, b) => effOf(b) - effOf(a));
+            document.getElementById('decisions-count').textContent = sorted.length + (sorted.length === 1 ? ' propozycja czeka' : ' propozycji czeka');
+            document.getElementById('decisions-cards').innerHTML = sorted.map(pr => {
                 const prod = products.find(p => p.id === pr.product_id);
                 const proj = projects.find(p => p.id === (pr.project_id || prod?.project_id));
                 const pl = pr.payload || {};
-                // format agencyjny: obserwacja → rekomendacja → efekt → termin (payload z silnika, W3)
-                const lines = ['observation', 'recommendation', 'expected_effect', 'deadline']
-                    .filter(k => pl[k]).map(k => `<div class="text-zinc-400 text-xs">${escapeHtml(pl[k])}</div>`).join('');
+                const deadline = pl.deadline ? `<span class="text-zinc-500">· ${escapeHtml(pl.deadline)}</span>` : '';
+                const exp = expiresLabel(pr.expires_at);
                 return `<div class="border border-[#f5a623]/40 bg-[#f5a623]/5 rounded-lg p-4">
-                    <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center justify-between mb-1.5 gap-2">
                         <span class="text-[#f5b955] text-xs font-semibold">${escapeHtml(KIND_LABEL[pr.kind] || pr.kind)}</span>
-                        <span class="text-zinc-600 text-[10px]">${relDate(pr.created_at)}</span>
+                        <span class="text-zinc-600 text-[10px] flex-shrink-0">${relDate(pr.created_at)}</span>
                     </div>
-                    <div class="text-white text-sm mb-1">${escapeHtml(prod?.name || '—')} <span class="text-zinc-500 text-xs">· ${escapeHtml(proj?.customer_name || '')}</span></div>
-                    ${lines || '<div class="text-zinc-500 text-xs">szczegóły w payload</div>'}
-                    <div class="text-zinc-600 text-[10px] mt-2">Akcept/odrzuć — od W3 (na razie podgląd)</div>
+                    <div class="text-white text-sm mb-1.5">${escapeHtml(prod?.name || '—')} <span class="text-zinc-500 text-xs">· ${escapeHtml(proj?.customer_name || '')}</span></div>
+                    ${cardBody(pr)}
+                    <div class="flex items-center gap-2 mt-3">
+                        <button onclick="propDecide('${pr.id}','accepted')" class="st-btn st-accept text-xs">Akceptuj</button>
+                        <button onclick="propDecide('${pr.id}','rejected')" class="st-btn st-reject text-xs">Odrzuć</button>
+                        ${exp ? `<span class="ml-auto text-[10px] ${exp === 'wygasła' ? 'text-[#f26d78]' : 'text-zinc-600'}">${exp}</span>` : (deadline ? `<span class="ml-auto text-[10px] text-zinc-600">${escapeHtml(pl.deadline)}</span>` : '')}
+                    </div>
                 </div>`;
             }).join('');
         }
+        async function propDecide(id, status) {
+            const pr = proposals.find(p => p.id === id);
+            const { error } = await supabaseClient.from('wf2_proposals')
+                .update({ status, decided_at: new Date().toISOString(), decided_by: 'tomek' }).eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            await logActivity(pr?.project_id || pr?.payload?.project_id, 'proposal_decision',
+                `Karta ${id.slice(0, 8)}… (${pr?.kind || '?'}) → ${status === 'accepted' ? 'ZAAKCEPTOWANA' : 'odrzucona'}`);
+            showToast(status === 'accepted' ? 'Zaakceptowana — wykona silnik w ≤10 min' : 'Odrzucona', 'success');
+            await loadAll();
+        }
+        async function logActivity(projectId, action, description) {
+            if (!projectId) return;
+            try { await supabaseClient.from('wf2_activities').insert({ project_id: projectId, actor: 'admin', action, description }); } catch (_) {}
+        }
 
         // ============ TABELA ============
-        function phaseOf(p) { return Math.min(num(p.price_phase) || 1, 4); }
-        function beroas(p) { const up = num(p.unit_profit); return (up > 0 && num(p.price) > 0) ? (num(p.price) / up) : null; }
-        function advanceLabel(p) {
-            if (!p.price_ladder?.accepted_at) return '<span class="text-zinc-600">drabinka nie zaakceptowana</span>';
-            const need = num(cfg.advance_orders_test ?? 5);
-            const eff = Math.floor(num(p.orders_paid) * (cfg.effective_factor ?? 0.9) * 100) / 100;
-            if (phaseOf(p) === 1) return `<span class="font-mono text-zinc-300">${num(p.orders_paid)}</span><span class="text-zinc-500"> zam. · próg ${need} (eff ${eff.toFixed(1)})</span>`;
-            return '<span class="text-zinc-500">wg silnika (W2)</span>';
+        function phaseOf(p) { const n = num(p.price_phase) || 1; return Math.max(1, Math.min(n, 6)); }
+        function autonomyOf(p) { return p.pricing_autonomy || cfg.autonomy_default || 'propose'; }
+        function landingOf(p) { return p.landing_price_contract || 'legacy'; }
+        function contrib14(p) {
+            const rows = dailyByProduct[p.id] || [];
+            const cut = isoDaysAgo(14), unit = num(p.unit_profit);
+            let has = false, sum = 0;
+            rows.forEach(r => { if (r.date >= cut) { has = true; sum += unit * num(r.orders) - num(r.spend); } });
+            return has ? sum : null;
         }
-        function attention(p) { return (p.price_state && p.price_state !== 'ok') || proposals.some(x => x.product_id === p.id); }
-
+        function attention(p) {
+            return (p.price_state && p.price_state !== 'ok') || proposals.some(x => x.product_id === p.id) ||
+                (p.rollback_lock_until && new Date(p.rollback_lock_until).getTime() > Date.now());
+        }
+        function lastDecisionCell(p) {
+            const d = lastDecisionByProduct[p.id];
+            if (!d) return '<span class="text-zinc-600 text-xs">—</span>';
+            const meta = ACTION_META[d.action] || ['#a1a1aa', d.action || '?'];
+            const reason = d.reason_pl || '';
+            return `<span class="mini-badge" style="border-color:${meta[0]}55;color:${meta[0]}" title="${escapeHtml(reason)}${reason ? ' · ' : ''}${escapeHtml(relAgo(d.run_at))}">${escapeHtml(meta[1])}</span>`;
+        }
+        function autonomyCell(p) {
+            const a = autonomyOf(p);
+            if (isAdmin()) {
+                return `<select onclick="event.stopPropagation()" onchange="event.stopPropagation(); setAutonomy('${p.id}', this.value)" class="cfg-input py-0.5 text-[11px]">
+                    ${['auto', 'propose', 'off'].map(o => `<option value="${o}" ${a === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+            }
+            const m = AUTONOMY_META[a] || AUTONOMY_META.propose;
+            return `<span class="mini-badge ${m.cls}">${m.label}</span>`;
+        }
         function renderTable() {
             const fp = document.getElementById('f-project').value;
             const fph = document.getElementById('f-phase').value;
+            const fau = document.getElementById('f-autonomy').value;
             const fat = document.getElementById('f-attention').checked;
             let rows = products;
             if (fp) rows = rows.filter(p => p.project_id === fp);
             if (fph) rows = rows.filter(p => String(phaseOf(p)) === fph);
+            if (fau) rows = rows.filter(p => autonomyOf(p) === fau);
             if (fat) rows = rows.filter(attention);
             document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
             document.getElementById('rows').innerHTML = rows.map(p => {
                 const proj = projects.find(x => x.id === p.project_id);
                 const ph = PHASES[phaseOf(p)] || PHASES[1];
-                const be = beroas(p);
                 const spend = spendByProduct[p.id] || 0;
                 const rev = revenueByProduct[p.id] || 0;
-                const ladderOk = !!p.price_ladder?.accepted_at;
+                const lm = LANDING_META[landingOf(p)] || LANDING_META.legacy;
+                const c14 = contrib14(p);
                 return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.03] cursor-pointer transition-colors" onclick="openDrawer('${p.id}')">
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-2.5 min-w-0">
                             ${p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" class="w-8 h-8 rounded object-cover border border-[#1f1f1f] flex-shrink-0" alt="">` : '<div class="w-8 h-8 rounded bg-[#111] border border-[#1f1f1f] flex-shrink-0"></div>'}
                             <div class="min-w-0">
-                                <div class="text-white font-medium truncate max-w-[220px]">${escapeHtml(p.name)}</div>
+                                <div class="text-white font-medium truncate max-w-[200px]">${escapeHtml(p.name)}</div>
                                 <div class="text-zinc-600 text-[11px] truncate">${escapeHtml(proj?.customer_name || '')}</div>
                             </div>
                         </div>
                     </td>
                     <td class="px-4 py-3"><span class="phase-badge ${ph.cls}">${ph.label}</span></td>
-                    <td class="px-4 py-3 text-right font-mono text-white">${money(p.price)} <span class="ml-1">${STATE_ICON[p.price_state || 'ok'] || ''}</span></td>
+                    <td class="px-4 py-3">${autonomyCell(p)}</td>
+                    <td class="px-4 py-3 text-right font-mono text-white whitespace-nowrap">${money(p.price)} <span class="ml-1">${STATE_ICON[p.price_state || 'ok'] || ''}</span></td>
                     <td class="px-4 py-3 text-right font-mono text-zinc-400">${money(p.platform_price)}</td>
-                    <td class="px-4 py-3 text-xs">${advanceLabel(p)}</td>
+                    <td class="px-4 py-3"><span class="mini-badge ${lm.cls}">${lm.label}</span></td>
                     <td class="px-4 py-3 text-right font-mono ${num(p.unit_profit) > 0 ? 'text-[#62c073]' : 'text-[#f26d78]'}">${money(p.unit_profit)}</td>
-                    <td class="px-4 py-3 text-right font-mono ${be && be <= 4 ? 'text-[#62c073]' : 'text-[#f5b955]'}">${be ? be.toFixed(1) : '—'}</td>
+                    <td class="px-4 py-3 text-right font-mono ${c14 == null ? 'text-zinc-600' : c14 >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]'}">${c14 == null ? '—' : money(c14)}</td>
+                    <td class="px-4 py-3">${lastDecisionCell(p)}</td>
                     <td class="px-4 py-3 text-right font-mono text-zinc-300">${spend ? money(spend) : '—'}</td>
                     <td class="px-4 py-3 text-right font-mono text-zinc-300">${rev ? money(rev) : '—'}</td>
-                    <td class="px-4 py-3 text-xs">${ladderOk ? '<span class="text-[#62c073]"><i class="ph ph-check"></i> zaakceptowana</span>' : '<span class="text-zinc-500">brak</span>'}</td>
                 </tr>`;
             }).join('');
+        }
+        async function setAutonomy(pid, val) {
+            const { error } = await supabaseClient.from('wf2_products').update({ pricing_autonomy: val }).eq('id', pid);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); renderTable(); return; }
+            const p = products.find(x => x.id === pid); if (p) p.pricing_autonomy = val;
+            showToast('Autonomia: ' + val, 'success');
+            renderTable();
+        }
+
+        // ============ LOG AUTOMATU ============
+        function renderRuns() {
+            const only = document.getElementById('f-decision-only').checked;
+            const list = only ? runs.filter(r => r.kind === 'decision') : runs;
+            document.getElementById('runs-count').textContent = list.length ? list.length + ' przebieg(ów)' : '';
+            const box = document.getElementById('runs-list');
+            if (!list.length) { box.innerHTML = '<div class="border border-[#1f1f1f] rounded-lg px-5 py-4 text-zinc-500 text-xs">Brak przebiegów silnika w logu (tabela wf2_engine_runs zapełnia się po uruchomieniu crona / migracji 20260721d).</div>'; return; }
+            box.innerHTML = list.map(r => {
+                const decs = Array.isArray(r.decisions) ? r.decisions : [];
+                const errs = Array.isArray(r.errors) ? r.errors.length : (r.errors && typeof r.errors === 'object' ? Object.keys(r.errors).length : 0);
+                const okBadge = r.ok === true ? '<span class="mini-badge border-[#45a557]/50 text-[#62c073]">OK</span>'
+                    : r.ok === false ? '<span class="mini-badge border-[#e5484d]/50 text-[#f26d78]">FAIL</span>'
+                    : '<span class="mini-badge border-[#333] text-zinc-500">w toku</span>';
+                return `<div class="decwrap overflow-hidden">
+                    <button onclick="const d=this.nextElementSibling; if(d) d.classList.toggle('hidden')" class="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[.02]">
+                        <span class="mini-badge border-[#262626] text-zinc-400">${escapeHtml(r.kind || 'sweep')}</span>
+                        ${r.dry_run ? '<span class="mini-badge border-[#f5a623]/40 text-[#f5b955]">dry-run</span>' : ''}
+                        ${okBadge}
+                        <span class="text-zinc-500 text-xs font-mono">${escapeHtml(relDate(r.started_at))}</span>
+                        <span class="text-zinc-500 text-[11px] ml-auto">ocen. <b class="text-zinc-300 font-mono">${num(r.products_evaluated)}</b> · akcje <b class="text-zinc-300 font-mono">${num(r.actions_executed)}</b> · karty <b class="text-zinc-300 font-mono">${num(r.cards_created)}</b>${errs ? ` · <span class="text-[#f26d78]">błędy ${errs}</span>` : ''}</span>
+                        ${decs.length ? '<i class="ph ph-caret-down text-zinc-600"></i>' : ''}
+                    </button>
+                    ${decs.length ? `<div class="hidden border-t border-[#1f1f1f] px-4 py-2.5 space-y-1">
+                        ${decs.map(d => {
+                            const prod = products.find(x => x.id === d.product_id);
+                            const meta = ACTION_META[d.action] || ['#a1a1aa', d.action || '?'];
+                            const dr = (d.delta_revenue != null ? d.delta_revenue : d.delta_revenue_zl);
+                            return `<div class="flex items-start gap-2 text-xs">
+                                <span class="mini-badge flex-shrink-0" style="border-color:${meta[0]}55;color:${meta[0]}">${escapeHtml(meta[1])}</span>
+                                <span class="text-zinc-300 flex-shrink-0">${escapeHtml(prod?.name || d.name || (d.product_id ? d.product_id.slice(0,8) + '…' : '—'))}</span>
+                                <span class="text-zinc-500">${escapeHtml(d.reason_pl || '')}</span>
+                                ${dr != null ? `<span class="ml-auto font-mono flex-shrink-0 ${num(dr) >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]'}">${money(dr)}</span>` : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        // ============ WYKRES (inline SVG, zero bibliotek) ============
+        function drawChart(p) {
+            const rows = (dailyByProduct[p.id] || []);
+            const evs = events.filter(e => e.product_id === p.id);
+            const W = 280, H = 120, PL = 6, PR = 6, PT = 10, PB = 16;
+            const plotW = W - PL - PR, plotH = H - PT - PB, base = PT + plotH;
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const days = [];
+            for (let i = 29; i >= 0; i--) { const d = new Date(today); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
+            const dmap = {}; rows.forEach(r => { dmap[r.date] = r; });
+            const spend = days.map(d => num(dmap[d]?.spend));
+            const orders = days.map(d => num(dmap[d]?.orders));
+            const unit = num(p.unit_profit);
+            let cum = 0; const contrib = days.map((d, i) => { cum += unit * orders[i] - spend[i]; return cum; });
+
+            const ev = evs.filter(e => e.new_price != null || e.old_price != null).slice().sort((a, b) => new Date(a.at) - new Date(b.at));
+            function priceOn(dstr) {
+                const t = new Date(dstr + 'T23:59:59').getTime();
+                let pr = null;
+                for (const e of ev) { if (new Date(e.at).getTime() <= t && e.new_price != null) pr = num(e.new_price); }
+                if (pr == null) pr = ev.length ? num(ev[0].old_price != null ? ev[0].old_price : ev[0].new_price) : num(p.price);
+                return pr;
+            }
+            const price = days.map(priceOn);
+
+            const hasActivity = spend.some(v => v > 0) || orders.some(v => v > 0) || ev.length > 0;
+            if (!hasActivity && !num(p.price)) return '<div class="text-zinc-600 text-xs py-8 text-center">Brak danych do wykresu — czeka na sync/silnik.</div>';
+
+            const xAt = i => PL + (i / 29) * plotW;
+            const spMax = Math.max.apply(null, spend.concat(0.0001));
+            const pMin = Math.min.apply(null, price), pMax = Math.max.apply(null, price);
+            const cMin = Math.min.apply(null, contrib.concat(0)), cMax = Math.max.apply(null, contrib.concat(0));
+            const yP = v => PT + plotH - ((v - pMin) / ((pMax - pMin) || 1)) * plotH;
+            const yC = v => PT + plotH - ((v - cMin) / ((cMax - cMin) || 1)) * plotH;
+
+            const bw = Math.max(1.5, (plotW / 30) * 0.5);
+            let bars = '';
+            spend.forEach((v, i) => { if (v <= 0) return; const h = (v / spMax) * (plotH * 0.55); bars += `<rect x="${(xAt(i) - bw / 2).toFixed(1)}" y="${(base - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="#f5a623" fill-opacity="0.4" rx="0.5"/>`; });
+
+            let pp = '', prevPY = 0;
+            for (let i = 0; i < price.length; i++) {
+                const x = xAt(i), y = yP(price[i]);
+                if (i === 0) pp = `M ${x.toFixed(1)} ${y.toFixed(1)}`;
+                else pp += ` L ${x.toFixed(1)} ${prevPY.toFixed(1)} L ${x.toFixed(1)} ${y.toFixed(1)}`;
+                prevPY = y;
+            }
+            const cpts = contrib.map((v, i) => `${xAt(i).toFixed(1)},${yC(v).toFixed(1)}`).join(' ');
+            let dots = '';
+            orders.forEach((v, i) => { if (v <= 0) return; const r = Math.min(3.5, 1.5 + v * 0.5); dots += `<circle cx="${xAt(i).toFixed(1)}" cy="${yP(price[i]).toFixed(1)}" r="${r.toFixed(1)}" fill="#4cb782"/>`; });
+
+            return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" font-family="JetBrains Mono, monospace">
+                <line x1="${PL}" y1="${base}" x2="${W - PR}" y2="${base}" stroke="#1f1f1f" stroke-width="0.5"/>
+                ${bars}
+                <polyline points="${cpts}" fill="none" stroke="#62c073" stroke-width="1" stroke-opacity="0.85"/>
+                <path d="${pp}" fill="none" stroke="#52a8ff" stroke-width="1.4"/>
+                ${dots}
+                <text x="${PL}" y="${PT - 2}" fill="#52a8ff" font-size="7" opacity="0.8">${money(pMax)}</text>
+                <text x="${PL}" y="${H - 4}" fill="#52525b" font-size="7">${days[0].slice(5)}</text>
+                <text x="${W - PR}" y="${H - 4}" fill="#52525b" font-size="7" text-anchor="end">dziś</text>
+            </svg>`;
         }
 
         // ============ DRAWER ============
@@ -326,39 +805,53 @@
             const p = products.find(x => x.id === pid); if (!p) return;
             const proj = projects.find(x => x.id === p.project_id);
             document.getElementById('dr-name').textContent = p.name;
-            document.getElementById('dr-project').textContent = (proj?.customer_name || '') + ' · faza ' + (PHASES[phaseOf(p)]?.label || '?') + (p.phase_started_at ? ' od ' + relDate(p.phase_started_at) : '');
+            document.getElementById('dr-project').textContent = (proj?.customer_name || '') + ' · reżim ' + (PHASES[phaseOf(p)]?.label || '?') + (p.phase_started_at ? ' od ' + relDate(p.phase_started_at) : '');
             const cov = document.getElementById('dr-cover');
             if (p.cover_url) { cov.src = p.cover_url; cov.classList.remove('hidden'); } else cov.classList.add('hidden');
             document.getElementById('dr-open-project').href = 'projekt.html?id=' + p.project_id;
 
             const spend = spendByProduct[p.id] || 0, rev = revenueByProduct[p.id] || 0;
-            const contrib = num(p.unit_profit) * num(p.orders_paid) - spend;
+            const c14 = contrib14(p);
             const stat = (l, v, cls) => `<div class="border border-[#1f1f1f] rounded-lg p-3"><div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">${l}</div><div class="font-mono ${cls || 'text-white'}">${v}</div></div>`;
+            const lm = LANDING_META[landingOf(p)] || LANDING_META.legacy;
+            const am = AUTONOMY_META[autonomyOf(p)] || AUTONOMY_META.propose;
             document.getElementById('dr-stats').innerHTML =
-                stat('Zamówienia', num(p.orders_paid)) +
-                stat('Przychód', money(rev)) +
-                stat('Spend', money(spend)) +
+                stat('Cena', money(p.price)) +
+                stat('Kontryb. 14d', c14 == null ? '—' : money(c14), c14 == null ? 'text-zinc-500' : c14 >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]') +
                 stat('Zysk/szt.', money(p.unit_profit), num(p.unit_profit) > 0 ? 'text-[#62c073]' : 'text-[#f26d78]') +
-                stat('BEROAS', beroas(p) ? beroas(p).toFixed(1) : '—') +
-                stat('Wynik (zł)', money(contrib), contrib >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]');
+                stat('Przychód (all-time)', money(rev)) +
+                stat('Spend (all-time)', money(spend)) +
+                stat('Autonomia', `<span class="mini-badge ${am.cls}">${am.label}</span> <span class="mini-badge ${lm.cls} ml-1">${lm.label}</span>`);
 
-            // drabinka
-            const ladder = p.price_ladder;
-            const cur = phaseOf(p);
-            const PHASE_NO = { test: 1, ramp: 2, scale: 3, opt: 4 };
-            document.getElementById('dr-ladder').innerHTML = ladder?.rungs?.length ? ladder.rungs.map(r => {
-                const no = PHASE_NO[r.phase] || 9;
-                const cls = no < cur ? 'done' : no === cur ? 'active' : '';
-                const priceTxt = r.price != null ? money(r.price) : (r.source === 'ai' ? 'propozycja AI (bramka Tomka)' : r.step_pct ? '+' + r.step_pct + '% / szczebel' : '—');
-                return `<div class="rung ${cls} flex items-center justify-between">
-                    <div><span class="text-white text-xs font-semibold uppercase">${escapeHtml(r.phase)}</span>
-                        ${r.note ? `<span class="text-zinc-500 text-[11px] ml-2">${escapeHtml(r.note)}</span>` : ''}</div>
-                    <div class="font-mono text-xs ${no === cur ? 'text-[#52a8ff]' : 'text-zinc-300'}">${priceTxt}</div>
+            // wykres
+            document.getElementById('dr-chart').innerHTML = drawChart(p);
+
+            // akcje admina
+            const actWrap = document.getElementById('dr-admin-actions');
+            if (isAdmin()) {
+                actWrap.classList.remove('hidden');
+                const paused = p.price_state === 'paused';
+                const btn = document.getElementById('dr-pause-btn');
+                btn.innerHTML = paused ? '<i class="ph ph-play"></i> Wznów' : '<i class="ph ph-pause"></i> Pauza silnika';
+                btn.onclick = () => setPriceState(p.id, paused ? 'ok' : 'paused');
+                const asel = document.getElementById('dr-autonomy');
+                asel.value = autonomyOf(p);
+                asel.onchange = () => setAutonomy(p.id, asel.value).then(() => openDrawer(p.id));
+            } else actWrap.classList.add('hidden');
+
+            // decyzje silnika dot. produktu (ostatnie 7)
+            const pdec = [];
+            runs.forEach(r => (r.decisions || []).forEach(d => { if (d && d.product_id === pid && pdec.length < 7) pdec.push(Object.assign({ run_at: r.started_at }, d)); }));
+            document.getElementById('dr-decisions').innerHTML = pdec.length ? pdec.map(d => {
+                const meta = ACTION_META[d.action] || ['#a1a1aa', d.action || '?'];
+                return `<div class="flex items-start gap-2 text-xs">
+                    <span class="text-zinc-600 font-mono text-[10px] w-14 flex-shrink-0">${escapeHtml(relAgo(d.run_at))}</span>
+                    <span class="mini-badge flex-shrink-0" style="border-color:${meta[0]}55;color:${meta[0]}">${escapeHtml(meta[1])}</span>
+                    <span class="text-zinc-400">${escapeHtml(d.reason_pl || '')}</span>
                 </div>`;
-            }).join('') + (ladder.accepted_at ? `<div class="text-zinc-600 text-[10px]">zaakceptowana ${relDate(ladder.accepted_at)} przez ${escapeHtml(ladder.accepted_by || '?')}</div>` : '')
-              : '<div class="text-zinc-500 text-xs">Brak drabinki — wygeneruj i zaakceptuj w kroku „Kalkulacja ceny" projektu (albo: panel-sync.py kalkulacja).</div>';
+            }).join('') : '<div class="text-zinc-500 text-xs">Brak decyzji silnika dla tego produktu.</div>';
 
-            // historia
+            // historia eventów
             const evs = events.filter(e => e.product_id === pid);
             document.getElementById('dr-events').innerHTML = evs.length ? evs.map(e => {
                 const st = { proposed: '#f5b955', accepted: '#52a8ff', applied: '#52a8ff', confirmed: '#62c073', rejected: '#71717a', failed: '#f26d78' }[e.status] || '#71717a';
@@ -372,7 +865,14 @@
 
             document.getElementById('drawer').classList.add('open');
         }
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+        async function setPriceState(pid, state) {
+            const { error } = await supabaseClient.from('wf2_products').update({ price_state: state }).eq('id', pid);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            const p = products.find(x => x.id === pid); if (p) p.price_state = state;
+            showToast(state === 'paused' ? 'Silnik wstrzymany na produkcie' : 'Wznowiono', 'success');
+            renderTable(); openDrawer(pid);
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeConfirm(); closeDrawer(); } });
 
         (async () => {
             const session = await checkAuth();

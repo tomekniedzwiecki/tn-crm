@@ -443,7 +443,9 @@ async function syncProject(
   }
 
   // 5) znacznik: To (koniec okna) — kolejny run rusza od tego czasu (minus 1d overlap)
-  await supabase.from('wf2_projects').update({ orders_synced_at: toIso }).eq('id', proj.id);
+  //    + orders_unmapped_last = liczba niezmapowanych nazw z TEGO przebiegu (per projekt) —
+  //    czyta ją strażnik DQ silnika cen (CENNIK v3.1 §5.1 P12; rosnące unmapped = pauza DQ, NIE rollback).
+  await supabase.from('wf2_projects').update({ orders_synced_at: toIso, orders_unmapped_last: unmappedNames.size }).eq('id', proj.id);
 
   // source_summary: top źródła NOWYCH zamówień, np. 'facebook/paid ×2' (bez extra wywołań)
   const source_summary = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k} ×${n}`).join(', ');

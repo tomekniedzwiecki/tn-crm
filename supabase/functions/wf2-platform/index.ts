@@ -24,6 +24,7 @@
 //   order_detail      { shop_id, order_id }                     → GET /orders/{oid} (detal zamówienia)
 //   order_attribution { shop_id, order_id }                     → GET /orders/{oid}/attribution (404 = brak sesji, przechodzi w kopercie)
 //   set_price         { shop_id, product_id, variant_id, price }→ PUT …/variants/{vid}/price {price} (CENNIK W2; price>0)
+//   verify_price      { shop_id, product_id, variant_id, expected } → { matches, platform_price, variant_id } (dowód 'confirmed', CENNIK v3.1 §4.2)
 //   delivery          { shop_id }                               → metody dostawy
 //   delivery_options  { shop_id }                               → brokerzy (COD-capability)
 //   add_delivery      { shop_id, body }                         → POST delivery-methods (pełny body wg API)
@@ -149,6 +150,42 @@ async function setIntegration(shopId: string, type: string, config: Record<strin
   return { status: put.status, data: { integrationId: hit.integrationId, type, result: put.data, note: 'PUT z wartością AUTO-WŁĄCZA integrację' } };
 }
 
+// znajdź produkt/wariant po id i zwróć cenę platformy (dowód do 'confirmed' w silniku cen — CENNIK v3.1 §4.2).
+// (1) bezpośredni GET /products/{pid}; (2) fallback: lista produktów (Search puste, PageSize 100).
+async function verifyPrice(shopId: string, productId: string, variantId: string, expected: number) {
+  const numv = (v: unknown): number => {
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (v && typeof v === 'object' && !Array.isArray(v)) { const o = v as Record<string, unknown>; if ('amount' in o) return numv(o.amount); if ('value' in o) return numv(o.value); }
+    if (typeof v === 'string') { const n = parseFloat(v.replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+    return 0;
+  };
+  const pickV = (o: Record<string, unknown>, keys: string[]): unknown => { for (const k of keys) { const v = o[k]; if (v !== undefined && v !== null && v !== '') return v; } return undefined; };
+
+  let item: Record<string, unknown> | null = null;
+  const direct = await pf('GET', `/stores/${shopId}/products/${productId}`);
+  if (direct.status === 200 && direct.data && typeof direct.data === 'object' && !Array.isArray(direct.data)) {
+    const d = direct.data as Record<string, unknown>;
+    item = (d.id ? d : (d.product as Record<string, unknown> | undefined)) || null;
+  }
+  if (!item) {
+    const list = await pf('GET', `/stores/${shopId}/products`, { query: { Search: '', PageSize: 100 } });
+    const items = ((list.data as { items?: unknown })?.items && Array.isArray((list.data as { items?: unknown[] }).items))
+      ? (list.data as { items: Record<string, unknown>[] }).items
+      : (Array.isArray(list.data) ? list.data as Record<string, unknown>[] : []);
+    item = items.find((p) => String(pickV(p, ['id', 'productId', 'product_id']) ?? '') === productId) || null;
+  }
+  if (!item) return { status: 404, data: { error: 'product_not_found', matches: false } };
+
+  const variants = pickV(item, ['variants', 'variantList', 'skus']);
+  const varr = Array.isArray(variants) ? variants as Record<string, unknown>[] : [];
+  const variant = (variantId ? varr.find((v) => String(pickV(v, ['id', 'variantId', 'variant_id']) ?? '') === variantId) : null) || varr[0] || null;
+  const platformPrice = variant
+    ? numv(pickV(variant, ['price', 'grossPrice', 'priceGross', 'value', 'amount']))
+    : numv(pickV(item, ['price', 'grossPrice', 'priceGross', 'value']));
+  const vid = variant ? String(pickV(variant, ['id', 'variantId', 'variant_id']) ?? variantId) : variantId;
+  return { status: 200, data: { matches: Math.abs(platformPrice - expected) <= 0.01, platform_price: platformPrice, variant_id: vid } };
+}
+
 // ── serwer ─────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   const c = cors(req.headers.get('origin'));
@@ -213,6 +250,13 @@ Deno.serve(async (req) => {
         out = await pf('PUT', `/stores/${shopId}/products/${s(body.product_id)}/variants/${s(body.variant_id)}/price`, { body: { price } });
         break;
       }
+      case 'verify_price': {
+        needShop();
+        const expected = Number(body.expected);
+        if (!s(body.product_id) || !Number.isFinite(expected)) return J({ error: 'product_id_expected_required' }, 400);
+        out = await verifyPrice(shopId, s(body.product_id), s(body.variant_id), expected);
+        break;
+      }
       case 'delivery': needShop(); out = await pf('GET', `/stores/${shopId}/delivery-methods`); break;
       case 'delivery_options': needShop(); out = await pf('GET', `/stores/${shopId}/delivery-methods/options`); break;
       case 'add_delivery': needShop(); out = await pf('POST', `/stores/${shopId}/delivery-methods`, { body: body.body }); break;
@@ -226,7 +270,7 @@ Deno.serve(async (req) => {
         break;
       }
       default:
-        return J({ error: 'nieznana_akcja', allowed: ['stores','pages','publish_landing','unpublish_landing','products','ensure_product','set_checkout_slug','integrations','set_integration','toggle_integration','upload_logo','upload_favicon','domains','add_domain','activate_domain','orders','order_detail','order_attribution','set_price','delivery','delivery_options','add_delivery','set_cod_account','set_delivery_order','raw'] }, 400);
+        return J({ error: 'nieznana_akcja', allowed: ['stores','pages','publish_landing','unpublish_landing','products','ensure_product','set_checkout_slug','integrations','set_integration','toggle_integration','upload_logo','upload_favicon','domains','add_domain','activate_domain','orders','order_detail','order_attribution','set_price','verify_price','delivery','delivery_options','add_delivery','set_cod_account','set_delivery_order','raw'] }, 400);
     }
     return J({ status: out.status, data: out.data });
   } catch (e) {
