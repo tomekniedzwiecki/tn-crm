@@ -807,8 +807,18 @@ w kodzie = FAIL projektowy.
 **🧩 MODUŁY KANONICZNE (R13 — `docs/zbuduje/moduly/` + `MODULY.md`).** Gdy sekcja ma
 odpowiednik w bibliotece, koder MUSI użyć modułu jako **BAZY MECHANIKI** — nie pisze
 mechaniki od zera. Dostępne @1: `wideo-rail` (rail 9:16, IO-autoplay, unmute-exclusive),
-`lightbox` (delegacja `.gitem`), `sticky-buy` (IO na `.hero`), `faq-accordion` (natywny
-`<details>`, ZERO JS), `footer` (stopka standardowa: marka+linki-prawne+zaufanie, ZERO JS).
+`lightbox` (delegacja `.gitem`), `sticky-buy` (IO na `.hero` + IO na `#zamow` — pasek chowany
+nad checkoutem), `faq-accordion` (natywny `<details>`, ZERO JS), `footer` (stopka standardowa:
+marka+linki-prawne+zaufanie, ZERO JS), **`checkout-inline`** (SEKCJA #zamow = TEN MODUŁ:
+pełny checkout na landingu — COD+BLIK+online po Public Storefront API; warianty layout
+flat|steps; prawo/walidacja/eventy w mechanice).
+**SEKCJA #zamow OD 21.07 = moduł `checkout-inline`** (zastępuje dawną kartę oferty z linkiem
+do kasy platformy — klient finalizuje NA landingu). Makieta oferty z F2 = wzór SKÓRKI
+(paleta/nastrój/typografia karty), nie struktury — struktura formularza jest w kontrakcie
+modułu. **Skórka = mapowanie tokenów `--zc-*` na tokeny landinga ALIASAMI** (`--zc-text:var(--ink)`
+itd. — nie dublować hexów; hex wolno tylko gdy landing nie ma zmiennej). Konfig przez
+`data-zc-product="{{WF2_PRODUCT_ID}}"` (ten sam placeholder co runtime-snippet; publish
+podmienia). Wariant layout (flat/steps) = decyzja per landing do czasu rozstrzygnięcia A/B.
 Skórowanie = TYLKO tokeny/kolory/promienie/cienie/treść (kontrakt w
 nagłówku pliku modułu). **Z6 (design per projekt) dotyczy WYGLĄDU, nie MECHANIKI** — mechanika
 jest wspólna i sprawdzona; proporcje i JS = nietykalne (np. wideo desktop = `repeat(N,1fr)`,
