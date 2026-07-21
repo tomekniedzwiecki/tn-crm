@@ -10,8 +10,8 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2.91.0"></script>
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.2/src/index.js" integrity="sha384-J7cw2fbG1T4C5MirTVUxsZGaMfw2m0XsCgOQEqUvB1OF9VIsHWuZF1GmyVRzs7eu" crossorigin="anonymous"></script>
     <script src="../components/shared-sidebar.js"></script>
-    <link rel="stylesheet" href="panel.css?v=2026072101">
-    <script src="panel-core.js?v=2026072101"></script>
+    <link rel="stylesheet" href="panel.css?v=2026072102">
+    <script src="panel-core.js?v=2026072102"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
@@ -65,7 +65,10 @@
                                         <div id="p-meta" class="text-zinc-500 text-[11px] mt-1 flex items-center gap-x-2.5 gap-y-1 flex-wrap"></div>
                                     </div>
                                 </div>
-                                <select id="p-status" onchange="saveStatus()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none flex-shrink-0 self-start"></select>
+                                <div class="flex items-center gap-2 flex-shrink-0 self-start flex-wrap justify-end">
+                                    <span id="p-lc-badge" class="hidden"></span>
+                                    <select id="p-status" onchange="saveStatus()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none"></select>
+                                </div>
                             </div>
                             <div id="p-brand" class="mt-4 flex items-center gap-x-3 gap-y-1.5 flex-wrap"></div>
                         </div>
@@ -338,9 +341,12 @@
                 <button onclick="closeCard()" class="p-1.5 text-zinc-500 hover:text-white flex-shrink-0"><i class="ph ph-x"></i></button>
             </div>
             <div id="card-body" class="px-6 py-5"></div>
-            <div class="border-t border-[#1f1f1f] px-6 py-3 flex items-center justify-between">
+            <div class="border-t border-[#1f1f1f] px-6 py-3 flex items-center justify-between gap-4">
                 <span class="text-zinc-600 text-[11px]">Dane z radaru /trendy (aukcja AliExpress + TikTok)</span>
-                <button id="card-edit-btn" class="text-xs text-[#52a8ff] hover:text-[#78b6ff]">Pełna edycja produktu</button>
+                <div class="flex items-center gap-4 flex-shrink-0">
+                    <a id="card-trendy-link" href="#" target="_blank" rel="noopener" style="display:none" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] items-center gap-1">Zobacz w /trendy <i class="ph ph-arrow-square-out"></i></a>
+                    <button id="card-edit-btn" class="text-xs text-[#52a8ff] hover:text-[#78b6ff]">Pełna edycja produktu</button>
+                </div>
             </div>
         </div>
     </div>
@@ -413,6 +419,13 @@
         <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-lg p-6">
             <h3 class="text-white text-lg font-semibold mb-4">Ustawienia projektu</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="text-xs text-zinc-500 block mb-1">Stan projektu</label>
+                    <select id="set-lifecycle" class="fld">
+                        <option value="active">Aktywny</option>
+                        <option value="paused">Wstrzymany</option>
+                        <option value="cancelled">Anulowany</option>
+                        <option value="completed">Zakończony</option>
+                    </select></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Klient</label><input id="set-customer" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">E-mail</label><input id="set-email" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Telefon</label><input id="set-phone" class="fld"></div>
@@ -468,6 +481,16 @@
         let pendingTT = null;
         let genMap = {};         // bud_session_id -> generacje z lejka /sklep
         let noteFilter = 'open';
+
+        // STAN CYKLU ŻYCIA projektu (lifecycle) — NIEZALEŻNY od statusu pipeline (PROJECT_STATUSES).
+        const LC_ORDER = ['active', 'paused', 'cancelled', 'completed'];
+        const LC_META = {
+            active:    { label: 'Aktywny',    color: '#0070f3', icon: 'ph-play-circle' },
+            paused:    { label: 'Wstrzymany', color: '#f5a623', icon: 'ph-pause-circle' },
+            cancelled: { label: 'Anulowany',  color: '#e5484d', icon: 'ph-x-circle' },
+            completed: { label: 'Zakończony', color: '#45a557', icon: 'ph-check-circle' },
+        };
+        function lifecycleOf(pr) { return (pr && LC_META[pr.lifecycle]) ? pr.lifecycle : 'active'; }
 
         const PRODUCT_STATUSES = ['kandydat','zaakceptowany','w_budowie','gotowy','live','test','winner','kill','skala'];
         const STEP_CYCLE = { pending:'in_progress', in_progress:'done', done:'pending', skipped:'pending', blocked:'in_progress' };
@@ -582,6 +605,18 @@
             document.getElementById('p-avatar').textContent = ((project.name || project.customer_name || '?').trim()[0] || '?').toUpperCase();
             const sel = document.getElementById('p-status');
             sel.innerHTML = PROJECT_STATUSES.map(s=>`<option value="${s}" ${project.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('');
+            // badge stanu cyklu życia obok statusu pipeline — tylko gdy ≠ aktywny
+            const lcEl = document.getElementById('p-lc-badge');
+            if (lcEl) {
+                const lc = lifecycleOf(project);
+                if (lc === 'active') { lcEl.className = 'hidden'; lcEl.innerHTML = ''; }
+                else {
+                    const m = LC_META[lc];
+                    lcEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap';
+                    lcEl.style.cssText = `color:${m.color};border:1px solid ${m.color}59;background:${m.color}14`;
+                    lcEl.innerHTML = `<i class="ph ${m.icon}"></i>${m.label}`;
+                }
+            }
             const meta = [];
             if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
             if (project.customer_phone) {
@@ -934,9 +969,9 @@
             pl_dostawy: { desc:'Metody dostawy z POBRANIEM (broker Apaczka): konto COD (NRB z kroku Dane), usługi brokera, metody (kurier COD DoorToDoor + paczkomat), kolejność: COD NA GÓRZE (filar narracji risk-reversal).',
                 fields:[{k:'broker_id',l:'Broker ID (Apaczka)'},{k:'methods',l:'Metody (nazwa · cena · COD)',ta:true}],
                 check:['Konto COD ustawione (set_cod_account, NRB klienta)','≥1 metoda z pobraniem (add_delivery)','Kolejność: pobranie na górze (set_delivery_order)','Widoczne w kasie (test)'], prompt:'pl_dostawy' },
-            pl_domena: { desc:'TOR RÓWNOLEGŁY Etapu 1 — uruchamiać OD RAZU po wyborze marki: zakup + propagacja DNS (24-48 h) + weryfikacja w Meta BM to najdłuższa ścieżka projektu; NIE blokuje landingów. Zakup AUTOMATEM przez GoDaddy (edge wfa-domain; bramka wydatku = akcept Tomka, confirm:true) → add_domain na platformie → rekordy DNS wpisuje automat w strefie GoDaddy (dns_set; NS ZOSTAJĄ na GoDaddy — ZAKAZ set_ns/Vercel, sklep hostuje platforma) → strażnik (cron) aktywuje po propagacji i odhacza krok.',
+            pl_domena: { desc:'TOR RÓWNOLEGŁY Etapu 1 — uruchamiać OD RAZU po wyborze marki: zakup + propagacja DNS (24-48 h) + weryfikacja w Meta BM to najdłuższa ścieżka projektu; NIE blokuje landingów. Zakup AUTOMATEM przez GoDaddy (edge wfa-domain; zakup autonomiczny — decyzja Tomka 21.07; confirm:true ustawia sesja, nota retro po zakupie) → add_domain na platformie → rekordy DNS wpisuje automat w strefie GoDaddy (dns_set; NS ZOSTAJĄ na GoDaddy — ZAKAZ set_ns/Vercel, sklep hostuje platforma) → strażnik (cron) aktywuje po propagacji i odhacza krok.',
                 fields:[{k:'domain',l:'Domena', col:'project.domain'},{k:'dns',l:'Rekordy DNS (z API platformy)',ta:true},{k:'gd_status',l:'Status GoDaddy (kupiona / rekordy wpisane)'}],
-                check:['Domena kupiona przez GoDaddy (wfa-domain, akcept Tomka)','Domena dodana na platformie (add_domain) — rekordy zwrócone','Rekordy DNS wpisane w strefie GoDaddy (dns_set, 1:1 z API)','Weryfikacja przeszła → domena aktywowana (strażnik/auto)'], prompt:'pl_domena' },
+                check:['Domena kupiona przez GoDaddy (wfa-domain, automat)','Domena dodana na platformie (add_domain) — rekordy zwrócone','Rekordy DNS wpisane w strefie GoDaddy (dns_set, 1:1 z API)','Weryfikacja przeszła → domena aktywowana (strażnik/auto)'], prompt:'pl_domena' },
             pl_integracje: { desc:'Integracje per sklep przez API: Meta pixel (PUT AUTO-WŁĄCZA; pixel wstrzykiwany na WSZYSTKICH stronach — także landingach isHtml → landing ma INIT-GUARD), GA4 opcjonalnie. Pixel_id powstaje w Etapie Kampanie — krok jest idempotentny.',
                 fields:[{k:'ga4_id',l:'GA4 measurement ID (opcjonalnie)'},{k:'capi',l:'CAPI token ustawiony? (apiKey)'}],
                 check:['GA4 ustawione (jeśli używamy)','Meta pixel ustawiony (set_integration, gdy pixel_id znany)','Pixel aktywny na storefroncie (weryfikacja w źródle strony)'], prompt:'pl_integracje' },
@@ -1698,7 +1733,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             const S = p ? (p.slug || '<slug>') : '<slug>';
             const PID = p ? p.id : '<product_id>';
             const map = {
-                marka: `KROK MARKA PARASOLOWA (Etap 1 Fundament; scope=project — krok W PEŁNI AUTONOMICZNY, bramka wydatku żyje w kroku „Domena marki"). Parasol ≠ mini-marka produktu: 1 sklep = 1 domena; storefront/checkout i strona główna-galeria noszą parasol, produkty na podstronach mają WŁASNE mini-marki. KONTEKST: krok rusza PO wyborze produktów — przeczytaj portfel projektu (wf2_products, powinien być skompletowany); portfel to kontekst nazwy: musi być POJEMNA na rotujący asortyment (nigdy kategorii-specyficzna) i pasować stylem do rodziny mini-marek (Drapek/Chłodzik — ciepłe polskie słowa). WYKONAJ: (1) ~25 kandydatek nazw → domeny .pl: RDAP https://rdap.dns.pl/domain/<d> (404=WOLNA, 200=zajęta; sekwencyjnie ~3,5 s odstępu; po 429 → WHOIS whois.dns.pl:43; awaryjnie MCP Vercel check_domain_availability) + web-check kolizji z polskimi markami; top-3 z rekomendacją do notatki kroku. (2) Tagline + opis marki 2-3 zdania (zasilą stronę główną-galerię). (3) Paleta 6 hex Z ROLAMI (primary/accent/neutrale) — WYŁĄCZNIE jasne tła; fonty heading/body z latin-ext (pobierz plik .ttf — wordmark renderuje Pillow z fontu, NIGDY gpt-image). (4) Logo (pipeline R3, DIVERSITY-FIRST): NAJPIERW wymyśl 2-3 RÓŻNE metafory znaku (różne kategorie wizualne — nie warianty jednego pomysłu; N klonów 1 metafory = fixation), potem scripts/mockup-tools/brand-forge.py w trybie PARASOLOWYM: --project-id <projekt> (claim nazwy PRZED generacją) --slug parasol-<slug> --nazwa <Nazwa> --paleta <hexy> --metafory 'a;b;c' --font <plik.ttf> --count 6; skrypt sam: kanał LOKALNY OpenAI HIGH (bez limitu edge; gpt-image-2 NIE wspiera background:transparent — biel + defringe-alfa z próbki rogów) → selektor @32px (+ test mono, + bleed-guard) → favicon 512/256/32/16 + mono → wordmark Z FONTU (guard glifów PL) + wordmark-dark → lockupy jasny/ciemny → brand-context.png (DOWÓD @16/32/64 na obu tłach) → upload bud-assets/parasol-<slug>/brand/ + brand.json. Werdykt vision top-2 (skrypt wybiera z RÓŻNYCH konceptów) wykonaj SAM wg RUBRYKI 6×T/N, którą skrypt wypisuje — TAK bez 6×T = FAIL, frazy-wytrychy = FAIL; podaj jedną najsłabszą rzecz znaku. (5) ZAPIS: bezpośredni UPDATE wf2_projects (kolumny: name/domain/tagline/brand_opis/palette/fonts/logo_url/favicon_url — logo_url=lockup, favicon_url=favicon-512; panel czyta pola kroku Z TYCH kolumn przez bindingi col) + artefakty wf2_artifacts (kind='brand', product_id NULL) + koszty wf2_costs. (6) HANDOFF: INSERT do wf2_notes (tag='decyzja', status='open') „DO DECYZJI TOMKA: zgoda na zakup domeny <domena> (GoDaddy, automat — wykonuje krok Domena marki)" — zakup+DNS to krok „Domena marki" (ten sam etap, tor równoległy: po akcepcie automat kupuje przez GoDaddy → add_domain → rekordy przez dns_set w strefie GoDaddy → strażnik aktywuje); krok pl_branding (logo na platformę) może iść zaraz po tym kroku.`,
+                marka: `KROK MARKA PARASOLOWA (Etap 1 Fundament; scope=project — krok W PEŁNI AUTONOMICZNY; zakup domeny w kroku „Domena marki" też jest autonomiczny, bez bramki (decyzja Tomka 21.07)). Parasol ≠ mini-marka produktu: 1 sklep = 1 domena; storefront/checkout i strona główna-galeria noszą parasol, produkty na podstronach mają WŁASNE mini-marki. KONTEKST: krok rusza PO wyborze produktów — przeczytaj portfel projektu (wf2_products, powinien być skompletowany); portfel to kontekst nazwy: musi być POJEMNA na rotujący asortyment (nigdy kategorii-specyficzna) i pasować stylem do rodziny mini-marek (Drapek/Chłodzik — ciepłe polskie słowa). WYKONAJ: (1) ~25 kandydatek nazw → domeny .pl: RDAP https://rdap.dns.pl/domain/<d> (404=WOLNA, 200=zajęta; sekwencyjnie ~3,5 s odstępu; po 429 → WHOIS whois.dns.pl:43; awaryjnie MCP Vercel check_domain_availability) + web-check kolizji z polskimi markami; top-3 z rekomendacją do notatki kroku. (2) Tagline + opis marki 2-3 zdania (zasilą stronę główną-galerię). (3) Paleta 6 hex Z ROLAMI (primary/accent/neutrale) — WYŁĄCZNIE jasne tła; fonty heading/body z latin-ext (pobierz plik .ttf — wordmark renderuje Pillow z fontu, NIGDY gpt-image). (4) Logo (pipeline R3, DIVERSITY-FIRST): NAJPIERW wymyśl 2-3 RÓŻNE metafory znaku (różne kategorie wizualne — nie warianty jednego pomysłu; N klonów 1 metafory = fixation), potem scripts/mockup-tools/brand-forge.py w trybie PARASOLOWYM: --project-id <projekt> (claim nazwy PRZED generacją) --slug parasol-<slug> --nazwa <Nazwa> --paleta <hexy> --metafory 'a;b;c' --font <plik.ttf> --count 6; skrypt sam: kanał LOKALNY OpenAI HIGH (bez limitu edge; gpt-image-2 NIE wspiera background:transparent — biel + defringe-alfa z próbki rogów) → selektor @32px (+ test mono, + bleed-guard) → favicon 512/256/32/16 + mono → wordmark Z FONTU (guard glifów PL) + wordmark-dark → lockupy jasny/ciemny → brand-context.png (DOWÓD @16/32/64 na obu tłach) → upload bud-assets/parasol-<slug>/brand/ + brand.json. Werdykt vision top-2 (skrypt wybiera z RÓŻNYCH konceptów) wykonaj SAM wg RUBRYKI 6×T/N, którą skrypt wypisuje — TAK bez 6×T = FAIL, frazy-wytrychy = FAIL; podaj jedną najsłabszą rzecz znaku. (5) ZAPIS: bezpośredni UPDATE wf2_projects (kolumny: name/domain/tagline/brand_opis/palette/fonts/logo_url/favicon_url — logo_url=lockup, favicon_url=favicon-512; panel czyta pola kroku Z TYCH kolumn przez bindingi col) + artefakty wf2_artifacts (kind='brand', product_id NULL) + koszty wf2_costs. (6) HANDOFF: INSERT do wf2_notes (tag='info', status='open') „Domena <domena> wybrana — zakup wykona automatycznie krok Domena marki (bez bramki)" — zakup+DNS to krok „Domena marki" (ten sam etap, tor równoległy: automat kupuje przez GoDaddy → add_domain → rekordy przez dns_set w strefie GoDaddy → strażnik aktywuje); krok pl_branding (logo na platformę) może iść zaraz po tym kroku.`,
                 kalkulacja: `KROK KALKULACJA CENY dla ${S} (id ${PID}; Etap 1 Fundament, scope=product). Ustal ceny w warsztacie kroku i zapisz je na produkcie (wf2_products): (1) CENA ZAKUPU = żywa aukcja AliExpress (source='detail'; jeśli ≠detail — STOP, podmień link w pełnej edycji i odśwież snapshot, dopiero potem kalkuluj) → cost_purchase; (2) CENA SPRZEDAŻY = narzut 10–15% na koszt efektywny (koszt+wysyłka, z prowizjami), końcówka psychologiczna — przycisk „10–15%" liczy najwyższą cenę psych. w paśmie → price; (3) DRABINKA CENOWA zaakceptowana (TEST→SCALE→OPT) — bez akceptu silnik cen NIE rusza produktu. Zapis najlepiej komendą panel-sync (product_meta cost_purchase/price + step_update kalkulacja z checklistą VERBATIM z WS) albo bezpośrednio w warsztacie kroku. Marża testowa to PASMO 10–15% (decyzja Tomka 2026-07-21: start nisko, żeby zacząć sprzedawać i przejść testy).`,
                 lp_dane: `KROK DANE fabryki landingów dla produktu ${S} (wf2_products.id ${PID}). Wykonaj F0–F0.6 wg STANDARD-LANDING-SKLEPY.md §1 i GALERIA-ALI.md: najpierw GATE source='detail' (≠detail po force:true = STOP produktu, status kroku blocked + nota), potem kuracja galerii i wideo do bud_tt_products.gallery_curated/videos_curated, na końcu KARTA-PRAWDY.md (format §1a: cena z sku_prices + kurs NBP z datą, specs 1:1, destylacja FAKT/BEŁKOT, warianty) i PASZPORT.md w FABRYKA-*/${S}/. Zarezerwuj mini-markę w bud_brand_names (INSERT-or-fail). Puste pole = „brak danych", nigdy zmyślanie.`,
                 lp_plan: `KROK PLAN dla ${S} (id ${PID}). Wg STANDARD F1 + PRZEWODNIK-GRAFICZNY.md: wypuść plan gpt-5.6-sol (motyw przewodni = metafora korzyści pod TEN produkt, dobór i kolejność sekcji, paleta+font, lista grafik, funkcje konwersji) na bazie KARTA-PRAWDY.md; zrób tabelę anty-mismatch CLAIM→ŹRÓDŁO (korzyść bez kotwicy = CUT; claim o klasie produktu bez źródła = STOP planu); potem przewodnik graficzny z osiami różnorodności (≥3 konteksty/≥3 skale/≥2 światła/człowiek ≥30%) + gate krytyka przewodnika PRZED makietami. Zapisz PLAN.md i PRZEWODNIK-GRAFICZNY.md w FABRYKA-*/${S}/.`,
@@ -1712,7 +1747,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 pl_sklep: `KROK SKLEP NA PLATFORMIE. Narzędzie: python scripts/mockup-tools/platform-sync.py (MOST fabryka↔platforma). Komendy: 'shops' (lista sklepów partnera + zajętość per projekt) → 'link-shop ${projectId} <shop_id>' (zapis platform_shop_id + link w Podglądach; sklep zajęty przez inny projekt = odmowa bez --force). Jeśli >1 wolny sklep i nie wiadomo który — zapytaj Tomka w wf2_notes i weź pierwszy. Weryfikacja: 'status ${projectId}' (domena starter/custom + produkty + strony + integracje). Tomek może też przypiąć sklep sam PICKEREM w warsztacie tego kroku. Po przypięciu sklepu sprawdź tor domeny: jeśli project.domain kupione (wfa-domain status=200) a wf2-platform {action:"domains"} go nie zawiera → wykonaj punkty add_domain + dns_set z paczki pl_domena i uzupełnij pola tamtego kroku.`,
                 pl_branding: `KROK LOGO + FAVICON SKLEPU. Jedna komenda: python scripts/mockup-tools/platform-sync.py branding ${projectId} — bierze wf2_projects.logo_url + favicon_url (kontrakt marki PARASOLOWEJ z kroku „Marka sklepu"; storefront/checkout = parasol, NIE mini-marka produktu) i wgrywa przez adapter (upload_logo/upload_favicon, surowy base64). Wypisze DOWODY (URL-e CDN) — wklej do pól kroku. Zweryfikuj podmianę w headerze storefrontu (propagacja natychmiastowa). ⚡ RÓWNOLEGLE: można odpalić zaraz po kroku „Marka sklepu" (wymaga tylko logo + platform_shop_id).`,
                 pl_dostawy: `KROK DOSTAWY + COD. Przez wf2-platform: 'delivery_options' (broker Apaczka + priceGroups) → 'set_cod_account' {broker_id, nrb: NRB z kroku „Dane rozliczeniowe"} → raw GET /stores/{id}/delivery-brokers/{brokerId}/services (externalServiceId) → 'add_delivery' (Kurier COD DoorToDoor isCashOnDelivery:true + InPost DoorToPoint pointsType:'inpost'; ceny wg settings/decyzji) → 'set_delivery_order' (COD NA GÓRZE — filar risk-reversal). Zweryfikuj w kasie sklepu.`,
-                pl_domena: `KROK DOMENA — zakup AUTOMATEM przez GoDaddy (edge fn wfa-domain; ZERO plików lokalnych, klucze w sekretach tn-crm). Domena z kroku Marka sklepu (project.domain / nota decyzji). Procedura: (1) POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-domain, Authorization Bearer = SUPABASE_SERVICE_KEY (tn-crm/.env): {action:"check",domain} (RDAP; GoDaddy /available=403 przy koncie <50 domen — nie błąd klucza); potem {action:"validate",domain,email:"ceo@tomekniedzwiecki.pl",phone:"+48.533308623"} → ok:true. (2) BRAMKA TOMKA: potwierdzenie zakupu (płatność kartą konta GoDaddy; ceny przez API nie widać — typowo .pl ≈ $8-15/rok); bez zgody: krok in_progress + nota tag=decyzja, koniec sesji. (3) Po OK: {action:"buy",domain,email,phone,confirm:true,wf2_project_id:"<id projektu wf2>"} — koszt auto do biznes_costs + wf2_costs + activity; sprawdź cost_recorded:true/fx_missing:false/price_alert:null (inaczej uzupełnij ręcznie i zgłoś); 409=domena już na koncie (idempotencja — jedź dalej). ⛔ NIE wykonuj set_ns — NS zostają defaultowe GoDaddy (nsXX.domaincontrol.com), strefą DNS zarządzamy przez API GoDaddy (ODWROTNIE niż w tn-app/Vercel). (4) Jeśli projekt MA platform_shop_id: wf2-platform {action:"add_domain",shop_id,domain} → zapisz zwrócone rekordy (apex+www) w polu kroku „Rekordy DNS". Jeśli NIE MA (pl_sklep później): zostaw krok in_progress z notą — dokończy sesja kroku pl_sklep. (5) wfa-domain {action:"dns_set",domain,records:[...]} — rekordy 1:1 z odpowiedzi platformy (PUT per typ+nazwa, idempotentne); dowód: {action:"dns_get",domain}. (6) Aktywacją się NIE zajmujesz: strażnik wf2-orders-sync wykryje weryfikację, zrobi activate_domain, uzupełni wf2_projects.domain i odhaczy krok — zostaw in_progress (waits_external). Po aktywacji sanity: https://domena = 200 + SSL.`,
+                pl_domena: `KROK DOMENA — zakup AUTOMATEM przez GoDaddy (edge fn wfa-domain; ZERO plików lokalnych, klucze w sekretach tn-crm). Domena z kroku Marka sklepu (project.domain / nota decyzji). Procedura: (1) POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-domain, Authorization Bearer = SUPABASE_SERVICE_KEY (tn-crm/.env): {action:"check",domain} (RDAP; GoDaddy /available=403 przy koncie <50 domen — nie błąd klucza); potem {action:"validate",domain,email:"ceo@tomekniedzwiecki.pl",phone:"+48.533308623"} → ok:true. (2) ZAKUP BEZ PYTANIA (decyzja Tomka 21.07 — autonomia): confirm:true ustawiasz SAM (płatność kartą konta GoDaddy; ceny przez API nie widać — typowo .pl ≈ $8-15/rok). Po zakupie wpisz do wf2_notes notę INFORMACYJNĄ retro (tag="info", status="open"): domena + kwota z amount_pln + „retro-akceptacja". (3) Zakup: {action:"buy",domain,email,phone,confirm:true,wf2_project_id:"<id projektu wf2>"} — koszt auto do biznes_costs + wf2_costs + activity; sprawdź cost_recorded:true/fx_missing:false/price_alert:null (inaczej uzupełnij ręcznie i zgłoś); 409=domena już na koncie (idempotencja — jedź dalej). ⛔ NIE wykonuj set_ns — NS zostają defaultowe GoDaddy (nsXX.domaincontrol.com), strefą DNS zarządzamy przez API GoDaddy (ODWROTNIE niż w tn-app/Vercel). (4) Jeśli projekt MA platform_shop_id: wf2-platform {action:"add_domain",shop_id,domain} → zapisz zwrócone rekordy (apex+www) w polu kroku „Rekordy DNS". Jeśli NIE MA (pl_sklep później): zostaw krok in_progress z notą — dokończy sesja kroku pl_sklep. (5) wfa-domain {action:"dns_set",domain,records:[...]} — rekordy 1:1 z odpowiedzi platformy (PUT per typ+nazwa, idempotentne); dowód: {action:"dns_get",domain}. (6) Aktywacją się NIE zajmujesz: strażnik wf2-orders-sync wykryje weryfikację, zrobi activate_domain, uzupełni wf2_projects.domain i odhaczy krok — zostaw in_progress (waits_external). Po aktywacji sanity: https://domena = 200 + SSL.`,
                 pl_integracje: `KROK INTEGRACJE. Przez wf2-platform: 'integrations' (stan) → 'set_integration' {type:'FacebookPixel', config:{pixelId: wf2_projects.pixel_id, apiKey: <token CAPI jeśli mamy>}} — UWAGA: PUT AUTO-WŁĄCZA. GA4 opcjonalnie {type:'GoogleAnalytics'}. Jeśli pixel_id jeszcze nie istnieje (Etap Kampanie) — krok zostaje in_progress z notą; jest idempotentny. Zweryfikuj w źródle storefrontu, że pixel się wstrzykuje.`,
                 pl_produkt: `KROK PRODUKT + KASA dla ${S} (id ${PID}). Jedna komenda: python scripts/mockup-tools/platform-sync.py product ${projectId} ${PID} [--name 'nazwa mini-marki — czym jest'] — robi CAŁOŚĆ: ensure_product (idempotentny po nazwie; platforma NIE MA DELETE produktu!) → set_checkout_slug ('${S}') → checkout_url składany deterministycznie z activeDomain → zapis kolumn platform_* na wf2_products → test kasy (HTTP). Domyślna nazwa = platform_name albo name produktu; nazwa widoczna W KASIE — format „Mini-marka — czym jest". Kasa nie-200 tuż po utworzeniu = materializacja, ponów komendę za kilka minut. Dowody z outputu wklej do checklisty.`,
                 pl_landing: `KROK PUBLIKACJA LANDINGA dla ${S} (id ${PID}). WARUNEK: gate-check 0 FAIL z kroku Finisz (źródło: repo_path produktu, fallback tn-crm/sklepy/tomek-niedzwiecki/${S}/index.html). Jedna komenda: python scripts/mockup-tools/platform-sync.py publish ${projectId} ${PID} — sama podmienia placeholdery ({{WF2_PRODUCT_ID}}, {{CANONICAL_URL}} z aktywnej domeny, {{PIXEL_ID}} gdy projekt go ma, {{CHECKOUT_URL}} gdy w HTML), noindex zdejmuje TYLKO na domenie docelowej (na starterze zostaje — anty-indeksacja złej domeny), publikuje (publish_landing), weryfikuje 200 + obecność runtime product_id, zapisuje platform_page_url + link w Podglądach. HTML bez {{WF2_PRODUCT_ID}} = FAIL (brak runtime-snippetu — wróć do lp_kod). Po publish: test hydratacji w konsoli (cena z wf2-landing-api + CTA→kasa) — najlepiej agentem visual-verify. ZMIANA CENY test→scale = re-publish (JSON-LD/meta mają cenę zapieczoną — README platforma-api „REGUŁA ZMIANY CENY").`,
@@ -2104,12 +2139,16 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
 
         // ============ KARTA PRODUKTU (info: zdjęcie, cena, dostawca, TikToki max 5, galeria) ============
         let cardSeq = 0;   // guard: szybkie otwarcie karty A→B nie pozwala wolnej odpowiedzi A nadpisać treści
+        let cardVideoClips = [];   // klipy aktualnie wyrenderowanej karty (lazy-mount playera po kliknięciu kafla)
         async function openCard(pid) {
             const p = products.find(x => x.id === pid); if (!p) return;
             const myCard = ++cardSeq;
             document.getElementById('card-name').textContent = p.name || 'Karta produktu';
             document.getElementById('card-sub').textContent = [p.slug ? 'slug: ' + p.slug : '', PRODUCT_STATUS_META[p.status]?.label || ''].filter(Boolean).join(' · ');
             document.getElementById('card-edit-btn').onclick = () => { closeCard(); openProductModal(pid); };
+            const trendyLink = document.getElementById('card-trendy-link');
+            if (p.tt_product_id) { trendyLink.href = '/trendy?id=' + encodeURIComponent(p.tt_product_id); trendyLink.style.display = 'inline-flex'; }
+            else { trendyLink.style.display = 'none'; }
             const body = document.getElementById('card-body');
             body.innerHTML = '<div class="text-zinc-600 text-xs py-6 text-center">Ładowanie danych z radaru…</div>';
             document.getElementById('card-modal').classList.remove('hidden');
@@ -2127,21 +2166,52 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             if (myCard !== cardSeq) return;
             renderCard(p, tt);
         }
-        function closeCard() { document.getElementById('card-modal').classList.add('hidden'); }
+        function closeCard() { document.getElementById('card-modal').classList.add('hidden'); const b = document.getElementById('card-body'); if (b) b.innerHTML = ''; /* zatrzymuje wideo */ cardVideoClips = []; }
+        // player TikToka (oficjalny iframe — video-id = same cyfry, nie wygasa, bez rehostu). LUSTRO vidSrc z trendy.html.
+        function ttPlayerSrc(id) { return `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1&rel=0&music_info=0&description=0&native_context_menu=0&closed_caption=0&timestamp=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1`; }
+        // lazy-mount: klik w kafel montuje player W MIEJSCU kafla. mp4_hosted → <video> (wzorzec plbSetVideo); inaczej → iframe TikToka; brak video-id → link zewnętrzny.
+        function cardMountVideo(tileEl, idx) {
+            const v = cardVideoClips[idx]; if (!v || !tileEl || tileEl.classList.contains('cvid-live')) return;
+            if (v.mp4) {
+                tileEl.innerHTML = `<video class="cvid-player" controls playsinline autoplay preload="metadata"${v.poster ? ` poster="${escapeHtml(v.poster)}"` : ''} src="${escapeHtml(v.mp4)}"></video>`;
+                tileEl.classList.add('cvid-live'); return;
+            }
+            const m = String(v.url || '').match(/(\d{15,})/);
+            if (m) {
+                const f = document.createElement('iframe');
+                f.className = 'cvid-frame'; f.src = ttPlayerSrc(m[1]);
+                f.allow = 'autoplay; fullscreen; encrypted-media'; f.setAttribute('allowfullscreen', '');
+                tileEl.innerHTML = ''; tileEl.appendChild(f); tileEl.classList.add('cvid-live'); return;
+            }
+            window.open(v.url, '_blank', 'noopener');   // nie da się sparsować video-id → otwórz w TikToku
+        }
         function fmtPlays(n) { n = Number(n)||0; return n >= 1e6 ? (n/1e6).toFixed(1).replace('.',',') + ' mln' : n >= 1e3 ? Math.round(n/1e3) + ' tys.' : String(n); }
         function renderCard(p, tt) {
             const img = (tt && (tt.curated_image || tt.ali_img)) || p.cover_url;
             const usd = tt ? parseFloat(tt.ali_sale) : NaN;
             const costPln = !isNaN(usd) && usdRate ? Math.round(usd * usdRate * 100) / 100 : (p.cost_purchase != null ? Number(p.cost_purchase) : null);
-            // TikToki: kurowane (keep) → surowe videos → link wzorca; MAX 5
-            let vids = [];
+            // WIDEO: WSZYSTKIE klipy z TikTok Shop (nie tylko keep) — videos_curated.items → videos[] → tiktok_url; dedup po URL.
+            const clips = [];
             if (tt) {
-                const cur = tt.videos_curated && Array.isArray(tt.videos_curated.items) ? tt.videos_curated.items.filter(v => v.keep) : [];
-                if (cur.length) vids = cur.map(v => ({ url: v.url, plays: v.plays, label: v.typ || '' }));
-                else if (Array.isArray(tt.videos) && tt.videos.length) vids = tt.videos.map(v => ({ url: v.url || v.link || v, plays: v.plays, label: '' }));
-                else if (tt.tiktok_url) vids = [{ url: tt.tiktok_url, plays: tt.max_plays, label: 'wzorzec' }];
+                const seen = new Set();
+                const pushClip = (url, o) => {
+                    o = o || {};
+                    const u = String(url || ''); if (!/^https?:\/\//i.test(u)) return;
+                    if (seen.has(u)) return; seen.add(u);
+                    const plays = (typeof o.plays === 'number') ? o.plays : (o.plays != null && !isNaN(+o.plays) ? +o.plays : null);
+                    clips.push({
+                        url: u, plays,
+                        mp4: (typeof o.mp4 === 'string' && /^https?:\/\//i.test(o.mp4)) ? o.mp4 : null,
+                        poster: (typeof o.poster === 'string' && /^https?:\/\//i.test(o.poster)) ? o.poster : null,
+                        keep: !!o.keep, label: o.label || ''
+                    });
+                };
+                const items = (tt.videos_curated && Array.isArray(tt.videos_curated.items)) ? tt.videos_curated.items : [];
+                items.forEach(it => { if (it && it.url) pushClip(it.url, { plays: it.plays, mp4: it.mp4_hosted, poster: it.poster_hosted || it.cover_src, keep: it.keep === true || ['KEEP','PASS'].includes(String(it.werdykt || '').toUpperCase()), label: it.typ || '' }); });
+                if (Array.isArray(tt.videos)) tt.videos.forEach(v => pushClip((v && (v.url || v.link)) || v, { plays: v && v.plays }));
+                if (tt.tiktok_url) pushClip(tt.tiktok_url, { plays: tt.max_plays, label: 'wzorzec' });
             }
-            vids = vids.filter(v => v.url).slice(0, 5);
+            cardVideoClips = clips;
             const gallery = tt && tt.gallery_curated && Array.isArray(tt.gallery_curated.items)
                 ? tt.gallery_curated.items.filter(g => g.keep && g.url).slice(0, 8) : [];
             const shopName = tt && tt.tt_shop && tt.tt_shop.shop ? tt.tt_shop.shop.name : null;
@@ -2165,12 +2235,21 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                         ${p.checkout_url ? `<div class="flex items-center gap-2"><i class="ph ph-shopping-cart text-zinc-600"></i> <a href="${escapeHtml(p.checkout_url)}" target="_blank" class="text-[#52a8ff] hover:text-[#78b6ff]">Kasa (checkout)</a></div>` : ''}
                         ${(() => { const pc = costs.filter(c => c.product_id === p.id).reduce((a, c) => a + costPln(c), 0); return pc > 0 ? `<div class="flex items-center gap-2 text-zinc-400"><i class="ph ph-coins text-zinc-600"></i> Koszt produkcji (AI): <b class="text-white font-mono">${moneyPL(pc)}</b> <span class="text-zinc-600 text-[10.5px]">— szczegóły w zakładce Koszty</span></div>` : ''; })()}
                     </div>
-                    ${vids.length ? `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">TikToki (${vids.length})</div>
-                        <div class="space-y-1">${vids.map((v, i) => `<a href="${escapeHtml(v.url)}" target="_blank" class="flex items-center gap-2 text-[11.5px] text-zinc-300 hover:text-white bg-[#111] border border-[#232323] hover:border-[#0070f3]/40 rounded px-2.5 py-1.5 transition-colors">
-                            <i class="ph ph-tiktok-logo text-[#52a8ff]"></i> <span class="truncate">TikTok #${i+1}${v.label ? ' · ' + escapeHtml(v.label) : ''}</span>
-                            ${v.plays ? `<span class="ml-auto text-zinc-500 font-mono text-[10px] flex-shrink-0">${fmtPlays(v.plays)} odtw.</span>` : ''}</a>`).join('')}</div></div>` : ''}
                 </div>
             </div>`;
+            // WIDEO — pełna szerokość pod główną siatką: kafle wszystkich klipów, klik = player w miejscu kafla (lazy).
+            if (clips.length) {
+                h += `<div class="mt-4">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5"><i class="ph ph-tiktok-logo text-[#52a8ff]"></i> Wideo z TikTok Shop (${clips.length})</div>
+                    <div class="cvid-grid">${clips.map((v, i) => `<div class="cvid-tile" onclick="cardMountVideo(this, ${i})">
+                        ${v.poster ? `<img class="cvid-poster" src="${escapeHtml(v.poster)}" loading="lazy" onerror="this.style.display='none'">` : ''}
+                        <span class="cvid-play"><i class="ph ph-play-fill"></i></span>
+                        ${v.keep ? '<span class="cvid-keep">na landingu</span>' : ''}
+                        ${v.plays ? `<span class="cvid-plays">▶ ${fmtPlays(v.plays)}</span>` : ''}
+                        <a class="cvid-ext" href="${escapeHtml(v.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Otwórz na TikToku"><i class="ph ph-arrow-square-out"></i></a>
+                    </div>`).join('')}</div>
+                </div>`;
+            }
             // artefakty fabryki produktu (ostatnie 6 — pełne w warsztatach kroków)
             const arts = artifactsFor(p.id).slice(-6);
             if (arts.length) h += `<div class="mt-4 pt-4 border-t border-[#1f1f1f]">${artifactsGallery(arts)}</div>`;
@@ -2374,14 +2453,19 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 showToast('Zapisano','success');
             } catch(e) { showToast('Błąd: '+(e.message||e),'error'); }
         }
-        async function deleteProduct() {
-            if (!editingProductId) return;
-            const p = products.find(x=>x.id===editingProductId);
-            if (!confirm(`Usunąć produkt „${p?.name||''}" z portfela? Usunie też jego kroki i artefakty.`)) return;
-            const { error } = await supabaseClient.from('wf2_products').delete().eq('id', editingProductId);
+        // pid opcjonalny (widok produktów woła z id wiersza); bez argumentu = kontekst modala (editingProductId).
+        async function deleteProduct(pid) {
+            const id = pid || editingProductId;
+            if (!id) return;
+            const p = products.find(x=>x.id===id);
+            const nm = p?.name || '(bez nazwy)';
+            if (!confirm(`Usunąć produkt „${nm}" z portfela?\n\nTo NIEODWRACALNIE skasuje też WSZYSTKIE jego kroki (postęp), artefakty i pozycje kosztów. Aukcja dostawcy i rekord w radarze /trendy pozostają nietknięte.`)) return;
+            const { error } = await supabaseClient.from('wf2_products').delete().eq('id', id);
             if (error) { showToast('Błąd: '+error.message,'error'); return; }
-            logActivity('product_deleted', 'Usunięto produkt: ' + (p?.name||''));
-            closeProductModal(); await loadAll();
+            logActivity('product_deleted', 'Usunięto produkt: ' + nm);
+            if (id === editingProductId) closeProductModal();
+            await loadAll();
+            showToast('Produkt usunięty','success');
         }
 
         // ============ AKCJE: projekt ============
@@ -2399,6 +2483,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             project.notes = notesVal; showToast('Notatki zapisane','success');
         }
         async function openSettings() {
+            document.getElementById('set-lifecycle').value = lifecycleOf(project);
             document.getElementById('set-customer').value = project.customer_name || '';
             document.getElementById('set-email').value = project.customer_email || '';
             document.getElementById('set-phone').value = project.customer_phone || '';
@@ -2475,7 +2560,9 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             } catch (e) { showToast('Chwilowa przerwa techniczna — spróbuj ponownie', 'error'); }
         }
         async function saveSettings() {
+            const prevLc = lifecycleOf(project);
             const payload = {
+                lifecycle: document.getElementById('set-lifecycle').value || 'active',
                 customer_name: document.getElementById('set-customer').value.trim() || null,
                 customer_email: document.getElementById('set-email').value.trim() || null,
                 customer_phone: document.getElementById('set-phone').value.trim() || null,
@@ -2487,7 +2574,9 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             };
             const { error } = await supabaseClient.from('wf2_projects').update(payload).eq('id', projectId);
             if (error) { showToast('Błąd: '+error.message,'error'); return; }
-            Object.assign(project, payload); closeSettings(); renderHeader(); renderFields(); showToast('Zapisano','success');
+            Object.assign(project, payload);
+            if (payload.lifecycle !== prevLc) logActivity('lifecycle_changed', 'Stan projektu: ' + (LC_META[payload.lifecycle]?.label || payload.lifecycle));
+            closeSettings(); renderHeader(); renderFields(); showToast('Zapisano','success');
         }
         async function deleteProject() {
             if (!confirm(`Usunąć projekt klienta „${project.customer_name||''}"? Skasuje produkty, kroki, artefakty i historię.`)) return;

@@ -95,8 +95,45 @@
         /* pole wyszukiwania */
         .searchbox { display:flex; align-items:center; gap:8px; background:#0a0a0a; border:1px solid #1f1f1f; border-radius:8px; padding:7px 11px; }
         .searchbox:focus-within { border-color:rgba(0,112,243,.5); }
-        .searchbox input { background:transparent; border:none; outline:none; color:#fff; font-size:13px; width:210px; }
+        .searchbox input { background:transparent; border:none; outline:none; color:#fff; font-size:13px; width:230px; max-width:56vw; }
         .searchbox input::placeholder { color:#52525b; }
+
+        /* ── stan cyklu życia (lifecycle) — osobny wymiar od statusu pipeline ── */
+        .lc-badge { flex-shrink:0; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;
+            border:1px solid; font-size:10.5px; font-weight:600; letter-spacing:.01em; white-space:nowrap; }
+        .lc-badge i { font-size:11px; }
+        .pcard.is-idle { opacity:.6; }
+        .pcard.is-idle:hover { opacity:.82; }
+        /* menu ⋯ w rogu karty (zmiana stanu bez wchodzenia w projekt) */
+        .pc-menu { position:absolute; top:8px; right:8px; z-index:20; }
+        .pc-menu-btn { width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:6px;
+            color:#8b8b94; background:rgba(10,10,10,.55); border:1px solid transparent; cursor:pointer; transition:all .15s ease; }
+        .pc-menu-btn:hover { color:#fff; background:#161616; border-color:#2a2a2a; }
+        .pc-menu-dd { position:absolute; top:calc(100% + 4px); right:0; min-width:172px; background:#0d0d0d; border:1px solid #2a2a2a;
+            border-radius:8px; padding:4px; box-shadow:0 8px 26px rgba(0,0,0,.55); display:none; }
+        .pc-menu.open .pc-menu-dd { display:block; }
+        .pc-menu-hd { font:600 9px/1 ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; color:#52525b; padding:6px 8px 4px; }
+        .pc-menu-it { width:100%; display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:6px; font-size:12.5px;
+            color:#c4c4c4; background:transparent; border:none; cursor:pointer; text-align:left; transition:background .12s ease; }
+        .pc-menu-it:hover { background:#161616; color:#fff; }
+        .pc-menu-it .lc-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+        .pc-menu-it .lc-check { margin-left:auto; color:#62c073; font-size:13px; opacity:0; }
+        .pc-menu-it.is-cur .lc-check { opacity:1; }
+        /* chipy filtra widoku (stan) obok wyszukiwarki */
+        .lc-filter { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+        .lc-chip { display:inline-flex; align-items:center; gap:7px; border:1px solid #232323; background:#0a0a0a; color:#8b8b94;
+            border-radius:7px; padding:6px 11px; font-size:12px; cursor:pointer; transition:all .15s ease; user-select:none; }
+        .lc-chip:hover { color:#e4e4e7; border-color:#333; }
+        .lc-chip.on { color:#fff; }
+        .lc-chip .lc-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; background:#3f3f46; }
+        .lc-chip .lc-n { font:600 11px/1 'JetBrains Mono',monospace; color:#6b6b74; }
+        .lc-chip.on .lc-n { color:#c9c9d0; }
+        .lc-chip.is-zero { opacity:.42; }
+        /* licznik tempa: warianty wstrzymany / zakończony / anulowany */
+        .tempo-paused { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:#a1a1aa; }
+        .tempo-cancel { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#52525b; }
+        /* karta ma miejsce w prawym górnym rogu na menu ⋯ (żeby nie kolidowało z badge/tagiem) */
+        .pcard .pc-head { padding-right:24px; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -134,12 +171,13 @@
                     <div id="stages-wrap" class="space-y-5 mt-5 hidden"></div>
                 </div>
 
-                <!-- Pasek nad listą: wyszukiwarka + aktywny filtr + licznik -->
+                <!-- Pasek nad listą: wyszukiwarka + chipy stanu + aktywny filtr + licznik -->
                 <div class="flex flex-wrap items-center gap-3 mb-5">
                     <label class="searchbox">
                         <i class="ph ph-magnifying-glass text-zinc-500"></i>
-                        <input id="search" type="text" placeholder="Szukaj marki lub klienta…" oninput="renderCards()">
+                        <input id="search" type="text" placeholder="Szukaj: marka, klient, e-mail, telefon, domena, produkt…" oninput="renderCards()">
                     </label>
+                    <div id="lc-filter" class="lc-filter"></div>
                     <div id="filter-bar" class="hidden items-center gap-2">
                         <span class="text-zinc-500 text-xs">Filtr:</span>
                         <span id="filter-label" class="text-[#52a8ff] text-xs font-medium"></span>
@@ -216,6 +254,33 @@
         const BADGE_COLORS = { admin: '#0070f3', client: '#f5a623', auto: '#45a557' };
         const OWNER_LABEL = { admin: 'Tomek', client: 'Klient', auto: 'Auto' };
 
+        // ── STAN CYKLU ŻYCIA (lifecycle) — NIEZALEŻNY od statusu pipeline ──
+        const LC_ORDER = ['active', 'paused', 'completed', 'cancelled'];
+        const LC_META = {
+            active:    { label: 'Aktywny',    plural: 'Aktywne',    color: '#0070f3', icon: 'ph-play-circle' },
+            paused:    { label: 'Wstrzymany', plural: 'Wstrzymane', color: '#f5a623', icon: 'ph-pause-circle' },
+            completed: { label: 'Zakończony', plural: 'Zakończone', color: '#45a557', icon: 'ph-check-circle' },
+            cancelled: { label: 'Anulowany',  plural: 'Anulowane',  color: '#e5484d', icon: 'ph-x-circle' },
+        };
+        const LC_RANK = { active: 0, paused: 1, completed: 2, cancelled: 3 };
+        function lifecycleOf(p) { return LC_META[p.lifecycle] ? p.lifecycle : 'active'; }
+
+        // widok listy: które stany pokazywać (multi-toggle). Domyślnie tylko aktywne.
+        function loadViewLC() {
+            try { const raw = JSON.parse(localStorage.getItem('wf2_view_lifecycle'));
+                if (Array.isArray(raw)) { const s = new Set(raw.filter(x => LC_META[x])); return s; } } catch (_) {}
+            return new Set(['active']);
+        }
+        function saveViewLC() { try { localStorage.setItem('wf2_view_lifecycle', JSON.stringify([...viewLC])); } catch (_) {} }
+        let viewLC = loadViewLC();
+
+        // składanie diakrytyków — wyszukiwanie działa bez polskich znaków (fachmat = fąchmąt)
+        function foldStr(s) {
+            return (s || '').toLowerCase()
+                .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e').replace(/ł/g,'l')
+                .replace(/ń/g,'n').replace(/ó/g,'o').replace(/ś/g,'s').replace(/ż/g,'z').replace(/ź/g,'z');
+        }
+
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -290,7 +355,7 @@
             const [defsQ, projQ, prodQ, steps, actQ, ordQ] = await Promise.all([
                 supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
                 supabaseClient.from('wf2_projects').select('*').order('created_at', { ascending: false }).range(0, 999),
-                supabaseClient.from('wf2_products').select('id, project_id, name, cover_url, sort, status').order('sort', { ascending: true }).range(0, 4999),
+                supabaseClient.from('wf2_products').select('id, project_id, name, slug, cover_url, sort, status').order('sort', { ascending: true }).range(0, 4999),
                 fetchAllSteps(),
                 supabaseClient.from('wf2_activities').select('project_id, created_at, action, description').order('created_at', { ascending: false }).range(0, 499),
                 supabaseClient.from('wf2_orders').select('project_id').range(0, 4999),
@@ -317,8 +382,28 @@
             (ordQ.data || []).forEach(o => { orders[o.project_id] = (orders[o.project_id] || 0) + 1; });
 
             computeAgg(lastAct, orders);
+            buildSearchIndex();
             renderStages();
+            renderLifecycleChips();
             renderCards();
+        }
+
+        // Indeks wyszukiwania per projekt — składany RAZ po load. Obejmuje WSZYSTKO,
+        // po czym sensownie się szuka: markę, klienta, e-mail, telefon (surowy + same cyfry),
+        // domenę, URL sklepu / e-mail platformy, konto reklamowe, pixel, tagline, notatki,
+        // status pipeline (PL) i stan lifecycle (PL) oraz nazwy + slugi produktów. Foldowany.
+        function buildSearchIndex() {
+            const COLS = ['name','customer_name','customer_email','customer_phone','domain','td_shop_url',
+                'platform_account_email','platform_shop_id','meta_ad_account_id','pixel_id','tagline','brand_opis','notes'];
+            projects.forEach(p => {
+                const parts = [];
+                COLS.forEach(c => { if (p[c]) parts.push(String(p[c])); });
+                if (p.customer_phone) { const d = String(p.customer_phone).replace(/\D/g, ''); if (d) parts.push(d); }
+                parts.push(STATUS_META[p.status]?.label || p.status || '');
+                parts.push(LC_META[lifecycleOf(p)].label);
+                (productsByProj[p.id] || []).forEach(pr => { if (pr.name) parts.push(pr.name); if (pr.slug) parts.push(pr.slug); });
+                p._idx = foldStr(parts.join(' '));
+            });
         }
 
         // Postęp, segmenty etapów, aktualny krok, licznik tempa — wszystko z jednego przebiegu.
@@ -434,25 +519,60 @@
         }
         function clearFilter() { toggleFilter(filterStepKey); }
 
-        // bucket sortowania: 0 = realne aktywne (palące się na górze), 2 = demo, 3 = zamknięte (na końcu)
-        function sortBucket(p) {
-            if (p.status === 'zamkniety') return 3;
-            if (isDemo(p)) return 2;
-            return 0;
+        // ============ FILTR STANU (chipy) ============
+        function renderLifecycleChips() {
+            const wrap = document.getElementById('lc-filter'); if (!wrap) return;
+            const counts = { active: 0, paused: 0, completed: 0, cancelled: 0 };
+            projects.forEach(p => { counts[lifecycleOf(p)]++; });
+            wrap.innerHTML = LC_ORDER.map(lc => {
+                const m = LC_META[lc], n = counts[lc], on = viewLC.has(lc);
+                const style = on ? `border-color:${m.color};` : '';
+                const dot = on ? `background:${m.color}` : '';
+                return `<button class="lc-chip ${on ? 'on' : ''} ${n === 0 ? 'is-zero' : ''}" style="${style}" onclick="toggleViewLC('${lc}')" title="${m.plural} — pokaż/ukryj">
+                    <span class="lc-dot" style="${dot}"></span>${m.plural}<span class="lc-n">${n}</span></button>`;
+            }).join('');
+        }
+        function toggleViewLC(lc) {
+            if (viewLC.has(lc)) viewLC.delete(lc); else viewLC.add(lc);
+            saveViewLC(); renderLifecycleChips(); renderCards();
+        }
+
+        // ============ MENU ⋯ + zmiana stanu ============
+        function toggleMenu(e, id) {
+            e.stopPropagation();
+            const el = document.getElementById('menu-' + id);
+            const willOpen = el && !el.classList.contains('open');
+            document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+            if (willOpen) el.classList.add('open');
+        }
+        document.addEventListener('click', () => { document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open')); });
+
+        async function setLifecycle(id, lc) {
+            const p = projects.find(x => x.id === id); if (!p) return;
+            const prev = lifecycleOf(p);
+            document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+            if (prev === lc) return;
+            p.lifecycle = lc;
+            const { error } = await supabaseClient.from('wf2_projects').update({ lifecycle: lc }).eq('id', id);
+            if (error) { p.lifecycle = prev; showToast('Błąd zmiany stanu: ' + error.message, 'error'); return; }
+            buildSearchIndex(); renderLifecycleChips(); renderCards();
+            showToast('Stan: ' + LC_META[lc].label, 'success');
         }
 
         // ============ RENDER: karty ============
         function renderCards() {
             const grid = document.getElementById('proj-grid');
             const q = (document.getElementById('search')?.value || '').trim().toLowerCase();
-            let rows = projects.slice();
+            let rows = viewLC.size ? projects.filter(p => viewLC.has(lifecycleOf(p))) : [];
             if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
-            if (q) rows = rows.filter(p => ((p.name || '') + ' ' + (p.customer_name || '') + ' ' + (p.customer_email || '')).toLowerCase().includes(q));
+            if (q) { const toks = q.split(/\s+/).filter(Boolean).map(foldStr); rows = rows.filter(p => { const idx = p._idx || ''; return toks.every(t => idx.includes(t)); }); }
 
             rows.sort((a, b) => {
-                const ba = sortBucket(a), bb = sortBucket(b);
-                if (ba !== bb) return ba - bb;
-                if (ba === 0) return (aggByProj[a.id]?.tempo?.slack ?? 999) - (aggByProj[b.id]?.tempo?.slack ?? 999); // najmniejszy zapas = najpilniejsze na górze
+                const ra = LC_RANK[lifecycleOf(a)], rb = LC_RANK[lifecycleOf(b)];
+                if (ra !== rb) return ra - rb;                        // active → paused → completed → cancelled
+                const da = isDemo(a) ? 1 : 0, db = isDemo(b) ? 1 : 0;
+                if (da !== db) return da - db;                         // DEMO na końcu swojej grupy
+                if (ra === 0) return (aggByProj[a.id]?.tempo?.slack ?? 999) - (aggByProj[b.id]?.tempo?.slack ?? 999); // aktywne wg zapasu tempa
                 return new Date(b.created_at) - new Date(a.created_at);
             });
 
@@ -466,6 +586,18 @@
             const agg = aggByProj[p.id] || {};
             const sm = STATUS_META[p.status] || STATUS_META.start;
             const demo = isDemo(p);
+            const lc = lifecycleOf(p);
+            const lcM = LC_META[lc];
+            const idle = (lc === 'paused' || lc === 'cancelled'); // wyszarz jak DEMO
+            const lcBadge = lc !== 'active'
+                ? `<span class="lc-badge" style="color:${lcM.color};border-color:${lcM.color}59;background:${lcM.color}14"><i class="ph ${lcM.icon}"></i>${lcM.label}</span>`
+                : '';
+            const menuHtml = `<div class="pc-menu" id="menu-${p.id}" onclick="event.stopPropagation()">
+                <button class="pc-menu-btn" title="Zmień stan projektu" onclick="toggleMenu(event,'${p.id}')"><i class="ph ph-dots-three-outline"></i></button>
+                <div class="pc-menu-dd">
+                    <div class="pc-menu-hd">Stan projektu</div>
+                    ${LC_ORDER.map(k => { const m = LC_META[k]; return `<button class="pc-menu-it ${lc === k ? 'is-cur' : ''}" onclick="setLifecycle('${p.id}','${k}')"><span class="lc-dot" style="background:${m.color}"></span>${m.label}<i class="ph ph-check lc-check"></i></button>`; }).join('')}
+                </div></div>`;
             const brand = (p.name || '').trim() || p.customer_name || '(bez marki)';
             // linia klienta: unikaj powtórki gdy marka = nazwa klienta
             const clientLine = (p.name && p.name.trim() && p.customer_name) ? p.customer_name : (p.customer_email || p.customer_name || '');
@@ -503,15 +635,16 @@
             const ordersHtml = agg.orders > 0 ? `<span class="pc-orders"><i class="ph ph-shopping-cart"></i>${agg.orders}</span>` : '';
             const actHtml = agg.lastAct ? `<span class="pc-act"><i class="ph ph-clock-countdown"></i>${escapeHtml(relDate(agg.lastAct.created_at))}</span>` : '';
 
-            return `<div class="pcard${demo ? ' is-demo' : ''}" onclick="location.href='projekt.html?id=${p.id}'">
-                ${demo ? '<span class="demo-tag">DEMO</span>' : ''}
+            return `<div class="pcard${demo ? ' is-demo' : ''}${idle ? ' is-idle' : ''}" onclick="location.href='projekt.html?id=${p.id}'">
+                ${demo ? '<span class="demo-tag" style="right:38px">DEMO</span>' : ''}
+                ${menuHtml}
                 <div class="pc-head">
                     <div class="pc-mono">${escapeHtml(initials(brand))}</div>
                     <div class="pc-tt">
-                        <div class="pc-title" style="${demo ? 'padding-right:44px' : ''}">${escapeHtml(brand)}</div>
+                        <div class="pc-title" style="${demo ? (lcBadge ? 'padding-right:6px' : 'padding-right:66px') : ''}">${escapeHtml(brand)}</div>
                         <div class="pc-client">${escapeHtml(clientLine) || '&nbsp;'}${waIcon(p)}</div>
                     </div>
-                    ${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}
+                    ${(demo && !lcBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}${lcBadge}</div>`}
                 </div>
 
                 <div>
@@ -522,13 +655,44 @@
                     </div>
                 </div>
 
-                <div class="pc-tempo">${renderTempo(agg.tempo)}</div>
+                <div class="pc-tempo">${renderTempoLC(p, agg)}</div>
 
                 <div class="pc-foot">
                     <div class="flex items-center gap-2.5 min-w-0">${portfel}</div>
                     <div class="flex items-center gap-2.5 flex-shrink-0">${ordersHtml}${actHtml}</div>
                 </div>
             </div>`;
+        }
+
+        // licznik tempa wg stanu lifecycle: wstrzymany = pauza (bez czerwonego),
+        // anulowany/zakończony = bez licznika (zakończony pokazuje „Zbudowany w N dni" jeśli dotyczy)
+        function renderTempoLC(p, agg) {
+            const lc = lifecycleOf(p);
+            if (lc === 'cancelled') {
+                return `<div class="tempo-cancel"><i class="ph ph-x-circle"></i>Projekt anulowany — bez licznika</div>`;
+            }
+            if (lc === 'completed') {
+                const t = agg.tempo;
+                if (t && t.kind === 'built' && t.n != null) {
+                    const col = t.onTime ? '#45a557' : '#e5484d';
+                    return `<div class="tempo-top">
+                            <span class="tempo-lbl"><i class="ph ph-flag-checkered"></i>Etapy 1–5</span>
+                            <span class="tempo-built" style="color:${col}"><i class="ph ph-${t.onTime ? 'check-circle' : 'warning-circle'}"></i>Zbudowany w <span style="font-family:'JetBrains Mono',monospace">${t.n}</span> ${t.n === 1 ? 'dzień' : 'dni'}</span>
+                        </div>
+                        <div class="tempo-bar"><span style="width:100%;background:${col}"></span></div>`;
+                }
+                return `<div class="tempo-cancel" style="color:#4c7a5c"><i class="ph ph-check-circle"></i>Projekt zakończony</div>`;
+            }
+            if (lc === 'paused') {
+                const day = dayNumber(p.created_at);
+                const w = Math.round(Math.min(day, BUILD_DAYS) / BUILD_DAYS * 100);
+                return `<div class="tempo-top">
+                        <span class="tempo-lbl"><i class="ph ph-pause-circle"></i>Tempo budowy</span>
+                        <span class="tempo-paused"><i class="ph ph-pause"></i>Wstrzymany · dzień ${day} z ${BUILD_DAYS}</span>
+                    </div>
+                    <div class="tempo-bar"><span style="width:${w}%;background:#3f3f46"></span></div>`;
+            }
+            return renderTempo(agg.tempo);
         }
 
         // widżet licznika tempa 14 dni
