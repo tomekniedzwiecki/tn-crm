@@ -127,6 +127,17 @@ export const CHECKLIST_MAP: Record<string, Record<string, string>> = {
     "Domena startowa znana":
       "Ustalony startowy adres sklepu",
   },
+  // Krok w budowie — dziś widoczny TYLKO w podglądzie admina (PREVIEW_ONLY_STEPS w index.ts)
+  firma: {
+    "Klient przygotowany (profil zaufany + dane do wniosku)":
+      "Przygotowane: profil zaufany i dane do wniosku",
+    "Firma zarejestrowana w CEIDG — NIP wpisany w portalu":
+      "Firma zarejestrowana, NIP podany",
+    "Księgowość wybrana (inFakt z linku polecającego)":
+      "Wybrana księgowość dla Twojej firmy",
+    "Dane firmy przepisane do kroku Dane rozliczeniowe":
+      "Dane firmy uzupełnione w zadaniu Dane rozliczeniowe",
+  },
   pl_dane: {
     "Numer konta do pobrań (NRB, 26 cyfr)":
       "Numer konta do wypłat za zamówienia",
