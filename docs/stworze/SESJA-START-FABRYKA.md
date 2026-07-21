@@ -160,6 +160,15 @@ retro-akceptacje (pkt 1), decyzje produktowe/autonomii (RAPORT §3, FLOW-AUTONOM
 
 ## 5. Jak startować pracę w nowej sesji (checklist)
 
+> ⚙️ **AUTOPILOT PIERWSZY.** Nadrzędny runbook = `docs/stworze/AUTOPILOT-APLIKACJI.md`. Start KAŻDEJ
+> sesji nad aplikacją zaczyna się od DWÓCH komend (nie od czytania transkryptu):
+> 1. `node scripts/wfa-panel-sync.mjs resume --project <p> --repo <repo>` — odzysk stanu (in_progress,
+>    noty, ostatnie activities, git log + ogon BUILDLOG, „NASTĘPNY RUCH").
+> 2. `node scripts/wfa-panel-sync.mjs next --project <p> [--flags "ext:..."]` — fala do zrobienia
+>    (▶ do startu równolegle · ⏳ w toku · 🧍 czeka na człowieka · 🔒 zablokowane).
+>    Dopiero potem plan fali. Koniec sesji = `gaps` (bramka raportu).
+
+0. `resume` → `next` (patrz banner wyżej) — to jest PIERWSZY ruch, przed lekturą.
 1. Przeczytaj TEN plik w całości + MEMORY.md (auto) + `tn-crm/CLAUDE.md` (sekcja TN App).
 2. Stan faktyczny: `git -C c:\repos_tn\fachmat log --oneline -15` + ogon BUILDLOG.md + SQL:
    `SELECT step_key, status FROM wfa_steps WHERE project_id='102e4c74-...' ORDER BY ...` +

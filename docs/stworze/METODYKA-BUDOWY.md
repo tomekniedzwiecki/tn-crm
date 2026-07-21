@@ -3,6 +3,10 @@
 > Obowiązuje w każdym projekcie `/tn-app`. Prompty generowane w panelu odwołują się do tego dokumentu.
 > Pętla: **Spec → Plan → Sesje → Weryfikacja**. Zero „skakania do kodu". Tomek = decyzje i bramki; sesje = wykonanie.
 
+> ⚙️ **AUTOPILOT: nadrzędny runbook procesu = `AUTOPILOT-APLIKACJI.md`** (komendy `next`/`gaps`/`resume`
+> na `dag-manifest.json` + żywe `wfa_steps`). Drogowskaz = panel + DAG, NIGDY narracja agenta. Ten plik
+> (METODYKA) opisuje rytuał kroku i bramki; AUTOPILOT mówi **co robić TERAZ** i jak wznowić po padzie.
+
 ## 0. AUTONOMIA — default = KONTYNUUJ (decyzja Tomka 2026-07-17)
 
 **Nigdy nie pytaj „co robić", gdy czeka znana robota (backlog/etapy/kroki/STAN).** Rób ją. Fabryka ma iść

@@ -27,6 +27,11 @@
 //                                     niedomknięte / „done" z niepełną checklistą / bez noty; exit 1
 //                                     gdy istnieje choć jedna luka [BEZ-POWODU]. „Suma zwrotów
 //                                     subagentów ≠ stan projektu — prawdą jest panel" (L-053).
+//   next                           — DROGOWSKAZ (read-only, start sesji): manifest DAG + żywe wfa_steps
+//                                     → co DO STARTU teraz (równolegle), co w toku, co czeka na człowieka
+//                                     (ext-tokeny → KTO/CO), co zablokowane. Autopilot fabryki (L-054).
+//   resume                         — ODZYSK PO PADZIE (read-only): in_progress+noty, ostatnie activities,
+//                                     (--repo) git log + ogon BUILDLOG, „NASTĘPNY RUCH" = skrót next.
 //   step <key> [--status s] [--check "1,3"] [--check-all] [--check-match "frag"] [--note "..."]
 //                                   — upsert kroku: checklista z WS (VERBATIM), MERGE z done.
 //   activity --action slug --desc "..." [--actor nazwa]   — wpis do kroniki wfa_activities.
@@ -42,7 +47,35 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PROJECT_REF = 'yxmavwkwnfuphjqbelws';
 const MGMT_URL = `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
 const PROJEKT_HTML = join(ROOT, 'tn-app', 'projekt.html');
+const MANIFEST_JSON = join(ROOT, 'docs', 'stworze', 'dag-manifest.json');
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Ext-tokeny wyinferowane ze stanu (istnienie projektu wfa ⇒ opłacona rezerwacja + sesja sparingowa
+// z full_paid_at — RPC wfa_sync_projects tworzy projekt WYŁĄCZNIE dla nich): zawsze spełnione.
+const INFERRED_TRUE_EXT = new Set(['ext:paid', 'ext:spar']);
+
+// Ext-token → czytelna etykieta bramki ludzkiej „KTO — CO" (KTO z prefiksu: tomek_/client_).
+const EXT_LABEL = {
+  'ext:paid':             { kto: 'AUTO',   co: 'opłacona rezerwacja (spełnione z istnienia projektu)' },
+  'ext:spar':             { kto: 'AUTO',   co: 'sesja sparingowa opłacona (spełnione z istnienia projektu)' },
+  'ext:tomek_name':       { kto: 'TOMEK',  co: 'wybór nazwy marki' },
+  'ext:tomek_domain_buy': { kto: 'TOMEK',  co: 'zakup domeny' },
+  'ext:tomek_ns':         { kto: 'TOMEK',  co: 'ustawienie NS/DNS domeny (→ Vercel SSL)' },
+  'ext:tomek_send_mail':  { kto: 'TOMEK',  co: 'wysyłka maila dostępowego do klienta' },
+  'ext:tomek_pay_launch': { kto: 'TOMEK',  co: 'decyzja/opłata startu produkcyjnego' },
+  'ext:tomek_ext_spend':  { kto: 'TOMEK',  co: 'wydatek zewnętrzny z pieniędzy Tomka (prawnik/subskrypcja)' },
+  'ext:client_kyc':       { kto: 'KLIENT', co: 'KYC Stripe (charges_enabled)' },
+  'ext:client_materials': { kto: 'KLIENT', co: 'materiały operatora (dane/treści do seedu)' },
+  'ext:client_sign':      { kto: 'KLIENT', co: 'podpis umowy' },
+  'ext:client_demo':      { kto: 'KLIENT', co: 'test wersji demo aplikacji' },
+  'ext:client_test':      { kto: 'KLIENT', co: 'runda testów klienta (zgłoszenia)' },
+  'ext:client_account':   { kto: 'KLIENT', co: 'konto operatora gotowe (onboarding)' },
+};
+function extKtoCo(tok) {
+  if (EXT_LABEL[tok]) return EXT_LABEL[tok];
+  const kto = tok.startsWith('ext:tomek_') ? 'TOMEK' : tok.startsWith('ext:client_') ? 'KLIENT' : 'CZŁOWIEK';
+  return { kto, co: tok.replace(/^ext:/, '') };
+}
 
 // ── util ──────────────────────────────────────────────────────────────────
 const die = (msg) => { console.error(`[wfa-panel-sync] BŁĄD: ${msg}`); process.exit(1); };
@@ -123,6 +156,66 @@ function loadWS() {
   catch (e) { die(`parsowanie WS nieudane: ${e.message}`); }
   _wsCache = ws;
   return ws;
+}
+
+// ── manifest DAG (docs/stworze/dag-manifest.json) — źródło requires/parallel_group/files_owned ─
+let _manCache = null;
+function loadManifest() {
+  if (_manCache) return _manCache;
+  let raw;
+  try { raw = readFileSync(MANIFEST_JSON, 'utf8'); }
+  catch { die(`nie mogę wczytać ${MANIFEST_JSON}`); }
+  let man;
+  try { man = JSON.parse(raw); } // walidacja: niepoprawny JSON = twardy błąd
+  catch (e) { die(`dag-manifest.json nie parsuje się (JSON.parse): ${e.message}`); }
+  if (!man || !Array.isArray(man.steps)) die('dag-manifest.json: brak tablicy `steps`');
+  _manCache = man;
+  return man;
+}
+// kroki aktywne (pomijamy legacy_*) — z manifestu, w kolejności pliku (= kolejność DAG)
+function manifestActiveSteps(man) {
+  return man.steps.filter((s) => !(s.status && String(s.status).startsWith('legacy')));
+}
+
+// ── żywy stan wszystkich kroków projektu: key → {status, note} ──────────────
+async function loadLiveSteps(pid) {
+  const rows = await sql(
+    `select step_key, status, data from wfa_steps where project_id = ${sqlStr(pid)}`);
+  const map = {};
+  for (const r of rows) {
+    const note = (r.data && typeof r.data.note === 'string') ? r.data.note.trim() : '';
+    map[r.step_key] = { status: r.status || null, note };
+  }
+  return map;
+}
+
+// ── flagi ext z --flags "ext:paid,ext:spar" (przecinek/spacja) → Set ────────
+function parseFlags(raw) {
+  const set = new Set();
+  if (!raw || raw === true) return set;
+  for (const part of String(raw).split(/[,\s]+/)) {
+    const t = part.trim();
+    if (!t) continue;
+    set.add(t.startsWith('ext:') ? t : `ext:${t}`); // toleruj skrót bez prefiksu
+  }
+  return set;
+}
+
+// ── klasyfikacja kroku wg manifestu + żywego stanu + flag ext ───────────────
+// Zwraca: DONE | IN_PROGRESS | READY | HUMAN (czeka na człowieka) | BLOCKED.
+function classifyStep(step, live, flags) {
+  const st = (live[step.key] && live[step.key].status) || null;
+  if (st === 'done') return { klas: 'DONE', status: st };
+  if (st === 'in_progress') return { klas: 'IN_PROGRESS', status: st, note: live[step.key].note };
+  const reqs = step.requires || [];
+  const extReqs = reqs.filter((r) => r.startsWith('ext:'));
+  const stepReqs = reqs.filter((r) => !r.startsWith('ext:'));
+  const missingSteps = stepReqs.filter((r) => ((live[r] && live[r].status) || null) !== 'done');
+  const extOk = (tok) => INFERRED_TRUE_EXT.has(tok) || flags.has(tok);
+  const missingExt = extReqs.filter((r) => !extOk(r));
+  if (missingSteps.length) return { klas: 'BLOCKED', status: st, missingSteps, missingExt };
+  if (missingExt.length) return { klas: 'HUMAN', status: st, missingExt };
+  return { klas: 'READY', status: st };
 }
 
 // ── rozwiązanie projektu (uuid lub slug) ────────────────────────────────────
@@ -249,10 +342,219 @@ async function cmdGaps(opts) {
   }
 }
 
+// ── komenda: next (DROGOWSKAZ — co robić TERAZ, read-only) ──────────────────
+// Wczytuje dag-manifest.json + żywe wfa_steps; klasyfikuje każdy krok i grupuje w sekcje.
+// Nie liczy na narrację agenta — prawdą jest panel + DAG (L-053/L-054). To komenda STARTU sesji.
+async function cmdNext(opts) {
+  const pid = await resolveProject(opts.project);
+  const man = loadManifest();
+  const live = await loadLiveSteps(pid);
+  const flags = parseFlags(opts.flags);
+  const steps = manifestActiveSteps(man);
+
+  const done = [], inprog = [], ready = [], human = [], blocked = [];
+  for (const s of steps) {
+    const c = classifyStep(s, live, flags);
+    if (c.klas === 'DONE') done.push(s);
+    else if (c.klas === 'IN_PROGRESS') inprog.push({ s, note: c.note });
+    else if (c.klas === 'READY') ready.push(s);
+    else if (c.klas === 'HUMAN') human.push({ s, missingExt: c.missingExt });
+    else blocked.push({ s, missingSteps: c.missingSteps, missingExt: c.missingExt });
+  }
+
+  // kolizje plików: READY (i READY↔IN_PROGRESS) dzielące ten sam wpis files_owned
+  const owners = {}; // plik → [ {key, where} ]
+  const addOwner = (key, where, files) => (files || []).forEach((f) => {
+    (owners[f] = owners[f] || []).push({ key, where });
+  });
+  ready.forEach((s) => addOwner(s.key, 'READY', s.files_owned));
+  inprog.forEach((x) => addOwner(x.s.key, 'W TOKU', x.s.files_owned));
+  const collisions = [];
+  for (const [file, list] of Object.entries(owners)) {
+    if (list.length > 1 && list.some((o) => o.where === 'READY')) {
+      collisions.push({ file, keys: list.map((o) => `${o.key}(${o.where})`) });
+    }
+  }
+
+  // grupy równoległe READY
+  const groups = {};
+  ready.forEach((s) => { const g = s.parallel_group || '—'; (groups[g] = groups[g] || []).push(s); });
+
+  if (opts.json) {
+    console.log(JSON.stringify({
+      project: pid, flags: [...flags],
+      counts: { total: steps.length, done: done.length, in_progress: inprog.length,
+        ready: ready.length, human: human.length, blocked: blocked.length },
+      ready: ready.map((s) => ({ key: s.key, stage: s.stage, parallel_group: s.parallel_group,
+        files_owned: s.files_owned || [], actor: s.actor, model: s.model || null, loop: !!s.loop })),
+      in_progress: inprog.map((x) => ({ key: x.s.key, stage: x.s.stage, note: x.note || '' })),
+      human: human.map((x) => ({ key: x.s.key, stage: x.s.stage,
+        gates: x.missingExt.map((t) => ({ token: t, ...extKtoCo(t) })) })),
+      blocked: blocked.map((x) => ({ key: x.s.key, stage: x.s.stage,
+        by_steps: x.missingSteps, by_ext: x.missingExt })),
+      collisions,
+    }, null, 2));
+    return;
+  }
+
+  const short = (s, n) => { const t = (s || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  log(`NEXT projektu ${pid} — ${done.length}/${steps.length} done · ${ready.length} READY · ` +
+    `${inprog.length} w toku · ${human.length} czeka na człowieka · ${blocked.length} zablokowane` +
+    (flags.size ? ` · flagi: ${[...flags].join(',')}` : ' · (bez --flags)'));
+  console.log('');
+
+  console.log('▶ DO STARTU TERAZ (równolegle):');
+  if (!ready.length) console.log('   (brak kroków gotowych do startu przez agenta — patrz „czeka na człowieka" / „zablokowane")');
+  else {
+    for (const [g, list] of Object.entries(groups)) {
+      console.log(`   • grupa ${g}:`);
+      for (const s of list) {
+        const tags = [s.actor === 'M' ? 'actor:M' : null, s.model ? `model:${s.model}` : null, s.loop ? '⟳pętla' : null].filter(Boolean);
+        console.log(`      - ${s.key}${tags.length ? '  [' + tags.join(' ') + ']' : ''}`);
+        if (s.files_owned && s.files_owned.length) console.log(`          pliki: ${s.files_owned.join(', ')}`);
+      }
+    }
+    if (collisions.length) {
+      console.log('   ⚠ KOLIZJA PLIKÓW (nie odpalaj równolegle bez rozdzielenia / merge sekwencyjny):');
+      collisions.forEach((c) => console.log(`      ! ${c.file} ← ${c.keys.join(' vs ')}`));
+    }
+  }
+  console.log('');
+
+  console.log('⏳ W TOKU:');
+  if (!inprog.length) console.log('   (nic nie jest in_progress)');
+  else inprog.forEach((x) => console.log(`   - ${x.s.key}${x.note ? '  — ' + short(x.note, 80) : ''}`));
+  console.log('');
+
+  console.log('🧍 CZEKA NA CZŁOWIEKA (KTO — CO):');
+  if (!human.length) console.log('   (żadna bramka ludzka nie jest teraz na ścieżce krytycznej)');
+  else human.forEach((x) => {
+    const gates = x.missingExt.map((t) => { const k = extKtoCo(t); return `${k.kto} — ${k.co}`; });
+    console.log(`   - ${x.s.key}: ${gates.join(' · ')}`);
+  });
+  console.log('');
+
+  console.log('🔒 ZABLOKOWANE (przez co):');
+  if (!blocked.length) console.log('   (nic nie czeka na inne kroki)');
+  else blocked.forEach((x) => {
+    const parts = [];
+    if (x.missingSteps.length) parts.push(`kroki: ${x.missingSteps.join(', ')}`);
+    if (x.missingExt.length) parts.push(`ext: ${x.missingExt.join(', ')}`);
+    console.log(`   - ${x.s.key} ← ${parts.join(' + ')}`);
+  });
+}
+
+// ── komenda: resume (ODZYSK PO PADZIE — read-only, agreguje ślady stanu) ────
+// Jedna komenda zamiast rekonstrukcji z transkryptu: in_progress + noty, ostatnie activities,
+// (opcjonalnie) git log + ogon BUILDLOG repo aplikacji, i skrót „NASTĘPNY RUCH" z logiki `next`.
+async function cmdResume(opts) {
+  const pid = await resolveProject(opts.project);
+  const man = loadManifest();
+  const live = await loadLiveSteps(pid);
+  const flags = parseFlags(opts.flags);
+  const steps = manifestActiveSteps(man);
+
+  const inprog = steps.filter((s) => classifyStep(s, live, flags).klas === 'IN_PROGRESS');
+  const acts = await sql(
+    `select created_at, actor, action, description from wfa_activities
+      where project_id = ${sqlStr(pid)} order by created_at desc limit 5`);
+
+  // git log + BUILDLOG tail przy --repo
+  let gitLog = null, buildlogTail = null;
+  if (opts.repo && opts.repo !== true) {
+    try {
+      gitLog = execFileSync('git', ['-C', String(opts.repo), 'log', '--oneline', '-10'],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    } catch (e) { gitLog = `(git log niedostępny: ${(e.message || '').split('\n')[0]})`; }
+    try {
+      const txt = readFileSync(join(String(opts.repo), 'BUILDLOG.md'), 'utf8').split(/\r?\n/);
+      // „ostatni wpis" = od ostatniego nagłówka markdown do końca (cap 60 linii)
+      let start = 0;
+      for (let i = txt.length - 1; i >= 0; i--) { if (/^#{1,3}\s/.test(txt[i])) { start = i; break; } }
+      const slice = txt.slice(start);
+      buildlogTail = (slice.length > 60 ? slice.slice(-60) : slice).join('\n');
+    } catch (e) { buildlogTail = `(BUILDLOG.md niedostępny: ${(e.message || '').split('\n')[0]})`; }
+  }
+
+  // „NASTĘPNY RUCH" = skrót next
+  const ready = [], human = [], blocked = [];
+  for (const s of steps) {
+    const c = classifyStep(s, live, flags);
+    if (c.klas === 'READY') ready.push(s.key);
+    else if (c.klas === 'HUMAN') human.push({ key: s.key, gates: c.missingExt.map((t) => { const k = extKtoCo(t); return `${k.kto}—${k.co}`; }) });
+  }
+
+  if (opts.json) {
+    console.log(JSON.stringify({
+      project: pid,
+      in_progress: inprog.map((s) => ({ key: s.key, note: (live[s.key] && live[s.key].note) || '' })),
+      activities: acts,
+      git_log: gitLog, buildlog_tail: buildlogTail,
+      next_move: { ready, human },
+    }, null, 2));
+    return;
+  }
+
+  const short = (s, n) => { const t = (s || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  log(`RESUME projektu ${pid} — odzysk stanu po padzie.`);
+  console.log('');
+  console.log('⏳ KROKI IN_PROGRESS (marker „byłem, wznów"):');
+  if (!inprog.length) console.log('   (żaden krok nie jest in_progress)');
+  else inprog.forEach((s) => {
+    const note = (live[s.key] && live[s.key].note) || '';
+    console.log(`   - ${s.key}${note ? '  — ' + short(note, 100) : '  (brak noty)'}`);
+  });
+  console.log('');
+  console.log('🕘 OSTATNIE 5 WPISÓW KRONIKI (wfa_activities):');
+  if (!acts.length) console.log('   (brak wpisów)');
+  else acts.forEach((a) => console.log(`   - ${a.created_at} [${a.actor}] ${a.action} — ${short(a.description, 80)}`));
+  console.log('');
+  if (opts.repo && opts.repo !== true) {
+    console.log(`📦 GIT LOG (${opts.repo}, ostatnie 10):`);
+    console.log(gitLog ? gitLog.split('\n').map((l) => '   ' + l).join('\n') : '   (brak)');
+    console.log('');
+    console.log('📓 BUILDLOG.md — ostatni wpis:');
+    console.log(buildlogTail ? buildlogTail.split('\n').map((l) => '   ' + l).join('\n') : '   (brak)');
+    console.log('');
+  } else {
+    console.log('(podaj --repo <ścieżka>, aby dołączyć git log + ogon BUILDLOG.md aplikacji)');
+    console.log('');
+  }
+  console.log('➡ NASTĘPNY RUCH (skrót z `next`):');
+  console.log(`   READY do startu: ${ready.length ? ready.join(', ') : '—'}`);
+  if (human.length) human.forEach((h) => console.log(`   czeka na człowieka: ${h.key} → ${h.gates.join(' · ')}`));
+  console.log(`   Pełny obraz: node scripts/wfa-panel-sync.mjs next --project ${pid}`);
+}
+
 // ── komenda: step (upsert checklisty/statusu/noty) ──────────────────────────
 async function cmdStep(stepKey, opts) {
   if (!stepKey) die('wymagany <step_key> — np. `step funkcja_glowna ...`');
   const pid = await resolveProject(opts.project);
+
+  // ── SOFT-GUARD: nie oznaczaj `done`, jeśli requires (nie-ext) z manifestu nie są done ──
+  // Chroni przed „done-z-wyprzedzeniem" łamiącym DAG (klasa L-053). Kroki spoza manifestu = wolne.
+  // `--force` przechodzi, ale WYMAGA `--note` (powód) i dopisuje prefiks [force-done].
+  if (opts.status === 'done') {
+    const man = loadManifest();
+    const def = manifestActiveSteps(man).find((s) => s.key === stepKey);
+    if (def) {
+      const live = await loadLiveSteps(pid);
+      const stepReqs = (def.requires || []).filter((r) => !r.startsWith('ext:'));
+      const missing = stepReqs.filter((r) => ((live[r] && live[r].status) || null) !== 'done');
+      if (missing.length) {
+        if (!opts.force) {
+          die(`SOFT-GUARD: krok „${stepKey}" ma niedomknięte requires (DAG): ${missing.join(', ')}. ` +
+            `Domknij je najpierw albo użyj --force --note "powód" (świadome przejście).`);
+        }
+        if (opts.note == null || String(opts.note).trim().length < 5) {
+          die(`--force wymaga --note z powodem (min. 5 znaków). Braki: ${missing.join(', ')}.`);
+        }
+        opts.note = `[force-done] ${opts.note}`;
+        log(`SOFT-GUARD ominięty (--force): braki ${missing.join(', ')} — nota oznaczona [force-done].`);
+      }
+    }
+  }
+
   const WS = loadWS();
   const ws = WS[stepKey];
   const tpl = (ws && ws.check) || [];
@@ -394,6 +696,7 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === '--dry-run') o.dryRun = true;
     else if (a === '--json') o.json = true;
+    else if (a === '--force') o.force = true;
     else if (a === '--check-all') o.checkAll = true;
     else if (a.startsWith('--')) {
       const key = a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
@@ -412,25 +715,37 @@ async function main() {
     console.log(`wfa-panel-sync.mjs — sync panelu TN App (wfa_*). Zrobione = od razu odnotowane.
 
 Komendy:
-  steps --project <uuid|slug>
-  gaps  --project <uuid|slug>   [--json]   (read-only; exit 1 gdy istnieje luka [BEZ-POWODU])
+  steps  --project <uuid|slug>
+  gaps   --project <uuid|slug>  [--json]   (read-only; exit 1 gdy istnieje luka [BEZ-POWODU])
+  next   --project <uuid|slug>  [--flags "ext:tomek_name,ext:client_sign,..."] [--json]
+         DROGOWSKAZ (start sesji): manifest DAG + żywe wfa_steps → sekcje
+         ▶DO STARTU (równolegle, per parallel_group + kolizje plików) · ⏳W TOKU ·
+         🧍CZEKA NA CZŁOWIEKA (KTO—CO z ext-tokenów) · 🔒ZABLOKOWANE (przez co).
+  resume --project <uuid|slug>  [--repo <ścieżka>] [--json]
+         ODZYSK PO PADZIE: in_progress+noty · ostatnie 5 activities · (--repo) git log 10 +
+         ogon BUILDLOG · sekcja „NASTĘPNY RUCH" (skrót next).
   step <step_key> --project <p> [--status pending|in_progress|done|skipped|blocked]
-       [--check "1,3,5" | --check-all | --check-match "fragment"] [--note "..."] [--actor nazwa]
+       [--check "1,3,5" | --check-all | --check-match "fragment"] [--note "..."] [--actor nazwa] [--force]
+       SOFT-GUARD: --status done ODMÓWI, jeśli requires (nie-ext) z manifestu nie są done;
+       --force przechodzi, ale wymaga --note (powód) → prefiks [force-done].
   activity --project <p> --action <slug> --desc "..." [--actor nazwa]
   note --project <p> --kind uwaga|decyzja|blokada|retro --text "..." [--author nazwa]
 
 Wspólne: --dry-run  --json  --token <sbp_...>
-Checklisty budowane VERBATIM z obiektu WS w tn-app/projekt.html (klucz dedup panelu).`);
+Checklisty budowane VERBATIM z obiektu WS w tn-app/projekt.html (klucz dedup panelu).
+Manifest DAG (next/resume/soft-guard): docs/stworze/dag-manifest.json.`);
     process.exit(cmd ? 0 : 1);
   }
   TOKEN = getToken(opts.token);
   try {
     if (cmd === 'steps') await cmdSteps(opts);
     else if (cmd === 'gaps') await cmdGaps(opts);
+    else if (cmd === 'next') await cmdNext(opts);
+    else if (cmd === 'resume') await cmdResume(opts);
     else if (cmd === 'step') await cmdStep(opts._[0], opts);
     else if (cmd === 'activity') await cmdActivity(opts);
     else if (cmd === 'note') await cmdNote(opts);
-    else die(`nieznana komenda: ${cmd} (steps|gaps|step|activity|note)`);
+    else die(`nieznana komenda: ${cmd} (steps|gaps|next|resume|step|activity|note)`);
   } catch (e) {
     die(e && e.message ? e.message : String(e));
   }
