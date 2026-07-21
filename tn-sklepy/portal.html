@@ -444,17 +444,9 @@
     // desc = 1–2 zdania (podgląd kroku / matryca); guide = pełna instrukcja zadania (%NAME% = marka).
     const CLIENT_WS = {
         // ——— Zadania klienta ———
-        pl_konto_klient: {
-            desc: 'Zakładasz darmowe konto na platformie sklepowej i podajesz nam swój e-mail — dzięki temu przypniemy sklep do Twojego konta.',
-            why: 'Sklep stoi na platformie sklepowej. Konto pozwoli nam przypisać Wasz sklep do Ciebie.',
-            time: 'ok. 3 min',
-            guide: `<p>Załóż darmowe konto na platformie, na której będzie stał Wasz sklep. Zajmie to chwilę.</p>
-                <ol><li>Kliknij przycisk <b>„Załóż konto"</b> poniżej i zarejestruj się.</li>
-                <li>Wróć tutaj i wpisz adres e-mail, którego użyłeś przy rejestracji.</li></ol>
-                <p style="margin-top:10px"><a href="https://panel.niedzwiecki.ai" target="_blank" rel="noopener" class="btn-accent" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px" onclick="track('link_click','Załóż konto na platformie')"><i class="ph ph-arrow-square-out"></i> Załóż konto</a></p>
-                <div class="note">Podaj ten sam e-mail, którego użyłeś na platformie — dzięki temu przypiszemy Wasz sklep do Twojego konta.</div>`,
-            fields: [{ k: 'platform_email', l: 'E-mail użyty na platformie', type: 'email' }],
-        },
+        // (pl_konto_klient USUNIĘTE 22.07: konto merchanta zakłada FABRYKA — wf2-merchant
+        //  create_store na e-mailu klienta; klient dostaje kartę „Panel Twojego sklepu"
+        //  z przyciskiem „Ustaw hasło". Krok przeszedł na owner='admin'.)
         pl_dane: {
             desc: 'Podajesz dane firmy i numer konta — potrzebne do regulaminu sklepu oraz do wypłat i rozliczeń pobrań.',
             why: 'Bez numeru konta nie wypłacimy Ci pieniędzy z zamówień, a dane firmy muszą być w regulaminie.',
@@ -722,7 +714,7 @@
     // ── Model zadań klienta ─────────────────────────────────────────────────
     // Kolejność JAWNA (decyzja Tomka: strona FB+IG przed kontem reklamowym; „przejęcia"
     // z ostatniego etapu w ogóle poza listą — wrócą, gdy się nimi zajmiemy).
-    const TASK_ORDER = ['pl_konto_klient', 'pl_dane', 'ads_strona', 'ads_konto', 'ads_budzet'];
+    const TASK_ORDER = ['pl_dane', 'ads_strona', 'ads_konto', 'ads_budzet'];
     const TASK_HIDDEN = ['przejecie_kampanii', 'przejecie_operacji'];
     function tvTasks() {
         return P.stepDefs.filter(d => d.owner === 'client' && d.scope === 'project' && !TASK_HIDDEN.includes(d.key))

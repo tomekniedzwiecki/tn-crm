@@ -213,7 +213,7 @@
                     <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
                         <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
                             <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-coins text-[#3291ff]"></i> Koszty produkcji</h3>
-                            <span class="text-zinc-600 text-[11px]">sesje logują koszty same (panelUpd) · kurs NBP do przeliczeń USD→PLN</span>
+                            <span id="costs-rate" class="text-zinc-600 text-[11px]">sesje logują koszty same (panelUpd)</span>
                         </div>
                         <div id="costs-cards" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3"></div>
                         <div id="costs-kinds" class="flex flex-wrap gap-1.5 mb-5"></div>
@@ -237,14 +237,22 @@
                             <div class="flex gap-2 flex-wrap items-end">
                                 <div><label class="text-[10px] text-zinc-600 block mb-0.5">Kwota</label><input id="cost-amount" type="number" step="0.01" min="0" class="fld" style="width:100px" aria-label="Kwota"></div>
                                 <div><label class="text-[10px] text-zinc-600 block mb-0.5">Waluta</label><select id="cost-currency" class="fld" style="width:auto"><option>USD</option><option>PLN</option></select></div>
-                                <div><label class="text-[10px] text-zinc-600 block mb-0.5">Rodzaj</label><select id="cost-kind" class="fld" style="width:auto"><option>openai</option><option>manus</option><option>fal</option><option>gpt-image</option><option>gemini</option><option selected>inne</option></select></div>
+                                <div><label class="text-[10px] text-zinc-600 block mb-0.5">Rodzaj</label><select id="cost-kind" class="fld" style="width:auto"><option>openai</option><option>fal</option><option>gpt-image</option><option>domena</option><option selected>inne</option></select></div>
                                 <div><label class="text-[10px] text-zinc-600 block mb-0.5">Etap</label><select id="cost-stage" class="fld" style="width:auto"></select></div>
                                 <div><label class="text-[10px] text-zinc-600 block mb-0.5">Produkt</label><select id="cost-product" class="fld" style="width:auto"><option value="">— projekt —</option></select></div>
                                 <div class="flex-1 min-w-[160px]"><label class="text-[10px] text-zinc-600 block mb-0.5">Notatka</label><input id="cost-note" class="fld" aria-label="Notatka kosztu"></div>
                                 <button onclick="addCost()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-zinc-200 flex-shrink-0">Dodaj</button>
                             </div>
                         </div>
-                        <div id="costs-list" class="mt-4 space-y-1"></div>
+                        <div class="flex items-center gap-2 flex-wrap mt-5 pt-4 border-t border-[#1f1f1f]">
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 flex-1">Wpisy</div>
+                            <select id="costf-product" onchange="renderCosts()" class="fld" style="width:auto;padding:4px 8px;font-size:11px"></select>
+                            <select id="costf-stage" onchange="renderCosts()" class="fld" style="width:auto;padding:4px 8px;font-size:11px"></select>
+                            <select id="costf-kind" onchange="renderCosts()" class="fld" style="width:auto;padding:4px 8px;font-size:11px"></select>
+                            <span id="costs-count" class="text-zinc-500 text-[11px] font-mono"></span>
+                        </div>
+                        <div id="costs-list" class="mt-2.5 space-y-1"></div>
+                        <button id="costs-more" onclick="costShowAll=true;renderCosts()" class="hidden mt-2 text-[11px] text-[#52a8ff] hover:text-[#78b6ff]"></button>
                     </div>
                 </div>
 
@@ -801,43 +809,55 @@
 
         // ── TAB Koszty (wf2_costs): rollup per etap + per produkt + podsumowanie ──
         function costPln(c) { return c.currency === 'USD' ? Number(c.amount) * (usdRate || 4) : Number(c.amount); }
+        let costShowAll = false;
         function renderCosts() {
             const prodCost = costs.reduce((a, c) => a + costPln(c), 0);
             const adsSpend = adStats.reduce((a, s) => a + Number(s.spend || 0), 0);
             document.getElementById('tab-costs-sum').textContent = prodCost > 0 ? `(${Math.round(prodCost)} zł)` : '';
-            const perProduct = products.length ? prodCost / products.length : 0;
+            // kurs użyty do przeliczeń — jawnie w nagłówku (fallback 4,00 gdy NBP padnie)
+            const rateEl = document.getElementById('costs-rate');
+            if (rateEl) rateEl.textContent = usdRate
+                ? `sesje logują koszty same (panelUpd) · kurs NBP ${usdRate.toFixed(4).replace('.', ',')} zł/USD`
+                : '⚠ kurs NBP niedostępny — USD przeliczam po 4,00 zł';
+            // średnia TYLKO z kosztów przypisanych produktom, dzielona przez produkty Z kosztem
+            // (koszty wspólne projektu — marka/domena — zawyżałyby „cenę produktu")
+            const prodOnly = costs.filter(c => c.product_id);
+            const prodOnlySum = prodOnly.reduce((a, c) => a + costPln(c), 0);
+            const prodWithCost = new Set(prodOnly.map(c => c.product_id)).size;
             const cards = [
-                ['Produkcja (AI/treści)', moneyPL(prodCost), 'text-white'],
-                ['Reklamy (spend Meta)', moneyPL(adsSpend), 'text-white'],
-                ['RAZEM', moneyPL(prodCost + adsSpend), 'text-[#f5b955]'],
-                ['Śr. produkcja / produkt', products.length ? moneyPL(perProduct) : '—', 'text-white'],
+                ['Produkcja (AI/treści)', moneyPL(prodCost), 'text-white', 'Suma wpisów z tej zakładki (wf2_costs) — produkty + koszty wspólne projektu'],
+                ['Reklamy (spend Meta)', moneyPL(adsSpend), 'text-white', 'Spend z syncu Meta (wf2_ad_stats) — NIE wchodzi do tabeli etapów poniżej'],
+                ['RAZEM', moneyPL(prodCost + adsSpend), 'text-[#f5b955]', 'Produkcja + spend Meta'],
+                ['Śr. produkcja / produkt', prodWithCost ? moneyPL(prodOnlySum / prodWithCost) : '—', 'text-white', `Tylko koszty przypisane produktom (${moneyPL(prodOnlySum)}), dzielone przez produkty z kosztem (${prodWithCost}); wspólne projektu osobno`],
             ];
             document.getElementById('costs-cards').innerHTML = cards.map(c =>
-                `<div class="bg-[#111] border border-[#262626] rounded-md px-3.5 py-3"><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">${c[0]}</div><div class="text-sm font-semibold font-mono ${c[2]}">${c[1]}</div></div>`).join('');
+                `<div class="bg-[#111] border border-[#262626] rounded-md px-3.5 py-3" data-tip-title="${escapeHtml(c[0])}" data-tip-desc="${escapeHtml(c[3])}"><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">${c[0]}</div><div class="text-sm font-semibold font-mono ${c[2]}">${c[1]}</div></div>`).join('');
 
             // rozbicie wg rodzaju (wideo = fal, osobno — życzenie Tomka 18.07)
-            const KIND_LABEL = { fal: 'wideo (fal)', manus: 'Manus', 'gpt-image': 'gpt-image', openai: 'OpenAI', gemini: 'Gemini', inne: 'inne' };
+            const KIND_LABEL = { fal: 'wideo (fal)', manus: 'Manus', 'gpt-image': 'gpt-image', openai: 'OpenAI', gemini: 'Gemini', domena: 'domena', fix: 'poprawki (fix)', inne: 'inne' };
             const byKind = {};
             costs.forEach(c => { const k = c.kind || 'inne'; byKind[k] = (byKind[k] || 0) + costPln(c); });
             document.getElementById('costs-kinds').innerHTML = Object.entries(byKind).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
                 `<span class="inline-flex items-center gap-1.5 border border-[#2a2a2a] rounded-md px-2.5 py-1 text-[11px]"><span class="text-zinc-500">${escapeHtml(KIND_LABEL[k] || k)}</span><span class="font-mono text-white">${moneyPL(v)}</span></span>`).join('')
                 || '<span class="text-zinc-600 text-[11px]">—</span>';
 
-            // per etap (stage z wpisu; fallback: z definicji kroku)
+            // per etap (stage z wpisu; fallback: z definicji kroku); „/ produkt" = TYLKO koszty
+            // przypisane produktom, dzielone przez produkty z kosztem W TYM etapie (nie przez cały portfel)
             const byStage = {};
             costs.forEach(c => {
                 const st = c.stage || (c.step_key ? (defFor(c.step_key)?.stage || 0) : 0);
-                (byStage[st] = byStage[st] || { sum: 0, n: 0 }).sum += costPln(c); byStage[st].n++;
+                const s = (byStage[st] = byStage[st] || { sum: 0, prodSum: 0, prods: new Set() });
+                s.sum += costPln(c);
+                if (c.product_id) { s.prodSum += costPln(c); s.prods.add(c.product_id); }
             });
             const stageRows = stageNums().map(n => {
-                const s = byStage[n] || { sum: 0, n: 0 };
+                const s = byStage[n] || { sum: 0, prodSum: 0, prods: new Set() };
                 const label = defsForStage(n)[0]?.stage_label || ('Etap ' + n);
-                const hasProd = defsForStage(n).some(d => d.scope === 'product');
-                const per = hasProd && products.length ? s.sum / products.length : null;
+                const per = s.prods.size ? s.prodSum / s.prods.size : null;
                 return `<tr class="border-b border-[#1f1f1f]">
                     <td class="px-2 py-2 text-xs text-zinc-300">${n}. ${escapeHtml(label)}</td>
                     <td class="px-2 py-2 text-right font-mono text-xs ${s.sum > 0 ? 'text-white' : 'text-zinc-600'}">${s.sum > 0 ? moneyPL(s.sum) : '—'}</td>
-                    <td class="px-2 py-2 text-right font-mono text-[11px] text-zinc-500">${per != null && s.sum > 0 ? moneyPL(per) : '—'}</td>
+                    <td class="px-2 py-2 text-right font-mono text-[11px] text-zinc-500" title="${s.prods.size ? 'średnia z ' + s.prods.size + ' produktów z kosztem w tym etapie' : ''}">${per != null ? moneyPL(per) : '—'}</td>
                 </tr>`;
             }).join('');
             const other = byStage[0];
@@ -857,12 +877,38 @@
                 </div>`;
             }).join('') + (byProd['_proj'] ? `<div class="flex items-center gap-2 text-xs pt-1 border-t border-[#1f1f1f]"><span class="text-zinc-500 flex-1">koszty wspólne projektu</span><span class="font-mono text-zinc-300">${moneyPL(byProd['_proj'])}</span></div>` : '');
 
-            // selecty formularza + ostatnie wpisy
+            // selecty formularza
             const stageSel = document.getElementById('cost-stage');
             if (stageSel && !stageSel.options.length) stageSel.innerHTML = stageNums().map(n => `<option value="${n}">${n}. ${escapeHtml(defsForStage(n)[0]?.stage_label || n)}</option>`).join('');
             const prodSel = document.getElementById('cost-product');
             if (prodSel && prodSel.options.length !== products.length + 1) prodSel.innerHTML = '<option value="">— projekt —</option>' + products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-            document.getElementById('costs-list').innerHTML = costs.slice(0, 15).map(c => {
+
+            // ── filtry listy wpisów (produkt / etap / rodzaj) + „pokaż wszystkie" ──
+            const fP = document.getElementById('costf-product'), fS = document.getElementById('costf-stage'), fK = document.getElementById('costf-kind');
+            if (fP && !fP.options.length) fP.innerHTML = '<option value="">produkt: wszystkie</option><option value="_proj">— tylko projekt —</option>' + products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+            if (fS && !fS.options.length) fS.innerHTML = '<option value="">etap: wszystkie</option>' + stageNums().map(n => `<option value="${n}">${n}. ${escapeHtml(defsForStage(n)[0]?.stage_label || n)}</option>`).join('');
+            if (fK) {
+                const kinds = [...new Set(costs.map(c => c.kind || 'inne'))].sort();
+                const cur = fK.value;
+                fK.innerHTML = '<option value="">rodzaj: wszystkie</option>' + kinds.map(k => `<option value="${escapeHtml(k)}"${k === cur ? ' selected' : ''}>${escapeHtml(KIND_LABEL[k] || k)}</option>`).join('');
+            }
+            const filtered = costs.filter(c => {
+                if (fP && fP.value) { if (fP.value === '_proj' ? c.product_id : c.product_id !== fP.value) return false; }
+                if (fS && fS.value) { const st = c.stage || (c.step_key ? (defFor(c.step_key)?.stage || 0) : 0); if (String(st) !== fS.value) return false; }
+                if (fK && fK.value && (c.kind || 'inne') !== fK.value) return false;
+                return true;
+            });
+            const fSum = filtered.reduce((a, c) => a + costPln(c), 0);
+            const cntEl2 = document.getElementById('costs-count');
+            if (cntEl2) cntEl2.textContent = `${filtered.length}${filtered.length !== costs.length ? ' z ' + costs.length : ''} wpisów · ${moneyPL(fSum)}`;
+            const LIMIT = 15;
+            const shown = costShowAll ? filtered : filtered.slice(0, LIMIT);
+            const moreBtn = document.getElementById('costs-more');
+            if (moreBtn) {
+                moreBtn.classList.toggle('hidden', filtered.length <= LIMIT || costShowAll);
+                moreBtn.textContent = `Pokaż wszystkie (${filtered.length})`;
+            }
+            document.getElementById('costs-list').innerHTML = shown.map(c => {
                 const p = c.product_id ? products.find(x => x.id === c.product_id) : null;
                 return `<div class="flex items-center gap-2 text-[11.5px] bg-[#111] border border-[#232323] rounded px-2.5 py-1.5">
                     <span class="text-[9.5px] border border-[#333] rounded px-1.5 py-0.5 text-zinc-400">${escapeHtml(c.kind)}</span>
@@ -892,6 +938,8 @@
             renderCosts(); showToast('Koszt zapisany', 'success');
         }
         async function deleteCost(id) {
+            const c = costs.find(x => x.id === id);
+            if (c && !confirm(`Usunąć wpis kosztu ${Number(c.amount).toFixed(2)} ${c.currency} (${c.kind}${c.note ? ' — ' + c.note : ''})?${c.created_by === 'auto' ? '\n\nWpis pochodzi z automatu (księgowość fabryki).' : ''}`)) return;
             const { error } = await supabaseClient.from('wf2_costs').delete().eq('id', id);
             if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
             costs = costs.filter(c => c.id !== id); renderCosts();
@@ -964,9 +1012,11 @@
                 check:['F6 twarda: 0 konsoli, 0 h-scroll (390/768/1280), img OK','Grep zakazów + shop.name nie występuje w HTML','GATE-CHECK gate-check.py = 0 FAIL','Finalny pass: PASS 0-4 czyste','PASS 5 semantyka: SEMANTYKA.md komplet','Wersja + grafiki zarchiwizowane (Desktop)','RETRO F8: NOWE WNIOSKI + LEKSYKON + CHANGELOG','Koszty landinga zalogowane w wf2_costs (zakładka Koszty)','Status produktu → gotowy'], prompt:'lp_finisz' },
 
             // ── ETAP 3: SKLEP NA PLATFORMIE (Trevio przez wf2-platform) ──
-            pl_sklep: { desc:'Przypięcie sklepu partnera do projektu — PICKER poniżej: „Pobierz sklepy z platformy" pokazuje wszystkie sklepy konta partnera (wolne vs zajęte przez inne projekty), klik „Przypnij" zapisuje platform_shop_id. Konto+sklep zakłada KLIENT (provisioning: developer platformy). Po przypięciu: „Pobierz stan platformy" = live-podgląd produktów/kas/landingów/integracji/domeny.',
+            pl_sklep: { desc:'Sklep na platformie — od 21.07 zakłada go FABRYKA: gdy projekt nie ma platform_shop_id, edge wf2-merchant create_store {project_id} tworzy konto merchanta + sklep (od razu widoczny w API partnera) i przypina go do projektu. PICKER poniżej („Pobierz sklepy z platformy") służy do RĘCZNEGO przypięcia istniejącego sklepu (wolne vs zajęte). Po przypięciu: „Pobierz stan platformy" = live-podgląd produktów/kas/landingów/integracji/domeny.',
                 fields:[{k:'shop_id',l:'Shop ID (websiteId)', col:'project.platform_shop_id'},{k:'starter_domain',l:'Domena startowa'},],
-                check:['Sklep wybrany z listy partnera (akcja stores)','platform_shop_id zapisany na projekcie','Domena startowa znana'], prompt:'pl_sklep' },
+                check:['Sklep istnieje — założony automatem (wf2-merchant) albo przypięty z listy partnera','platform_shop_id zapisany na projekcie','Domena startowa znana'], prompt:'pl_sklep' },
+            pl_konto_klient: { desc:'Konto merchanta na platformie — AUTOMAT FABRYKI (od 21.07, edge wf2-merchant): create_store z {project_id} zakłada konto na e-mailu KLIENTA (zajęty w Trevio = 409 → adres systemowy <slug>@tomekniedzwiecki.pl + nota) razem ze sklepem; dane logowania w wf2_merchant_accounts (service-role only, plaintext — NIGDY do portalu). Klient NICZEGO nie zakłada i nie dostaje hasła — portal pokazuje kartę „Panel Twojego sklepu" (login + „Ustaw hasło" przez forgot-password). Krok wykonuje się RAZEM z krokiem „Sklep na platformie".',
+                check:['Konto merchanta utworzone (wf2-merchant create_store — creds w wf2_merchant_accounts)','platform_merchant_email zapisany na projekcie (e-mail klienta albo nota o adresie systemowym po 409)','Karta „Panel Twojego sklepu" w portalu aktywna (albo nota, czemu pending)'] },
             pl_dane: { check:['Numer konta do pobrań (NRB, 26 cyfr)','Dane firmy do faktur/regulaminu','Akceptacja treści prawnych'],
                 fields:[{k:'nrb',l:'NRB do wypłat i rozliczeń COD (26 cyfr)'},{k:'company',l:'Dane firmy (nazwa, NIP, adres)',ta:true},{k:'shop_email',l:'E-mail sklepu'}] },
             pl_branding: { desc:'Logo + favicon sklepu przez API (akcje upload_logo/upload_favicon; base64). Architektura v3: storefront (home/checkout) = marka PARASOLOWA; landing pokazuje mini-markę produktu.',

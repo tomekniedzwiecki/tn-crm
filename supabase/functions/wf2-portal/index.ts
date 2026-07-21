@@ -75,8 +75,9 @@ function isViewableMedia(url: string): boolean {
 }
 
 // ── pola klienckie per krok (whitelist twarda; klucz spoza = 400) ──────────
+// pl_konto_klient USUNIETE 22.07: konto merchanta zaklada FABRYKA (wf2-merchant) -
+// krok przeszedl na owner='admin', klient nie podaje juz e-maila konta.
 const CLIENT_FIELD_WHITELIST: Record<string, string[]> = {
-  pl_konto_klient: ["platform_email"],
   pl_dane:         ["company", "nip", "regon", "address", "nrb", "email_kontakt", "phone", "return_address"],
   ads_konto:       ["bm_id", "partner_id", "ad_account_id", "fanpage_url"],
   ads_strona:      ["fanpage_url", "instagram_url"],
@@ -487,9 +488,6 @@ Deno.serve(async (req: Request) => {
       if (val.length > 500) { errs.push(`Pole „${k}" jest za długie (max 500 znaków).`); continue; }
       cleaned[k] = val;
     }
-    if (step_key === "pl_konto_klient" && cleaned.platform_email && !EMAIL_RE.test(cleaned.platform_email)) {
-      errs.push("Podaj poprawny adres e-mail konta na platformie.");
-    }
     if (step_key === "pl_dane" && cleaned.email_kontakt && !EMAIL_RE.test(cleaned.email_kontakt)) {
       errs.push("Podaj poprawny adres e-mail kontaktowy.");
     }
@@ -510,10 +508,6 @@ Deno.serve(async (req: Request) => {
       if (error) return json({ error: "save_failed" }, 500);
     }
 
-    // pl_konto_klient: e-mail konta ląduje też w kolumnie projektu (dopasowanie sklepu/operatora)
-    if (step_key === "pl_konto_klient" && cleaned.platform_email) {
-      await sb.from("wf2_projects").update({ platform_account_email: cleaned.platform_email }).eq("id", p.id);
-    }
     // pl_dane: dane sprzedawcy żyją w dokumentach sklepu → auto re-publish (koalescencja 60 s,
     // best-effort w tle; SSOT docs/zbuduje/PRAWNE.md §2)
     if (step_key === "pl_dane") {

@@ -368,7 +368,7 @@ Deno.serve(async (req) => {
             stage: 1,
             amount: amountPln,
             currency: "PLN",
-            kind: "inne",
+            kind: "domena",
             note: `Domena ${domain} (GoDaddy order ${orderId})${fxMissing ? " — BRAK KURSU NBP, uzupełnij kwotę ręcznie" : ""}`,
             created_by: "auto",
           }),
