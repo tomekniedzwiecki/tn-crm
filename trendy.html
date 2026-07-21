@@ -1069,7 +1069,8 @@ function mediaHtml(x,vid){
     </div>
   </div>`;
 }
-// Zbiera wideo do paska: główny film (z tiktok_url) + wszystkie tt_shop.videos; dedup po video-id (tylko cyfry).
+// Zbiera wideo do paska: główny film (z tiktok_url) + tt_shop.videos + videos_curated.items (ręcznie
+// dodane/skuratorowane multi-video); dedup po video-id (tylko cyfry).
 function _detailVideos(x,mainVid){
   const out=[], seen=new Set();
   if(mainVid&&/^\d+$/.test(mainVid)){seen.add(mainVid);out.push({vid:mainVid,cover:safeUrl(x.cover),plays:x.max_plays,author:x.author,main:true});}
@@ -1078,6 +1079,12 @@ function _detailVideos(x,mainVid){
     const m=/\/video\/(\d+)/.exec(v&&v.url||''); const id=m?m[1]:null;
     if(!id||seen.has(id))return; seen.add(id);
     out.push({vid:id,cover:safeUrl(v.cover),plays:v.plays,author:v.author,title:v.title});
+  });
+  const cur=(x.videos_curated&&Array.isArray(x.videos_curated.items))?x.videos_curated.items:[];
+  cur.forEach(v=>{
+    const m=/\/video\/(\d+)/.exec(v&&v.url||''); const id=m?m[1]:null;
+    if(!id||seen.has(id))return; seen.add(id);
+    out.push({vid:id,cover:safeUrl(v.cover),plays:v.plays,author:v.author,title:(v.kolor?('['+v.kolor+'] '):'')+(v.alt_pl||v.nick||'')});
   });
   return out;
 }
