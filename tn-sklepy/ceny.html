@@ -38,6 +38,8 @@
         .toggle { width:38px; height:20px; border-radius:999px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; border:1px solid #262626; }
         .toggle .knob { position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .2s; }
         .toggle.on .knob { transform:translateX(18px); }
+        /* mobile: nazwa produktu przyklejona przy poziomym scrollu tabeli */
+        #rows td:first-child, thead th:first-child { position:sticky; left:0; background:#000; z-index:5; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -184,7 +186,7 @@
                 <div class="flex flex-wrap items-center gap-2">
                     <button id="dr-pause-btn" class="st-btn st-reject text-xs"></button>
                     <div class="inline-flex items-center gap-1.5 text-xs text-zinc-400">Autonomia:
-                        <select id="dr-autonomy" class="cfg-input py-1 text-xs">
+                        <select id="dr-autonomy" name="dr-autonomy" class="cfg-input py-1 text-xs">
                             <option value="auto">auto</option><option value="propose">propose</option><option value="off">off</option>
                         </select>
                     </div>
@@ -489,7 +491,7 @@
             if (!isAdmin()) { wrap.classList.add('hidden'); return; }
             wrap.classList.remove('hidden');
             const pilots = Array.isArray(cfg.pilot_project_ids) ? cfg.pilot_project_ids.join(', ') : '';
-            const sel = (key, val, opts) => `<select class="cfg-input" onchange="saveSelectCfg('${key}', this.value)">` +
+            const sel = (key, val, opts) => `<select name="cfg-${key}" id="cfg-${key}" class="cfg-input" onchange="saveSelectCfg('${key}', this.value)">` +
                 opts.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('') + '</select>';
             wrap.innerHTML = `
             <div class="rounded-lg border border-[#1f1f1f] bg-[#0a0a0a]">
@@ -510,18 +512,18 @@
                     </div>
                     <div class="grid gap-4 sm:grid-cols-3">
                         <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">decision_hour</span>
-                            <input type="number" min="0" max="23" class="cfg-input w-full" value="${num(cfg.decision_hour ?? 7)}" onchange="saveNum('decision_hour', this.value, true)"></label>
+                            <input type="number" name="cfg-decision_hour" min="0" max="23" class="cfg-input w-full" value="${num(cfg.decision_hour ?? 7)}" onchange="saveNum('decision_hour', this.value, true)"></label>
                         <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">autonomy_default</span>
                             ${sel('autonomy_default', cfg.autonomy_default || 'propose', ['auto', 'propose', 'off'])}</label>
                         <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">auto_step_max_pct</span>
-                            <input type="number" step="1" class="cfg-input w-full" value="${num(cfg.auto_step_max_pct ?? 20)}" onchange="saveNum('auto_step_max_pct', this.value)"></label>
+                            <input type="number" name="cfg-auto_step_max_pct" step="1" class="cfg-input w-full" value="${num(cfg.auto_step_max_pct ?? 20)}" onchange="saveNum('auto_step_max_pct', this.value)"></label>
                         <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">cooldown_days</span>
-                            <input type="number" step="1" class="cfg-input w-full" value="${num(cfg.cooldown_days ?? 7)}" onchange="saveNum('cooldown_days', this.value, true)"></label>
+                            <input type="number" name="cfg-cooldown_days" step="1" class="cfg-input w-full" value="${num(cfg.cooldown_days ?? 7)}" onchange="saveNum('cooldown_days', this.value, true)"></label>
                         <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">max_price_changes_per_run</span>
-                            <input type="number" step="1" class="cfg-input w-full" value="${num(cfg.max_price_changes_per_run ?? 5)}" onchange="saveNum('max_price_changes_per_run', this.value, true)"></label>
+                            <input type="number" name="cfg-max_price_changes_per_run" step="1" class="cfg-input w-full" value="${num(cfg.max_price_changes_per_run ?? 5)}" onchange="saveNum('max_price_changes_per_run', this.value, true)"></label>
                     </div>
                     <label class="block"><span class="text-[10.5px] font-mono uppercase tracking-wider text-zinc-500 block mb-1.5">pilot_project_ids (CSV — pusto = wszystkie projekty)</span>
-                        <textarea rows="2" class="cfg-input w-full resize-y" onchange="savePilots(this.value)" placeholder="baacc66f-…, …">${escapeHtml(pilots)}</textarea></label>
+                        <textarea rows="2" name="cfg-pilot_project_ids" class="cfg-input w-full resize-y" onchange="savePilots(this.value)" placeholder="baacc66f-…, …">${escapeHtml(pilots)}</textarea></label>
                     <div class="text-[10.5px] text-zinc-600 flex items-center gap-1.5"><i class="ph ph-info"></i> Zapis merguje TYLKO edytowane klucze do <span class="font-mono">settings.wf2_price_config</span> — pozostałe progi (§8 SSOT) nietknięte. config_version: <span class="font-mono text-zinc-500">${escapeHtml(cfg.config_version || '—')}</span></div>
                 </div>
             </div>`;
@@ -643,7 +645,7 @@
         function autonomyCell(p) {
             const a = autonomyOf(p);
             if (isAdmin()) {
-                return `<select onclick="event.stopPropagation()" onchange="event.stopPropagation(); setAutonomy('${p.id}', this.value)" class="cfg-input py-0.5 text-[11px]">
+                return `<select name="autonomy-${p.id}" onclick="event.stopPropagation()" onchange="event.stopPropagation(); setAutonomy('${p.id}', this.value)" class="cfg-input py-0.5 text-[11px]">
                     ${['auto', 'propose', 'off'].map(o => `<option value="${o}" ${a === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
             }
             const m = AUTONOMY_META[a] || AUTONOMY_META.propose;
@@ -769,7 +771,9 @@
             const spMax = Math.max.apply(null, spend.concat(0.0001));
             const pMin = Math.min.apply(null, price), pMax = Math.max.apply(null, price);
             const cMin = Math.min.apply(null, contrib.concat(0)), cMax = Math.max.apply(null, contrib.concat(0));
-            const yP = v => PT + plotH - ((v - pMin) / ((pMax - pMin) || 1)) * plotH;
+            const yP = (pMax - pMin) > 0
+                ? (v => PT + plotH - ((v - pMin) / (pMax - pMin)) * plotH)
+                : (() => PT + plotH * 0.5); // płaska seria = środek pola, nie dolna oś
             const yC = v => PT + plotH - ((v - cMin) / ((cMax - cMin) || 1)) * plotH;
 
             const bw = Math.max(1.5, (plotW / 30) * 0.5);
@@ -796,6 +800,7 @@
                 <text x="${PL}" y="${PT - 2}" fill="#52a8ff" font-size="7" opacity="0.8">${money(pMax)}</text>
                 <text x="${PL}" y="${H - 4}" fill="#52525b" font-size="7">${days[0].slice(5)}</text>
                 <text x="${W - PR}" y="${H - 4}" fill="#52525b" font-size="7" text-anchor="end">dziś</text>
+                ${hasActivity ? '' : `<text x="${(W / 2).toFixed(0)}" y="${(PT + plotH * 0.5 - 8).toFixed(0)}" fill="#52525b" font-size="7" text-anchor="middle">brak ruchu w oknie 30 dni</text>`}
             </svg>`;
         }
 
