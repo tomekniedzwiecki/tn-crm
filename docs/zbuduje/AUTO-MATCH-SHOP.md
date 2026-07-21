@@ -175,12 +175,21 @@ Trzeci głos rozstrzygający, decyzja większością 3 (do zatwierdzenia: ≥2×
 
 Czyli **28 z 72 dopasowań po tytule (39%) okazało się innym produktem.**
 
-Grupa „jednogłośne 3× TAK poniżej progu" to przypadki, gdzie trzy niezależne przebiegi
-zgadzają się co do TAK, ale pewność siedzi w paśmie 0.78–0.89 — zwykle znaczy to „ten sam
-typ rzeczy, inny model/wariant". Próg 0.9 był kalibrowany dla POJEDYNCZEGO przebiegu;
-przy jednogłośności trzech mierzy już co innego. **Decyzja o traktowaniu tej grupy należy
-do Tomka — nie obniżać progu samodzielnie** (dobieranie reguły pod pożądany wynik to
-dokładnie ten błąd, przez który 66 rekordów miało `score = 1.0` i cudze dane w środku).
+### Reguła jednogłośności (decyzja 21.07)
+
+Próg 0.9 był kalibrowany dla POJEDYNCZEGO przebiegu. Przy trzech przebiegach mierzymy już
+co innego — **powtarzalność**, czyli dokładnie tę własność, której brakowało (ten sam
+materiał potrafił dać TAK 0.93 i NIE 0.99). Przyjęta reguła:
+
+> **3 przebiegi zgodnie TAK, zero głosów NIE, średnia pewność ≥ 0.85 → zatwierdzone**
+> (`confirmed_by = 'vision3_unanimous'`)
+
+Margines 0.85 zostawia odstęp od pasma 0.78–0.84, gdzie widać wahanie modelu. Zatwierdziło
+to **7 rekordów**. Pozostałe 15 (9 jednogłośnych poniżej 0.85 + 6 spornych 2:1) zostaje do
+ręcznego kliknięcia — tam pewność 0.78–0.84 zwykle znaczy „ten sam typ rzeczy, inny model",
+a to właśnie liczba sprzedaży ma być dowodem.
+
+**Bilans końcowy 72 auto-dopasowań: 29 potwierdzonych, 28 wycofanych, 15 do ręki.**
 
 ### Nagrobek po odrzuceniu
 
