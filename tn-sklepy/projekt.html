@@ -584,7 +584,13 @@
             sel.innerHTML = PROJECT_STATUSES.map(s=>`<option value="${s}" ${project.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('');
             const meta = [];
             if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
-            if (project.customer_phone) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-phone"></i>${escapeHtml(project.customer_phone)}</span>`);
+            if (project.customer_phone) {
+                const waNum = project.customer_phone.replace(/\D/g, '').replace(/^00/, '');
+                const wa = waNum.length === 9 ? '48' + waNum : waNum;
+                meta.push(`<span class="flex items-center gap-1"><i class="ph ph-phone"></i>${escapeHtml(project.customer_phone)}
+                    <a href="https://wa.me/${wa}" target="_blank" rel="noopener" title="Napisz na WhatsApp" onclick="event.stopPropagation()"
+                       class="inline-flex items-center justify-center w-5 h-5 rounded-md text-[#25D366] hover:bg-[rgba(37,211,102,.14)] transition-colors"><i class="ph-fill ph-whatsapp-logo text-[14px]"></i></a></span>`);
+            }
             if (project.lead_id) meta.push(`<a href="/pipeline#lead-${project.lead_id}" target="_blank" class="text-zinc-400 hover:text-[#52a8ff] flex items-center gap-1"><i class="ph ph-kanban"></i>lead</a>`);
             if (project.bud_session_id) meta.push(`<a href="/tn-sklep/" target="_blank" class="text-zinc-400 hover:text-[#52a8ff] flex items-center gap-1"><i class="ph ph-chats-circle"></i>sesja /sklep</a>`);
             document.getElementById('p-meta').innerHTML = meta.join('<span class="text-zinc-700">·</span>');
