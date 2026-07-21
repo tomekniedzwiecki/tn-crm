@@ -435,6 +435,7 @@
                 <ol>
                 <li>Wejdź na <a href="https://business.facebook.com" target="_blank" rel="noopener" onclick="track('link_click','business.facebook.com')">business.facebook.com</a> i utwórz <b>Meta Business Suite</b> (jeśli jeszcze nie masz).</li>
                 <li>Ustawienia → Konta → <b>Konta reklamowe</b> → Utwórz nowe. Waluta: <b>PLN</b>.</li>
+                <li>Dodaj też swoją stronę z poprzedniego zadania: Ustawienia → Konta → <b>Strony</b> → Dodaj istniejącą stronę.</li>
                 <li>Ustawienia → <b>Partnerzy</b> → Dodaj → wklej moje ID:</li>
                 </ol>
                 <div class="copybox">737839566050751 <button type="button" onclick="copyText('737839566050751', this)">Kopiuj</button></div>
@@ -450,11 +451,9 @@
             guide: `<p>Reklamy muszą wychodzić z prawdziwej strony marki. Załóż stronę na Facebooku dla <b>%NAME%</b>.</p>
                 <ol>
                 <li>Wejdź na <a href="https://facebook.com/pages/create" target="_blank" rel="noopener" onclick="track('link_click','facebook pages create')">facebook.com/pages/create</a>. Nazwa strony: <b>%NAME%</b>, kategoria: „Sklep".</li>
-                <li>Dodaj stronę do Business Managera (Ustawienia → Konta → Strony → Dodaj istniejącą).</li>
-                <li>Udostępnij stronę mnie — to samo ID co przy koncie reklamowym, „Pełna kontrola":</li>
+                <li>Załóż firmowe konto na Instagramie i połącz je ze stroną (Ustawienia strony → Połączone konta). Jeśli wolisz — możesz to zrobić później.</li>
                 </ol>
-                <div class="copybox">737839566050751 <button type="button" onclick="copyText('737839566050751', this)">Kopiuj</button></div>
-                <p>Opcjonalnie: załóż firmowe konto na Instagramie i połącz je ze stroną.</p>`,
+                <div class="note">Dostępu do strony nie musisz teraz nikomu dawać — zrobisz to w następnym zadaniu, przy dodawaniu partnera zaznaczysz stronę, Instagram i konto reklamowe za jednym razem.</div>`,
             fields: [{ k: 'fanpage_url', l: 'Link do strony na Facebooku', type: 'text' }],
         },
         ads_budzet: {
@@ -664,10 +663,19 @@
     let taskFieldTimers = {};
 
     // ── Model zadań klienta ─────────────────────────────────────────────────
-    // Kolejność: (stage, sort) → konto na platformie → dane → konto reklamowe → strona FB → budżet → przejęcia.
+    // Kolejność JAWNA (decyzja Tomka: strona FB+IG przed kontem reklamowym; „przejęcia"
+    // z ostatniego etapu w ogóle poza listą — wrócą, gdy się nimi zajmiemy).
+    const TASK_ORDER = ['pl_konto_klient', 'pl_dane', 'ads_strona', 'ads_konto', 'ads_budzet'];
+    const TASK_HIDDEN = ['przejecie_kampanii', 'przejecie_operacji'];
     function tvTasks() {
-        return P.stepDefs.filter(d => d.owner === 'client' && d.scope === 'project')
-            .sort((a, b) => (a.stage - b.stage) || ((a.sort || 0) - (b.sort || 0)));
+        return P.stepDefs.filter(d => d.owner === 'client' && d.scope === 'project' && !TASK_HIDDEN.includes(d.key))
+            .sort((a, b) => {
+                const ia = TASK_ORDER.indexOf(a.key), ib = TASK_ORDER.indexOf(b.key);
+                if (ia !== -1 && ib !== -1) return ia - ib;
+                if (ia !== -1) return -1;
+                if (ib !== -1) return 1;
+                return (a.stage - b.stage) || ((a.sort || 0) - (b.sort || 0));
+            });
     }
     function isTaskDone(d) { const st = stepFor(d.key, null); return !!(st && st.status === 'done'); }
     // Odblokowanie: po utworzeniu marki (krok marka done LUB frontStage>=2) klient może zrobić
@@ -750,6 +758,11 @@
     window.addEventListener('popstate', () => { if (!$('content').classList.contains('hidden')) syncTasksView(); });
 
     function selectTask(key) {
+        // klik w krok spoza listy (np. ukryte „przejęcia" z boxów etapu) → pierwsze niezrobione
+        if (key !== '__done__' && !tvTasks().some(d => d.key === key)) {
+            const u = tvTasks().find(d => taskUnlocked(d) && !isTaskDone(d));
+            key = u ? u.key : '__done__';
+        }
         tvActive = key;
         renderTasksView();
         if (key !== '__done__' && !taskSelTracked.has(key)) { taskSelTracked.add(key); track('open_step', (defFor(key) || {}).label || key); }
