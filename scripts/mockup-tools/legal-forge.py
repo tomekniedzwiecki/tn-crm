@@ -250,13 +250,30 @@ def cmd_publish(a):
     dom = data["DOMAIN"]
     results = []
     for tpl, path, name in PAGES:
+        if getattr(a, "skip_fresh", False):
+            _, ver0, fresh0 = _live_check(dom, path, data["DOC_VERSION"])
+            if fresh0:
+                log(f"skip /{path} — live już {ver0} (kolejny PUT tylko mrozi snapshot)")
+                results.append((path, 200, ver0, True))
+                continue
         ns = argparse.Namespace(project=a.project, path=path, file=os.path.join(out, tpl),
                                 name=name, strip_noindex=True)
         pls.cmd_page(ns)
-    for tpl, path, name in PAGES:
-        # origin platformy odświeża snapshot asynchronicznie po PUT — do 8 prób co 20 s
-        code, ver, fresh = _live_check(dom, path, data["DOC_VERSION"], retries=8, wait_s=20)
-        results.append((path, code, ver, fresh))
+        results.append([path, None, None, False])
+    # weryfikacja ze WSPÓLNĄ pulą czasu (origin odświeża asynchronicznie; zamrożona ścieżka
+    # nie może zawiesić całości — po puli raportujemy STALE jako WARN)
+    import time as _t
+    deadline = _t.time() + 180
+    while True:
+        for r in results:
+            if not (isinstance(r, list) and not r[3]):
+                continue
+            code, ver, fresh = _live_check(dom, r[0], data["DOC_VERSION"])
+            r[1], r[2], r[3] = code, ver, fresh
+        if all(r[3] for r in results) or _t.time() > deadline:
+            break
+        _t.sleep(20)
+    results = [tuple(r) for r in results]
     hard = [r for r in results if r[1] != 200]
     stale = [r for r in results if r[1] == 200 and not r[3]]
     for path, code, ver, fresh in results:
@@ -301,7 +318,9 @@ def cmd_update_all(a):
         if not dom:
             report.append((r["name"], "SKIP", "brak domeny"))
             continue
-        code, live_ver, fresh = _live_check(dom, "regulation", version)
+        # sonda świeżości na privacy-policy (ścieżka /regulation bywa zamrożona po PUT
+        # i fałszywie wskazywałaby wieczne DO-AKTUALIZACJI)
+        code, live_ver, fresh = _live_check(dom, "privacy-policy", version)
         if fresh and not a.force:
             report.append((r["name"], "OK", f"live już {live_ver}"))
             continue
@@ -309,7 +328,7 @@ def cmd_update_all(a):
             report.append((r["name"], "DO-AKTUALIZACJI", f"live {live_ver or code} → {version}"))
             continue
         try:
-            ns = argparse.Namespace(project=r["id"], set=a.set, no_panel=False)
+            ns = argparse.Namespace(project=r["id"], set=a.set, no_panel=False, skip_fresh=True)
             cmd_publish(ns)
             report.append((r["name"], "ZAKTUALIZOWANO", f"→ {version}"))
         except SystemExit as e:
