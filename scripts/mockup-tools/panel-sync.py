@@ -668,7 +668,7 @@ def kalkulacja(project, product, margin_min=10.0, margin_max=15.0, cost_usd=None
 PORTFEL_CEL = 3
 WYBOR_CHECKLIST = [
     {"t": "Produkty wybrane przez Tomka (ręcznie i/lub losowaniem w panelu)", "done": True},
-    {"t": "Niechciane wymienione przez „Przelosuj" (pinezka chroni zaznaczone)", "done": True},
+    {"t": 'Niechciane wymienione przez „Przelosuj" (pinezka chroni zaznaczone)', "done": True},
     {"t": "Portfel skompletowany — fabryka może startować", "done": True},
 ]
 
