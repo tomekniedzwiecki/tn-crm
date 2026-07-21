@@ -263,6 +263,35 @@ def _sprawdz_kolejnosc(project, product, step):
     return zarzuty
 
 
+def _sprawdz_makiety_komplet(project, product):
+    """GATE KOMPLETU MAKIET (LL-030, incydent Ugniatek 22.07: krok done z 2/10 par mobile).
+    Kontrakt artefaktu makiety: pelny URL http + meta.section + meta.viewport; kind
+    'makieta' (desktop) / 'makieta_mobile'. Komplet = KAZDA sekcja desktop ma pare mobile
+    (F2.4: mobile dla WSZYSTKICH sekcji — nie tylko hero/TOR-I). Zwraca liste zarzutow."""
+    params = _scope_param({"project_id": f"eq.{project}", "step_key": "eq.lp_makiety",
+                           "select": "kind,url,meta,label"}, product)
+    rows = [r for r in _get("wf2_artifacts", params)
+            if r.get("kind") in ("makieta", "makieta_mobile")]
+    zarzuty = []
+    if not rows:
+        return ["brak JAKICHKOLWIEK artefaktow makiet (kind makieta/makieta_mobile)"]
+    desktop, mobile = set(), set()
+    for r in rows:
+        meta = r.get("meta") or {}
+        sec, vp = meta.get("section"), meta.get("viewport")
+        if not (r.get("url") or "").startswith("http"):
+            zarzuty.append(f"artefakt '{r.get('label')}' ma URL wzgledny (kontrakt: pelny public URL)")
+        if not sec or not vp:
+            zarzuty.append(f"artefakt '{r.get('label')}' bez meta.section/viewport (kontrakt galerii panelu)")
+            continue
+        (desktop if r["kind"] == "makieta" else mobile).add(sec)
+    for sec in sorted(desktop - mobile):
+        zarzuty.append(f"sekcja '{sec}' NIE MA pary mobile (F2.4: mobile dla WSZYSTKICH sekcji)")
+    for sec in sorted(mobile - desktop):
+        zarzuty.append(f"mobile '{sec}' bez makiety desktop (osierocona para)")
+    return zarzuty
+
+
 def step_update(project, product, step, status=None, note=None, fields=None, checklist=None,
                 force_kolejnosc=False):
     """Aktualizuje/tworzy instancję kroku. Merge data: fields=old||new, note nadpisz,
@@ -275,6 +304,14 @@ def step_update(project, product, step, status=None, note=None, fields=None, che
                 "BLOKADA KOLEJNOSCI FAZ — nie zamykam '%s', bo wczesniejsze fazy nie sa domkniete:\n  - %s\n"
                 "Domknij je najpierw (albo --force-kolejnosc, gdy odstepstwo jest swiadome i opisane w LEDGER)."
                 % (step, "\n  - ".join(zarzuty)))
+    if step == "lp_makiety" and status == "done" and not force_kolejnosc:
+        zarzuty = _sprawdz_makiety_komplet(project, product)
+        if zarzuty:
+            raise SystemExit(
+                "GATE KOMPLETU MAKIET — nie zamykam 'lp_makiety':\n  - %s\n"
+                "Dostarcz komplet (kazda sekcja: makieta desktop + para mobile, meta.section/"
+                "viewport, pelny URL) albo --force-kolejnosc ze swiadomym odstepstwem w LEDGER."
+                % "\n  - ".join(zarzuty))
     params = _scope_param({"project_id": f"eq.{project}", "step_key": f"eq.{step}",
                            "select": "id,data,status"}, product)
     rows = _get("wf2_steps", params)
