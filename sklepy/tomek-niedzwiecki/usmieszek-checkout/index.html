@@ -1741,6 +1741,12 @@
     --zc-shadow:0 22px 60px rgba(16,24,40,.12);
     --zc-font:inherit;
 
+    /* ── SKÓRKA wariantu layout='steps' (bez efektu w 'flat') ── */
+    --zc-step-num-bg:var(--zc-accent);
+    --zc-step-num-text:var(--zc-accent-text);
+    --zc-step-active-bg:color-mix(in srgb,var(--zc-accent) 4%,var(--zc-card));
+    --zc-step-locked-opacity:.55;
+
     position:relative;
     background:var(--zc-bg);
     color:var(--zc-text);
@@ -1909,6 +1915,32 @@
     background:var(--zc-bg);border:1px solid var(--zc-border);font-weight:800;font-size:16px;color:var(--zc-text);letter-spacing:.02em}
   .zc-checkout .zc-cod-amount{margin-top:6px;font-weight:700;color:var(--zc-text)}
 
+  /* ── WARIANT LAYOUTU „steps" (aktywny gdy .zc-checkout[data-zc-layout="steps"]) ── */
+  .zc-checkout[data-zc-layout="steps"] .zc-step{
+    border:1px solid var(--zc-border);border-radius:var(--zc-radius-sm);background:var(--zc-card);
+    overflow:hidden;transition:opacity .18s ease,background .18s ease}
+  .zc-checkout[data-zc-layout="steps"] .zc-step .zc-legend{display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-head{display:flex;align-items:center;gap:12px;width:100%;
+    padding:14px 16px;background:none;border:0;cursor:pointer;font:inherit;color:inherit;text-align:left}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-num{flex:0 0 auto;width:26px;height:26px;border-radius:50%;
+    display:grid;place-items:center;font-size:13px;font-weight:800;line-height:1;
+    background:var(--zc-step-num-bg);color:var(--zc-step-num-text)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-titlewrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-title{font-weight:800;font-size:15px;color:var(--zc-text);letter-spacing:-.01em}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-summary{font-size:13px;color:var(--zc-muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-edit{flex:0 0 auto;font-size:13px;font-weight:700;
+    color:var(--zc-accent);text-decoration:underline;display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-body{display:flex;flex-direction:column;gap:15px;padding:0 16px 16px}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked{opacity:var(--zc-step-locked-opacity)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked .zc-step-num{background:var(--zc-border);color:var(--zc-muted)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-active{background:var(--zc-step-active-bg)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-num{background:var(--zc-ok);color:#fff}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked .zc-step-body,
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-body{display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-summary{display:block}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-edit{display:inline}
+
   /* stany maszyny — pokazywanie paneli */
   .zc-checkout[data-zc-state="waiting_blik"] .zc-form,
   .zc-checkout[data-zc-state="success"] .zc-form{display:none}
@@ -1920,7 +1952,7 @@
 <section id="zamow" class="zc-checkout" aria-labelledby="zc-title"
          data-zc-product="{{WF2_PRODUCT_ID}}"
          data-zc-api="https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-landing-api"
-         data-zc-config='{"websiteId":"019f650b-8d9b-7225-b0aa-c5455f6298a1","productVariantId":"019f6baf-8ea3-7153-81ab-2a20c0179b66","name":"Uśmieszek — szczoteczka U-kształtna","price":49.99,"thumb":"https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/usmieszek/offer-packshot.webp","checkoutFallbackUrl":"https://test.shop.tomekniedzwiecki.pl/checkout?p=api-test-produkt","merchant":"Sprzedawca: sklep testowy Trevio (sandbox) · pełne dane w Regulaminie. Ceny zawierają VAT."}'>
+         data-zc-config='{"layout":"steps","websiteId":"019f650b-8d9b-7225-b0aa-c5455f6298a1","productVariantId":"019f6baf-8ea3-7153-81ab-2a20c0179b66","name":"Uśmieszek — szczoteczka U-kształtna","price":49.99,"thumb":"https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/usmieszek/offer-packshot.webp","checkoutFallbackUrl":"https://test.shop.tomekniedzwiecki.pl/checkout?p=api-test-produkt","merchant":"Sprzedawca: sklep testowy Trevio (sandbox) · pełne dane w Regulaminie. Ceny zawierają VAT."}'>
   <!-- dekoracyjna scena (SKÓRKA) — spójna z Uśmieszkiem -->
   <img class="zc-scene" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/ai-generated/wf2-usmieszek-sc-offer/1784222616060_0.png?width=1400&amp;quality=76&amp;resize=contain" alt="" width="1400" height="900" loading="lazy" aria-hidden="true">
   <div class="zc-wrap">
@@ -1958,7 +1990,7 @@
 
         <div class="zc-main">
           <!-- (2) METODY PŁATNOŚCI -->
-          <fieldset class="zc-block zc-pay">
+          <fieldset class="zc-block zc-pay" data-zc-step="4">
             <legend class="zc-legend">Płatność</legend>
             <div class="zc-pay-list" role="radiogroup" aria-label="Metoda płatności">
               <p class="zc-load" data-zc-pay-load>Ładujemy metody płatności…</p>
@@ -1969,7 +2001,7 @@
           <fieldset class="zc-block zc-fields">
             <legend class="zc-legend">Dane do wysyłki</legend>
 
-            <div class="zc-field" data-field="name">
+            <div class="zc-field" data-field="name" data-zc-step="2">
               <label class="zc-label" for="zc-f-name">Imię i nazwisko</label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-name" name="name" type="text" inputmode="text"
@@ -1980,7 +2012,7 @@
               <p class="zc-err" data-err="name" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="phone">
+            <div class="zc-field" data-field="phone" data-zc-step="1">
               <label class="zc-label" for="zc-f-phone">Telefon <span class="zc-opt-tag">— kurier zadzwoni przed dostawą</span></label>
               <div class="zc-inwrap">
                 <span class="zc-prefix" aria-hidden="true">+48</span>
@@ -1991,7 +2023,7 @@
               <p class="zc-err" data-err="phone" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="email">
+            <div class="zc-field" data-field="email" data-zc-step="1">
               <label class="zc-label" for="zc-f-email">E-mail <span class="zc-opt-tag">— potwierdzenie zamówienia</span></label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-email" name="email" type="email" inputmode="email"
@@ -2002,7 +2034,7 @@
               <p class="zc-err" data-err="email" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="street">
+            <div class="zc-field" data-field="street" data-zc-step="2">
               <label class="zc-label" for="zc-f-street">Ulica i numer</label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-street" name="street" type="text" inputmode="text"
@@ -2013,7 +2045,7 @@
               <p class="zc-err" data-err="street" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="postCode">
+            <div class="zc-field" data-field="postCode" data-zc-step="2">
               <label class="zc-label" for="zc-f-post">Kod pocztowy</label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-post" name="postCode" type="text" inputmode="numeric"
@@ -2024,7 +2056,7 @@
               <p class="zc-err" data-err="postCode" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="city">
+            <div class="zc-field" data-field="city" data-zc-step="2">
               <label class="zc-label" for="zc-f-city">Miejscowość</label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-city" name="city" type="text" inputmode="text"
@@ -2037,7 +2069,7 @@
           </fieldset>
 
           <!-- (4) DOSTAWA -->
-          <fieldset class="zc-block zc-delivery">
+          <fieldset class="zc-block zc-delivery" data-zc-step="3">
             <legend class="zc-legend">Dostawa</legend>
             <div class="zc-del-list" role="radiogroup" aria-label="Sposób dostawy">
               <p class="zc-load" data-zc-del-load>Ładujemy sposoby dostawy…</p>
@@ -2180,6 +2212,10 @@
   var purchaseSent = false;       // Purchase — raz
   var blikTimer = null, blikDeadline = 0, blikAttempts = 0;
   var lazyLoaded = false;
+  var identified = {};            // dedup identify() — klucze 'EmailHash:<v>' / 'PhoneHash:<v>'
+  var STEP_EL = {};               // wariant steps: key kroku → element .zc-step
+  var stepsOn = false;
+  var STEP_ORDER = ['contact', 'address', 'delivery', 'payment'];
 
   // ── KONFIGURACJA: override (data-zc-config) LUB wf2-landing-api ──────────
   function parseOverride() {
@@ -2558,6 +2594,24 @@
     }
   }
 
+  // ── IDENTIFY (window.trevio) — po pozytywnej walidacji e-maila/telefonu, raz per wartość ──
+  function fireIdentify(type, value) {
+    if (!value) return;
+    var key = type + ':' + value;
+    if (identified[key]) return;
+    if (!window.trevio || typeof window.trevio.identify !== 'function') return; // preview poza platformą
+    identified[key] = true;
+    try {
+      var o = {}; o[type] = value; window.trevio.identify(o);
+    } catch (e) {
+      try { window.trevio.identify({ type: type, value: value }); } catch (e2) {}
+    }
+  }
+  function maybeIdentify(name, rawVal) {
+    if (name === 'email') fireIdentify('EmailHash', rawVal);
+    else if (name === 'phone') fireIdentify('PhoneHash', '+48' + normPhone(rawVal));
+  }
+
   // ── MASZYNA STANÓW ─────────────────────────────────────────────────────────
   function setState(s) { root.setAttribute('data-zc-state', s); }
   function setBusy(on) {
@@ -2779,7 +2833,7 @@
     // walidacja on-blur + czyszczenie błędu na keystroke; maski
     Object.keys(RULES).forEach(function (name) {
       var i = $('#zc-f-' + fieldIdFrag(name)); if (!i) return;
-      i.addEventListener('blur', function () { if (i.value.trim()) validateField(name); });
+      i.addEventListener('blur', function () { if (i.value.trim()) { if (validateField(name)) maybeIdentify(name, i.value.trim()); } });
       i.addEventListener('input', function () {
         if (name === 'postCode') { var p = i.selectionStart; i.value = normPost(i.value); }
         var fe = fieldEl(name);
@@ -2800,7 +2854,150 @@
       io.observe(root);
     } else { lazyLoad(); }
     root.addEventListener('focusin', function () { lazyLoad(); }, { once: true });
+
+    // ── WARIANT LAYOUTU: 'flat' (default) lub 'steps' ──
+    var layout = resolveLayout();
+    root.setAttribute('data-zc-layout', layout);
+    if (layout === 'steps') initSteps();
   });
+
+  // ── WARIANT LAYOUTU „steps" (micro-konfigurator; te same pola co flat, reorder przez DOM) ──
+  function resolveLayout() {
+    var a = (root.getAttribute('data-zc-layout') || '').toLowerCase();
+    if (a === 'steps') return 'steps';
+    if (a === 'flat') return 'flat';
+    var ov = parseOverride();
+    if (ov && ov.layout && String(ov.layout).toLowerCase() === 'steps') return 'steps';
+    return 'flat';
+  }
+  function stepOfField(name) { return (name === 'email' || name === 'phone') ? 'contact' : 'address'; }
+  function fieldValidSilent(name) { return RULES[name] ? RULES[name](val(name)) === '' : true; }
+  function stepComplete(key) {
+    if (key === 'contact') return fieldValidSilent('email') && fieldValidSilent('phone');
+    if (key === 'address') return fieldValidSilent('name') && fieldValidSilent('street') && fieldValidSilent('postCode') && fieldValidSilent('city');
+    if (key === 'delivery') return !!delivery.selectedId;
+    if (key === 'payment') return !!(selectedPayment && selectedPayment.mode);
+    return false;
+  }
+  function stepSummary(key) {
+    if (key === 'contact') {
+      var em = val('email'), ph = normPhone(val('phone'));
+      var emShort = em ? (em.split('@')[0] + '@…') : '';
+      return '✓ ' + [emShort, ph ? ('+48 ' + ph) : ''].filter(function (x) { return x; }).join(' · ');
+    }
+    if (key === 'address') {
+      var loc = (normPost(val('postCode')) + ' ' + val('city')).trim();
+      return '✓ ' + [val('name'), loc].filter(function (x) { return x && x.trim(); }).join(' · ');
+    }
+    if (key === 'delivery') { var dm = currentDelivery(); return '✓ ' + (dm ? dm.name : 'wybrano'); }
+    if (key === 'payment') {
+      var m = selectedPayment && selectedPayment.mode;
+      return '✓ ' + (m === 'blik' ? 'BLIK' : m === 'cod' ? 'Płatność przy odbiorze' : 'Płatność online');
+    }
+    return '';
+  }
+  function setStepState(key, state) {
+    var el = STEP_EL[key]; if (!el) return;
+    el.classList.remove('is-active', 'is-done', 'is-locked');
+    el.classList.add('is-' + state);
+    var head = el.querySelector('.zc-step-head');
+    if (head) head.setAttribute('aria-expanded', state === 'active' ? 'true' : 'false');
+    var sum = el.querySelector('[data-zc-step-sum]');
+    if (sum) sum.textContent = (state === 'done') ? stepSummary(key) : '';
+  }
+  function focusStep(key) {
+    var el = STEP_EL[key]; if (!el) return;
+    var f = el.querySelector('.zc-step-body input, .zc-step-body select, .zc-step-body textarea');
+    if (f) { try { f.focus(); } catch (e) {} }
+    try { el.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+  }
+  function openStep(key, focusIt) {
+    STEP_ORDER.forEach(function (k) {
+      if (k === key) return;
+      var el = STEP_EL[k]; if (!el) return;
+      if (el.classList.contains('is-active')) setStepState(k, stepComplete(k) ? 'done' : 'locked');
+    });
+    setStepState(key, 'active');
+    if (focusIt) focusStep(key);
+  }
+  function advanceFrom(key) {
+    setStepState(key, 'done');
+    var next = STEP_ORDER[STEP_ORDER.indexOf(key) + 1];
+    if (next) { setStepState(next, 'active'); focusStep(next); }
+  }
+  function firstIncompleteStep() {
+    for (var i = 0; i < STEP_ORDER.length; i++) if (!stepComplete(STEP_ORDER[i])) return STEP_ORDER[i];
+    return null;
+  }
+  function buildStepEl(num, key, title) {
+    var wrap = document.createElement('div');
+    wrap.className = 'zc-step';
+    wrap.setAttribute('data-zc-step-panel', key);
+    var head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'zc-step-head';
+    head.setAttribute('aria-expanded', 'false');
+    head.innerHTML =
+      '<span class="zc-step-num" aria-hidden="true">' + num + '</span>' +
+      '<span class="zc-step-titlewrap"><span class="zc-step-title">' + escapeHtml(title) + '</span>' +
+      '<span class="zc-step-summary" data-zc-step-sum></span></span>' +
+      '<span class="zc-step-edit" aria-hidden="true">Zmień</span>';
+    head.addEventListener('click', function () { openStep(key, true); });
+    var body = document.createElement('div');
+    body.className = 'zc-step-body';
+    wrap.appendChild(head); wrap.appendChild(body);
+    return { wrap: wrap, body: body };
+  }
+  function initSteps() {
+    var main = $('.zc-main'); if (!main) return;
+    var anchor = $('.zc-total'); if (!anchor) return;
+    stepsOn = true;
+
+    // 4 kroki; te SAME węzły co flat przeniesione do kontenerów (E-mail przed Telefonem TYLKO tu)
+    var defs = [
+      { num: 1, key: 'contact', title: 'Kontakt', nodes: [fieldEl('email'), fieldEl('phone')] },
+      { num: 2, key: 'address', title: 'Adres dostawy', nodes: [fieldEl('name'), fieldEl('street'), fieldEl('postCode'), fieldEl('city')] },
+      { num: 3, key: 'delivery', title: 'Sposób dostawy', nodes: [$('.zc-delivery')] },
+      { num: 4, key: 'payment', title: 'Płatność', nodes: [$('.zc-pay')] }
+    ];
+    defs.forEach(function (d) {
+      var b = buildStepEl(d.num, d.key, d.title);
+      d.nodes.forEach(function (nd) { if (nd) b.body.appendChild(nd); });
+      main.insertBefore(b.wrap, anchor);
+      STEP_EL[d.key] = b.wrap;
+    });
+    // pusty po przeniesieniu pól fieldset .zc-fields (legenda-sierota) — ukryj
+    var fieldsFs = $('.zc-fields'); if (fieldsFs) fieldsFs.style.display = 'none';
+
+    // stan startowy: krok 1 aktywny, reszta zablokowana
+    setStepState('contact', 'active');
+    setStepState('address', 'locked');
+    setStepState('delivery', 'locked');
+    setStepState('payment', 'locked');
+
+    // auto-advance kroków 1–2: on-blur pola (po walidacji rdzenia), gdy cały krok kompletny
+    ['email', 'phone', 'name', 'street', 'postCode', 'city'].forEach(function (name) {
+      var i = $('#zc-f-' + fieldIdFrag(name)); if (!i) return;
+      i.addEventListener('blur', function () {
+        var key = stepOfField(name);
+        var el = STEP_EL[key];
+        if (el && el.classList.contains('is-active') && stepComplete(key)) advanceFrom(key);
+      });
+    });
+
+    // auto-advance kroku 3 (dostawa) po wyborze radia; krok 4 (płatność) = ostatni, NIE zwijamy
+    root.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || t.name !== 'zc-delivery') return;
+      if (STEP_EL.delivery && STEP_EL.delivery.classList.contains('is-active')) advanceFrom('delivery');
+    });
+
+    // submit z niekompletnym krokiem → rozwiń pierwszy niekompletny (rdzeń pokaże komunikaty)
+    $('.zc-form').addEventListener('submit', function () {
+      var bad = firstIncompleteStep();
+      if (bad) openStep(bad, true);
+    });
+  }
 
   function showGuard() {
     var form = $('.zc-form'); if (form) form.style.display = 'none';

@@ -24,7 +24,8 @@ CO JEST NIETYKALNE (mechanika i prawo — NIE RUSZAĆ):
     checkout-details → order/cart, BLIK 6-box + polling (2,5 s / max 90 s) + stany
     błędów, COD inline, redirect online, walidacja PL, eventy analityki.
   • STRUKTURA i KOLEJNOŚĆ pól: Imię i nazwisko → Telefon → E-mail → Ulica i numer →
-    Kod pocztowy → Miejscowość (1 kolumna, etykiety NAD polami).
+    Kod pocztowy → Miejscowość (1 kolumna, etykiety NAD polami) — dotyczy layout='flat';
+    dla layout='steps' porządek wizualny wg sekcji WARIANT LAYOUTU niżej.
   • KAŻDE pole danych: autocomplete + inputmode + enterkeyhint + type (natywny autofill;
     NIGDY autocomplete="off").
   • BRZMIENIE PRZYCISKU „Zamawiam z obowiązkiem zapłaty" (art. 17 ust. 3–4 UoPK —
@@ -52,6 +53,35 @@ WSPÓŁISTNIENIE z landing-runtime-snippet.html: snippet pali viewItem@load + Vi
   wskazują #zamow (scroll), więc snippet ich NIE liczy — moduł jest JEDYNYM źródłem
   addToCart/beginCheckout (@submit). Zero podwójnych eventów.
 
+────────────────────────────────────────────────────────────────────────────
+WARIANT LAYOUTU (data-zc-config.layout='steps' LUB atrybut data-zc-layout="steps" na
+  sekcji — jedno lub drugie wystarcza; default = 'flat'):
+  • 'flat' (domyślny) — układ jak dotąd; KOLEJNOŚĆ pól NIETKNIĘTA
+    (Imię i nazwisko→Telefon→E-mail→Ulica→Kod→Miejscowość, 1 kolumna).
+  • 'steps' — micro-konfigurator wizualny: 4 wizualne kroki na JEDNEJ stronie, bez
+    przycisków „Dalej", bez przeładowań: (1) Kontakt [E-mail→Telefon], (2) Adres dostawy
+    [Imię i nazwisko→Ulica→Kod→Miejscowość], (3) Sposób dostawy, (4) Płatność. Poniżej
+    kroków (total, checkbox regulaminu, CTA, trust) = ZAWSZE widoczne.
+  • REORDER PÓL rozwiązany PRZEZ DOM: JS przy inicjalizacji steps przenosi te SAME inputy
+    (name/id/autocomplete bez zmian) do kontenerów .zc-step — NIE przez CSS `order` (order
+    rozjeżdża kolejność TAB/focus z kolejnością wizualną = pułapka a11y). Skutek: flat = markup
+    nietknięty → kontrakt kolejności flat zachowany „za darmo"; steps = jedyny tryb przestawiający
+    węzły (E-mail przed Telefonem występuje TYLKO tu). Grupy zadeklarowane w markup atrybutem
+    data-zc-step="1|2|3|4" na polach/fieldsetach; kolejność w obrębie kroku ustala JS.
+  • SKÓRKA steps (wolno zmieniać): tokeny --zc-step-* (kolor/tło numeru, tło kroku aktywnego,
+    przygaszenie zablokowanego) + tytuły kroków (.zc-step-title w JS-ie: Kontakt/Adres/…).
+  • NIETYKALNA MECHANIKA steps: krok aktywny rozwinięty, przyszłe zwinięte+przygaszone (ale
+    klikalne), ukończony = 1 linia podsumowania („✓ + skrót", np. „jan@… · +48 500 000 002")
+    + „Zmień"; auto-advance po walidacji on-blur (krok się zwija, następny rozwija, focus na
+    1. polu, scrollIntoView block:'nearest' — bez scroll-jackingu); klik w nagłówek = rozwinięcie
+    (edycja wstecz zawsze możliwa, NIC się nie czyści); kroki 3/4 = wybór radia kompletuje krok;
+    submit z niekompletnym krokiem = rozwiń pierwszy niekompletny + standardowe komunikaty walidacji.
+
+IDENTIFY (oba layouty, NIETYKALNE): po pozytywnej walidacji e-maila/telefonu (on-blur) moduł
+  woła window.trevio.identify({EmailHash:<email>}) oraz ({PhoneHash:'+48'+9 cyfr}) — RAZ per
+  wartość (dedup), forma pól wg guide GET /docs (identify{EmailHash|PhoneHash|CustomerId}),
+  z fallbackiem {type,value} w try/catch; brak window.trevio = cicho pomijane (preview poza platformą).
+
 WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konfiguracja:
   (A) tryb produkcyjny — data-zc-product="{{WF2_PRODUCT_ID}}" (podmieniane przy publikacji;
       moduł czyta cenę/nazwę/wariant/websiteId z wf2-landing-api, blok `platform`),
@@ -77,6 +107,12 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
     --zc-radius-sm:10px;
     --zc-shadow:0 22px 60px rgba(16,24,40,.12);
     --zc-font:inherit;
+
+    /* ── SKÓRKA wariantu layout='steps' (bez efektu w 'flat') ── */
+    --zc-step-num-bg:var(--zc-accent);          /* tło numeru kroku aktywnego/przyszłego */
+    --zc-step-num-text:var(--zc-accent-text);
+    --zc-step-active-bg:color-mix(in srgb,var(--zc-accent) 4%,var(--zc-card));
+    --zc-step-locked-opacity:.55;               /* przygaszenie kroku zablokowanego */
 
     position:relative;
     background:var(--zc-bg);
@@ -246,6 +282,33 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
     background:var(--zc-bg);border:1px solid var(--zc-border);font-weight:800;font-size:16px;color:var(--zc-text);letter-spacing:.02em}
   .zc-checkout .zc-cod-amount{margin-top:6px;font-weight:700;color:var(--zc-text)}
 
+  /* ── WARIANT LAYOUTU „steps" (aktywny gdy .zc-checkout[data-zc-layout="steps"]) ── */
+  .zc-checkout[data-zc-layout="steps"] .zc-step{
+    border:1px solid var(--zc-border);border-radius:var(--zc-radius-sm);background:var(--zc-card);
+    overflow:hidden;transition:opacity .18s ease,background .18s ease}
+  .zc-checkout[data-zc-layout="steps"] .zc-step .zc-legend{display:none} /* tytuł kroku zastępuje legendę fieldsetu */
+  .zc-checkout[data-zc-layout="steps"] .zc-step-head{display:flex;align-items:center;gap:12px;width:100%;
+    padding:14px 16px;background:none;border:0;cursor:pointer;font:inherit;color:inherit;text-align:left}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-num{flex:0 0 auto;width:26px;height:26px;border-radius:50%;
+    display:grid;place-items:center;font-size:13px;font-weight:800;line-height:1;
+    background:var(--zc-step-num-bg);color:var(--zc-step-num-text)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-titlewrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-title{font-weight:800;font-size:15px;color:var(--zc-text);letter-spacing:-.01em}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-summary{font-size:13px;color:var(--zc-muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-edit{flex:0 0 auto;font-size:13px;font-weight:700;
+    color:var(--zc-accent);text-decoration:underline;display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step-body{display:flex;flex-direction:column;gap:15px;padding:0 16px 16px}
+  /* stany kroku */
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked{opacity:var(--zc-step-locked-opacity)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked .zc-step-num{background:var(--zc-border);color:var(--zc-muted)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-active{background:var(--zc-step-active-bg)}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-num{background:var(--zc-ok);color:#fff}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-locked .zc-step-body,
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-body{display:none}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-summary{display:block}
+  .zc-checkout[data-zc-layout="steps"] .zc-step.is-done .zc-step-edit{display:inline}
+
   /* stany maszyny — pokazywanie paneli */
   .zc-checkout[data-zc-state="waiting_blik"] .zc-form,
   .zc-checkout[data-zc-state="success"] .zc-form{display:none}
@@ -293,7 +356,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
 
         <div class="zc-main">
           <!-- (2) METODY PŁATNOŚCI -->
-          <fieldset class="zc-block zc-pay">
+          <fieldset class="zc-block zc-pay" data-zc-step="4">
             <legend class="zc-legend">Płatność</legend>
             <div class="zc-pay-list" role="radiogroup" aria-label="Metoda płatności">
               <p class="zc-load" data-zc-pay-load>Ładujemy metody płatności…</p>
@@ -304,7 +367,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
           <fieldset class="zc-block zc-fields">
             <legend class="zc-legend">Dane do wysyłki</legend>
 
-            <div class="zc-field" data-field="name">
+            <div class="zc-field" data-field="name" data-zc-step="2">
               <label class="zc-label" for="zc-f-name">Imię i nazwisko</label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-name" name="name" type="text" inputmode="text"
@@ -315,7 +378,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
               <p class="zc-err" data-err="name" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="phone">
+            <div class="zc-field" data-field="phone" data-zc-step="1">
               <label class="zc-label" for="zc-f-phone">Telefon <span class="zc-opt-tag">— kurier zadzwoni przed dostawą</span></label>
               <div class="zc-inwrap">
                 <span class="zc-prefix" aria-hidden="true">+48</span>
@@ -326,7 +389,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
               <p class="zc-err" data-err="phone" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="email">
+            <div class="zc-field" data-field="email" data-zc-step="1">
               <label class="zc-label" for="zc-f-email">E-mail <span class="zc-opt-tag">— potwierdzenie zamówienia</span></label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-email" name="email" type="email" inputmode="email"
@@ -337,7 +400,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
               <p class="zc-err" data-err="email" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="street">
+            <div class="zc-field" data-field="street" data-zc-step="2">
               <label class="zc-label" for="zc-f-street">Ulica i numer</label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-street" name="street" type="text" inputmode="text"
@@ -348,7 +411,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
               <p class="zc-err" data-err="street" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="postCode">
+            <div class="zc-field" data-field="postCode" data-zc-step="2">
               <label class="zc-label" for="zc-f-post">Kod pocztowy</label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-post" name="postCode" type="text" inputmode="numeric"
@@ -359,7 +422,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
               <p class="zc-err" data-err="postCode" role="alert" hidden></p>
             </div>
 
-            <div class="zc-field" data-field="city">
+            <div class="zc-field" data-field="city" data-zc-step="2">
               <label class="zc-label" for="zc-f-city">Miejscowość</label>
               <div class="zc-inwrap">
                 <input class="zc-in" id="zc-f-city" name="city" type="text" inputmode="text"
@@ -372,7 +435,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
           </fieldset>
 
           <!-- (4) DOSTAWA -->
-          <fieldset class="zc-block zc-delivery">
+          <fieldset class="zc-block zc-delivery" data-zc-step="3">
             <legend class="zc-legend">Dostawa</legend>
             <div class="zc-del-list" role="radiogroup" aria-label="Sposób dostawy">
               <p class="zc-load" data-zc-del-load>Ładujemy sposoby dostawy…</p>
@@ -516,6 +579,10 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
   var purchaseSent = false;       // Purchase — raz
   var blikTimer = null, blikDeadline = 0, blikAttempts = 0;
   var lazyLoaded = false;
+  var identified = {};            // dedup identify() — klucze 'EmailHash:<v>' / 'PhoneHash:<v>'
+  var STEP_EL = {};               // wariant steps: key kroku → element .zc-step
+  var stepsOn = false;
+  var STEP_ORDER = ['contact', 'address', 'delivery', 'payment'];
 
   // ── KONFIGURACJA: override (data-zc-config) LUB wf2-landing-api ──────────
   function parseOverride() {
@@ -894,6 +961,26 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
     }
   }
 
+  // ── IDENTIFY (window.trevio) — po pozytywnej walidacji e-maila/telefonu, raz per wartość ──
+  function fireIdentify(type, value) {
+    if (!value) return;
+    var key = type + ':' + value;
+    if (identified[key]) return;
+    if (!window.trevio || typeof window.trevio.identify !== 'function') return; // preview poza platformą
+    identified[key] = true;
+    try {
+      // forma pól wg guide GET /docs: identify{EmailHash|PhoneHash|CustomerId}
+      var o = {}; o[type] = value; window.trevio.identify(o);
+    } catch (e) {
+      // fallback defensywny na wariant {type, value}
+      try { window.trevio.identify({ type: type, value: value }); } catch (e2) {}
+    }
+  }
+  function maybeIdentify(name, rawVal) {
+    if (name === 'email') fireIdentify('EmailHash', rawVal);
+    else if (name === 'phone') fireIdentify('PhoneHash', '+48' + normPhone(rawVal));
+  }
+
   // ── MASZYNA STANÓW ─────────────────────────────────────────────────────────
   function setState(s) { root.setAttribute('data-zc-state', s); }
   function setBusy(on) {
@@ -1115,7 +1202,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
     // walidacja on-blur + czyszczenie błędu na keystroke; maski
     Object.keys(RULES).forEach(function (name) {
       var i = $('#zc-f-' + fieldIdFrag(name)); if (!i) return;
-      i.addEventListener('blur', function () { if (i.value.trim()) validateField(name); });
+      i.addEventListener('blur', function () { if (i.value.trim()) { if (validateField(name)) maybeIdentify(name, i.value.trim()); } });
       i.addEventListener('input', function () {
         if (name === 'postCode') { var p = i.selectionStart; i.value = normPost(i.value); }
         var fe = fieldEl(name);
@@ -1136,7 +1223,150 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
       io.observe(root);
     } else { lazyLoad(); }
     root.addEventListener('focusin', function () { lazyLoad(); }, { once: true });
+
+    // ── WARIANT LAYOUTU: 'flat' (default) lub 'steps' ──
+    var layout = resolveLayout();
+    root.setAttribute('data-zc-layout', layout);
+    if (layout === 'steps') initSteps();
   });
+
+  // ── WARIANT LAYOUTU „steps" (micro-konfigurator; te same pola co flat, reorder przez DOM) ──
+  function resolveLayout() {
+    var a = (root.getAttribute('data-zc-layout') || '').toLowerCase();
+    if (a === 'steps') return 'steps';
+    if (a === 'flat') return 'flat';
+    var ov = parseOverride();
+    if (ov && ov.layout && String(ov.layout).toLowerCase() === 'steps') return 'steps';
+    return 'flat';
+  }
+  function stepOfField(name) { return (name === 'email' || name === 'phone') ? 'contact' : 'address'; }
+  function fieldValidSilent(name) { return RULES[name] ? RULES[name](val(name)) === '' : true; }
+  function stepComplete(key) {
+    if (key === 'contact') return fieldValidSilent('email') && fieldValidSilent('phone');
+    if (key === 'address') return fieldValidSilent('name') && fieldValidSilent('street') && fieldValidSilent('postCode') && fieldValidSilent('city');
+    if (key === 'delivery') return !!delivery.selectedId;
+    if (key === 'payment') return !!(selectedPayment && selectedPayment.mode);
+    return false;
+  }
+  function stepSummary(key) {
+    if (key === 'contact') {
+      var em = val('email'), ph = normPhone(val('phone'));
+      var emShort = em ? (em.split('@')[0] + '@…') : '';
+      return '✓ ' + [emShort, ph ? ('+48 ' + ph) : ''].filter(function (x) { return x; }).join(' · ');
+    }
+    if (key === 'address') {
+      var loc = (normPost(val('postCode')) + ' ' + val('city')).trim();
+      return '✓ ' + [val('name'), loc].filter(function (x) { return x && x.trim(); }).join(' · ');
+    }
+    if (key === 'delivery') { var dm = currentDelivery(); return '✓ ' + (dm ? dm.name : 'wybrano'); }
+    if (key === 'payment') {
+      var m = selectedPayment && selectedPayment.mode;
+      return '✓ ' + (m === 'blik' ? 'BLIK' : m === 'cod' ? 'Płatność przy odbiorze' : 'Płatność online');
+    }
+    return '';
+  }
+  function setStepState(key, state) {
+    var el = STEP_EL[key]; if (!el) return;
+    el.classList.remove('is-active', 'is-done', 'is-locked');
+    el.classList.add('is-' + state);
+    var head = el.querySelector('.zc-step-head');
+    if (head) head.setAttribute('aria-expanded', state === 'active' ? 'true' : 'false');
+    var sum = el.querySelector('[data-zc-step-sum]');
+    if (sum) sum.textContent = (state === 'done') ? stepSummary(key) : '';
+  }
+  function focusStep(key) {
+    var el = STEP_EL[key]; if (!el) return;
+    var f = el.querySelector('.zc-step-body input, .zc-step-body select, .zc-step-body textarea');
+    if (f) { try { f.focus(); } catch (e) {} }
+    try { el.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+  }
+  function openStep(key, focusIt) {
+    STEP_ORDER.forEach(function (k) {
+      if (k === key) return;
+      var el = STEP_EL[k]; if (!el) return;
+      if (el.classList.contains('is-active')) setStepState(k, stepComplete(k) ? 'done' : 'locked');
+    });
+    setStepState(key, 'active');
+    if (focusIt) focusStep(key);
+  }
+  function advanceFrom(key) {
+    setStepState(key, 'done');
+    var next = STEP_ORDER[STEP_ORDER.indexOf(key) + 1];
+    if (next) { setStepState(next, 'active'); focusStep(next); }
+  }
+  function firstIncompleteStep() {
+    for (var i = 0; i < STEP_ORDER.length; i++) if (!stepComplete(STEP_ORDER[i])) return STEP_ORDER[i];
+    return null;
+  }
+  function buildStepEl(num, key, title) {
+    var wrap = document.createElement('div');
+    wrap.className = 'zc-step';
+    wrap.setAttribute('data-zc-step-panel', key);
+    var head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'zc-step-head';
+    head.setAttribute('aria-expanded', 'false');
+    head.innerHTML =
+      '<span class="zc-step-num" aria-hidden="true">' + num + '</span>' +
+      '<span class="zc-step-titlewrap"><span class="zc-step-title">' + escapeHtml(title) + '</span>' +
+      '<span class="zc-step-summary" data-zc-step-sum></span></span>' +
+      '<span class="zc-step-edit" aria-hidden="true">Zmień</span>';
+    head.addEventListener('click', function () { openStep(key, true); });
+    var body = document.createElement('div');
+    body.className = 'zc-step-body';
+    wrap.appendChild(head); wrap.appendChild(body);
+    return { wrap: wrap, body: body };
+  }
+  function initSteps() {
+    var main = $('.zc-main'); if (!main) return;
+    var anchor = $('.zc-total'); if (!anchor) return;
+    stepsOn = true;
+
+    // 4 kroki; te SAME węzły co flat przeniesione do kontenerów (E-mail przed Telefonem TYLKO tu)
+    var defs = [
+      { num: 1, key: 'contact', title: 'Kontakt', nodes: [fieldEl('email'), fieldEl('phone')] },
+      { num: 2, key: 'address', title: 'Adres dostawy', nodes: [fieldEl('name'), fieldEl('street'), fieldEl('postCode'), fieldEl('city')] },
+      { num: 3, key: 'delivery', title: 'Sposób dostawy', nodes: [$('.zc-delivery')] },
+      { num: 4, key: 'payment', title: 'Płatność', nodes: [$('.zc-pay')] }
+    ];
+    defs.forEach(function (d) {
+      var b = buildStepEl(d.num, d.key, d.title);
+      d.nodes.forEach(function (nd) { if (nd) b.body.appendChild(nd); });
+      main.insertBefore(b.wrap, anchor);
+      STEP_EL[d.key] = b.wrap;
+    });
+    // pusty po przeniesieniu pól fieldset .zc-fields (legenda-sierota) — ukryj
+    var fieldsFs = $('.zc-fields'); if (fieldsFs) fieldsFs.style.display = 'none';
+
+    // stan startowy: krok 1 aktywny, reszta zablokowana
+    setStepState('contact', 'active');
+    setStepState('address', 'locked');
+    setStepState('delivery', 'locked');
+    setStepState('payment', 'locked');
+
+    // auto-advance kroków 1–2: on-blur pola (po walidacji rdzenia), gdy cały krok kompletny
+    ['email', 'phone', 'name', 'street', 'postCode', 'city'].forEach(function (name) {
+      var i = $('#zc-f-' + fieldIdFrag(name)); if (!i) return;
+      i.addEventListener('blur', function () {
+        var key = stepOfField(name);
+        var el = STEP_EL[key];
+        if (el && el.classList.contains('is-active') && stepComplete(key)) advanceFrom(key);
+      });
+    });
+
+    // auto-advance kroku 3 (dostawa) po wyborze radia; krok 4 (płatność) = ostatni, NIE zwijamy
+    root.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || t.name !== 'zc-delivery') return;
+      if (STEP_EL.delivery && STEP_EL.delivery.classList.contains('is-active')) advanceFrom('delivery');
+    });
+
+    // submit z niekompletnym krokiem → rozwiń pierwszy niekompletny (rdzeń pokaże komunikaty)
+    $('.zc-form').addEventListener('submit', function () {
+      var bad = firstIncompleteStep();
+      if (bad) openStep(bad, true);
+    });
+  }
 
   function showGuard() {
     var form = $('.zc-form'); if (form) form.style.display = 'none';
