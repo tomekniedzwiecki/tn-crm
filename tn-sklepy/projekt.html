@@ -2195,8 +2195,11 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             const img = (tt && (tt.curated_image || tt.ali_img)) || p.cover_url;
             const usd = tt ? parseFloat(tt.ali_sale) : NaN;
             // purchasePln — NIE 'costPln': lokalny const shadowował globalną funkcję costPln(c)
-            // i wywalał całą kartę (TypeError w reduce kosztów — visual-verify 21.07)
-            const purchasePln = !isNaN(usd) && usdRate ? Math.round(usd * usdRate * 100) / 100 : (p.cost_purchase != null ? Number(p.cost_purchase) : null);
+            // i wywalał całą kartę (TypeError w reduce kosztów — visual-verify 21.07).
+            // Priorytet: cost_purchase (POTWIERDZONA cena zakupu z kroku kalkulacja — właściwy wariant SKU);
+            // przelicznik USD z aukcji tylko jako fallback (price.sale = często najtańszy wariant)
+            const purchasePln = p.cost_purchase != null ? Number(p.cost_purchase)
+                : (!isNaN(usd) && usdRate ? Math.round(usd * usdRate * 100) / 100 : null);
             // WIDEO: WSZYSTKIE klipy z TikTok Shop (nie tylko keep) — videos_curated.items → videos[] → tiktok_url; dedup po URL.
             const clips = [];
             if (tt) {
@@ -2229,7 +2232,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 </div>
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">
-                        <div class="bg-[#111] border border-[#262626] rounded-md px-3 py-2.5"><div class="text-[9.5px] font-mono uppercase tracking-wider text-zinc-500 mb-0.5">Zakup</div><div class="text-sm font-semibold font-mono text-white">${purchasePln != null ? moneyPL(purchasePln) : '—'}${!isNaN(usd) ? ` <span class="text-zinc-500 text-[10px]">($${usd})</span>` : ''}</div></div>
+                        <div class="bg-[#111] border border-[#262626] rounded-md px-3 py-2.5"><div class="text-[9.5px] font-mono uppercase tracking-wider text-zinc-500 mb-0.5">Zakup</div><div class="text-sm font-semibold font-mono text-white">${purchasePln != null ? moneyPL(purchasePln) : '—'}${!isNaN(usd) ? ` <span class="text-zinc-500 text-[10px]" title="cena główna aukcji (sale) — sprzedawany wariant może być droższy">(aukcja $${usd})</span>` : ''}</div></div>
                         <div class="bg-[#111] border border-[#262626] rounded-md px-3 py-2.5"><div class="text-[9.5px] font-mono uppercase tracking-wider text-zinc-500 mb-0.5">Sprzedaż (${p.margin_mode === 'scale' ? 'SKALA' : 'TEST'})</div><div class="text-sm font-semibold font-mono text-white">${p.price != null ? moneyPL(p.price) : '—'}</div></div>
                         <div class="bg-[#111] border border-[#262626] rounded-md px-3 py-2.5"><div class="text-[9.5px] font-mono uppercase tracking-wider text-zinc-500 mb-0.5">Zysk/szt.</div><div class="text-sm font-semibold font-mono ${p.unit_profit > 0 ? 'text-[#4cb782]' : 'text-zinc-300'}">${p.unit_profit != null ? moneyPL(p.unit_profit) : '—'}</div></div>
                         <div class="bg-[#111] border border-[#262626] rounded-md px-3 py-2.5"><div class="text-[9.5px] font-mono uppercase tracking-wider text-zinc-500 mb-0.5">Potencjał (heat)</div><div class="text-sm font-semibold font-mono text-white">${tt ? (tt.heat ?? '—') : '—'}${tt && tt.max_plays ? ` <span class="text-zinc-500 text-[10px]">${fmtPlays(tt.max_plays)} odtw.</span>` : ''}</div></div>
