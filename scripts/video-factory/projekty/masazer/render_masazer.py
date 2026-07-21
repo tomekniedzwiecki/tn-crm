@@ -12,7 +12,10 @@ GEN = os.path.join(BASE, "gen"); REFS = os.path.join(BASE, "refs")
 KARTA = json.load(open(os.path.join(BASE, "KARTA.json"), encoding="utf-8"))
 BP = {s["id"]: s for s in json.load(open(os.path.join(BASE, "blueprint.json"), encoding="utf-8"))["sceny"]}
 NEG_EXTRA = ", ".join(KARTA["product"]["forbidden_leaks"])
-KREF_NEG = render.NEG + ", " + NEG_EXTRA
+# NEG umiejscowienia (fix 19.07): anty-"gardlo" — twardo wyklucz przod szyi.
+PLACEMENT_NEG = ("device on the throat, device on the front of the neck, massager on the front of the throat, "
+                 "hand gripping the front of the throat, person reclining face-up with exposed throat, chin raised exposing throat")
+KREF_NEG = render.NEG + ", " + NEG_EXTRA + ", " + PLACEMENT_NEG
 
 def upfr(name):  return fal.store(os.path.join(GEN, name), "masazer/rn_" + name)
 def upref(name): return fal.store(os.path.join(REFS, name), "masazer/rnref_" + name)
@@ -47,7 +50,7 @@ def build_scenes(only):
                 "tag": sid, "engine": "flf",
                 "image_url": first, "tail_image_url": tail,
                 "prompt": sc["motion_prompt_en"],
-                "negative_extra": NEG_EXTRA,
+                "negative_extra": NEG_EXTRA + ", " + PLACEMENT_NEG,
             })
     return scenes
 

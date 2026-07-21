@@ -7,12 +7,21 @@ fal.set_project('masazer')
 BASE = r"C:\tmp\video-factory\masazer"; GEN = os.path.join(BASE, 'gen'); os.makedirs(GEN, exist_ok=True)
 VOICE = "Aria"  # kobiecy PL, UGC first-person
 
+# VO — PELNE DIAKRYTYKI (fix 19.07: v1 czytal ASCII 'BOL/NAPIECIE'). Trzymane w plikach UTF-8
+# (gen/<tag>.txt), podawane do TTS Z PLIKU; przed submitem weryfikacja diakrytykow w payloadzie.
 VO = {
- "vo_hook":   "Mialam koszmarny bol karku.",
- "vo_worn":   "Zapinam to na bark i wlaczam.",
- "vo_relief": "Napiecie po prostu odplywa.",
- "vo_cta":    "Juz tego nie oddam.",
+ "vo_hook":   "Miałam koszmarny ból karku.",
+ "vo_worn":   "Zapinam to na bark i włączam.",
+ "vo_relief": "Napięcie po prostu odpływa.",
+ "vo_cta":    "Już tego nie oddam.",
 }
+VODIR = os.path.join(GEN, "vo_txt"); os.makedirs(VODIR, exist_ok=True)
+PL_DIAC = set("ąćęłńóśźż") | set("ĄĆĘŁŃÓŚŹŻ")  # polskie znaki diakrytyczne
+
+def _write_vo_files():
+    """Zapisuje kwestie VO do plikow UTF-8 (SSOT PROMPTY-BIBLIOTEKA: teksty VO w plikach)."""
+    for tag, txt in VO.items():
+        open(os.path.join(VODIR, tag + ".txt"), "w", encoding="utf-8").write(txt)
 
 # SFX: {tag: (prompt, trim_seconds, continuous?)}
 SFX = {
@@ -29,8 +38,18 @@ def _url(res):
     return ((res.get('audio') or {}).get('url') or res.get('audio_url')
             or (res.get('audio_file') or {}).get('url'))
 
-def tts(tag, text):
-    res = fal.gen("fal-ai/elevenlabs/tts/eleven-v3", {"text": text, "voice": VOICE, "stability": 0.3}, tag="masazer_"+tag)
+def tts(tag, text=None):
+    # ODCZYT Z PLIKU UTF-8 (zrodlo prawdy tekstu VO) — nie z argumentu ASCII-podatnego.
+    fpath = os.path.join(VODIR, tag + ".txt")
+    if not os.path.exists(fpath): _write_vo_files()
+    payload_text = open(fpath, encoding="utf-8").read().strip()
+    payload = {"text": payload_text, "voice": VOICE, "stability": 0.3}
+    # WERYFIKACJA PRZED WYSYLKA: payload MUSI zawierac polskie znaki (fix 19.07 'BOL/NAPIECIE').
+    diac = [c for c in payload["text"] if c in PL_DIAC]
+    if not diac:
+        raise RuntimeError(f"VO {tag}: payload BEZ diakrytykow -> STOP ('{payload_text}')")
+    print(f"[VO-CHECK] {tag}: '{payload_text}' | diakrytyki={''.join(sorted(set(diac)))}", flush=True)
+    res = fal.gen("fal-ai/elevenlabs/tts/eleven-v3", payload, tag="masazer_"+tag)
     u = _url(res)
     if not u: raise RuntimeError("no VO url: "+str(res)[:300])
     out = os.path.join(GEN, tag+'.mp3'); fal.download(u, out)
@@ -70,6 +89,7 @@ def sfx(tag):
     print('SFX', tag, round(dur(out),2),'s', flush=True); return out
 
 if __name__ == '__main__':
+    _write_vo_files()  # teksty VO -> pliki UTF-8 przed generacja
     which = sys.argv[1:] or (['music','ambient'] + list(VO) + list(SFX))
     for k in which:
         if k == 'music': music()

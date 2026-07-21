@@ -50,7 +50,15 @@ def first(scene_id, base_ref, person_ref=None):
         roles += ("Image 2 is the FACE/IDENTITY reference ONLY - the same young woman (same face, hair, skin); "
                   "ignore its product and background. ")
     brief = BP[scene_id]["first_frame_brief_en"]
-    prompt = f"{roles}Scene: {brief} The person is {PERSONA}. {COMMON} {ANTI}"
+    # PLACEMENT (fix 19.07): jednoznaczne umiejscowienie z kontraktu — anty-"gardlo".
+    placement = BP[scene_id].get("kontrakt_produktowy", {}).get("placement")
+    plc = ""
+    if placement:
+        plc = (f" PLACEMENT (critical, must match reference): the massager is worn on the {placement}. "
+               "Frame the shot from BEHIND-SIDE so the BACK of the neck is what we see; the silicone "
+               "hand-fingers wrap the nape FROM BEHIND. The device must NOT sit on the throat or the "
+               "front of the neck, and the person must NOT recline face-up with the throat exposed.")
+    prompt = f"{roles}Scene: {brief} The person is {PERSONA}.{plc} {COMMON} {ANTI}"
     return nano(prompt, imgs, f"{scene_id}_first.png", f"fr_{scene_id}_first")
 
 
@@ -59,10 +67,11 @@ def cta_last():
     imgs = [upfr("hook_first.png")]
     prompt = ("Image 1 is the base scene photo - keep it EXACTLY: same bedroom, same framing, lighting, camera "
               "angle, same young woman and the SAME massager kept pixel-for-pixel identical (green woven body, "
-              "chrome band, control panel, two silicone hand-heads, brown strap). Change ONLY: the silicone "
-              "hand-fingers have kneaded a little deeper into her trapezius and her shoulder has eased down a "
-              "touch. Do NOT change the device shape, keep the two hand-heads, keep exactly one massager. "
-              + COMMON + " " + ANTI)
+              "chrome band, control panel, two silicone hand-heads, brown strap). Keep the massager on the NAPE / "
+              "back of the neck / upper trapezius, seen from behind-side - NEVER on the throat or the front of the "
+              "neck. Change ONLY: the silicone hand-fingers have kneaded a little deeper into the BACK of her neck "
+              "and her shoulder has eased down a touch. Do NOT change the device shape, keep the two hand-heads, "
+              "keep exactly one massager. " + COMMON + " " + ANTI)
     return nano(prompt, imgs, "cta_last.png", "fr_cta_last")
 
 
