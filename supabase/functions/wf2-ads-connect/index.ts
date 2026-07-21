@@ -27,6 +27,10 @@ const json = (data: unknown, status = 200) =>
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// XSS-guard: przepuszczamy WYŁĄCZNIE http(s) URL-e z payloadu Leadsie (link/summary/request).
+// Bez tego `javascript:`/`data:` href z webhooka byłby klikalny w panelu admina (stored-XSS).
+const safeUrl = (u: unknown): string | null => (/^https?:\/\//i.test(String(u || "")) ? String(u) : null);
+
 type LeadsieAsset = {
   id?: string;
   name?: string;
@@ -45,7 +49,8 @@ function assetKind(a: LeadsieAsset): "ad_account" | "page" | "pixel" | "instagra
   const t = `${a.type || ""} ${a.name || ""}`.toLowerCase();
   const plat = (a.platform || "").toLowerCase();
   if (plat && !/facebook|meta|instagram/.test(plat)) return "other";
-  if (/ad\s*account|ads?\b.*konto|konto.*reklam/.test(t) || /\bads\b/.test((a.type || "").toLowerCase())) return "ad_account";
+  // ad[_\s-]*account łapie „ad account", „ad_account", „ad-account" (Leadsie nie publikuje słownika).
+  if (/ad[_\s-]*account|ads?\b.*konto|konto.*reklam/.test(t) || /\bads\b/.test((a.type || "").toLowerCase())) return "ad_account";
   if (/pixel|dataset/.test(t)) return "pixel";
   if (/instagram/.test(t)) return "instagram";
   if (/catalog|katalog/.test(t)) return "catalog";
@@ -55,7 +60,9 @@ function assetKind(a: LeadsieAsset): "ad_account" | "page" | "pixel" | "instagra
 }
 
 const isConnected = (a: LeadsieAsset) => (a.connectionStatus || "").toLowerCase() === "connected";
-const isManage = (a: LeadsieAsset) => /^(manage|owner|admin)$/i.test(a.accessLevel || "");
+// allowlista poziomów dających realną kontrolę — case-insensitive, substring (Leadsie bywa
+// „Full control" / „FULL_CONTROL" / „Advertise"). Zbyt wąska = cichy no-op całego toru.
+const isManage = (a: LeadsieAsset) => /manage|owner|admin|advertise|full[_\s-]*control/i.test(a.accessLevel || "");
 
 // VERBATIM z WS w tn-sklepy/projekt.html (klucz deduplikacji checklisty — nie parafrazować!).
 // Tor Leadsie po przebudowie 21.07: automat odhacza konto reklamowe + partner access (krok
@@ -107,13 +114,20 @@ Deno.serve(async (req) => {
     }
 
     const nowIso = new Date().toISOString();
+    // log assetów, których NIE sklasyfikowaliśmy — triage słownika payloadu Leadsie na 1. żywym
+    // webhooku (żeby wykryć np. nowe labelki typu/poziomu, zanim staną się cichym no-opem).
+    for (const a of assets) {
+      if (assetKind(a) === "other") {
+        console.log("[wf2-ads-connect] asset niesklasyfikowany:", JSON.stringify({ type: a.type, platform: a.platform, accessLevel: a.accessLevel, name: a.name }));
+      }
+    }
     const metaAssets = assets.filter((a) => assetKind(a) !== "other");
     const summary = metaAssets.map((a) => ({
       kind: assetKind(a),
       name: (a.name || "").slice(0, 120),
       status: a.connectionStatus || "Unknown",
       access: a.accessLevel || null,
-      link: a.linkToAsset || null,
+      link: safeUrl(a.linkToAsset),
     }));
 
     const adAccountOk = metaAssets.some((a) => assetKind(a) === "ad_account" && isConnected(a) && isManage(a));
@@ -125,20 +139,18 @@ Deno.serve(async (req) => {
       at: nowIso,
       status: overallStatus || null,
       client_name: clientName || null,
-      request_url: String(payload.requestUrl || "").slice(0, 500) || null,
-      summary_url: String(payload.clientSummaryUrl || "").slice(0, 500) || null,
+      request_url: safeUrl(payload.requestUrl)?.slice(0, 500) || null,
+      summary_url: safeUrl(payload.clientSummaryUrl)?.slice(0, 500) || null,
       assets: summary,
     };
 
     const stepsTouched: string[] = [];
     for (const stepKey of ["ads_konto", "ads_strona"] as const) {
       const { data: st } = await supabase
-        .from("wf2_steps").select("id, status, data")
+        .from("wf2_steps").select("id, status")
         .eq("project_id", projectId).eq("step_key", stepKey).is("product_id", null)
         .maybeSingle();
       if (!st) continue; // wf2_ensure_steps tworzy kroki przy projekcie — brak wiersza = stary projekt, nie wywracamy webhooka
-
-      const data = Object.assign({}, (st.data as Record<string, unknown>) || {}, { leadsie: leadsieBlock });
 
       // auto-odhaczenie TYLKO pozycji, które webhook faktycznie potwierdza (unia — nigdy nie odznaczamy).
       // ads_konto: konto reklamowe + partner access (gdy ad_account Connected + Manage/Owner).
@@ -146,22 +158,17 @@ Deno.serve(async (req) => {
       const toCheck: string[] = [];
       if (stepKey === "ads_konto" && adAccountOk) toCheck.push(CHECK_KONTO, CHECK_PARTNER_ACCESS);
       if (stepKey === "ads_strona" && pageOk) toCheck.push(CHECK_STRONA);
-      if (toCheck.length) {
-        const list: Array<{ t: string; done: boolean }> = Array.isArray((data as { checklist?: unknown }).checklist)
-          ? (data as { checklist: Array<{ t: string; done: boolean }> }).checklist
-          : [];
-        for (const key of toCheck) {
-          const hit = list.find((i) => i.t === key);
-          if (hit) hit.done = true;
-          else list.push({ t: key, done: true });
-        }
-        (data as { checklist: unknown }).checklist = list;
-      }
 
-      const upd: Record<string, unknown> = { data };
+      // ATOMOWY MERGE (RPC): wstaw blok `leadsie` + unia checklisty w JEDNYM UPDATE pod blokadą
+      // wiersza — zero read-modify-write (eliminuje lost-update z cronem verify/sweep o 06:40).
+      await supabase.rpc("wf2_step_merge", {
+        p_step_id: st.id, p_block_key: "leadsie", p_block: leadsieBlock, p_checks: toCheck,
+      });
+      // status pending→in_progress: osobny, monotoniczny UPDATE (nie dotyka bloba data → nie wyścig)
       const relevant = stepKey === "ads_konto" ? adAccountOk : pageOk;
-      if (st.status === "pending" && (relevant || metaAssets.length > 0)) upd.status = "in_progress";
-      await supabase.from("wf2_steps").update(upd).eq("id", st.id);
+      if (st.status === "pending" && (relevant || metaAssets.length > 0)) {
+        await supabase.from("wf2_steps").update({ status: "in_progress" }).eq("id", st.id);
+      }
       stepsTouched.push(stepKey);
     }
 

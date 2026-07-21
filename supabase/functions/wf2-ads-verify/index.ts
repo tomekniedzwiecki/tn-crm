@@ -12,8 +12,9 @@
 //        → waluta==PLN + strefa==Europe/Warsaw? metoda płatności jest? account_status==1?
 //   2. GET /{act}/promote_pages (fallback assigned_pages) → czy strona przypięta do konta.
 //   3. GET /{act}/adspixels → czy pixel istnieje (zapis pixel_id na projekt gdy kolumna pusta).
-//   4. spend_cap brak/0 → POST /{act} {spend_cap:150000} (1500 zł = bufor nad budżetem 1000 zł;
-//        jednostka = grosze/minor-units waluty konta). Ustawiamy TYLKO na koncie PLN/Warsaw.
+//   4. spend_cap brak/0 → POST /{act} {spend_cap: amount_spent + 500000} (LIFETIME cap Meta z 5000 zł
+//        bufora NAD już wydanym; jednostka = grosze/minor-units). TYLKO na aktywnym koncie PLN/Warsaw.
+//        Istniejący cap z buforem < 1000 zł nad wydanym → nota „zbliża się do limitu — podbij spend_cap".
 //
 // ⛔ TWARDY GUARD: EXCLUDED_ACCOUNTS (konto marki osobistej Tomka) — NIGDY nie odpytujemy/modyfikujemy.
 // Bez WF2_META_TOKEN → 200 {skipped:'no_token'} (fail-closed, nic nie sfabrykuje).
@@ -59,38 +60,54 @@ function normAct(raw: unknown): string {
   return "";
 }
 
+// Graph GET z twardym timeoutem (AbortController 20 s — edge nie ma domyślnego deadline'u fetch,
+// wisząca odpowiedź zjadłaby budżet sweepu) i 1 retry z backoffem 2 s na PRZEJŚCIOWE (5xx/429/sieć/
+// abort). 4xx = trwały błąd danych → rzucamy od razu (nie marnujemy sekund; fallback stron to obsłuży).
 async function graphGet(url: string): Promise<Record<string, unknown>> {
-  const r = await fetch(url);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`graph ${r.status}: ${JSON.stringify((d as { error?: unknown })?.error ?? d).slice(0, 260)}`);
-  return d as Record<string, unknown>;
-}
-
-// unia checklisty: dodaj/odhacz TYLKO wskazane pozycje (nigdy nie odznaczamy — jak wf2-ads-connect).
-function unionChecklist(data: Record<string, unknown>, toCheck: string[]) {
-  if (!toCheck.length) return;
-  const list: Array<{ t: string; done: boolean }> = Array.isArray((data as { checklist?: unknown }).checklist)
-    ? (data as { checklist: Array<{ t: string; done: boolean }> }).checklist
-    : [];
-  for (const key of toCheck) {
-    const hit = list.find((i) => i.t === key);
-    if (hit) hit.done = true;
-    else list.push({ t: key, done: true });
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await new Promise((res) => setTimeout(res, 2000)); // backoff przed retry
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 20_000);
+    try {
+      const r = await fetch(url, { signal: ac.signal });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const err = new Error(`graph ${r.status}: ${JSON.stringify((d as { error?: unknown })?.error ?? d).slice(0, 260)}`);
+        if (attempt === 0 && (r.status >= 500 || r.status === 429)) { lastErr = err; continue; } // przejściowe → retry
+        throw err; // 4xx trwałe
+      }
+      return d as Record<string, unknown>;
+    } catch (e) {
+      // wyjątek sieci/abort (nie HTTP „graph …”) → retry raz
+      if (attempt === 0 && !(e instanceof Error && e.message.startsWith("graph "))) { lastErr = e; continue; }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
   }
-  (data as { checklist: unknown }).checklist = list;
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 type SbClient = ReturnType<typeof createClient>;
 
-async function updateStepUnion(sb: SbClient, projectId: string, stepKey: string, toCheck: string[], extra?: Record<string, unknown>) {
-  const { data: st } = await sb.from("wf2_steps").select("id, status, data")
+// Odhaczanie/zapis podbloku przez ATOMOWY MERGE (RPC wf2_step_merge): podblok + unia checklisty
+// w JEDNYM UPDATE pod blokadą wiersza — bez read-modify-write całego data (eliminuje lost-update
+// z webhookiem wf2-ads-connect działającym w tym samym oknie co sweep 06:40). Nic nie odznaczamy.
+async function updateStepUnion(sb: SbClient, projectId: string, stepKey: string, toCheck: string[], blockKey?: string, block?: Record<string, unknown>) {
+  const { data: st } = await sb.from("wf2_steps").select("id, status")
     .eq("project_id", projectId).eq("step_key", stepKey).is("product_id", null).maybeSingle();
   if (!st) return false; // stary projekt bez kroku — nie wywracamy
-  const data = Object.assign({}, (st.data as Record<string, unknown>) || {}, extra || {});
-  unionChecklist(data, toCheck);
-  const upd: Record<string, unknown> = { data };
-  if (st.status === "pending" && (toCheck.length || extra)) upd.status = "in_progress";
-  await sb.from("wf2_steps").update(upd).eq("id", st.id);
+  await sb.rpc("wf2_step_merge", {
+    p_step_id: (st as { id: string }).id,
+    p_block_key: blockKey ?? null,
+    p_block: block ?? null,
+    p_checks: toCheck,
+  });
+  // status pending→in_progress: osobny monotoniczny UPDATE (nie dotyka bloba data → nie wyścig)
+  if ((st as { status: string }).status === "pending" && (toCheck.length || blockKey)) {
+    await sb.from("wf2_steps").update({ status: "in_progress" }).eq("id", (st as { id: string }).id);
+  }
   return true;
 }
 
@@ -110,30 +127,38 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
     return { project_id: projectId, act, skipped: "excluded", note: "konto marki osobistej Tomka — pominięte (guard)" };
   }
 
-  // 1. pola konta
-  const acct = await graphGet(`${GRAPH}/${act}?fields=currency,timezone_name,account_status,funding_source_details,spend_cap&access_token=${token}`);
+  // 1. pola konta (+ amount_spent — spend_cap Meta jest LIFETIME, więc bufor liczymy OD wydanego)
+  const acct = await graphGet(`${GRAPH}/${act}?fields=currency,timezone_name,account_status,funding_source_details,spend_cap,amount_spent&access_token=${token}`);
   const currency = String(acct.currency ?? "");
   const tz = String(acct.timezone_name ?? "");
   const accountStatus = Number(acct.account_status ?? 0);
   const funding = acct.funding_source_details as Record<string, unknown> | null | undefined;
   const spendCap = num(acct.spend_cap);
+  const amountSpent = num(acct.amount_spent);
   const currencyOk = currency === "PLN";
   const tzOk = tz === "Europe/Warsaw";
   const active = accountStatus === 1;
   const paymentMethod = !!funding && !!(funding.id || funding.type || funding.display_string);
+  // „Środki WIDOCZNE" odhaczamy TYLKO gdy metoda = KARTA (prepaid = saldo 0 nieczytelne przez Graph
+  // → zielony ptaszek wbrew treści pozycji). Rozpoznanie po type/display_string; brak pewności = NIE.
+  const fundBlob = `${String(funding?.type ?? "")} ${String(funding?.display_string ?? "")}`.toLowerCase();
+  const paymentIsCard = paymentMethod && /visa|master|amex|american express|discover|maestro|\bcard\b|karta|credit|debit|\*{2,}\s*\d|•{2,}\s*\d|x{4,}\s*\d|\d{4}\s*$/.test(fundBlob);
+  const paymentUnknown = paymentMethod && !paymentIsCard; // metoda jest, ale typu nie rozpoznajemy
 
-  // 2. strona przypięta do konta (promote_pages; fallback assigned_pages)
+  // 2. strona przypięta do konta. promote_pages PUSTE [] (nie tylko rzucony błąd) → i tak spróbuj
+  //    assigned_pages, zanim uznasz brak strony (część kont trzyma stronę tylko na assigned_pages).
   let pageAttached = false;
   let pagesEdge = "promote_pages";
   try {
     const pg = await graphGet(`${GRAPH}/${act}/promote_pages?fields=id,name&limit=10&access_token=${token}`);
     pageAttached = Array.isArray(pg.data) && (pg.data as unknown[]).length > 0;
-  } catch (_e) {
+  } catch (_e) { pagesEdge = "promote_error"; }
+  if (!pageAttached) {
     try {
       const pg2 = await graphGet(`${GRAPH}/${act}/assigned_pages?fields=id,name&limit=10&access_token=${token}`);
-      pageAttached = Array.isArray(pg2.data) && (pg2.data as unknown[]).length > 0;
-      pagesEdge = "assigned_pages";
-    } catch (_e2) { pagesEdge = "error"; }
+      if (Array.isArray(pg2.data) && (pg2.data as unknown[]).length > 0) { pageAttached = true; pagesEdge = "assigned_pages"; }
+      else if (pagesEdge !== "promote_error") pagesEdge = "promote_empty";
+    } catch (_e2) { if (pagesEdge === "promote_error") pagesEdge = "error"; }
   }
 
   // 3. pixel — zapis pixel_id gdy pusty
@@ -147,65 +172,83 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
     await sb.from("wf2_projects").update({ pixel_id: pixelId }).eq("id", projectId);
   }
 
-  // 4. spend_cap — ustaw 150000 (1500 zł) gdy brak/0; TYLKO na koncie PLN/Warsaw (inne = DO WYMIANY)
+  // 4. spend_cap = LIFETIME cap Meta (NIE miesięczny!) → musi OBEJMOWAĆ już wydane środki, inaczej
+  //    cicha śmierć konta przy skalowaniu. Ustawiamy amount_spent + 500000 (5000 zł bufora, minor
+  //    units) gdy brak/0; TYLKO na koncie PLN/Warsaw AKTYWNYM (zła waluta = DO WYMIANY; nieaktywne = niżej).
   let spendCapAction = spendCap > 0 ? "kept" : "absent";
   let spendCapValue = spendCap;
-  if (currencyOk && tzOk && spendCap <= 0) {
+  const spendCapTarget = Math.round(amountSpent) + 500000;
+  if (currencyOk && tzOk && active && spendCap <= 0) {
     try {
       const r = await fetch(`${GRAPH}/${act}`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ spend_cap: "150000", access_token: token }),
+        body: new URLSearchParams({ spend_cap: String(spendCapTarget), access_token: token }),
       });
-      if (r.ok) { spendCapAction = "set_150000"; spendCapValue = 150000; }
+      if (r.ok) { spendCapAction = `set_${spendCapTarget}`; spendCapValue = spendCapTarget; }
       else { const e = await r.text(); spendCapAction = `set_failed:${e.slice(0, 120)}`; }
     } catch (e) { spendCapAction = `set_error:${String(e).slice(0, 120)}`; }
   }
+  // istniejący cap zbyt blisko wydanego (bufor < 1000 zł) → nota do podbicia (dedup niżej)
+  const spendCapNearLimit = spendCap > 0 && (spendCap - amountSpent) < 100000;
 
   const checks = {
     currency, timezone_name: tz, account_status: accountStatus,
     currency_ok: currencyOk, tz_ok: tzOk, active,
-    payment_method: paymentMethod, page_attached: pageAttached, pages_edge: pagesEdge,
-    pixel_id: pixelId, spend_cap: spendCapValue, spend_cap_action: spendCapAction,
+    payment_method: paymentMethod, payment_is_card: paymentIsCard, page_attached: pageAttached, pages_edge: pagesEdge,
+    pixel_id: pixelId, amount_spent: amountSpent, spend_cap: spendCapValue, spend_cap_action: spendCapAction,
+    spend_cap_near_limit: spendCapNearLimit,
   };
 
   // ── auto-odhaczenie (unia; VERBATIM) ─────────────────────────────────────────
-  // ads_konto: waluta+strefa TYLKO gdy oba OK. Rozjazd = nota blokada + BEZ odhaczenia.
-  const kontoChecks = currencyOk && tzOk ? [CHECK_ADS_KONTO_WALUTA] : [];
-  await updateStepUnion(sb, projectId, "ads_konto", kontoChecks, {
-    ads_verify: { at: new Date().toISOString(), wyniki: checks },
-  });
+  // NIEAKTYWNE konto (account_status != 1): NIE odhaczamy niczego środowiskowego (środowisko
+  // niepewne) — zapis tylko do data.ads_verify; blokadę zgłasza nota niżej.
+  // ads_konto: waluta+strefa TYLKO gdy oba OK i konto aktywne. Rozjazd = nota blokada + BEZ odhaczenia.
+  const kontoChecks = active && currencyOk && tzOk ? [CHECK_ADS_KONTO_WALUTA] : [];
+  await updateStepUnion(sb, projectId, "ads_konto", kontoChecks, "ads_verify", { at: new Date().toISOString(), wyniki: checks });
 
-  // ads_budzet: środki = przy istniejącej metodzie płatności (saldo prepaid nie jest czytelne
-  //   wprost przez Graph API — dopisujemy to w nocie); limit = po ustawieniu/potwierdzeniu spend_cap.
+  // ads_budzet: „środki" odhaczamy WYŁĄCZNIE gdy metoda = KARTA (prepaid = saldo nieczytelne przez
+  //   Graph → nota informacyjna niżej); limit = po ustawieniu/potwierdzeniu spend_cap. Oba tylko aktywne.
   const budzetChecks: string[] = [];
-  if (paymentMethod) budzetChecks.push(CHECK_ADS_BUDZET_SRODKI);
-  if (spendCapValue > 0) budzetChecks.push(CHECK_ADS_BUDZET_LIMIT);
+  if (active && paymentIsCard) budzetChecks.push(CHECK_ADS_BUDZET_SRODKI);
+  if (active && spendCapValue > 0) budzetChecks.push(CHECK_ADS_BUDZET_LIMIT);
   await updateStepUnion(sb, projectId, "ads_budzet", budzetChecks);
 
-  // ads_strona: przypięcie strony do konta (wymóg create_ad)
-  await updateStepUnion(sb, projectId, "ads_strona", pageAttached ? [CHECK_ADS_STRONA_PRZYPISANA] : []);
+  // ads_strona: przypięcie strony do konta (wymóg create_ad) — tylko na aktywnym koncie
+  await updateStepUnion(sb, projectId, "ads_strona", active && pageAttached ? [CHECK_ADS_STRONA_PRZYPISANA] : []);
 
-  // ── nota przy rozjeździe waluty/strefy (dedup po otwartej nocie automatu) ─────
-  if (!currencyOk || !tzOk) {
+  // ── noty automatu (każda z własnym wzorcem dedup po otwartej nocie) ───────────
+  const noteOnce = async (likePattern: string, body: string, tag = "blokada") => {
     const { data: dup } = await sb.from("wf2_notes").select("id")
-      .eq("project_id", projectId).eq("status", "open").like("body", "⚠️ AUTOMAT: środowisko%").limit(1);
+      .eq("project_id", projectId).eq("status", "open").like("body", likePattern).limit(1);
     if (!dup || dup.length === 0) {
       await sb.from("wf2_notes").insert({
-        project_id: projectId, tag: "blokada", status: "open", author: "auto",
-        body: `⚠️ AUTOMAT: środowisko — konto ${act} ma walutę ${currency || "?"}/strefę ${tz || "?"} (wymagane PLN/Europe-Warsaw) — konto DO WYMIANY (nieodwracalne).`.slice(0, 1000),
+        project_id: projectId, tag, status: "open", author: "auto", body: body.slice(0, 1000),
       });
     }
+  };
+  if (!active) {
+    // konto nieaktywne/ograniczone → blokada środowiska (odhaczeń i capa już nie ruszaliśmy)
+    await noteOnce("⚠️ AUTOMAT: środowisko — konto%status%",
+      `⚠️ AUTOMAT: środowisko — konto ${act} ma status ${accountStatus} (nieaktywne/ograniczone) — sprawdź Account Quality.`);
+  } else if (!currencyOk || !tzOk) {
+    await noteOnce("⚠️ AUTOMAT: środowisko — konto%walutę%",
+      `⚠️ AUTOMAT: środowisko — konto ${act} ma walutę ${currency || "?"}/strefę ${tz || "?"} (wymagane PLN/Europe-Warsaw) — konto DO WYMIANY (nieodwracalne).`);
   }
-
-  // ── nota informacyjna: saldo prepaid nie czytelne przez API (gdy odhaczyliśmy „środki") ──
-  if (paymentMethod && spendCapAction !== "set_failed") {
-    // (informacja w data.ads_verify wystarcza — nie zaśmiecamy notatek; saldo w kontrolce checks)
+  // metoda płatności jest, ale nie rozpoznaliśmy karty (prepaid?/saldo nieczytelne przez API)
+  if (active && paymentUnknown) {
+    await noteOnce("⚠️ AUTOMAT: metoda płatności jest%",
+      `⚠️ AUTOMAT: metoda płatności jest, saldo nieczytelne API — potwierdź środki na koncie ${act} w Ads Managerze.`, "info");
+  }
+  // istniejący spend_cap zbyt blisko wydanego (bufor < 1000 zł) → podbij (bezpiecznik LIFETIME)
+  if (active && spendCapNearLimit) {
+    await noteOnce("⚠️ AUTOMAT: konto zbliża się do limitu%",
+      `⚠️ AUTOMAT: konto zbliża się do limitu wydatków — podbij spend_cap konta ${act} (spend ${(amountSpent / 100).toFixed(0)} zł / cap ${(spendCap / 100).toFixed(0)} zł, LIFETIME).`, "info");
   }
 
   await sb.from("wf2_activities").insert({
     project_id: projectId, actor: "wf2-ads-verify", action: "ads_verify",
-    description: `Weryfikacja środowiska ${act}: waluta ${currency}/${currencyOk ? "OK" : "ZŁA"}, strefa ${tz}/${tzOk ? "OK" : "ZŁA"}, status ${accountStatus}, metoda płatności ${paymentMethod ? "jest" : "brak"}, strona ${pageAttached ? "przypięta" : "brak"}, spend_cap ${spendCapAction}${pixelId ? `, pixel ${pixelId}` : ""}`.slice(0, 2000),
+    description: `Weryfikacja środowiska ${act}: waluta ${currency}/${currencyOk ? "OK" : "ZŁA"}, strefa ${tz}/${tzOk ? "OK" : "ZŁA"}, status ${accountStatus}, metoda płatności ${paymentIsCard ? "karta" : paymentMethod ? "inna/prepaid" : "brak"}, strona ${pageAttached ? "przypięta" : "brak"}, spend_cap ${spendCapAction}${pixelId ? `, pixel ${pixelId}` : ""}`.slice(0, 2000),
   });
 
   return { project_id: projectId, act, checks };
@@ -247,9 +290,29 @@ Deno.serve(async (req) => {
     if (action === "sweep") {
       const { data: projects } = await supabase.from("wf2_projects")
         .select("id, name, meta_ad_account_id, pixel_id").not("meta_ad_account_id", "is", null).neq("meta_ad_account_id", "");
+      const projList = (projects ?? []) as Array<Record<string, unknown>>;
+      // KOLEJNOŚĆ: najstarzej weryfikowane NAJPIERW (ogon nie głoduje pod deadline'em). Data ostatniej
+      // weryfikacji = ads_konto.data.ads_verify.at; brak = najpierw. Stepy pobieramy JEDNYM zapytaniem
+      // i sortujemy w JS. ⚠️ PostgREST domyślny cap 1000 wierszy — przy >1000 kont/kroków trzeba będzie
+      // stronicować (dziś kont garść, bufor duży).
+      const lastVerifyAt = new Map<string, string>();
+      const ids = projList.map((p) => String(p.id));
+      if (ids.length) {
+        const { data: kroki } = await supabase.from("wf2_steps").select("project_id, data")
+          .eq("step_key", "ads_konto").is("product_id", null).in("project_id", ids);
+        for (const s of (kroki ?? []) as Array<Record<string, any>>) {
+          const at = s?.data?.ads_verify?.at;
+          if (typeof at === "string" && at) lastVerifyAt.set(String(s.project_id), at);
+        }
+      }
+      projList.sort((a, b) => {
+        const av = lastVerifyAt.get(String(a.id)) || ""; // brak weryfikacji = "" = najpierw
+        const bv = lastVerifyAt.get(String(b.id)) || "";
+        return av < bv ? -1 : av > bv ? 1 : 0;
+      });
       const t0 = Date.now();
       const out = { checked: 0, skipped_excluded: 0, skipped_other: 0, mismatches: 0, errors: [] as string[], results: [] as VerifyResult[] };
-      for (const proj of projects ?? []) {
+      for (const proj of projList) {
         if (Date.now() - t0 > DEADLINE_MS) { out.errors.push("deadline — reszta w kolejnym biegu"); break; }
         try {
           const r = await verifyProject(supabase, token, proj as Record<string, unknown>);

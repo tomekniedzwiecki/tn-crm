@@ -36,13 +36,39 @@ function act(list: Array<{ action_type: string; value: string }> | undefined, ..
 // pola video_*_watched_actions: [{action_video_type:'total', value}] — bierz pierwszą wartość
 const vid = (list: Array<{ value: string }> | undefined) => (list?.length ? int(list[0].value) : null);
 
+// pojedynczy GET z twardym timeoutem (AbortController 20 s — edge nie ma domyślnego deadline'u fetch;
+// error 17 / blip sieci nie może zawiesić synca) i 1 retry z backoffem 2 s na PRZEJŚCIOWE (5xx/429/sieć).
+// deno-lint-ignore no-explicit-any
+async function graphFetch(url: string): Promise<any> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await new Promise((res) => setTimeout(res, 2000)); // backoff przed retry
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 20_000);
+    try {
+      const r = await fetch(url, { signal: ac.signal });
+      const d = await r.json();
+      if (!r.ok) {
+        const err = new Error(`graph ${r.status}: ${JSON.stringify(d?.error ?? d).slice(0, 300)}`);
+        if (attempt === 0 && (r.status >= 500 || r.status === 429)) { lastErr = err; continue; } // przejściowe → retry
+        throw err; // 4xx trwałe
+      }
+      return d;
+    } catch (e) {
+      if (attempt === 0 && !(e instanceof Error && e.message.startsWith("graph "))) { lastErr = e; continue; }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 async function graphPaged(url: string, maxPages = 5): Promise<Record<string, unknown>[]> {
   const rows: Record<string, unknown>[] = [];
   let next: string | null = url;
   for (let p = 0; p < maxPages && next; p++) {
-    const r = await fetch(next);
-    const d = await r.json();
-    if (!r.ok) throw new Error(`graph ${r.status}: ${JSON.stringify(d?.error ?? d).slice(0, 300)}`);
+    const d = await graphFetch(next);
     rows.push(...(d.data ?? []));
     next = d.paging?.next ?? null;
   }

@@ -96,9 +96,10 @@ function isViewableMedia(url: string): boolean {
 const CLIENT_FIELD_WHITELIST: Record<string, string[]> = {
   firma:           ["nip", "data_rejestracji"],
   pl_dane:         ["company", "nip", "regon", "address", "nrb", "email_kontakt", "phone", "return_address"],
-  ads_konto:       ["bm_id", "partner_id", "ad_account_id", "fanpage_url"],
+  // ads_konto / ads_budzet USUNIĘTE (Etap 4 runda 2): to były relikty self-attestation
+  // (bm_id/partner_id/ad_account_id · amount/method/confirmation). Prawdę o koncie ustala teraz
+  // webhook wf2-ads-connect + weryfikator wf2-ads-verify (Graph API) — klient niczego nie deklaruje.
   ads_strona:      ["fanpage_url", "instagram_url"],
-  ads_budzet:      ["amount", "method", "confirmation"],
 };
 
 // ── Kroki W BUDOWIE: widoczne WYŁĄCZNIE w podglądzie admina (preview:true + JWT) ──

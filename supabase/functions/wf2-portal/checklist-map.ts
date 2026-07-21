@@ -288,7 +288,8 @@ export const CHECKLIST_MAP: Record<string, Record<string, string>> = {
       "Testowy zakup poprawnie zmierzony",
   },
   ads_preflight: {
-    // naming/UTM + „WF2_META_TOKEN aktywny…" celowo POMINIĘTE (gotowość wewnętrzna, nie do klienta)
+    // naming/UTM + „WF2_META_TOKEN aktywny…" + „Próbny ads_create_creative…" (creative-probe)
+    // celowo POMINIĘTE (gotowość wewnętrzna/techniczna fabryki, nie do klienta)
     "Płatność realnie zeszła (mikro-wydatek 5–15 zł/d przez 2–3 dni, bez skoków)":
       "Potwierdzone działanie płatności na koncie",
     "Account Quality czyste (brak restrykcji na koncie/BM/stronie)":

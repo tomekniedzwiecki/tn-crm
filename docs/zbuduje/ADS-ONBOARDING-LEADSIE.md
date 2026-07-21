@@ -57,9 +57,14 @@ zły/nieznany → 200 z `{ok:false}` (retry Leadsie nic nie naprawi — ślad w 
   assets:[{kind,name,status,access,link}] }`. Ten sam blok trafia do **ads_konto** i
   **ads_strona** (lustro).
 - **Mapowanie asset → krok / checklista:** webhook odhacza w `ads_konto.data.checklist`
-  **wyłącznie** pozycję `"Partner access do BM Tomka — pełna kontrola, 3 assety"` i **tylko
-  gdy** jest `ad_account` w stanie `Connected` z poziomem `Manage/Owner/Admin`. Unia — nigdy
-  nie odznacza. `pending → in_progress` gdy pojawią się jakiekolwiek assety Meta.
+  **DWIE** pozycje — `"Konto reklamowe istnieje i połączone (Leadsie — automat)"` oraz
+  `"Partner access do BM Tomka — nadany przez Leadsie (automat)"` — i **tylko gdy** jest
+  `ad_account` w stanie `Connected` z poziomem `Manage/Owner/Admin/Advertise/Full control`
+  (allowlista poszerzona, case-insensitive — za wąska = cichy no-op toru). W `ads_strona.data.checklist`
+  odhacza `"Strona FB istnieje i udostępniona do BM Tomka (Leadsie — automat)"` gdy strona `Connected`.
+  Unia — nigdy nie odznacza; scalanie przez RPC **`wf2_step_merge`** (atomowy `jsonb_set` + unia
+  checklisty w JEDNYM `UPDATE` — bez read-modify-write, koniec lost-update z cronem verify).
+  `pending → in_progress` gdy pojawią się jakiekolwiek assety Meta.
 - **Idempotencja:** nadpisanie bloku `leadsie` + unia checklisty → retry bezpieczny (500 →
   Leadsie może ponowić).
 
@@ -186,24 +191,53 @@ wymaga odczytu przez **Graph API** (partner access do BM klientów). Robi to edg
 - **Fail-closed:** bez `WF2_META_TOKEN` → 200 `{skipped:'no_token'}` (nic nie sfabrykuje; token jeszcze
   nie istnieje w Supabase).
 - **Co czyta i USTAWIA (per konto = `wf2_projects.meta_ad_account_id`):**
-  1. `GET /{act}?fields=currency,timezone_name,account_status,funding_source_details,spend_cap` →
-     waluta==PLN + strefa==Europe/Warsaw? metoda płatności jest? `account_status==1`?
-  2. `GET /{act}/promote_pages` (fallback `assigned_pages`) → strona przypięta do konta.
+  1. `GET /{act}?fields=currency,timezone_name,account_status,funding_source_details,spend_cap,amount_spent` →
+     waluta==PLN + strefa==Europe/Warsaw? metoda płatności (KARTA?) jest? `account_status==1`?
+  2. `GET /{act}/promote_pages` → strona przypięta. **Puste `[]` (nie tylko rzucony błąd) też odpala
+     fallback `assigned_pages`** zanim uznamy brak strony.
   3. `GET /{act}/adspixels` → pixel istnieje (zapis `pixel_id` na projekt gdy kolumna pusta).
-  4. `spend_cap` brak/0 → `POST /{act} {spend_cap:150000}` (**1500 zł**, jednostka = grosze/minor-units;
-     bufor nad budżetem 1000 zł). Ustawiane **tylko** na koncie PLN/Warsaw (rozjazd = konto DO WYMIANY).
-- **Co odhacza (unia, VERBATIM — jak webhook; nigdy nie odznacza):**
+  4. `spend_cap` brak/0 → `POST /{act} {spend_cap: amount_spent + 500000}` — **LIFETIME cap Meta**
+     (nie miesięczny!): bufor **5000 zł NAD już wydanym** (jednostka = grosze/minor-units). Ustawiane
+     **tylko** na koncie PLN/Warsaw **aktywnym**. Istniejący cap z buforem < 1000 zł nad wydanym →
+     nota `info` „⚠️ AUTOMAT: konto zbliża się do limitu wydatków — podbij spend_cap" (dedup).
+  Graph GET-y mają twardy timeout (AbortController 20 s) + 1 retry z backoffem 2 s na przejściowe (5xx/429/sieć).
+- **Co odhacza (unia, VERBATIM — jak webhook; nigdy nie odznacza; TYLKO na aktywnym koncie):**
   `ads_konto` → „Waluta PLN + strefa Europe/Warsaw zweryfikowane w Business Settings" (gdy oba OK);
-  `ads_budzet` → „Środki WIDOCZNE w Ads Managerze (nie tylko deklaracja)" (przy aktywnej metodzie
-  płatności — saldo prepaid nie jest czytelne wprost przez Graph, dopisane w `data.ads_verify`) +
-  „Limit wydatków konta ustawiony (fabryka, po WF2_META_TOKEN)" (po ustawieniu/potwierdzeniu spend_cap);
+  `ads_budzet` → „Środki WIDOCZNE w Ads Managerze (nie tylko deklaracja)" **wyłącznie gdy metoda
+  płatności = KARTA** (prepaid = saldo 0 nieczytelne przez Graph → zamiast odhaczenia nota `info`
+  „metoda płatności jest, saldo nieczytelne API — potwierdź w Ads Managerze") + „Limit wydatków konta
+  ustawiony (fabryka, po WF2_META_TOKEN)" (po ustawieniu/potwierdzeniu spend_cap);
   `ads_strona` → „Strona przypisana do konta reklamowego (wymóg create_ad)" (gdy strona przypięta).
 - **Rozjazd waluty/strefy** = nota `blokada` „⚠️ AUTOMAT: środowisko — konto {act} ma walutę X/strefę Y
   (wymagane PLN/Europe-Warsaw) — konto DO WYMIANY (nieodwracalne)" (dedup po otwartej nocie) + **BEZ**
   odhaczenia. Pełny wynik → `wf2_steps(ads_konto).data.ads_verify = {at, wyniki}`; `wf2_activities(ads_verify)`.
+- **`account_status != 1`** (nieaktywne/ograniczone) = nota `blokada` „⚠️ AUTOMAT: środowisko — konto {act}
+  ma status {n} (nieaktywne/ograniczone) — sprawdź Account Quality" (dedup) + **pomija** odhaczanie
+  środowiska i ustawianie spend_cap dla tego projektu (środowisko niepewne).
+- **Sweep** iteruje projekty **najstarzej weryfikowane najpierw** (`ads_konto.data.ads_verify.at` rosnąco,
+  brak = najpierw — ogon nie głoduje pod deadline'em; stepy pobierane jednym zapytaniem, ⚠️ cap 1000 wierszy).
 - **Cron:** `wf2-ads-verify` (migracja `20260722i_wf2_ads_verify_cron.sql`, apply
   `node scripts/apply-wf2-ads-verify-cron.mjs`) — `40 4 * * *` (**06:40 PL**, 20 min po `wf2-ads-sync`);
   `action:'sweep'`, `timeout_milliseconds:350000` (obejście 5 s pg_net), sekret z Vault `wf2_gen_secret`.
 - **Panel** (`projekt.html`, warsztat `ads_konto`): przycisk „Weryfikuj środowisko (API)" (`adsVerifyEnv`)
   → `functions.invoke('wf2-ads-verify')` + sekcja `adsVerifyBlock` (staty checków, timestamp, styl Geist).
   Odpowiedź `{skipped:'no_token'}` → toast „WF2_META_TOKEN nie ustawiony — weryfikacja uśpiona".
+
+---
+
+## 10. KONTO DO WYMIANY (zła waluta/strefa — nieodwracalne)
+
+Waluty i strefy konta reklamowego **nie da się zmienić po utworzeniu** (Meta). Gdy verify oznaczy
+konto notą „konto DO WYMIANY", nota **nie jest ślepym zaułkiem** — jest procedura:
+
+1. **Nowe konto w BM KLIENTA** z poprawną walutą **PLN** i strefą **Europe/Warsaw**:
+   - przez **kreator Leadsie** (klient klika „Połącz konta reklamowe" i tworzy nowe konto), **albo**
+   - przez **API** po `WF2_META_TOKEN` (`POST /{business_id}/adaccounts` w BM klienta) — konto powstaje
+     od razu z partner access do BM Tomka.
+2. **Ponowny connect** — klient przechodzi link Leadsie jeszcze raz (webhook nadpisze blok `leadsie`;
+   przy pustym `meta_ad_account_id` zapisze nowe `act_…`). Gdy stare `act_` wciąż siedzi na projekcie —
+   podmień je ręcznie w panelu (pole „Konto reklamowe act_…") na nowe, żeby verify sprawdzał właściwe.
+3. **Stare konto**: zamknij w Business Settings albo **zostaw nieużywane** (guard `EXCLUDED_ACCOUNTS`
+   dotyczy tylko konta marki Tomka — cudze konta nie kolidują; byle nie było `meta_ad_account_id` projektu).
+4. **Domknięcie** — webhook (`ads_konto`/`ads_strona`) i verify (waluta/strefa/środki/strona/spend_cap)
+   **same odhaczą** checklisty na nowym koncie przy najbliższym connect/sweep. Ręcznie tylko podmiana `act_`.

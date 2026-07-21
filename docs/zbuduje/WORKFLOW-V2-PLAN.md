@@ -681,6 +681,8 @@ Wada świadoma: `bud_sessions` pełni drugą rolę — akceptowalne wobec kosztu
 
 ## 7. Kampanie Meta i statystyki per produkt
 
+⛔ SEKCJA HISTORYCZNA (stan sprzed 21.07) — obowiązuje tabela ETAP 4 w §2 + docs/zbuduje/ADS-ONBOARDING-LEADSIE.md.
+
 - Konwencja: **1 kampania Meta = 1 produkt**, nazwa `[WF2:<projekt>] <produkt>`; po utworzeniu
   (procedura MCP jak `CLAUDE_MCP_CAMPAIGN_PROCEDURE.md`) `campaign_id` zapisywany na `wf2_products`.
 - Rutyna synca (rozszerzenie istniejącej rutyny kampanii): per `meta_ad_account_id` projektu →
@@ -690,6 +692,8 @@ Wada świadoma: `bud_sessions` pełni drugą rolę — akceptowalne wobec kosztu
 - Purchases z piksela → `wf2_sales(source='meta')` (dzienne, per kampania/produkt).
 
 ## 8. Sprzedaż, P&L i decyzje
+
+⛔ SEKCJA HISTORYCZNA (stan sprzed 21.07) — obowiązuje tabela ETAP 4 w §2 + docs/zbuduje/ADS-ONBOARDING-LEADSIE.md.
 
 - **Import pliku TakeDrop**: upload eksportu zamówień (CSV/XLS) w `sklep-projekt.html` → edge
   `wf2-sales-import` parsuje → upsert `wf2_sales(source='takedrop')` per dzień/produkt.

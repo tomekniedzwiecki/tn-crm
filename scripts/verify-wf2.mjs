@@ -410,5 +410,102 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   /ZALECAMY KART/i.test(im) ? ok('wf2_step_defs.ads_budzet.instructions_md: rekomendacja KARTY (klient)') : bad('ads_budzet instructions_md', 'brak rekomendacji KARTY (PATCH zaaplikowany?)');
 }
 
+// ── 15. Etap 4 RUNDA 2 poprawek (atomowy merge, XSS, spend_cap LIFETIME, Leadsie-first portal) ──
+{
+  const connectSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-connect', 'index.ts'), 'utf8');
+  const verifySrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-verify', 'index.ts'), 'utf8');
+  const syncSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-sync', 'index.ts'), 'utf8');
+  const portalSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
+  const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+  const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
+
+  // (poz.2) ATOMOWY MERGE: migracja z funkcją SQL + oba edge wołają rpc('wf2_step_merge')
+  const migPath = join(ROOT, 'supabase', 'migrations', '20260722j_wf2_step_merge.sql');
+  const mig = existsSync(migPath) ? readFileSync(migPath, 'utf8') : '';
+  (mig.includes('wf2_step_merge') && mig.includes('jsonb_set') && /FOR UPDATE/i.test(mig) && mig.includes('jsonb_array_elements'))
+    ? ok('migracja 20260722j_wf2_step_merge: funkcja SQL (jsonb_set + unia po jsonb_array_elements + FOR UPDATE)')
+    : bad('migracja wf2_step_merge', 'brak funkcji / jsonb_set / FOR UPDATE / jsonb_array_elements');
+  connectSrc.includes('rpc("wf2_step_merge"') ? ok('wf2-ads-connect: scala przez rpc(wf2_step_merge) — bez read-modify-write') : bad('wf2-ads-connect merge', 'brak rpc(wf2_step_merge)');
+  verifySrc.includes('rpc("wf2_step_merge"') ? ok('wf2-ads-verify: scala przez rpc(wf2_step_merge) — bez read-modify-write') : bad('wf2-ads-verify merge', 'brak rpc(wf2_step_merge)');
+  // read-modify-write zabity: żaden z edge nie robi już update({ data }) całego bloba
+  (!/update\(\{\s*data\s*[,}]/.test(connectSrc) && !/update\(\{\s*data\s*[,}]/.test(verifySrc))
+    ? ok('wf2-ads-connect/verify: brak update({data}) całego bloba (RMW wyeliminowany)')
+    : bad('RMW nadal obecny', 'któryś edge robi update({data}) — wraca lost-update');
+
+  // (poz.3) assetKind: ad[_\s-]*account + allowlista poziomów + log niesklasyfikowanych
+  /ad\[_\\s-\]\*account/.test(connectSrc) ? ok('wf2-ads-connect: assetKind łapie ad_account (ad[_\\s-]*account)') : bad('wf2-ads-connect assetKind', 'regex nie łapie ad_account (podkreślnik)');
+  (/advertise/i.test(connectSrc) && /full\[_\\s-\]\*control/i.test(connectSrc)) ? ok('wf2-ads-connect: allowlista poziomów poszerzona (advertise/full_control)') : bad('wf2-ads-connect allowlist', 'brak advertise/full_control w isManage');
+  connectSrc.includes('asset niesklasyfikowany') ? ok('wf2-ads-connect: log niesklasyfikowanych assetów (triage payloadu)') : bad('wf2-ads-connect log', 'brak console.log niesklasyfikowanego assetu');
+
+  // (poz.5) XSS: safeUrl /^https?:\/\// na link/summary_url/request_url
+  (connectSrc.includes('safeUrl') && /\^https\?:\\\/\\\//.test(connectSrc) && connectSrc.includes('safeUrl(a.linkToAsset)'))
+    ? ok('wf2-ads-connect: safeUrl (http/https) na link/summary/request (XSS-guard)')
+    : bad('wf2-ads-connect safeUrl', 'brak filtra safeUrl na URL-ach z payloadu');
+
+  // (poz.4) Środki tylko dla karty
+  (verifySrc.includes('paymentIsCard') && verifySrc.includes('if (active && paymentIsCard) budzetChecks.push(CHECK_ADS_BUDZET_SRODKI)'))
+    ? ok('wf2-ads-verify: „środki" odhaczane TYLKO dla karty (paymentIsCard)')
+    : bad('wf2-ads-verify środki', 'środki nadal odhaczane z samego istnienia metody płatności');
+
+  // (poz.6) spend_cap = amount_spent + 500000 (LIFETIME) + nota near-limit
+  (verifySrc.includes('amount_spent') && verifySrc.includes('+ 500000') && verifySrc.includes('spendCapNearLimit'))
+    ? ok('wf2-ads-verify: spend_cap = amount_spent + 500000 (LIFETIME) + nota zbliżania do limitu')
+    : bad('wf2-ads-verify spend_cap', 'brak amount_spent/+500000/near-limit');
+  panelSrc.includes('Przy skalowaniu podbij spend_cap konta') ? ok('WS.skalowanie: dopiska o podbiciu spend_cap (lifetime)') : bad('WS.skalowanie', 'brak dopiski o spend_cap');
+
+  // (poz.7) account_status != 1 → nota + pominięcie odhaczeń/capa
+  (verifySrc.includes('ma status ${accountStatus}') && verifySrc.includes('active && currencyOk && tzOk'))
+    ? ok('wf2-ads-verify: account_status != 1 → nota blokada + pominięcie odhaczeń (guard active)')
+    : bad('wf2-ads-verify account_status', 'brak noty statusu / guardu active na odhaczeniach');
+
+  // (P2) AbortController + retry na Graph (verify + sync) i fallback assigned_pages przy pustym []
+  (verifySrc.includes('AbortController') && syncSrc.includes('AbortController'))
+    ? ok('Graph: AbortController (timeout) + retry w verify i sync') : bad('Graph timeout/retry', 'brak AbortController w verify/sync');
+  verifySrc.includes('promote_empty') ? ok('wf2-ads-verify: puste promote_pages [] też odpala fallback assigned_pages') : bad('wf2-ads-verify pages fallback', 'brak fallbacku przy pustym promote_pages');
+  verifySrc.includes('lastVerifyAt') ? ok('wf2-ads-verify sweep: sort najstarzej-weryfikowane-najpierw (ads_verify.at)') : bad('wf2-ads-verify sweep sort', 'brak sortowania sweepu po dacie weryfikacji');
+
+  // (poz.9) deploy:wf2 obejmuje obie nowe funkcje
+  (/deploy:wf2"[\s\S]*deploy:wf2-ads-connect[\s\S]*deploy:wf2-ads-verify/.test(pkg) || (/"deploy:wf2":[^\n]*wf2-ads-connect/.test(pkg) && /"deploy:wf2":[^\n]*wf2-ads-verify/.test(pkg)))
+    ? ok('package.json deploy:wf2 obejmuje wf2-ads-connect + wf2-ads-verify') : bad('deploy:wf2', 'deploy:wf2 nie deployuje connect/verify');
+
+  // (poz.13) CLIENT_FIELD_WHITELIST bez reliktów ads_konto/ads_budzet
+  {
+    const wlStart = portalSrc.indexOf('CLIENT_FIELD_WHITELIST');
+    const wlBlock = wlStart >= 0 ? portalSrc.slice(wlStart, portalSrc.indexOf('};', wlStart)) : '';
+    // sprawdzamy KLUCZE mapy (ads_konto:/ads_budzet:) i CUDZYSŁOWNE wartości (relikty jako "bm_id"),
+    // żeby nie łapać nazw reliktów wymienionych w komentarzu wyjaśniającym (bez cudzysłowów).
+    (!/ads_konto:\s*\[/.test(wlBlock) && !/ads_budzet:\s*\[/.test(wlBlock) && !/"bm_id"|"partner_id"|"ad_account_id"|"amount"|"confirmation"/.test(wlBlock))
+      ? ok('wf2-portal CLIENT_FIELD_WHITELIST: brak reliktów ads_konto/ads_budzet (self-attestation zabita)')
+      : bad('CLIENT_FIELD_WHITELIST relikty', 'nadal jest ads_konto/ads_budzet/"bm_id"/"partner_id"/"ad_account_id"/"confirmation"');
+  }
+
+  // (P0/poz.14) portal CLIENT_WS: Leadsie-first — 737839566050751 TYLKO w fallbacku <details> ads_konto
+  {
+    const kStart = portalHtml.indexOf('ads_konto: {');
+    const kEnd = portalHtml.indexOf('ads_strona: {', kStart);
+    const kBlock = kStart >= 0 && kEnd > kStart ? portalHtml.slice(kStart, kEnd) : '';
+    const detailsIdx = kBlock.indexOf('<details');
+    const idIdx = kBlock.indexOf('737839566050751');
+    (kBlock.includes('Połącz konta reklamowe') && detailsIdx >= 0 && idIdx > detailsIdx)
+      ? ok('portal CLIENT_WS.ads_konto: Leadsie-first, 737839566050751 tylko w fallbacku <details>')
+      : bad('portal CLIENT_WS.ads_konto', 'ID BM poza zwijanym fallbackiem albo brak „Połącz konta"');
+    // ads_budzet KARTA-first + ostrzeżenie o przelewie; kwoty bez zmian (1000 zł)
+    const bStart = portalHtml.indexOf('ads_budzet: {');
+    const bEnd = portalHtml.indexOf('pl_domena: {', bStart);
+    const bBlock = bStart >= 0 && bEnd > bStart ? portalHtml.slice(bStart, bEnd) : '';
+    (/kart/i.test(bBlock) && /przelew/i.test(bBlock) && bBlock.includes('1000 zł'))
+      ? ok('portal CLIENT_WS.ads_budzet: KARTA-first + ostrzeżenie o przelewie (1000 zł bez zmian)')
+      : bad('portal CLIENT_WS.ads_budzet', 'brak KARTA-first / ostrzeżenia o przelewie / kwoty 1000 zł');
+  }
+  // zadanie ads_strona: „Załatwione w tym samym kreatorze" zamiast dublowania CTA (poz.14)
+  portalHtml.includes('Załatwione w tym samym kreatorze') ? ok('portal: ads_strona przy connected_page → „Załatwione w tym samym kreatorze" (bez drugiego CTA)') : bad('portal ads_strona CTA', 'brak komunikatu „Załatwione w tym samym kreatorze"');
+
+  // (poz.12) checklist-map preflight: komentarz wspomina creative-probe
+  /celowo POMINIĘTE[\s\S]{0,120}(creative-probe|ads_create_creative)/i.test(mapSrc) || /creative-probe/i.test(mapSrc)
+    ? ok('checklist-map ads_preflight: komentarz wspomina pominięty creative-probe') : bad('checklist-map preflight', 'komentarz nie wspomina creative-probe');
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);
