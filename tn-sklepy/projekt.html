@@ -1119,13 +1119,13 @@
                     + '<div class="text-[10px] font-mono uppercase tracking-wider text-[#52a8ff]">Wygenerowane w rozmowie /sklep (punkt wyjścia)</div>';
                 if (gen.brand) {
                     const logo = gen.brand.chosen_logo || gen.brand.logo_url;
-                    g += `<div class="flex items-center gap-3">${logo ? `<img src="${escapeHtml(logo)}" class="w-10 h-10 rounded-md object-cover border border-[#2a2a2a]">` : ''}
+                    g += `<div class="flex items-center gap-3">${logo ? `<img src="${escapeHtml(logo)}" class="w-10 h-10 rounded-md object-cover border border-[#2a2a2a]" onerror="imgFallback(this,'w-10 h-10 rounded-md bg-[#111] border border-[#2a2a2a] flex items-center justify-center')">` : ''}
                         <div><div class="text-white text-sm font-medium">${escapeHtml(gen.brand.chosen_name || gen.brand.nazwa || '—')}</div>
                         <div class="text-zinc-500 text-[11px]">marka z lejka — decyzja: zostaje czy dopracowujemy</div></div></div>`;
                 }
                 if (Array.isArray(gen.mockups) && gen.mockups.length) {
                     g += '<div class="grid grid-cols-4 gap-1.5">' + gen.mockups.map(m =>
-                        `<a href="${escapeHtml(m.url)}" target="_blank" class="block relative"><img src="${escapeHtml(m.url)}" class="w-full h-16 object-cover rounded border ${m.style === gen.chosen_style ? 'border-[#0070f3]' : 'border-[#2a2a2a]'}" loading="lazy"></a>`).join('') + '</div>';
+                        `<a href="${escapeHtml(m.url)}" target="_blank" class="block relative"><img src="${escapeHtml(m.url)}" class="w-full h-16 object-cover rounded border ${m.style === gen.chosen_style ? 'border-[#0070f3]' : 'border-[#2a2a2a]'}" loading="lazy" onerror="imgFallback(this,'w-full h-16 rounded border border-[#2a2a2a] bg-[#111] flex items-center justify-center')"></a>`).join('') + '</div>';
                 }
                 g += `<button onclick="previewGenLanding('${gen.id}')" class="text-xs text-[#52a8ff] hover:text-[#78b6ff]"><i class="ph ph-browser"></i> Podgląd strony z lejka</button></div>`;
                 h += g;
@@ -1329,7 +1329,7 @@
                     const fmt = c.format === '916' ? '9:16' : c.format === '11' ? '1:1' : '4:5';
                     const ok = !!c.approved;
                     return `<div class="ads-cr">
-                        ${url ? `<a href="javascript:void(0)" data-lb-group="${gid}" data-lb-url="${escapeHtml(url)}" data-lb-cap="${escapeHtml((c.angle||'')+' · '+(c.headline||''))}" onclick="openLightboxG(this)"><img src="${escapeHtml(thumbUrl(url, 360))}" loading="lazy"></a>` : '<div class="ads-cr-empty">brak obrazu</div>'}
+                        ${url ? `<a href="javascript:void(0)" data-lb-group="${gid}" data-lb-url="${escapeHtml(url)}" data-lb-cap="${escapeHtml((c.angle||'')+' · '+(c.headline||''))}" onclick="openLightboxG(this)"><img src="${escapeHtml(thumbUrl(url, 360))}" loading="lazy" onerror="imgFallback(this)"></a>` : '<div class="ads-cr-empty">brak obrazu</div>'}
                         <span class="ads-cr-angle">${escapeHtml(c.angle || '—')} · ${fmt}</span>
                         <span class="ads-cr-ai" title="oznaczone jako AI (disclosure przy publikacji — Meta 2026)">AI</span>
                         <button onclick="wf2AdsToggleApprove(${i})" class="ads-cr-ok ${ok ? 'is-ok' : ''}" title="${ok ? 'zaakceptowana — kliknij, by cofnąć' : 'zaakceptuj tę kreację do testów'}"><i class="ph ${ok ? 'ph-check-circle' : 'ph-circle'}"></i></button>
@@ -2228,8 +2228,8 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             const shopName = tt && tt.tt_shop && tt.tt_shop.shop ? tt.tt_shop.shop.name : null;
             let h = `<div class="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-5">
                 <div>
-                    ${img ? `<img src="${escapeHtml(img)}" class="w-full aspect-square object-cover rounded-lg border border-[#2a2a2a] cursor-pointer" data-url="${escapeHtml(img)}" onclick="openLightbox(this.dataset.url)">` : '<div class="w-full aspect-square bg-[#111] rounded-lg flex items-center justify-center"><i class="ph ph-package text-zinc-700 text-3xl"></i></div>'}
-                    ${gallery.length ? `<div class="grid grid-cols-4 gap-1 mt-1.5">${gallery.map(g => `<img src="${escapeHtml(thumbUrl(g.url, 120))}" class="w-full aspect-square object-cover rounded cursor-pointer border border-[#232323]" loading="lazy" data-url="${escapeHtml(g.url)}" onclick="openLightbox(this.dataset.url)">`).join('')}</div>` : ''}
+                    ${img ? `<img src="${escapeHtml(img)}" class="w-full aspect-square object-cover rounded-lg border border-[#2a2a2a] cursor-pointer" data-url="${escapeHtml(img)}" onclick="openLightbox(this.dataset.url)" onerror="imgFallback(this,'w-full aspect-square bg-[#111] rounded-lg border border-[#2a2a2a] flex items-center justify-center')">` : '<div class="w-full aspect-square bg-[#111] rounded-lg flex items-center justify-center"><i class="ph ph-package text-zinc-700 text-3xl"></i></div>'}
+                    ${gallery.length ? `<div class="grid grid-cols-4 gap-1 mt-1.5">${gallery.map(g => `<img src="${escapeHtml(thumbUrl(g.url, 120))}" class="w-full aspect-square object-cover rounded cursor-pointer border border-[#232323]" loading="lazy" data-url="${escapeHtml(g.url)}" onclick="openLightbox(this.dataset.url)" onerror="imgFallback(this,'w-full aspect-square bg-[#111] rounded border border-[#232323] flex items-center justify-center')">`).join('')}</div>` : ''}
                 </div>
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">

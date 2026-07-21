@@ -95,6 +95,19 @@ function thumbUrl(url, w) {
     return `${m[1]}/storage/v1/render/image/public/${m[2]}?${q}width=${w || 360}&resize=contain`;
 }
 
+// Obrazek się nie wczytał (najczęściej wygasły podpis CDN TikToka → 403/ORB, ale też
+// skasowany plik w Storage). Podmieniamy na placeholder w rozmiarze kafla — bez tego
+// przeglądarka rysuje systemową ikonę „zepsuty obrazek" albo zostaje pusta dziura.
+function imgFallback(img, cls) {
+    if (!img || img.dataset.f) return;
+    img.dataset.f = '1';
+    if (!img.parentElement) return;
+    const d = document.createElement('div');
+    d.className = cls || 'w-full aspect-square bg-[#111] rounded flex items-center justify-center';
+    d.innerHTML = '<i class="ph ph-image text-zinc-700 text-xl"></i>';
+    img.replaceWith(d);
+}
+
 /* ── lightbox z nawigacją ──────────────────────────────────────────────── */
 function openLightbox(url) { if (!url) return; lbItems = [{ url: url, cap: '' }]; lbIdx = 0; lbShow(); }
 function openLightboxG(el) {
