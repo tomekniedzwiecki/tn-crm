@@ -125,7 +125,10 @@ def favicon_prompt(nazwa, metafora, palette):
         "Flat vector app-icon / favicon symbol for %s — a single %s. "
         "ONE simple geometric mark built from 2-3 primitive shapes (circle/arc/line), "
         "a BOLD, SOLID, FILLED mark (not an outline, not a hairline ring, no stroke-only "
-        "shapes), thick even strokes, high contrast, readable at 32px. Colors: %s. "
+        "shapes), thick even strokes, high contrast, readable at 32px. Colors: %s — "
+        "prefer a SINGLE mid-tone brand color for the whole mark; if two colors, BOTH must "
+        "stay readable on light AND dark backgrounds (no near-black elements that vanish "
+        "on dark UI). "
         "Centered on PLAIN PURE WHITE background, generous even margin ~20%%, "
         "strong silhouette, balanced negative space. "
         "Wykluczenia: no text, no letters, no wordmark, no gradient, no 3D, no shadow, "
@@ -584,6 +587,19 @@ def main():
     # ---- REALNY PRZEBIEG ----
     if not args.font or not os.path.isfile(args.font):
         raise SystemExit("--font (plik .ttf/.otf) jest wymagany w trybie realnym")
+    # FAIL-FAST fontu PRZED generacja (lekcja Ugniatek 21.07: uszkodzony TTF = 404-HTML z
+    # GitHuba wywalal krok (e) PO spaleniu kosztu 6 generacji; wordmark trzeba bylo
+    # dokanczac recznie). Walidujemy ladowalnosc + glify nazwy TERAZ, nie w kroku (e).
+    try:
+        _probe_font = _pil()[1].truetype(args.font, 64)
+    except Exception as e:
+        raise SystemExit("--font '%s' nie jest poprawnym TTF/OTF (%s) — sprawdz plik "
+                         "(magic bytes; GitHub raw potrafi zwrocic strone 404 zamiast fontu)"
+                         % (args.font, e))
+    _probe_miss = _missing_glyphs(_probe_font, args.nazwa)
+    if _probe_miss:
+        raise SystemExit("font '%s' nie ma glifow znakow nazwy: %s — wybierz inny plik"
+                         % (args.font, ", ".join(repr(c) for c in _probe_miss)))
     if channel == "local" and not openai_key:
         raise SystemExit("--channel local wymaga OPENAI_API_KEY w .env")
     if channel == "edge" and not wf2_secret:

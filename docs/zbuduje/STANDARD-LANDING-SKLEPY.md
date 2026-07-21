@@ -645,6 +645,16 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
   no watermark/signature, no lorem ipsum, no crossed-out prices, no bestseller/„NR 1"
   badges, no free-shipping unless specified, no extra text beyond quoted, no abstract
   blobs/random 3D/decorative gradients unless in style DNA.
+- **⚠️ LEKCJE UGNIATEK (21.07 — pierwszy przebieg produkcyjny; 3 nawyki modelu do jawnego
+  zbijania w promptach makiet):** (1) **anty-monospace przy H1:** gdy display = grotesk,
+  model potrafi ustawić nagłówek karty w kroju maszynowym — pisz jawnie „clean GEOMETRIC
+  SANS-SERIF, ABSOLUTELY NOT monospace/typewriter/slab, same typeface family as the button
+  label" (kotwica do elementu, który wychodzi dobrze); (2) **nav topbara ENUMEROWANY:**
+  bez jawnej listy linków model dopisuje „Opinie" z nawyku e-commerce = złamanie zakazu
+  social-proof — podawaj linki VERBATIM + „NEVER 'Opinie'"; (3) **NEG-blok PASZPORTU w
+  każdym prompcie makiety z produktem w kadrze** (nie dopiero w seedach F3/F4): negatywy
+  typu „no pistol grip / no interchangeable heads / single colorway" zbijają dryf bryły
+  już na makiecie (karbowane uchwyty, brandowane pudełko w zestawie = złapane na Ugniatku).
 - **Tekst PL**: krótkie stringi w "cudzysłowach" (nagłówek/cena/CTA); długie bloki (FAQ,
   opisy) = paski/linie o właściwej długości zamiast fałszywego copy (treść i tak nadpisuje
   kod); quality high dla drobnego tekstu.
