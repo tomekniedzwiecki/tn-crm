@@ -948,6 +948,19 @@ Deno.serve(async (req) => {
                 const prodName = String(prodObj.nazwa || prodObj.pl_name || prodObj.name || '').trim()
                 // projekt NIE ma własnej nazwy (decyzja Tomka 2026-07-03) — identyfikacja
                 // po kliencie; docelowo wizytówką będzie link do galerii landingów klienta
+                // BRAMKA ZGODY KONSUMENCKIEJ (migracja 20260722c): kopiuj NIP/firmę z zamówienia
+                // i — jeśli zgoda na start prac padła już w kasie (consent_digital_service) —
+                // przenieś jej znacznik do projektu, żeby portal nie pokazywał bramki drugi raz.
+                // deno-lint-ignore no-explicit-any
+                const consentCols: Record<string, any> = {
+                  customer_nip: order.customer_nip || null,
+                  customer_company: order.customer_company || null,
+                }
+                if (order.consent_digital_service === true && order.consented_at) {
+                  consentCols.work_consent_at = order.consented_at
+                  consentCols.work_consent_version = 'v2-2026-07-21'
+                  consentCols.work_consent_source = 'checkout'
+                }
                 const { data: proj, error: projErr } = await supabase.from('wf2_projects').insert({
                   customer_name: sess?.name || order.customer_name || null,
                   customer_email: sess?.email || order.customer_email || null,
@@ -956,6 +969,7 @@ Deno.serve(async (req) => {
                   bud_session_id: bs.id,
                   reservation_order_id: order.id,
                   status: 'start',
+                  ...consentCols,
                 }).select('id').single()
                 if (projErr) {
                   console.error('[tpay-webhook] WF2: insert projektu padł (nieblokujące):', projErr.message)

@@ -50,6 +50,9 @@
         <div class="flex-1 overflow-y-auto p-6 lg:p-10">
             <div class="max-w-7xl mx-auto animate-enter">
 
+                <!-- Pasek zgody na start prac (bramka konsumencka) — render: renderConsentWarn() -->
+                <div id="consent-warn-bar" class="hidden"></div>
+
                 <!-- HERO: karta tożsamości (klient + marka + kontakt + podglądy) i karta postępu (bar + liczby) -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4 lg:items-stretch">
 
@@ -588,8 +591,26 @@
                 const ttm = {}; (tts || []).forEach(t => ttm[t.id] = t);
                 products.forEach(p => { p.tiktoks = buildTiktoks(p.tt_product_id ? ttm[p.tt_product_id] : null); });
             } else { products.forEach(p => { p.tiktoks = []; }); }
-            syncP(); renderHeader(); renderLinks(); renderPills(); renderNextStep(); renderStage();
+            syncP(); renderHeader(); renderConsentWarn(); renderLinks(); renderPills(); renderNextStep(); renderStage();
             renderActivity(actQ.data||[]); renderNotes(); renderSales(); renderCosts(); renderFields();
+        }
+
+        // Pasek ostrzegawczy: fabryka NIE startuje bez zgody klienta na rozpoczęcie prac.
+        // DEMO/test bez paska. wait14 = świadomy wybór klienta → pasek bursztynowy (nie „brak zgody").
+        function renderConsentWarn() {
+            const el = document.getElementById('consent-warn-bar');
+            if (!el) return;
+            const isDemo = project.is_test === true || /demo/i.test(((project.name || '') + ' ' + (project.customer_name || '')));
+            if (project.work_consent_at || isDemo) { el.className = 'hidden'; el.innerHTML = ''; return; }
+            if (project.work_consent_source === 'wait14') {
+                let dtxt = 'po upływie 14 dni od zawarcia umowy';
+                if (project.created_at) { const s = new Date(new Date(project.created_at).getTime() + 15 * 24 * 3600 * 1000); if (!isNaN(s)) dtxt = 'od ' + s.toLocaleDateString('pl-PL'); }
+                el.className = 'mb-4 rounded-lg border border-[#f5a623]/40 bg-[#f5a623]/10 px-4 py-3 flex items-center gap-2.5 text-[#f5c46b] text-sm';
+                el.innerHTML = `<i class="ph ph-clock-countdown text-lg flex-shrink-0"></i><span>Klient wybrał start po 14 dniach — fabryka rusza ${dtxt}.</span>`;
+            } else {
+                el.className = 'mb-4 rounded-lg border border-[#e5484d]/40 bg-[#e5484d]/10 px-4 py-3 flex items-center gap-2.5 text-[#f2787f] text-sm';
+                el.innerHTML = `<i class="ph ph-warning-octagon text-lg flex-shrink-0"></i><span>⛔ Klient nie wyraził zgody na rozpoczęcie prac — fabryka NIE startuje.</span>`;
+            }
         }
 
         // most rdzenia widoku (panel-core.js): globalny stan P + hooki admina
@@ -2713,6 +2734,21 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             } else if (typeof stepFor === 'function' && stepFor('marka', null)?.status === 'done') {
                 // marka gotowa, a dostęp jeszcze nie wysłany → od tego momentu klient może zrobić wszystkie swoje zadania
                 lines.push(`<div class="text-[#f5b955]"><i class="ph ph-lightbulb"></i> Marka gotowa — dobry moment, by wysłać klientowi dostęp.</div>`);
+            }
+            // Zgoda na start prac (bramka zgody konsumenckiej) — 3 stany
+            {
+                const src = project.work_consent_source || null;
+                if (project.work_consent_at) {
+                    const d = new Date(project.work_consent_at);
+                    const srcLabel = src === 'checkout' ? 'kasa' : src === 'pre-regulamin' ? 'grandfathering' : src === 'portal' ? 'portal' : (src || '');
+                    lines.push(`<div class="text-[#62c073]"><i class="ph ph-check-circle"></i> Zgoda na start prac: ${isNaN(d) ? '' : d.toLocaleString('pl-PL')}${srcLabel ? ' · ' + srcLabel : ''}</div>`);
+                } else if (src === 'wait14') {
+                    let dtxt = 'po upływie 14 dni';
+                    if (project.created_at) { const s = new Date(new Date(project.created_at).getTime() + 15 * 24 * 3600 * 1000); if (!isNaN(s)) dtxt = 'od ' + s.toLocaleDateString('pl-PL'); }
+                    lines.push(`<div class="text-[#f5b955]"><i class="ph ph-clock-countdown"></i> Klient wybrał start po 14 dniach — prace ${dtxt}</div>`);
+                } else {
+                    lines.push(`<div class="text-[#e5484d]"><i class="ph ph-warning-octagon"></i> Zgoda na start prac: BRAK — prace wstrzymane</div>`);
+                }
             }
             box.innerHTML = lines.join('') || '<div class="text-zinc-700">Mail z dostępem jeszcze nie wysłany.</div>';
             // ostatnie wejście klienta do panelu (dedykowane zapytanie — portal_visit bywa poza 30 ostatnimi aktywnościami)

@@ -2372,7 +2372,8 @@ function validateForm() {
     }
 
     // Implicit consent — klik 'Zaplac' = akceptacja regulaminu (statement pod buttonem w pay bar)
-    // Stworzę: dodatkowo wymagany checkbox zgody na usługę cyfrową przed upływem 14 dni
+    // Stworzę: dodatkowo WYMAGANY checkbox zgody na usługę cyfrową przed upływem 14 dni.
+    // Sklep: checkbox OPCJONALNY (nie blokuje — patrz consentSnapshot), więc bez walidacji tu.
     if (!validateStworzeConsent()) valid = false;
     return valid;
 }
@@ -2564,6 +2565,12 @@ async function handleSubmit() {
         // Twardy link order→sesja, żeby webhook nie zgadywał „najnowszej po e-mailu".
         const sparSid = new URLSearchParams(window.location.search).get('sid') || null;
 
+        // Zgoda konsumenta (Stworzę/Sklep) w chwili płatności — jedno źródło dla obu gałęzi insertu.
+        const consent = consentSnapshot(); // { value: true|false|null, at: iso|null }
+        const consentNote = consent.value === true ? ' | Zgoda na rozpoczecie uslugi przed uplywem 14 dni: TAK'
+            : consent.value === false ? ' | Zgoda na rozpoczecie przed 14 dni: NIE (start po 14 dniach / portal)'
+            : '';
+
         // Try existing pending order for same email+description
         const { data: existingOrders } = await sbOrder({ 'x-customer-email': email })
             .from('orders').select('*')
@@ -2586,10 +2593,10 @@ async function handleSubmit() {
                 discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
                 discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                 payment_source: paymentSource,
-                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${stworzeConsentRequired ? ' | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK' : ''}`,
-                // Stworzę: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
-                consent_digital_service: stworzeConsentRequired ? true : null,
-                consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
+                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${consentNote}`,
+                // Stworzę / Sklep: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
+                consent_digital_service: consent.value,
+                consented_at: consent.at,
                 spar_user_id: sparUserId,
                 skip_workflow: sparUserId ? true : null,
                 ...(urlLeadId ? { lead_id: urlLeadId } : {}),
@@ -2612,10 +2619,10 @@ async function handleSubmit() {
                 discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                 status: 'pending',
                 payment_source: paymentSource,
-                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${stworzeConsentRequired ? ' | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK' : ''}`,
-                // Stworzę: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
-                consent_digital_service: stworzeConsentRequired ? true : null,
-                consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
+                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${consentNote}`,
+                // Stworzę / Sklep: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
+                consent_digital_service: consent.value,
+                consented_at: consent.at,
                 spar_user_id: sparUserId,
                 ...(sparSid ? { spar_session_id: sparSid } : {}),
                 // zakup sparingu (kolejna rozmowa) NIE jest budową → nie twórz workflow CRM
@@ -2712,6 +2719,7 @@ function setupOfferDisplay(offer) {
     }
 
     setupStworzeConsent(offer);
+    setupSklepConsent(offer);
     updatePayButton();
 }
 
@@ -2775,6 +2783,88 @@ function validateStworzeConsent() {
     if (err) err.style.display = ok ? 'none' : 'block';
     if (!ok && cb) cb.closest('label').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return ok;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SKLEP — usługa budowy sklepu: dedykowany regulamin + checkbox zgody na
+// rozpoczęcie realizacji przed upływem 14 dni. Checkbox OPCJONALNY do płatności
+// (klient ma alternatywę „start po 14 dniach" w portalu) → niezaznaczony = zgoda NIE.
+// WYJĄTEK: rezerwacja 100 zł jest w pełni zwrotna → checkboxa brak (tylko szum),
+// ale link „regulamin" i tak wskazuje sklep.
+// ═══════════════════════════════════════════════════════════════════
+const SKLEP_OFFER_IDS = ['30bf199b-8bc1-4810-8716-43dbffeb9113'];        // „Budowa sklepu pełen pakiet"
+const SKLEP_REZERWACJA_OFFER_ID = 'f32102f9-cc1e-42a3-9742-82593dadaaf1'; // „Rezerwacja — Twój sklep online" (100 zł, zwrotna)
+const SKLEP_REGULAMIN = 'https://tomekniedzwiecki.pl/sklep/regulamin/';
+let sklepConsentRequired = false;
+
+// Rozpoznanie płatności sklepowej. Sygnały (NIEZAWODNE, addytywne):
+//  • offer-mode: currentOffer.id ∈ SKLEP_OFFER_IDS (pełna płatność za usługę)
+//    lub === SKLEP_REZERWACJA_OFFER_ID (dedykowana rezerwacja 100 zł).
+//  • custom-payment z client-offer-v2/v3 (strony WYŁĄCZNIE sklepowe: /o/ /p/ /p2/):
+//    niosą ?client_offer=<id> + description „Pozostała kwota: …" (dopłata → usługa)
+//    lub „Rezerwacja: …" (zadatek 100 zł → zwrotna). Bez client_offer (np. legacy
+//    linki z panelu leada) NIE traktujemy jako sklep — brak pewności co do oferty.
+// Zwrot: { shop, service } — service=true tylko dla płatności ZA USŁUGĘ (nie rezerwacji).
+function detectSklepPayment(offer) {
+    if (!offer) return { shop: false, service: false };
+    if (offer.id === STWORZE_OFFER_ID) return { shop: false, service: false }; // aplikacja — nietknięta
+    const hasClientOffer = !!new URLSearchParams(window.location.search).get('client_offer');
+    const name = offer.name || '';
+    const isCustom = !offer.id; // custom payment / rata mają id === null
+
+    const isFullShopOffer    = SKLEP_OFFER_IDS.includes(offer.id);
+    const isReservationOffer  = offer.id === SKLEP_REZERWACJA_OFFER_ID;
+    const isCustomRemaining   = isCustom && hasClientOffer && name.startsWith('Pozosta');     // „Pozostała kwota: …"
+    const isCustomReservation = isCustom && hasClientOffer && name.startsWith('Rezerwacja');  // „Rezerwacja: …"
+
+    const service = isFullShopOffer || isCustomRemaining;          // pełna płatność LUB dopłata → checkbox
+    const reservation = isReservationOffer || isCustomReservation; // 100 zł zwrotna → BEZ checkboxa
+    return { shop: service || reservation, service };
+}
+
+function setupSklepConsent(offer) {
+    const { shop, service } = detectSklepPayment(offer);
+    if (!shop) return; // nie sklep → nic nie ruszamy (Stworzę/aplikacja/inne oferty bez zmian)
+
+    // Kontekst sklepowy → link „regulamin" pod przyciskiem wskazuje regulamin SKLEPU
+    // (dla rezerwacji ORAZ płatności za usługę). Polityka prywatności bez zmian.
+    document.querySelectorAll('.v-link-regulamin').forEach(a => a.href = SKLEP_REGULAMIN);
+
+    if (!service) return; // rezerwacja 100 zł (w pełni zwrotna) → checkbox zbędny
+
+    sklepConsentRequired = true;
+    const payBtn = $('v-pay-desktop');
+    if (!payBtn || $('sklep-consent')) return;
+    // checkbox MUSI stać POZA .v-form-cta (na mobile display:none — płatność ze sticky bara),
+    // żeby zgoda była widoczna i zaznaczalna także na telefonie
+    const ctaWrap = payBtn.closest('.v-form-cta') || payBtn;
+    const box = document.createElement('label');
+    box.id = 'sklep-consent-box';
+    box.style.cssText = 'display:flex;gap:10px;align-items:flex-start;margin:14px 0 4px;font-size:12.5px;line-height:1.55;color:#a1a1aa;cursor:pointer;';
+    box.innerHTML = '<input type="checkbox" id="sklep-consent" style="margin-top:2.5px;accent-color:#4d9fff;flex-shrink:0;">' +
+        '<span>Chcę, aby budowa mojego sklepu ruszyła od razu — wyraźnie żądam rozpoczęcia wykonywania usługi przed upływem 14 dni od zawarcia umowy. Przyjmuję do wiadomości, że jeżeli odstąpię przed pełnym wykonaniem Usługi Wdrożeniowej, zapłacę wyłącznie za świadczenia faktycznie spełnione (proporcjonalnie), a po jej pełnym wykonaniu utracę prawo odstąpienia w zakresie tej usługi. Szczegóły: <a href="' + SKLEP_REGULAMIN + '" target="_blank" style="color:#4d9fff;">regulamin</a>.</span>';
+    ctaWrap.parentNode.insertBefore(box, ctaWrap);
+    // Checkbox jest prawnie OPCJONALNY (klient ma alternatywę „start po 14 dniach" w portalu),
+    // więc NIE blokuje płatności — niezaznaczony = zgoda NIE (bramka portalu dobierze ją później).
+    const alt = document.createElement('div');
+    alt.id = 'sklep-consent-alt';
+    alt.style.cssText = 'margin:2px 0 10px;font-size:11.5px;line-height:1.5;color:#71717a;';
+    alt.textContent = 'Nie chcesz zaczynać od razu? Możesz zapłacić i wybrać start po upływie 14 dni — napisz do nas albo zaznacz to w panelu klienta po zalogowaniu.';
+    ctaWrap.parentNode.insertBefore(alt, ctaWrap);
+}
+
+// Snapshot zgody w momencie płatności (zapis do orders.consent_digital_service/consented_at):
+//  • STWORZĘ: checkbox WYMAGANY (walidacja blokuje) → gdy tu jesteśmy, jest zaznaczony → TAK + data.
+//  • SKLEP: checkbox OPCJONALNY do płatności → zaznaczony = TAK + data; niezaznaczony = FALSE (bez daty)
+//    — klient dobierze wariant „start po 14 dniach" przez portal klienta / kontakt.
+//  • Brak kontekstu zgody (zwykłe oferty, raty) → null (kolumny puste, jak dotąd).
+function consentSnapshot() {
+    let cb = null;
+    if (stworzeConsentRequired) cb = $('stworze-consent');
+    else if (sklepConsentRequired) cb = $('sklep-consent');
+    if (!cb) return { value: null, at: null };
+    const checked = !!cb.checked;
+    return { value: checked, at: checked ? new Date().toISOString() : null };
 }
 
 async function loadOffer() {

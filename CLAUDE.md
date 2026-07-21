@@ -128,6 +128,20 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
 - Auto-create projektu: tpay-webhook przy PEŁNEJ płatności za budowę (amt ≥ 1000; decyzja
   Tomka 21.07.2026 — sama rezerwacja 500 zł NIE tworzy projektu; blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).
+- **⛔ BRAMKA ZGODY KONSUMENCKIEJ (21.07.2026, migracja `20260722c_wf2_work_consent`):**
+  prace nad projektem NIE startują, dopóki `wf2_projects.work_consent_at` IS NULL i
+  `work_consent_source` IS NULL — fabryka przed startem Etapu 1 MUSI to sprawdzić (⛔ brak =
+  STOP; wyjątek: source='pre-regulamin' = grandfathering, source='wait14' = start dozwolony
+  dopiero po dacie utworzenia projektu +15 dni). Portal /twoj-biznes wymusza wybór po
+  zalogowaniu: „Zaczynamy od razu" (żądanie z art. 21 ust. 2 UoPK; treść = stałe
+  `CONSENT_VERSION`/`CONSENT_TEXT` w wf2-portal, obecnie v2-2026-07-21; mail potwierdzający
+  przez send-email — trwały nośnik) albo „wait14". Zgoda z checkoutu
+  (`orders.consent_digital_service`, checkbox OPCJONALNY dla ofert sklepu) przenoszona przez
+  tpay-webhook (+ `customer_nip`/`customer_company` → wf2_projects). Badge w projekt.html
+  (✓/⏳/⛔). Kanon prawny usługi = https://tomekniedzwiecki.pl/sklep/regulamin/ (źródło:
+  `docs/zbuduje/prawne-usluga/REGULAMIN-USLUGI-SKLEP-DRAFT-v1.md`; prowizja 5% od Przychodu,
+  wykup 24× śr. mies. prowizji / min 1900 zł). Stary wzór `umowy/umowa-budowa-sklepu.html` =
+  WYGASZONY (nieaktualne 20%/kary) — nie generować z niego nowych umów.
 - **Styl modułu = Geist/Vercel (twardo)**: tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,
   akcent #0070f3, success #45a557, warning #f5a623, error #e5484d, promienie 6–8px,
   zero fioletu/rose. Sidebar: `/tn-sklepy` sprawdzane PRZED `/tn-sklep` w detectCurrentApp.

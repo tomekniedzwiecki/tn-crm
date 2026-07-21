@@ -271,5 +271,41 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   /"deploy:wf2-ads-connect"\s*:/.test(pkg) ? ok('package.json ma deploy:wf2-ads-connect') : bad('package.json', 'brak deploy:wf2-ads-connect');
 }
 
+// ── 12. Bramka zgody konsumenckiej (żądanie startu prac przed 14 dniami) ───
+// Prace nie ruszają bez decyzji klienta. Kontrakt: edge (akcja work_consent + gate),
+// front portalu (ekran + wait14), panel (pasek + badge), migracja, tpay-webhook (checkout).
+{
+  const portalTs = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
+  (portalTs.includes('"work_consent"') && portalTs.includes('needs_work_consent'))
+    ? ok('wf2-portal: akcja work_consent + needs_work_consent w stanie') : bad('wf2-portal work_consent', 'brak akcji work_consent / needs_work_consent');
+  portalTs.includes("v2-2026-07-21") ? ok('wf2-portal: CONSENT_VERSION v2 (delta prawna)') : bad('wf2-portal wersja', 'brak wersji v2-2026-07-21');
+  (portalTs.includes('sendConsentEmail') && portalTs.includes('work_consent_mail_failed'))
+    ? ok('wf2-portal: mail potwierdzający + fallback work_consent_mail_failed') : bad('wf2-portal mail zgody', 'brak sendConsentEmail / work_consent_mail_failed');
+  (portalTs.includes('"wait14"') || portalTs.includes("'wait14'")) ? ok('wf2-portal: druga opcja wait14 (dobrowolność)') : bad('wf2-portal wait14', 'brak obsługi wait14');
+  portalTs.includes('preview_readonly') && portalTs.match(/action === "work_consent"[\s\S]{0,120}readonly/)
+    ? ok('wf2-portal: work_consent w podglądzie admina = 403') : bad('wf2-portal work_consent readonly', 'brak gate readonly na work_consent');
+
+  const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
+  (portalHtml.includes("id=\"consent\"") && portalHtml.includes('submitConsent') && portalHtml.includes("'consent'"))
+    ? ok('portal.html: ekran consent + submitConsent + show(consent)') : bad('portal.html ekran zgody', 'brak ekranu consent / submitConsent');
+  portalHtml.includes('consent-wait') && portalHtml.includes('consent-wait-banner')
+    ? ok('portal.html: opcja „poczekać 14 dni" + baner wait14') : bad('portal.html wait14', 'brak przycisku/banera wait14');
+
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  (panelSrc.includes('renderConsentWarn') && panelSrc.includes('Zgoda na start prac'))
+    ? ok('projekt.html: pasek renderConsentWarn + wiersz „Zgoda na start prac"') : bad('projekt.html zgoda', 'brak renderConsentWarn / wiersza zgody');
+
+  const tpaySrc = readFileSync(join(ROOT, 'supabase', 'functions', 'tpay-webhook', 'index.ts'), 'utf8');
+  (tpaySrc.includes('consentCols') && tpaySrc.includes("work_consent_source = 'checkout'"))
+    ? ok('tpay-webhook: przenosi zgodę z kasy (source=checkout) + NIP/firma') : bad('tpay-webhook zgoda', 'brak przenoszenia zgody z kasy');
+
+  existsSync(join(ROOT, 'supabase', 'migrations', '20260722c_wf2_work_consent.sql'))
+    ? ok('migracja 20260722c_wf2_work_consent.sql obecna') : bad('migracja work_consent', 'brak pliku migracji');
+
+  // DB: kolumny zgody istnieją na wf2_projects (odczyt service-role)
+  const cr = await rest('wf2_projects?select=id,work_consent_at,work_consent_source,customer_nip,customer_company&limit=1', SK);
+  cr.status < 300 ? ok('wf2_projects: kolumny work_consent_*/customer_nip/customer_company (migracja zaaplikowana)') : bad('wf2_projects kolumny zgody', `status ${cr.status} — migracja 20260722c zaaplikowana?`);
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

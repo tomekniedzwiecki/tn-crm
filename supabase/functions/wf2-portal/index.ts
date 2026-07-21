@@ -36,6 +36,21 @@ const CORS = {
 const MERCHANT_LOGIN_URL = "https://panel.niedzwiecki.ai/";
 const MERCHANT_PW_SETUP_URL = "https://panel.niedzwiecki.ai/auth/forgot-password";
 
+// ── BRAMKA ZGODY KONSUMENCKIEJ (żądanie rozpoczęcia prac przed upływem 14 dni) ──
+// Prace nad projektem NIE ruszają, dopóki klient nie złoży żądania (akcja work_consent
+// choice='accept'). Alternatywa (dobrowolność): choice='wait14' — klient woli poczekać do
+// upływu terminu odstąpienia. Treść oświadczenia (v2, konsultacja prawna gpt-5.6-sol):
+// traktujemy CAŁOŚĆ jako usługę (art. 35/38 pkt 1) — usunięta część o treściach cyfrowych.
+// Snapshot treści (work_consent_text) trafia do wf2_projects + maila = trwały nośnik.
+const CONSENT_VERSION = "v2-2026-07-21";
+const CONSENT_TEXT =
+  "Wyraźnie żądam rozpoczęcia wykonywania usługi przed upływem 14 dni od zawarcia umowy. " +
+  "Przyjmuję do wiadomości, że jeżeli odstąpię od umowy przed pełnym wykonaniem Usługi " +
+  "Wdrożeniowej (Etapy 1–7), zapłacę wyłącznie za świadczenia faktycznie spełnione do chwili " +
+  "odstąpienia, proporcjonalnie do ich zakresu (§18 Regulaminu), a po pełnym wykonaniu Usługi " +
+  "Wdrożeniowej utracę prawo odstąpienia od umowy w zakresie tej usługi.";
+const REGULAMIN_URL = "https://tomekniedzwiecki.pl/sklep/regulamin/";
+
 function json(body: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -347,6 +362,51 @@ function computeCeny(p: Record<string, unknown>, cm: CostModel) {
   };
 }
 
+// ── Mail potwierdzający zgodę = TRWAŁY NOŚNIK (art. 21 ust. 2 UoPK) ─────────────
+// Wysyłka przez istniejącą funkcję send-email (format Direct, no_signature — pełną,
+// prawnie kompletną treść budujemy tutaj). Zwraca resend_id lub rzuca wyjątek —
+// wołający łapie go OSOBNO, żeby błąd maila NIGDY nie wywalił zapisu zgody.
+async function sendConsentEmail(to: string, brandName: string, consentAtIso: string): Promise<void> {
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const esc = (s: unknown) => String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  let when = consentAtIso;
+  try {
+    when = new Intl.DateTimeFormat("pl-PL", { timeZone: "Europe/Warsaw", dateStyle: "long", timeStyle: "short" })
+      .format(new Date(consentAtIso)) + " (czas polski)";
+  } catch { /* fallback: surowy ISO */ }
+  const brand = (brandName || "").trim() || "Twój sklep";
+  const subject = "Potwierdzenie zgody na rozpoczęcie prac — Twój sklep";
+  const html =
+    `<div style="max-width:600px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#1a1a1a;line-height:1.6;font-size:15px">` +
+    `<p style="margin:0 0 4px 0;color:#10b981;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px">Potwierdzenie na trwałym nośniku</p>` +
+    `<h1 style="margin:0 0 18px 0;font-size:21px;font-weight:700;color:#111">Zgoda na rozpoczęcie prac</h1>` +
+    `<p style="margin:0 0 16px 0">Dziękuję — odnotowałem Twoje żądanie rozpoczęcia realizacji usługi dla projektu <b>${esc(brand)}</b>. To wiadomość potwierdzająca, zachowaj ją dla siebie.</p>` +
+    `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px 0;background:#f6f8fa;border:1px solid #e5e9ed;border-radius:10px">` +
+    `<tr><td style="padding:16px 18px">` +
+    `<p style="margin:0 0 10px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Treść Twojego oświadczenia</p>` +
+    `<p style="margin:0;color:#374151;font-size:14px">${esc(CONSENT_TEXT)}</p>` +
+    `</td></tr></table>` +
+    `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px 0;font-size:14px">` +
+    `<tr><td style="padding:7px 0;border-bottom:1px solid #eef1f4;color:#6b7280">Data i godzina zgody</td><td style="padding:7px 0;border-bottom:1px solid #eef1f4;color:#111;font-weight:600;text-align:right">${esc(when)}</td></tr>` +
+    `<tr><td style="padding:7px 0;border-bottom:1px solid #eef1f4;color:#6b7280">Wersja oświadczenia</td><td style="padding:7px 0;border-bottom:1px solid #eef1f4;color:#111;font-weight:600;text-align:right">${esc(CONSENT_VERSION)}</td></tr>` +
+    `<tr><td style="padding:7px 0;color:#6b7280">Regulamin (wersja obowiązująca w chwili zgody)</td><td style="padding:7px 0;text-align:right"><a href="${REGULAMIN_URL}" style="color:#0070f3;font-weight:600;text-decoration:none">${esc(REGULAMIN_URL)}</a></td></tr>` +
+    `</table>` +
+    `<p style="margin:0 0 18px 0;color:#6b7280;font-size:13px">Pamiętaj: prawo odstąpienia od umowy tracisz dopiero po pełnym wykonaniu usługi, a co do dostarczonych treści cyfrowych — z chwilą rozpoczęcia ich dostarczania. Jeśli odstąpisz wcześniej, zapłacisz jedynie za prace faktycznie wykonane do chwili odstąpienia (§18 Regulaminu).</p>` +
+    `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px 0;border-top:1px solid #eef1f4"><tr><td style="padding:16px 0 0 0">` +
+    `<p style="margin:0 0 4px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Usługodawca</p>` +
+    `<p style="margin:0;color:#374151;font-size:13px">Tomasz Niedźwiecki AI · ul. Grawerska 30L, 51-180 Wrocław · NIP 6972240255</p>` +
+    `</td></tr></table>` +
+    `</div>`;
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_KEY}` },
+    body: JSON.stringify({ to, subject, html, no_signature: true, email_type: "wf2_work_consent" }),
+  });
+  if (!r.ok) throw new Error(`send-email ${r.status}: ${(await r.text()).slice(0, 200)}`);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -358,6 +418,7 @@ Deno.serve(async (req: Request) => {
   let body: {
     token?: string; password?: string; action?: string; preview?: boolean;
     step_key?: string; fields?: Record<string, unknown>; done?: boolean;
+    choice?: string; // work_consent: 'accept' | 'wait14'
     events?: Array<{ action?: string; description?: string; product_id?: string }>;
     // CENY 3.2 — akcja set_client_cost
     product_id?: string; amount?: number | null; is_net?: boolean; source?: string; note?: string;
@@ -389,7 +450,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: p } = await sb
     .from("wf2_projects")
-    .select("id, name, customer_name, customer_email, status, links, target_orders, domain, deadline_at, platform_account_email, platform_shop_id, platform_merchant_email, created_at, unique_token, client_password_hash")
+    .select("id, name, customer_name, customer_email, customer_company, customer_nip, status, links, target_orders, domain, deadline_at, platform_account_email, platform_shop_id, platform_merchant_email, created_at, unique_token, client_password_hash, work_consent_at, work_consent_source")
     .eq("unique_token", token)
     .maybeSingle();
   if (!p) { await sleep(300); return json({ error: "unauthorized" }, 401); }
@@ -629,6 +690,77 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, cost_effective: ceny.cost_effective, unit_profit_net: ceny.unit_profit_net });
   }
 
+  // ════════════════════════ WORK_CONSENT (bramka zgody konsumenckiej) ═══════
+  // Dwie DOBROWOLNE ścieżki (dowód swobody decyzji — konsultacja prawna):
+  //   choice='accept' → żądanie rozpoczęcia prac przed upływem 14 dni (work_consent_at=now,
+  //                     source='portal') + mail potwierdzający (trwały nośnik).
+  //   choice='wait14' → klient woli poczekać do upływu terminu (work_consent_at ZOSTAJE NULL,
+  //                     source='wait14' → bramka się nie powtarza; prace ruszą po 14 dniach).
+  // Wzorzec set_password: atomowy UPDATE tylko gdy jeszcze bez decyzji (idempotentne).
+  // Dowody (art. 21 ust. 2): IP (pierwszy wpis x-forwarded-for — kolejne = infra) + user-agent → meta.
+  if (action === "work_consent") {
+    if (readonly) return json({ error: "preview_readonly" }, 403); // podgląd admina = readonly
+    const choice = body.choice === "wait14" ? "wait14" : "accept";
+    const xff = req.headers.get("x-forwarded-for") || "";
+    const ip = (xff.split(",")[0] || "").trim() || null;   // pierwszy = klient; kolejne = infra
+    const ua = (req.headers.get("user-agent") || "").slice(0, 300) || null;
+
+    if (choice === "wait14") {
+      const { data: updated, error: upErr } = await sb
+        .from("wf2_projects")
+        .update({ work_consent_source: "wait14", work_consent_version: CONSENT_VERSION })
+        .eq("id", p.id).is("work_consent_at", null).is("work_consent_source", null).select("id");
+      if (upErr) return json({ error: "save_failed" }, 500);
+      if (Array.isArray(updated) && updated.length > 0) {
+        await sb.from("wf2_activities").insert({
+          project_id: p.id, actor: "client", action: "work_consent_wait",
+          description: `Klient wybrał rozpoczęcie prac PO upływie 14-dniowego terminu odstąpienia (wersja ${CONSENT_VERSION}).`,
+          meta: { ip, ua, choice: "wait14", version: CONSENT_VERSION },
+        });
+      }
+      return json({ ok: true, choice: "wait14" });
+    }
+
+    // choice === 'accept'
+    const nowIso = new Date().toISOString();
+    const { data: updated, error: upErr } = await sb
+      .from("wf2_projects")
+      .update({
+        work_consent_at: nowIso,
+        work_consent_version: CONSENT_VERSION,
+        work_consent_text: CONSENT_TEXT,
+        work_consent_source: "portal",
+      })
+      .eq("id", p.id).is("work_consent_at", null).select("id");
+    if (upErr) return json({ error: "save_failed" }, 500);
+    const firstTime = Array.isArray(updated) && updated.length > 0;
+    if (firstTime) {
+      await sb.from("wf2_activities").insert({
+        project_id: p.id, actor: "client", action: "work_consent",
+        description: `Klient złożył żądanie rozpoczęcia prac przed upływem 14-dniowego terminu odstąpienia (wersja ${CONSENT_VERSION}).`,
+        meta: { ip, ua, choice: "accept", version: CONSENT_VERSION, text: CONSENT_TEXT },
+      });
+      // Trwały nośnik — mail potwierdzający. Osobny try/catch: błąd wysyłki NIE cofa zgody.
+      const to = String(p.customer_email || "").trim();
+      if (to && EMAIL_RE.test(to)) {
+        try {
+          await sendConsentEmail(to, String(p.name || ""), nowIso);
+        } catch (mailErr) {
+          await sb.from("wf2_activities").insert({
+            project_id: p.id, actor: "auto", action: "work_consent_mail_failed",
+            description: `Nie udało się wysłać maila potwierdzającego zgodę: ${String((mailErr as Error)?.message || mailErr).slice(0, 200)}`,
+          }).then(() => {}, () => {});
+        }
+      } else {
+        await sb.from("wf2_activities").insert({
+          project_id: p.id, actor: "auto", action: "work_consent_mail_failed",
+          description: "Nie wysłano maila potwierdzającego zgodę — brak poprawnego adresu e-mail klienta.",
+        }).then(() => {}, () => {});
+      }
+    }
+    return json({ ok: true, choice: "accept" });
+  }
+
   // ════════════════════════ DEFAULT: pełny stan (sanityzowany) ══════════════
   const [defsQ, stepsQ, prodsQ, artsQ, ordQ, priceEvQ, cfgQ, leadsieQ] = await Promise.all([
     sb.from("wf2_step_defs")
@@ -825,8 +957,26 @@ Deno.serve(async (req: Request) => {
     if (connect_url || connected) leadsie = { connect_url, connected };
   }
 
+  // BRAMKA ZGODY: pełnoekranowy ekran zgody, gdy klient jeszcze nie podjął decyzji
+  // (ani 'accept' → work_consent_at, ani 'wait14' → source). W podglądzie admina ZAWSZE
+  // false. work_consent_prompt = single-source treści (front nie dubluje CONSENT_TEXT).
+  // work_consent.start_after (tylko wait14): utworzenie projektu + 15 dni = po upływie terminu.
+  const needs_work_consent = !readonly && !p.work_consent_at && !p.work_consent_source;
+  let wcStartAfter: string | null = null;
+  if (p.work_consent_source === "wait14" && !p.work_consent_at && p.created_at) {
+    const t = new Date(p.created_at).getTime();
+    if (Number.isFinite(t)) wcStartAfter = new Date(t + 15 * 24 * 3600 * 1000).toISOString();
+  }
+
   return json({
     mode: readonly ? "preview" : "client",
+    needs_work_consent,
+    work_consent_prompt: { version: CONSENT_VERSION, text: CONSENT_TEXT, regulamin_url: REGULAMIN_URL },
+    work_consent: {
+      granted: !!p.work_consent_at,
+      source: p.work_consent_source || null,
+      start_after: wcStartAfter,
+    },
     merchant_panel,
     leadsie,
     project: {
