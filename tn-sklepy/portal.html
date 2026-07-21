@@ -64,11 +64,17 @@
         .task { border:1px solid #1f1f1f; border-radius:10px; background:#0a0a0a; margin-bottom:10px; overflow:hidden; transition:border-color .2s; }
         .task:hover { border-color:#2b2b30; }
         .task.open { border-color:#333; }
-        .task.soon { opacity:.6; }
-        .task-head { display:flex; align-items:center; gap:13px; width:100%; padding:15px 17px; background:none; border:none; cursor:pointer; text-align:left; color:inherit; font:inherit; }
-        .task.soon .task-head { cursor:default; }
-        .task-num { width:24px; height:24px; border-radius:50%; border:1.5px solid #3a3a40; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:600; color:#a1a1aa; }
-        .task.done .task-num { border-color:#3b8a52; background:rgba(69,165,87,.16); color:#5fce8c; }
+        .task.soon { opacity:1; }
+        /* wiersz nagłówka: checkbox (akcja) + rozwijalny nagłówek (opis) */
+        .task-head-row { display:flex; align-items:flex-start; }
+        .task-check { flex-shrink:0; width:22px; height:22px; margin:15px 0 0 17px; border-radius:6px; border:2px solid #3a3a40;
+            background:#0a0a0a; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px;
+            transition:border-color .15s, background .15s; }
+        .task-check:hover:not(:disabled) { border-color:#0070f3; }
+        .task-check.is-done { background:#45a557; border-color:#45a557; }
+        .task-check:disabled { cursor:default; opacity:.65; }
+        .task-check-info { border-style:solid; border-color:#2a2a2e; color:#52a8ff; cursor:default; }
+        .task-head { display:flex; align-items:center; gap:13px; flex:1; min-width:0; padding:15px 17px 15px 13px; background:none; border:none; cursor:pointer; text-align:left; color:inherit; font:inherit; }
         .task-tt { flex:1; min-width:0; }
         .task-t { display:block; color:#fff; font-size:14.5px; font-weight:600; letter-spacing:-.01em; }
         .task-m { display:block; color:#71717a; font-size:12.5px; margin-top:2px; }
@@ -176,10 +182,22 @@
             <div id="tasks-list"></div>
         </section>
 
+        <!-- Nawigacja etapami: pasek etapów (klik = przełącz etap; steruje osią i matrycą poniżej) -->
+        <div id="stage-nav" class="card hidden" style="margin-top:44px;overflow:hidden">
+            <div id="stage-pills" class="flex overflow-x-auto no-scrollbar"></div>
+        </div>
+
+        <!-- Postęp prac: oś procesu kroków aktywnego etapu -->
+        <section id="sec-process" class="hidden" style="margin-top:18px">
+            <div class="shead"><h2>Postęp prac</h2><span class="scount" id="proc-stage-label"></span></div>
+            <p class="sdesc">Co dzieje się na tym etapie. Kroki z materiałami możesz kliknąć, żeby je obejrzeć — Twoje kroki prowadzą do zadania powyżej.</p>
+            <div class="card" style="padding:8px 14px"><div id="steps-axis" class="proc"></div></div>
+        </section>
+
         <!-- Portfel produktów -->
         <section id="sec-portfolio" class="hidden">
             <div class="shead"><h2>Wasze produkty</h2><span class="scount" id="portfolio-count"></span></div>
-            <p class="sdesc">Postęp każdego produktu w sklepie. Komórki z lupką możesz kliknąć, żeby zobaczyć gotowe materiały.</p>
+            <p class="sdesc">Postęp każdego produktu na tym etapie. Komórki z lupką możesz kliknąć, żeby zobaczyć gotowe materiały.</p>
             <div class="card" style="padding:16px">
                 <div class="mx-scroll">
                     <table class="w-full text-left">
@@ -448,6 +466,8 @@
         P.hooks = {
             onOpenStep: (key) => { const d = defFor(key); track('open_step', d ? d.label : key); },
             onMediaView: (it) => { if (!it || !it.url) return; if (trackedMedia.has(it.url)) return; trackedMedia.add(it.url); track('media_view', it.cap || 'materiał'); },
+            // krok kliencki na osi procesu → prowadzi do karty zadania w „Twoje zadania"
+            openClientTask: (key) => openTask(key),
         };
     }
 
@@ -484,7 +504,7 @@
             : `Jesteśmy na etapie: <b style="color:#fff">${escapeHtml(stageLabel)}</b>`;
         renderMove();
         renderTasks();
-        renderPortfolio();
+        renderStageNav();
         if (pr.deadline_at) { const d = new Date(pr.deadline_at); if (!isNaN(d)) $('p-deadline').textContent = 'Planowane domknięcie: ' + d.toLocaleDateString('pl-PL'); }
     }
 
@@ -517,27 +537,35 @@
         const todo = defs.filter(d => { const st = stepFor(d.key, null); return st && st.status !== 'done' && st.status !== 'skipped' && taskReached(d, st, front); }).length;
         const doneN = defs.filter(d => { const st = stepFor(d.key, null); return st && st.status === 'done'; }).length;
         $('tasks-count').textContent = todo ? `${todo} do zrobienia` : (doneN ? 'wszystko zrobione' : 'na razie nic po Twojej stronie');
-        $('tasks-list').innerHTML = defs.map((d, i) => taskCard(d, i, front)).join('');
+        // domyślnie rozwinięte = pierwsze niezrobione, osiągalne zadanie (jasny punkt startu)
+        let opened = false;
+        $('tasks-list').innerHTML = defs.map((d, i) => {
+            const st = stepFor(d.key, null) || { status: 'pending' };
+            // rozwiń pierwsze niezrobione zadanie — jasny punkt startu (także z przyszłego etapu)
+            const openIt = !opened && st.status !== 'done' && st.status !== 'skipped';
+            if (openIt) opened = true;
+            return taskCard(d, i, front, openIt);
+        }).join('');
     }
     function taskReached(d, st, front) {
         if (st && (st.status === 'done' || st.status === 'in_progress')) return true;
         return d.stage <= (front === undefined ? frontStage() : front);
     }
-    function taskCard(d, i, front) {
+    // Karta zadania: checkbox (akcja) + rozwijalny przewodnik. ZAWSZE pełna treść —
+    // także dla zadań z przyszłych etapów (badge „Wkrótce" tylko informuje, nie ukrywa).
+    function taskCard(d, i, front, open) {
         const st = stepFor(d.key, null) || { status: 'pending', client_fields: {} };
         const ws = clientWs(d.key);
         const reached = taskReached(d, st, front);
         const isDone = st.status === 'done';
-        if (!reached) {
-            return `<div class="task soon"><div class="task-head">
-                <span class="task-num">${i + 1}</span>
-                <span class="task-tt"><span class="task-t">${escapeHtml(d.label)}</span><span class="task-m">${escapeHtml(ws.soon || ws.desc || 'Wkrótce.')}</span></span>
-                <span class="task-pill pill-soon">Wkrótce</span>
-            </div></div>`;
-        }
-        const pill = isDone ? `<span class="task-pill pill-done">Zrobione ✓</span>` : `<span class="task-pill pill-todo">Do zrobienia</span>`;
-        const meta = isDone && st.completed_at ? relTime(st.completed_at) : (ws.desc || '');
-        const guide = ws.guide ? String(ws.guide).replace(/%NAME%/g, escapeHtml(P.project.name || 'Twojej marki')) : `<p class="guide">${escapeHtml(ws.desc || d.label)}</p>`;
+        const canCheck = !ws.info;
+        const checkbox = canCheck
+            ? `<button class="task-check ${isDone ? 'is-done' : ''}" onclick="event.stopPropagation();taskDone('${d.key}', ${!isDone})" ${previewMode ? 'disabled' : ''} aria-label="${isDone ? 'Cofnij oznaczenie' : 'Oznacz jako zrobione'}">${isDone ? '<i class="ph ph-check"></i>' : ''}</button>`
+            : `<span class="task-check task-check-info" title="Tym zajmuję się ja"><i class="ph ph-info"></i></span>`;
+        const badge = !reached ? `<span class="task-pill pill-soon">Wkrótce</span>`
+            : (isDone ? `<span class="task-pill pill-done">Zrobione ✓</span>` : `<span class="task-pill pill-todo">Do zrobienia</span>`);
+        const meta = isDone && st.completed_at ? ('Zrobione ' + relTime(st.completed_at)) : (ws.desc || '');
+        const guide = ws.guide ? String(ws.guide).replace(/%NAME%/g, escapeHtml(P.project.name || 'Twojej marki')) : `<p>${escapeHtml(ws.desc || d.label)}</p>`;
         let fieldsHtml = '';
         (ws.fields || []).forEach(f => {
             const val = (st.client_fields && st.client_fields[f.k]) || '';
@@ -545,22 +573,17 @@
                 <input type="${f.type || 'text'}" data-task="${d.key}" data-field="${f.k}" value="${escapeHtml(val)}" oninput="queueTaskSave('${d.key}')" ${previewMode ? 'disabled' : ''}>
                 <div class="fld-ok" id="ok-${d.key}-${f.k}"></div>`;
         });
-        let actions = '';
-        if (!ws.info) {
-            actions = isDone
-                ? `<button class="btn-sec" style="padding:9px 16px;border-radius:8px;font-size:13px;cursor:pointer" onclick="taskDone('${d.key}', false)" ${previewMode ? 'disabled' : ''}>Cofnij „zrobione"</button>`
-                : `<button class="btn-accent" style="padding:10px 18px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;border:none" onclick="taskDone('${d.key}', true)" ${previewMode ? 'disabled' : ''}>Oznacz jako zrobione</button>`;
-        }
-        return `<div class="task ${isDone ? 'done' : ''}" id="task-${d.key}">
-            <button class="task-head" onclick="toggleTask('${d.key}')">
-                <span class="task-num">${isDone ? '<i class="ph ph-check"></i>' : (i + 1)}</span>
-                <span class="task-tt"><span class="task-t">${escapeHtml(d.label)}</span><span class="task-m">${escapeHtml(meta)}</span></span>
-                ${pill}<i class="ph ph-caret-down task-chev"></i>
-            </button>
+        return `<div class="task ${isDone ? 'done' : ''} ${reached ? '' : 'soon'} ${open ? 'open' : ''}" id="task-${d.key}">
+            <div class="task-head-row">
+                ${checkbox}
+                <button class="task-head" onclick="toggleTask('${d.key}')">
+                    <span class="task-tt"><span class="task-t">${escapeHtml(d.label)}</span><span class="task-m">${escapeHtml(meta)}</span></span>
+                    ${badge}<i class="ph ph-caret-down task-chev"></i>
+                </button>
+            </div>
             <div class="task-body">
                 <div class="guide">${guide}</div>
                 ${fieldsHtml}
-                <div class="task-actions">${actions}</div>
             </div>
         </div>`;
     }
@@ -595,18 +618,31 @@
             if (r.status >= 300) { showToast('Nie udało się zapisać — spróbuj ponownie', 'error'); return; }
             const st = stepFor(key, null);
             if (st) { st.status = done ? 'done' : 'in_progress'; st.completed_at = done ? new Date().toISOString() : null; }
-            renderTasks(); renderMove();
+            renderTasks(); renderMove(); renderPills(); renderStage(); refreshProgress();
             const el = $('task-' + key); if (el) el.classList.add('open');
             showToast(done ? 'Świetnie — odhaczone!' : 'Cofnięte', 'success');
         } catch (e) { showToast('Chwilowa przerwa techniczna — spróbuj za moment', 'error'); }
     }
 
-    function renderPortfolio() {
-        if (!P.products.length) { $('sec-portfolio').classList.add('hidden'); return; }
-        $('sec-portfolio').classList.remove('hidden');
-        const prodDefs = P.stepDefs.filter(d => d.scope === 'product' && !d.sub_of)
-            .sort((a, b) => (a.stage - b.stage) || ((a.sort || 0) - (b.sort || 0)));
-        renderMatrix(prodDefs);
+    // odśwież górny pasek postępu (po odhaczeniu zadania — bez przeskoku etapu)
+    function refreshProgress() {
+        const all = P.steps.filter(s => s.status !== 'skipped');
+        const done = all.filter(s => s.status === 'done').length;
+        const pct = all.length ? Math.round(done / all.length * 100) : 0;
+        $('p-pct').textContent = pct + '%';
+        $('p-bar').style.width = pct + '%';
+    }
+
+    // Nawigacja etapami (pasek etapów) → oś procesu + matryca aktywnego etapu.
+    // Domyślny etap = bieżący (frontStage). Reużywa renderPills/renderStage z panel-core.js.
+    function renderStageNav() {
+        const nums = stageNums();
+        if (!nums.length) { $('stage-nav').classList.add('hidden'); return; }
+        const front = frontStage();
+        activeStage = (front === Infinity || !nums.includes(front)) ? nums[nums.length - 1] : front;
+        $('stage-nav').classList.remove('hidden');
+        renderPills();
+        renderStage();
     }
 
     init();

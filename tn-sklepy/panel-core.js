@@ -51,6 +51,7 @@ const PRODUCT_STATUS_META = {
     skala:        { label:'Skala',        cls:'bg-[#0070f3]/10 text-[#52a8ff]' },
 };
 const STEP_LABELS = { pending:'Do zrobienia', in_progress:'W trakcie', done:'Ukończone', skipped:'Pominięte', blocked:'Zablokowane' };
+const STEP_ICON = { pending:'ph-circle', in_progress:'ph-circle-notch', done:'ph-check-circle', skipped:'ph-minus-circle', blocked:'ph-x-circle' };
 const OWNER_LABEL = { admin:'Tomek', client:'Klient', auto:'Auto' };
 const PORTFOLIO_TARGET = 3;
 
@@ -263,31 +264,38 @@ function stepMediaItems(pid, stepKey) {
         const isImg = !isVideo && (/\.(png|jpe?g|webp|avif|gif)(\?|$)/i.test(u) || MEDIA_IMG_KINDS.includes(a.kind));
         if (!isVideo && !isImg) return null;
         const cap = (a.meta && a.meta.section) ? a.meta.section : (a.label || a.kind);
-        return { url: u, isVideo, poster: (a.meta && a.meta.poster) || '', cap, label: a.label || a.kind };
+        // logotypy/branding: kadrowanie 4:3 ucina wordmarki — te kafle dopasowują bez przycinania
+        const contain = ['branding','brand','logo','favicon','styl_master'].includes(a.kind);
+        return { url: u, isVideo, poster: (a.meta && a.meta.poster) || '', cap, label: a.label || a.kind, contain };
     }).filter(Boolean);
 }
-// pasek do 4 miniatur (obrazy → lightbox tej galerii; wideo → poster+play, nowa karta); „+N" gdy więcej
-function stepThumbStrip(items) {
+// filmstrip osi procesu: duże, oglądalne kadry (obrazy → lightbox całej galerii kroku;
+// wideo → poster+play w nowej karcie); max 5 + kafel „+N pozostałych". Klik zdejmuje badge „nowe".
+function stepFilmstrip(items, pid, stepKey) {
     if (!items.length) return '';
-    const gid = 'thg-' + (++lbGroupSeq);
-    const show = items.slice(0, 4);
+    const gid = 'flm-' + (++lbGroupSeq);
+    const pidJs = pid ? `'${pid}'` : 'null';
+    const MAX = 5;
+    const show = items.slice(0, MAX);
     const more = items.length - show.length;
     const shownImg = new Set(show.filter(i => !i.isVideo).map(i => i.url));
     const cells = show.map(it => {
         if (it.isVideo) {
-            return `<a class="step-thumb step-vid" href="${escapeHtml(it.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${escapeHtml(it.label)}">
+            return `<a class="proc-frame proc-frame-vid" href="${escapeHtml(it.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation();markStepSeen(${pidJs},'${stepKey}')" title="${escapeHtml(it.label)}">
                 ${it.poster ? `<img src="${escapeHtml(it.poster)}" loading="lazy" onerror="this.style.display='none'">` : ''}
-                <span class="step-thumb-play"><i class="ph ph-play-fill"></i></span></a>`;
+                <span class="proc-frame-play"><i class="ph ph-play-fill"></i></span></a>`;
         }
-        return `<a class="step-thumb" href="javascript:void(0)" data-lb-group="${gid}" data-lb-url="${escapeHtml(it.url)}" data-lb-cap="${escapeHtml(it.cap)}"
-            onclick="event.stopPropagation();openLightboxG(this)" title="${escapeHtml(it.label)}">
-            <img src="${escapeHtml(thumbUrl(it.url, 120))}" loading="lazy" onerror="this.parentElement.style.display='none'"></a>`;
+        return `<a class="proc-frame${it.contain ? ' pf-contain' : ''}" href="javascript:void(0)" data-lb-group="${gid}" data-lb-url="${escapeHtml(it.url)}" data-lb-cap="${escapeHtml(it.cap)}"
+            onclick="event.stopPropagation();procFrameOpen(this,${pidJs},'${stepKey}')" title="${escapeHtml(it.label)}">
+            <img src="${escapeHtml(thumbUrl(it.url, 320))}" loading="lazy" onerror="this.parentElement.style.display='none'"></a>`;
     }).join('');
     // obrazy poza podglądem dokładam jako ukryte węzły grupy → lightbox nawiguje PEŁNĄ galerię kroku
     const hidden = items.filter(i => !i.isVideo && !shownImg.has(i.url))
         .map(it => `<a class="hidden" data-lb-group="${gid}" data-lb-url="${escapeHtml(it.url)}" data-lb-cap="${escapeHtml(it.cap)}"></a>`).join('');
-    const moreChip = more > 0 ? `<span class="step-thumb-more">+${more}</span>` : '';
-    return `<div class="step-thumbs">${cells}${moreChip}${hidden}</div>`;
+    const moreTile = more > 0
+        ? `<button class="proc-frame proc-frame-more" onclick="event.stopPropagation();procFrameOpen(this.closest('.proc-film').querySelector('[data-lb-url]'),${pidJs},'${stepKey}')"><span class="pfm-n">+${more}</span><span class="pfm-l">pozostałych</span></button>`
+        : '';
+    return `<div class="proc-film">${cells}${moreTile}${hidden}</div>`;
 }
 
 /* ── „Kliknij i podejrzyj": pamięć obejrzanych komórek (localStorage) ───── */
@@ -303,6 +311,17 @@ function peekOpen(key, pid) {
     openStep(key, pid);
     if (_matrixDefs) renderMatrix(_matrixDefs);
 }
+// oś procesu: klik w wiersz kroku. Krok kliencki w portalu → karta zadania (hook), inaczej drawer.
+function procOpen(key, productId) {
+    const d = defFor(key);
+    if (P.mode === 'client' && d && d.owner === 'client' && P.hooks && P.hooks.openClientTask) { P.hooks.openClientTask(key); return; }
+    const hadNew = stepMediaItems(productId || null, key).length && !isPeekSeen(productId || null, key);
+    openStep(key, productId);
+    if (hadNew) { markPeekSeen(productId || null, key); renderStage(); }
+}
+// klik w kadr filmstripa: otwórz lightbox galerii, zdejmij badge „nowe", odśwież oś
+function procFrameOpen(el, pid, key) { openLightboxG(el); markStepSeen(pid, key); }
+function markStepSeen(pid, key) { if (isPeekSeen(pid || null, key)) return; markPeekSeen(pid || null, key); renderStage(); }
 
 
 // Pasek „Podglądy" (wf2_projects.links) — akcje addLink/removeLink = globalne w bootstrapie admina
@@ -394,45 +413,94 @@ function renderStage() {
     const defs = defsForStage(activeStage);
     const projDefs = defs.filter(d=>d.scope==='project');
     const prodDefs = defs.filter(d=>d.scope==='product');
-
     const admin = P.mode === 'admin';
-    document.getElementById('steps-grid').innerHTML = projDefs.map((d, i) => {
-        const st = stepFor(d.key) || { status:'pending', data:{} };
-        const note = st.data && st.data.note ? st.data.note : '';
-        const isMile = d.milestone_label && st.status === 'done';
-        const wsDesc = (P.WS[d.key] && P.WS[d.key].desc) ? String(P.WS[d.key].desc) : '';
-        const descShort = wsDesc.length > 140 ? wsDesc.slice(0, 140).replace(/\s+\S*$/, '') + '…' : wsDesc;
-        const stIcon = st.status==='done'?'ph-check-circle':st.status==='in_progress'?'ph-circle-half':st.status==='skipped'?'ph-minus-circle':st.status==='blocked'?'ph-x-circle':'ph-circle';
+
+    renderStageAxis(projDefs, admin ? 'steps-grid' : 'steps-axis');
+
+    const showMatrix = prodDefs.length > 0 || activeStage === 1;
+    if (admin) {
+        const box = document.getElementById('portfolio-box');
+        if (box) box.classList.toggle('hidden', !showMatrix);
+        if (showMatrix) renderMatrix(prodDefs);
+    } else {
+        // portal: sekcja osi widoczna gdy etap ma kroki projektowe; matryca gdy ma kroki produktowe i są produkty
+        const secProc = document.getElementById('sec-process');
+        if (secProc) secProc.classList.toggle('hidden', projDefs.length === 0);
+        const lblEl = document.getElementById('proc-stage-label');
+        if (lblEl) lblEl.textContent = projDefs[0] ? (projDefs[0].stage_label || ('Etap ' + activeStage)) : '';
+        const sec = document.getElementById('sec-portfolio');
+        const hasProd = P.products.length > 0 && prodDefs.length > 0;
+        if (sec) sec.classList.toggle('hidden', !hasProd);
+        if (hasProd) renderMatrix(prodDefs);
+    }
+}
+
+// ── OŚ PROCESU: pionowy timeline kroków projektowych etapu (admin + portal) ──
+function renderStageAxis(projDefs, containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const admin = P.mode === 'admin';
+    if (!projDefs.length) { el.innerHTML = ''; return; }
+
+    const rows = projDefs.map(d => ({ d, st: stepFor(d.key) || { status:'pending', data:{} } }));
+    let lastDone = -1;
+    rows.forEach((r, i) => { if (r.st.status === 'done') lastDone = i; });
+
+    el.innerHTML = rows.map((r, i) => {
+        const { d, st } = r;
         const media = stepMediaItems(null, d.key);
-        const chk = (admin && st.data && Array.isArray(st.data.checklist) && st.data.checklist.length)
-            ? { done: st.data.checklist.filter(c => c.done).length, total: st.data.checklist.length } : null;
-        // status: admin = klikalny cykl; klient = pill tylko do odczytu
-        const statusEl = admin
-            ? `<button class="st-btn st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}', null)" data-tip-title="Klik = przełącz status" data-tip-desc="do zrobienia → w trakcie → ukończone; pełna kontrola w warsztacie kroku"><i class="ph ${stIcon}"></i>${STEP_LABELS[st.status]}</button>`
-            : `<span class="st-btn st-${st.status}" style="cursor:default"><i class="ph ${stIcon}"></i>${STEP_LABELS[st.status]}</span>`;
+        const isMile = !!d.milestone_label;
+        const mileDone = isMile && st.status === 'done';
+        const isClient = d.owner === 'client';
+        const clientPending = isClient && st.status !== 'done' && st.status !== 'skipped';
+
+        // segment osi: pełny success do ostatniego ukończonego; węzeł graniczny = split w węźle
+        const railCls = i < lastDone ? 'proc-rail-done' : (i === lastDone ? 'proc-rail-edge' : '');
+
+        // węzeł statusu
+        let nodeIcon = '', nodeCls;
+        if (mileDone)                 { nodeIcon = 'ph-flag-checkered'; nodeCls = 'pn-mile'; }
+        else if (st.status === 'done'){ nodeIcon = 'ph-check';          nodeCls = 'pn-done'; }
+        else if (clientPending)       { nodeIcon = 'ph-user';           nodeCls = 'pn-client'; }
+        else if (st.status === 'in_progress') { nodeIcon = isMile ? 'ph-flag' : 'ph-circle-notch'; nodeCls = 'pn-progress'; }
+        else if (st.status === 'blocked')     { nodeIcon = 'ph-x';       nodeCls = 'pn-blocked'; }
+        else if (st.status === 'skipped')     { nodeIcon = 'ph-minus';   nodeCls = 'pn-skipped'; }
+        else                          { nodeIcon = isMile ? 'ph-flag' : ''; nodeCls = 'pn-pending'; }
+
+        // meta w wierszu
+        const clientChip = isClient ? `<span class="proc-chip proc-chip-client"><i class="ph ph-user"></i>Klient</span>` : '';
         const dateStr = st.completed_at ? relTime(st.completed_at) : (admin ? clientLagBadge(d, st) : '');
-        return `<div class="step-card ${isMile ? 'is-mile' : ''}" onclick="openStep('${d.key}', null)">
-            <div class="step-card-top">
-                <div class="step-ico" data-tip-title="${i+1}. ${escapeHtml(d.label)}${d.milestone_label ? ' 🏁' : ''}" data-tip-sub="${OWNER_LABEL[d.owner] || ''}${d.milestone_label ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}" data-tip-desc="${escapeHtml(descShort)}"><i class="ph ${escapeHtml(d.icon)}"></i><span class="step-ico-num">${i+1}</span></div>
-                <div class="min-w-0 flex-1">
-                    <div class="step-card-title">${escapeHtml(d.label)}</div>
-                    <div class="step-card-meta">${statusEl}<span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span>${dateStr ? `<span class="step-card-date">${dateStr}</span>` : ''}</div>
+        const dateEl = dateStr ? `<span class="proc-date">${dateStr}</span>` : '';
+        const stBtn = admin
+            ? `<button class="proc-statusbtn proc-st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}', null)" data-tip-title="Klik = przełącz status" data-tip-desc="do zrobienia → w trakcie → ukończone; pełna kontrola w warsztacie kroku"><i class="ph ${STEP_ICON[st.status]}"></i>${STEP_LABELS[st.status]}</button>`
+            : '';
+
+        // podlinijki: kamień (zielony) + notatka (tylko admin)
+        const note = admin && st.data && st.data.note ? String(st.data.note) : '';
+        const mileLine = isMile ? `<span class="proc-mile"><i class="ph ph-flag-checkered"></i>${escapeHtml(d.milestone_label)}</span>` : '';
+        const noteLine = note ? `<span class="proc-note"><i class="ph ph-note"></i>${escapeHtml(note)}</span>` : '';
+        const sub = (mileLine || noteLine) ? `<div class="proc-subline">${mileLine}${noteLine}</div>` : '';
+
+        // badge „nowe" na krokach z mediami nieobejrzanymi
+        const newDot = (media.length && !isPeekSeen(null, d.key)) ? '<span class="proc-newdot" title="nowe materiały"></span>' : '';
+        const film = media.length ? stepFilmstrip(media, null, d.key) : '';
+
+        const denseCls = media.length ? '' : ' proc-dense';
+        const tip = admin
+            ? `data-tip-title="${i+1}. ${escapeHtml(d.label)}${isMile ? ' 🏁' : ''}" data-tip-sub="${OWNER_LABEL[d.owner] || ''}${isMile ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}" data-tip-desc="${escapeHtml((P.WS[d.key] && P.WS[d.key].desc) ? String(P.WS[d.key].desc).slice(0,140) : '')}"`
+            : '';
+        return `<div class="proc-step${denseCls}${mileDone ? ' proc-mile-done' : ''}" onclick="procOpen('${d.key}', null)">
+            <div class="proc-rail ${railCls}"><span class="proc-node ${nodeCls}${mileDone ? ' pn-big' : ''}" ${tip}>${nodeIcon ? `<i class="ph ${nodeIcon}"></i>` : ''}</span></div>
+            <div class="proc-content">
+                <div class="proc-row">
+                    <div class="proc-headline"><span class="proc-idx">${i+1}</span><span class="proc-title">${escapeHtml(d.label)}</span>${newDot}</div>
+                    <div class="proc-meta">${clientChip}${dateEl}${stBtn}<i class="ph ph-caret-right proc-caret"></i></div>
                 </div>
-                <i class="ph ph-caret-right step-card-chev"></i>
+                ${sub}
+                ${film}
             </div>
-            ${isMile ? `<div class="mile-badge"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</div>` : ''}
-            ${stepThumbStrip(media)}
-            ${(chk || (admin && note)) ? `<div class="step-card-foot">
-                ${chk ? `<span class="step-chip"><i class="ph ph-check-square-offset"></i> ${chk.done}/${chk.total}</span>` : ''}
-                ${admin && note ? `<span class="step-chip"><i class="ph ph-note"></i> notatka</span>` : ''}
-            </div>` : ''}
         </div>`;
     }).join('');
-
-    const box = document.getElementById('portfolio-box');
-    const showMatrix = prodDefs.length > 0 || activeStage === 1;
-    box.classList.toggle('hidden', !showMatrix);
-    if (showMatrix) renderMatrix(prodDefs);
 }
 
 /* ── macierz portfela (współdzielona: admin edytowalna, klient read-only) ─ */
