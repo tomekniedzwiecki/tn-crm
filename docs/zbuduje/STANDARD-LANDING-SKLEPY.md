@@ -318,7 +318,9 @@ Po planie F1, przed F2, agent tworzy RAZ per landing przewodnik warstwy wizualne
 łuk narracyjny (każda sekcja = klatka filmu), matryca OSI RÓŻNORODNOŚCI (≥3 konteksty
 / ≥3 skale / ≥2 światła / człowiek ≥30% / ≥2 perspektywy), karta per sekcja
 {rola→ujęcie→emocja→seed EN→powiązanie z sąsiadami} i REGUŁA RYTMU (2 sąsiednie
-sekcje nie dzielą kontekst+skala). Powód (Loczek 17.07): katalog ujęć §2 wymusił
+sekcje nie dzielą kontekst+skala; **⛔ ANTY-SZEW: dwie sąsiednie sceny PEŁNOKADROWE nie mają
+obrazu po tej samej stronie — inaczej kadry stykają się w twardy szew; ZIG-ZAG L/P lub sekcja
+rozdzielająca; PRZEWODNIK pkt 2**). Powód (Loczek 17.07): katalog ujęć §2 wymusił
 różne POZY, ale JEDEN świat (różowe studio) → „wszystko wygląda tak samo". Gate:
 krytyk ocenia SAM przewodnik („czy z opisów widać różnorodność i ciąg?") PRZED
 makietami. Pełny proces: `docs/zbuduje/PRZEWODNIK-GRAFICZNY.md`. Zapis:

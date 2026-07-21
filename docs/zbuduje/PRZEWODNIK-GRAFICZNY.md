@@ -38,6 +38,17 @@ nie zgadywanką. **Brak pliku ICP = osąd agenta jak dotąd** (artefakt opcjonal
    - CZŁOWIEK w ≥30% grafik (dłoń/model bez twarzy — realizm)
    - ≥2 PERSPEKTYWY
    REGUŁA RYTMU: dwie SĄSIEDNIE sekcje NIE dzielą tego samego kontekst+skala.
+   **⛔ ANTY-SZEW PEŁNOKADROWY (21.07, Tomek na macie problem↔prawda: „te dwie sekcje źle wyglądają,
+   bo zdjęcia się łączą między sekcjami"):** dwie SĄSIEDNIE sekcje z pełnokadrową sceną (typ B/C —
+   `fullframe`, obraz dochodzi do krawędzi sekcji) **NIE MOGĄ mieć obrazu po TEJ SAMEJ stronie** —
+   inaczej oba kadry stykają się krawędź-w-krawędź w twardy SZEW (spotęgowany, gdy sceny różnią się
+   światłem/skalą i gdy podziały kolumn się nie pokrywają → jeszcze schodek). Rozwiązania (w kolejności
+   preferencji): **(1) ZIG-ZAG** — obraz raz PRAWO, raz LEWO (na granicy zawsze foto↔papier, nie foto↔foto;
+   editorial rytm); **(2) sekcja ROZDZIELAJĄCA** między nimi (pasek zaufania/pełna kopia/karta na papierze —
+   scena kontenerowana z marginesem papieru, nie full-bleed); **(3)** ostatecznie jedną z nich kontenerować
+   (rounded card + margines papieru), by nie „bleedowała" w sąsiada. Karta sekcji (pkt 3) zapisuje STRONĘ
+   obrazu; przewodnik projektuje naprzemienność OD RAZU, nie łata jej w kodzie. Sekcja kontenerowana
+   (demo-karta, zestaw-shell, galeria) NIE liczy się jako pełnokadrowy sąsiad (papier ją izoluje).
 2b. **OSIE RÓŻNORODNOŚCI MIĘDZY LANDINGAMI (20.07 — druga warstwa, cross-landing).**
    Osie z pkt 2 działają WEWNĄTRZ jednego landingu (klauzula seedów `avoid: same world as
    previous SECTION`) — i to wystarczało, dopóki landingów było kilka. Audyt 4 gotowych stron
