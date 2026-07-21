@@ -237,50 +237,58 @@ export const CHECKLIST_MAP: Record<string, Record<string, string>> = {
 
   // ══════════ ETAP 4: ŚRODOWISKO REKLAMOWE ══════════
   ads_konto: {
-    "Konto reklamowe w BM klienta (PLN + Europe/Warsaw)":
-      "Założone konto reklamowe (w złotówkach)",
-    "Numer telefonu zweryfikowany (SMS) + 2FA włączone":
-      "Zweryfikowany telefon i zabezpieczenie konta",
-    "Metoda płatności dodana (płatności ręczne) + zapasowa":
-      "Dodana metoda płatności (i zapasowa)",
-    "Partner access do BM Tomka — pełna kontrola, 3 assety":
+    // klucze = VERBATIM z WS ads_konto (projekt.html) — tor Leadsie (przebudowa 21.07)
+    "Konto reklamowe istnieje i połączone (Leadsie — automat)":
+      "Konto reklamowe utworzone i połączone",
+    "Partner access do BM Tomka — nadany przez Leadsie (automat)":
       "Nadane uprawnienia do wspólnej obsługi konta",
+    "Waluta PLN + strefa Europe/Warsaw zweryfikowane w Business Settings":
+      "Konto w złotówkach i polskiej strefie czasu",
+    "Metoda płatności dodana + telefon/2FA (klient)":
+      "Dodana metoda płatności i zabezpieczenie konta",
     "Dokumenty firmy przygotowane (NIP/CEIDG — na wypadek weryfikacji)":
       "Przygotowane dokumenty firmy (na wypadek weryfikacji)",
   },
   ads_strona: {
-    "Strona FB: logo, cover, sekcja Informacje (dane firmy + link do sklepu)":
-      "Gotowa strona firmy na Facebooku",
-    "3–6 postów na stronie (produkt, marka, kulisy)":
+    // klucze = VERBATIM z WS ads_strona (przebudowa 21.07 — strona powstaje w kreatorze Leadsie)
+    "Strona FB istnieje i udostępniona do BM Tomka (Leadsie — automat)":
+      "Strona firmy na Facebooku gotowa i połączona",
+    "Logo, cover, sekcja Informacje (dane firmy + link do sklepu)":
+      "Logo, tło i dane firmy na stronie",
+    "3–6 postów na stronie (materiały z fabryki)":
       "Kilka postów na stronie (produkt, marka, kulisy)",
-    "Instagram utworzony i podpięty do strony FB":
-      "Założony i połączony profil na Instagramie",
     "Strona przypisana do konta reklamowego (wymóg create_ad)":
       "Strona połączona z kontem reklamowym",
+    "Instagram podpięty (opcjonalnie na start)":
+      "Instagram podpięty (opcjonalnie)",
   },
   ads_budzet: {
+    // klucze = VERBATIM z WS ads_budzet (przebudowa 21.07 — limit wydatków ustawia fabryka)
     "Budżet 1000 zł zadeklarowany (500 test / 500 skala)":
       "Ustalony budżet reklamowy (test i skalowanie)",
-    "Środki WIDOCZNE w Ads Managerze (nie tylko deklaracja klienta)":
+    "Środki WIDOCZNE w Ads Managerze (nie tylko deklaracja)":
       "Środki widoczne na koncie reklamowym",
-    "Limit wydatków konta ustawiony (bezpiecznik)":
-      "Ustawiony limit wydatków (bezpiecznik)",
-    "Zapasowa metoda płatności dodana":
+    "Limit wydatków konta ustawiony (fabryka, po WF2_META_TOKEN)":
+      "Limit wydatków ustawiony przez nas (bezpiecznik)",
+    "Zapasowa metoda płatności dodana (przy płatnościach kartą)":
       "Dodana zapasowa metoda płatności",
   },
   ads_pixel: {
-    "Pixel utworzony w BM z kontem reklamowym":
+    // klucze = VERBATIM z WS ads_pixel (przebudowa 21.07 — CAPI przez platformę Trevio).
+    // EMQ celowo POMINIĘTE (metryka wewnętrzna).
+    "Pixel utworzony na koncie klienta (automat, WF2_META_TOKEN)":
       "Utworzony pomiar reklam (pixel)",
-    "Obie domeny zweryfikowane w BM (landing + checkout)":
+    "Domeny zweryfikowane w BM (TXT przez wfa-domain)":
       "Zweryfikowane adresy sklepu",
-    "Pixel ustawiony na platformie (set_integration)":
+    "Token CAPI wygenerowany w Events Managerze (wąski per-pixel — NIE master)":
+      "Dokładny pomiar zakupów przygotowany",
+    "Pixel + token CAPI ustawione na platformie (set_integration)":
       "Pomiar podłączony do sklepu",
-    "CAPI: token na checkoucie + dedup po event_id (1 zdarzenie, nie 2)":
-      "Dokładny pomiar zakupów włączony",
-    "Purchase testowy widoczny w Events Managerze (Test Events)":
+    "Purchase testowy w Events Managerze + dedup po event_id (1 zdarzenie, nie 2)":
       "Testowy zakup poprawnie zmierzony",
   },
   ads_preflight: {
+    // naming/UTM + „WF2_META_TOKEN aktywny…" celowo POMINIĘTE (gotowość wewnętrzna, nie do klienta)
     "Płatność realnie zeszła (mikro-wydatek 5–15 zł/d przez 2–3 dni, bez skoków)":
       "Potwierdzone działanie płatności na koncie",
     "Account Quality czyste (brak restrykcji na koncie/BM/stronie)":

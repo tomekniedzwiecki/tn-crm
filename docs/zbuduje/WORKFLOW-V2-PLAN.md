@@ -545,11 +545,11 @@ Ból v1, którego v2 NIE dziedziczy:
 ### ETAP 4 — Środowisko reklamowe (od 19.07 rozbite z dawnych „Kampanii"; scope: project)
 | Krok | Label | Owner | Uwagi |
 |---|---|---|---|
-| `ads_konto` | Konto reklamowe | client | BM klienta: PLN + Europe/Warsaw (nieodwracalne), 2FA, partner access do BM Tomka; dokumenty firmy pod weryfikację. **Tor Leadsie** (jednoklikowy partner access): connect-link `settings.wf2_leadsie_connect_url` + `customUserId=<project_id>` → webhook `wf2-ads-connect` (gate `?s=WF2_LEADSIE_SECRET`, format v2) auto-odhacza „Partner access…" i zapisuje `data.leadsie`. SSOT: `docs/zbuduje/ADS-ONBOARDING-LEADSIE.md` |
-| `ads_strona` | Strona FB + Instagram | client | wiarygodność przed startem (posty/dane/IG); strona przypisana do konta |
-| `ads_budzet` | Budżet | client | doładowanie prepaid + limit wydatków + zapasowa metoda |
-| `ads_pixel` | Pixel 🏁 | admin | pixel+CAPI, dedup po `event_id`, EMQ 8+ z danych COD, weryfikacja OBU domen, Purchase w Test Events |
-| `ads_preflight` | Pre-flight 🏁 | admin | bramka 0 braków: płatność realnie schodzi (mikro-start bez skoków), Account Quality, naming/UTM z ID, blocklista komentarzy PL, plan struktury (1 kampania=1 produkt=1 ad set ABO) |
+| `ads_konto` | Konto reklamowe | client (przez Leadsie) | **Tor Leadsie** (przebudowa 21.07): klient klika „Połącz konta reklamowe" → Leadsie tworzy BM + konto reklamowe (gdy brak) i nadaje partner access do BM Tomka → webhook `wf2-ads-connect` (gate `?s=WF2_LEADSIE_SECRET`, format v2) auto-odhacza „konto" + „partner access", zapisuje `data.leadsie` i `meta_ad_account_id`. Ręcznie klient: metoda płatności + telefon/2FA. Weryfikacja PLN + Europe/Warsaw (nieodwracalne) = ręcznie/po `WF2_META_TOKEN`. SSOT: `docs/zbuduje/ADS-ONBOARDING-LEADSIE.md` |
+| `ads_strona` | Strona FB + Instagram | client (przez Leadsie) | strona FB powstaje w kreatorze Leadsie (przez API się nie da) i od razu udostępniona do BM; webhook odhacza „strona" gdy Connected. Materiały (logo/cover/posty) z brandingu parasola; IG opcjonalny na start |
+| `ads_budzet` | Budżet | client; limit = fabryka | klient zasila SWOJE konto (prepaid/karta+zapas); budżet 1000 zł = 500 test / 500 skala. **Limit wydatków konta (bezpiecznik) ustawia FABRYKA** przez API po `WF2_META_TOKEN` — nie klient |
+| `ads_pixel` | Pixel 🏁 | admin (automat + 30 s token) | automat: pixel na koncie klienta (`POST /adspixels`), weryfikacja domen (TXT `wfa-domain`), `set_integration` → **CAPI emituje platforma Trevio**; ręczne 30 s: token CAPI w Events Managerze (**wąski per-pixel, NIGDY master**); GATE: Purchase testowy + dedup po `event_id` |
+| `ads_preflight` | Pre-flight 🏁 | admin (auto-checki po tokenie) | warunek wejścia: Leadsie konto+strona Connected + `WF2_META_TOKEN` aktywny. Automaty po tokenie: mikro-wydatek schodzi, Account Quality, limit konta. Ręcznie: blocklista komentarzy PL, naming/UTM z ID, plan struktury (1 kampania=1 produkt=1 ad set ABO) |
 
 ### ETAP 5 — Materiały i kampania (scope: product)
 | Krok | Label | Owner | Uwagi |

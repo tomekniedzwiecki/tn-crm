@@ -121,10 +121,14 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   odczyt tylko service_role/team — **NIE** anon), edge `wf2-portal` dokleja `customUserId=<project_id>` i
   podaje klientowi gotowy URL (front nie czyta settings). Odbicie wraca webhookiem **`wf2-ads-connect`**
   (`--no-verify-jwt`, gate `?s=WF2_LEADSIE_SECRET`, format v2) → zapis `wf2_steps.data.leadsie` +
-  auto-odhaczenie „Partner access…" + `wf2_activities(ads_connect)`. Portal widzi TYLKO flagi
+  auto-odhaczenie „konto"+„partner access" (ads_konto) i „strona" (ads_strona) + `wf2_activities(ads_connect)`
+  + zapis `meta_ad_account_id` (gdy pusty). Portal widzi TYLKO flagi
   `{connected_ad_account,connected_page,at}`; panel (`adsKontoLeadsieBlock`) — pełne assety z chipami.
   Pusty klucz → przycisk się nie renderuje (fallback: ręczna instrukcja). Automat NIE potwierdza
-  waluty/2FA/karty (to `ads_pixel`/`ads_preflight`).
+  waluty/2FA/karty (to `ads_pixel`/`ads_preflight`). **Checklisty i opisy 5 kroków `ads_*` przebudowane
+  pod Leadsie 21.07** (migracja `20260722h_wf2_etap4_leadsie_teksty`): CAPI emituje platforma Trevio po
+  podaniu wąskiego tokenu per-pixel (generujemy MY w Events Managerze, NIGDY master), limit wydatków
+  ustawia fabryka po `WF2_META_TOKEN`.
 - Auto-create projektu: tpay-webhook przy PEŁNEJ płatności za budowę (amt ≥ 1000; decyzja
   Tomka 21.07.2026 — sama rezerwacja 500 zł NIE tworzy projektu; blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).

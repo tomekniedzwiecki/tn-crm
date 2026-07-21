@@ -4,8 +4,10 @@
 // Link dla klienta dostaje ?customUserId=<wf2_projects.id> — stąd mapowanie na projekt.
 //
 // Co robi: zapisuje stan połączeń do wf2_steps (ads_konto/ads_strona).data.leadsie,
-// podbija status pending→in_progress, odhacza w checklistcie ads_konto pozycję
-// „Partner access…" gdy konto reklamowe jest Connected z poziomem Manage/Owner,
+// podbija status pending→in_progress, odhacza w checklistcie ads_konto pozycje
+// „Konto reklamowe istnieje…" + „Partner access…" gdy konto reklamowe jest Connected
+// z poziomem Manage/Owner, a w kroku ads_strona pozycję „Strona FB istnieje…" gdy strona
+// jest Connected. Dopisuje też meta_ad_account_id na projekt (gdy kolumna pusta),
 // loguje wf2_activities, a przy problemach (FAILED/braki uprawnień) zostawia notę
 // „⚠️ AUTOMAT: Leadsie…" (dedup po otwartych notach). NIC nie odhacza „na wyrost" —
 // waluta/strefa/2FA/karta = weryfikacja w ads_pixel/ads_preflight (WF2_META_TOKEN),
@@ -55,8 +57,12 @@ function assetKind(a: LeadsieAsset): "ad_account" | "page" | "pixel" | "instagra
 const isConnected = (a: LeadsieAsset) => (a.connectionStatus || "").toLowerCase() === "connected";
 const isManage = (a: LeadsieAsset) => /^(manage|owner|admin)$/i.test(a.accessLevel || "");
 
-// VERBATIM z WS w tn-sklepy/projekt.html (klucz deduplikacji checklisty — nie parafrazować!)
-const CHECK_PARTNER_ACCESS = "Partner access do BM Tomka — pełna kontrola, 3 assety";
+// VERBATIM z WS w tn-sklepy/projekt.html (klucz deduplikacji checklisty — nie parafrazować!).
+// Tor Leadsie po przebudowie 21.07: automat odhacza konto reklamowe + partner access (krok
+// ads_konto) oraz stronę FB (krok ads_strona). Te teksty muszą być 1:1 z WS panelu i CHECKLIST_MAP.
+const CHECK_PARTNER_ACCESS = "Partner access do BM Tomka — nadany przez Leadsie (automat)";
+const CHECK_KONTO = "Konto reklamowe istnieje i połączone (Leadsie — automat)";
+const CHECK_STRONA = "Strona FB istnieje i udostępniona do BM Tomka (Leadsie — automat)";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -94,7 +100,7 @@ Deno.serve(async (req) => {
     );
 
     const { data: proj } = await supabase
-      .from("wf2_projects").select("id, name").eq("id", projectId).maybeSingle();
+      .from("wf2_projects").select("id, name, meta_ad_account_id").eq("id", projectId).maybeSingle();
     if (!proj) {
       console.error("[wf2-ads-connect] projekt nie istnieje:", projectId);
       return json({ ok: false, reason: "unknown_project" });
@@ -134,14 +140,21 @@ Deno.serve(async (req) => {
 
       const data = Object.assign({}, (st.data as Record<string, unknown>) || {}, { leadsie: leadsieBlock });
 
-      // auto-odhaczenie TYLKO pozycji, którą webhook faktycznie potwierdza (unia — nigdy nie odznaczamy)
-      if (stepKey === "ads_konto" && adAccountOk) {
+      // auto-odhaczenie TYLKO pozycji, które webhook faktycznie potwierdza (unia — nigdy nie odznaczamy).
+      // ads_konto: konto reklamowe + partner access (gdy ad_account Connected + Manage/Owner).
+      // ads_strona: strona FB (gdy page Connected). Reszta (waluta/2FA/karta/posty) = ręcznie.
+      const toCheck: string[] = [];
+      if (stepKey === "ads_konto" && adAccountOk) toCheck.push(CHECK_KONTO, CHECK_PARTNER_ACCESS);
+      if (stepKey === "ads_strona" && pageOk) toCheck.push(CHECK_STRONA);
+      if (toCheck.length) {
         const list: Array<{ t: string; done: boolean }> = Array.isArray((data as { checklist?: unknown }).checklist)
           ? (data as { checklist: Array<{ t: string; done: boolean }> }).checklist
           : [];
-        const hit = list.find((i) => i.t === CHECK_PARTNER_ACCESS);
-        if (hit) hit.done = true;
-        else list.push({ t: CHECK_PARTNER_ACCESS, done: true });
+        for (const key of toCheck) {
+          const hit = list.find((i) => i.t === key);
+          if (hit) hit.done = true;
+          else list.push({ t: key, done: true });
+        }
         (data as { checklist: unknown }).checklist = list;
       }
 
@@ -150,6 +163,19 @@ Deno.serve(async (req) => {
       if (st.status === "pending" && (relevant || metaAssets.length > 0)) upd.status = "in_progress";
       await supabase.from("wf2_steps").update(upd).eq("id", st.id);
       stepsTouched.push(stepKey);
+    }
+
+    // Zapis ID konta reklamowego na projekt — TYLKO gdy kolumna pusta (nie nadpisujemy ręcznych
+    // ustaleń). Normalizacja: same cyfry → 'act_'+id; już z prefiksem 'act_' → as-is; inaczej pomiń
+    // (nie zgadujemy formatu). Źródło = pierwszy Connected+Manage asset typu ad_account.
+    const curActId = String((proj as Record<string, unknown>).meta_ad_account_id || "").trim();
+    if (adAccountOk && !curActId) {
+      const acctAsset = metaAssets.find((a) => assetKind(a) === "ad_account" && isConnected(a) && isManage(a));
+      const rawId = String(acctAsset?.id || "").trim();
+      let actId: string | null = null;
+      if (/^\d+$/.test(rawId)) actId = `act_${rawId}`;
+      else if (/^act_/.test(rawId)) actId = rawId;
+      if (actId) await supabase.from("wf2_projects").update({ meta_ad_account_id: actId }).eq("id", projectId);
     }
 
     const assetLine = summary.map((a) => `${a.kind}:${a.status}${a.access ? `/${a.access}` : ""}`).join(", ") || "brak zasobów Meta";

@@ -126,3 +126,43 @@ Leadsie pokazuje tylko minimalne flagi (edge nie ujawnia więcej nawet podglądo
 - Panel: `tn-sklepy/projekt.html` (`adsKontoLeadsieBlock`).
 - Settings: `supabase/migrations/20260722_wf2_leadsie_settings.sql`.
 - Smoke test: `scripts/verify-wf2.mjs` (gate webhooka + wiring portalu).
+
+---
+
+## 8. ETAP 4 PO PRZEBUDOWIE (21.07) — role i sekwencja
+
+Przebudowa treści checklist/opisów 5 kroków `ads_*` pod ustalenia 21.07: onboarding klienta
+**wyłącznie przez Leadsie**, CAPI emituje **platforma Trevio** po podaniu tokenu, token CAPI
+generujemy **MY** w Events Managerze (wąski, per-pixel), limit wydatków ustawia **fabryka** po
+`WF2_META_TOKEN`. Portfel projektu = **3 produkty**.
+
+### Kto co robi (5 kroków)
+
+| Krok | Automat (Leadsie / fabryka) | Klient (ręcznie) | Fabryka (ręcznie) |
+|---|---|---|---|
+| `ads_konto` | Leadsie tworzy BM + konto reklamowe (gdy brak) i nadaje partner access do BM Tomka; webhook odhacza „konto" + „partner access" i zapisuje `meta_ad_account_id` (gdy pusty) | metoda płatności (Leadsie promptuje), telefon/2FA | weryfikacja **PLN + Europe/Warsaw** w Business Settings (kreator Leadsie tego nie gwarantuje; docelowo automat po `WF2_META_TOKEN`) |
+| `ads_strona` | Leadsie tworzy stronę FB w kreatorze (stron NIE DA SIĘ przez API) i udostępnia do BM; webhook odhacza „strona" gdy Connected | publikuje posty, IG opcjonalnie na start | dostarcza logo / cover / propozycje postów z brandingu parasola |
+| `ads_budzet` | **limit wydatków konta** = fabryka przez API po `WF2_META_TOKEN` | zasila SWOJE konto (BLIK / przelew / PayU; przy karcie + zapasowa) | — |
+| `ads_pixel` 🏁 | pixel na koncie klienta (`POST /act_*/adspixels`), weryfikacja domen (TXT `wfa-domain`), `set_integration` na platformie | — | **RĘCZNE 30 s**: token CAPI w Events Managerze (wąski per-pixel) |
+| `ads_preflight` 🏁 | mikro-wydatek, Account Quality, limit konta (po `WF2_META_TOKEN`) | — | blocklista PL, naming/UTM, plan struktury |
+
+Automat NIE potwierdza: waluty/strefy, telefonu/2FA, metody płatności, środków, dokumentów —
+to `ads_pixel`/`ads_preflight` lub ręczna weryfikacja, nigdy na podstawie webhooka.
+
+### Sekwencja `ads_pixel` (CAPI przez platformę Trevio)
+
+1. **AUTOMAT** — pixel na koncie klienta (`POST /act_*/adspixels` po `WF2_META_TOKEN`); pixel w BM
+   **KLIENTA** (ten sam co konto — inny BM = WCA nie działają).
+2. **Domeny** landing + checkout: rekord TXT przez `wfa-domain` (`dns_set`) + weryfikacja w BM.
+3. **RĘCZNE 30 s** — „Generate access token" w Events Managerze przy pixelu. Meta **nie ma API** do
+   tokenu CAPI; generujemy MY przez partner access.
+4. **AUTOMAT** — `set_integration {pixelId, apiKey = token CAPI}`; platforma **Trevio EMITUJE
+   Purchase server-side** (potwierdzone 21.07). Klient niczego nie wkleja.
+5. **GATE** — Purchase testowy + dedup po `event_id` w Events Managerze (1 zdarzenie, nie 2).
+   COD daje email+telefon z formularza → EMQ 8+ realnie osiągalne.
+
+### Zasada wąskiego tokenu (twardo)
+
+Token CAPI generujemy **per pixel** w Events Managerze — wąski zakres, do jednego zbioru zdarzeń.
+Do Trevio oddajemy **TYLKO** ten token, **NIGDY** master/system-user tokenu. Wyciek wąskiego tokenu =
+szkoda ograniczona do jednego pixela; master token = klucz do całego BM. Bez wyjątków.
