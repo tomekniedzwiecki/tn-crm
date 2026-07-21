@@ -603,8 +603,11 @@ async function init(){
   $('tableBtn').onclick=toggleTable;
   $('logiBtn').onclick=toggleLogistics;
   document.addEventListener('keydown',onKey);
-  // Deep-link: /trendy?q=<fraza> prefiltruje po nazwie produktu (klikalny link do rekordu).
-  const _qp=new URLSearchParams(location.search).get('q'); if(_qp)$('q').value=_qp;
+  // Deep-link do rekordu: ?id=<uuid> = STABILNY (przetrwa zmianę nazwy) → pokazuje tylko ten produkt;
+  // ?q=<fraza> = wygodny prefiltr po nazwie. id ma pierwszeństwo.
+  const _sp=new URLSearchParams(location.search);
+  window.IDQ=_sp.get('id')||null;
+  const _qp=_sp.get('q'); if(_qp)$('q').value=_qp;
   await load();
 }
 async function load(){
@@ -690,6 +693,7 @@ function _scardPred(x){
 }
 function rowMatches(x){
   if(!x)return false;
+  if(window.IDQ)return x.id===window.IDQ;   // deep-link ?id=<uuid> = tylko ten rekord (ponad wszystkie filtry)
   const fc=$('fcat').value; if(fc&&x.category!==fc)return false;
   const term=$('q').value.toLowerCase().trim(); if(term&&!(x.pl_name||'').toLowerCase().includes(term))return false;
   // Karta „Sezony" — gdy aktywny licznik, pokazujemy jego zbiór z pominięciem lejka/chipów (globalny przegląd).
