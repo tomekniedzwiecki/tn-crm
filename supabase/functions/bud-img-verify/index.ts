@@ -114,10 +114,14 @@ Deno.serve(async (req) => {
     const limit = Math.min(Math.max(Number(body.limit ?? 25), 1), 100);
     const minConf = Number(body.minConf ?? 0.9);
     const dryRun = !!body.dryRun;
-    const { data: rows, error } = await supabase.from("bud_tt_products")
+    const force = !!body.force;
+    // Filtr „już obejrzane" MUSI być w bazie, nie w pętli — inaczej rekordy z werdyktem
+    // (te zostają z is_auto=true) blokują pierwsze miejsca zapytania i przebieg staje.
+    let sel = supabase.from("bud_tt_products")
       .select("id,key,pl_name,query,tt_shop,ali_snapshot")
-      .filter("tt_shop->auto_match->>is_auto", "eq", "true")
-      .order("key").limit(limit);
+      .filter("tt_shop->auto_match->>by", "eq", "bud-shop-radar/match_existing");
+    if (!force) sel = sel.filter("tt_shop->auto_match->>vision", "is", null);
+    const { data: rows, error } = await sel.order("key").limit(limit);
     if (error) return new Response(JSON.stringify({ error: "db_read", detail: String(error.message).slice(0, 200) }), { status: 500, headers: { ...cors, "content-type": "application/json" } });
 
     const acc = { i: 0, c: 0, o: 0 };
@@ -128,21 +132,32 @@ Deno.serve(async (req) => {
     for (const r of (rows || [])) {
       // deno-lint-ignore no-explicit-any
       const ts: any = r.tt_shop || {};
-      if (ts?.auto_match?.vision) continue;                       // już obejrzane — nie płacimy 2×
       const shopImg = (ts.images_hosted || [])[0] || (ts.images || [])[0] || "";
       const refs = ((r.ali_snapshot || {}).images || []).filter(Boolean);
       if (!shopImg || !refs.length) { out.push({ key: r.key, skip: "brak_material" }); continue; }
 
+      // DWA NIEZALEŻNE PRZEBIEGI. Pojedynczy potrafi dać przeciwne werdykty przy tym samym
+      // materiale („budzik ze wschodem słońca": TAK 0.93, potem NIE 0.99). Zatwierdzamy
+      // wyłącznie przy ZGODZIE obu — niezgoda sama w sobie znaczy „nie jest pewne".
       const v = await gptShopMatch(String(r.pl_name || r.key), String(r.query || ""), refs, shopImg, String(ts.title || ""), acc);
       if (!v) { out.push({ key: r.key, skip: "vision_blad" }); continue; }
+      const v2 = await gptShopMatch(String(r.pl_name || r.key), String(r.query || ""), refs, shopImg, String(ts.title || ""), acc);
+      if (!v2) { out.push({ key: r.key, skip: "vision_blad_2" }); continue; }
 
-      const pewne = v.verdict === "TAK" && v.confidence >= minConf;
+      const zgoda = v.verdict === v2.verdict;
+      const pewne = zgoda && v.verdict === "TAK" && v.confidence >= minConf && v2.confidence >= minConf;
+      v.przebieg2 = v2;
+      v.zgodne = zgoda;
+      if (!zgoda) v.reason = `NIEZGODNE PRZEBIEGI (${v.verdict} ${v.confidence} vs ${v2.verdict} ${v2.confidence}) — ${v.reason}`;
       if (dryRun) { out.push({ key: r.key, ...v, potwierdzi: pewne }); continue; }
 
+      // is_auto ustawiamy JAWNIE w obie strony: przy ponownym sprawdzeniu rekord wcześniej
+      // zatwierdzony musi móc stracić zatwierdzenie, a nie odziedziczyć je przez spread.
       const am = { ...(ts.auto_match || {}), vision: { ...v, at: new Date().toISOString(), min_conf: minConf } };
-      if (pewne) { am.is_auto = false; am.confirmed_by = "vision"; potwierdzone++; } else doPrzegladu++;
+      am.is_auto = !pewne;
+      if (pewne) { am.confirmed_by = "vision"; potwierdzone++; } else { delete am.confirmed_by; doPrzegladu++; }
       const { error: uErr } = await supabase.from("bud_tt_products")
-        .update({ tt_shop: { ...ts, auto_match: am, source: pewne ? "vision_confirmed" : ts.source } })
+        .update({ tt_shop: { ...ts, auto_match: am, source: pewne ? "vision_confirmed" : "auto_match" } })
         .eq("id", r.id);
       out.push(uErr ? { key: r.key, err: String(uErr.message).slice(0, 120) } : { key: r.key, ...v, potwierdzone: pewne });
     }
