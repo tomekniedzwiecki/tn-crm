@@ -144,7 +144,17 @@ order_detail{order_id} · order_attribution{order_id} · set_price{product_id,va
 Retry na 429 (Retry-After) wbudowany. Cena na landingu: publiczny edge **`wf2-landing-api`**
 (GET ?product=<wf2_products.id> → {price, checkout_url}; cache 5 min; DB = źródło prawdy).
 
-**⚠️ CACHE DOMENY CUSTOM (empirycznie 21.07, trafionek.pl):** subdomena starter serwuje
+**⚠️ CACHE — DWA POZIOMY (empirycznie 21.07, trafionek.pl; PEŁNY obraz):**
+1. **Origin Trevio** — snapshot HTML per host, odświeżany asynchronicznie po PUT
+   (minuty–godziny); flush `unpublish→publish` przyspiesza, ale niedeterministycznie.
+2. **EDGE (Vercel CDN platformy)** — cache per URL na WIELE godzin (age>13400 s zmierzone),
+   `x-vercel-cache: HIT` mimo `cache-control: no-store` z originu; NIE mamy purge.
+   ⛔ Query-string omija edge (MISS→origin) — dlatego **weryfikację świeżości rób ZAWSZE
+   gołym URL-em** (z query wynik jest ZAWSZE świeży i MASKUJE stan realnych użytkowników).
+   Realni użytkownicy widzą starą wersję do wygaśnięcia edge — NAPRAWA WYŁĄCZNIE po
+   stronie Adriana (purge przy PUT + poprawna konfiguracja TTL). Noty w wf2_notes 21.07.
+
+**⚠️ CACHE DOMENY CUSTOM (empirycznie 21.07, trafionek.pl — poziom 1 szczegółowo):** subdomena starter serwuje
 świeży HTML od razu po PUT; **domena custom trzyma snapshot per host >2h** (query-param
 z MISS też daje starą wersję — cache origin Trevio, nie edge). **FLUSH = `unpublish` →
 `publish` na tej samej ścieżce** (propagacja kilka sekund–2 min; działa też dla home
