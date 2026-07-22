@@ -22,6 +22,8 @@ Domyślnie przy KAŻDYM publish (wyłączenie: `--no-harden`):
   produktem (dowód w sporze); 
 - nota © na szczycie dokumentu (deklaracja praw + informacja o identyfikowalności buildu).
 Źródła w repo zostają czytelne — harden działa tylko na publikowanym artefakcie.
+Obejmuje też `home` (strona główna; fingerprint po **project_id**, nie product_id). Podstrony
+prawne (`page`) świadomie BEZ hardenu — boilerplate, zero know-how.
 
 ## 3. Egzekucja — gdy znajdziemy kopię
 Landing (kod, układ, copy, sceny) = utwór; zdjęcia produktowe i klipy = nasze pliki. Ścieżka:
