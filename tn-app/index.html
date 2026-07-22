@@ -71,18 +71,9 @@
         .pc-stage { color:#a1a1aa; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .pc-stage b { color:#e4e4e7; font-weight:600; }
         .pc-pct { font:500 12.5px/1 'JetBrains Mono',monospace; color:#8b8b94; flex-shrink:0; }
-        /* licznik terminu umownego (4–8 tyg. od pełnej płatności) */
-        .pc-tempo { border-top:1px solid #161616; padding-top:12px; }
-        .tempo-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
-        .tempo-lbl { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#8b8b94; }
-        .tempo-day { font:600 13.5px/1 'JetBrains Mono',monospace; }
-        .tempo-bar { height:5px; border-radius:3px; background:#161616; overflow:hidden; }
-        .tempo-bar > span { display:block; height:100%; border-radius:3px; transition:width .3s ease; }
-        .tempo-over { display:inline-flex; align-items:center; gap:4px; font:600 11px/1 ui-monospace,monospace; letter-spacing:.03em;
-            color:#e5484d; border:1px solid rgba(229,72,77,.4); background:rgba(229,72,77,.1); border-radius:5px; padding:3px 6px; }
-        .tempo-paused { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:#a1a1aa; }
-        .tempo-cancel { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#52525b; }
-        .tempo-closed { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#52525b; }
+        /* wiersz FAZY OPERACYJNEJ (dawny licznik terminu — usunięty decyzją 22.07) */
+        .pc-tempo { border-top:1px solid #161616; padding-top:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        .pc-start { font:500 11px/1 'JetBrains Mono',monospace; color:#6b6b74; white-space:nowrap; }
         /* stopka: linki infrastruktury + spowiednik + aktywność */
         .pc-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; }
         .pc-links { display:flex; align-items:center; gap:2px; }
@@ -157,7 +148,7 @@
 
                 <div class="mb-8">
                     <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Aplikacje — wspólne SaaS</h1>
-                    <p class="text-zinc-500">Projekty po pełnej płatności /aplikacja: fundament → infrastruktura → budowa MVP → landing i jakość → start → stery. Termin umowny: <span class="text-zinc-300">4–8 tyg.</span> od pełnej płatności.</p>
+                    <p class="text-zinc-500">Projekty po pełnej płatności /aplikacja: spowiednik → budowa → dostęp dla klienta → testy → start → stery.</p>
                 </div>
 
                 <!-- Etapy z chipami kroków (badge = ilu projektów czeka na tym kroku; klik = filtr kart).
@@ -262,7 +253,7 @@
         let maxStage = 5;
         let projects = [];        // wfa_projects (bez is_test)
         let stepsByProj = {};     // project_id -> [wfa_steps skrót]
-        let aggByProj = {};       // project_id -> {pct, done, total, currentKey, currentStage, currentStageLabel, segs[], deadline, lastAct}
+        let aggByProj = {};       // project_id -> {pct, done, total, currentKey, currentStage, currentStageLabel, segs[], phase, lastAct}
         let knowhowByProj = {};   // project_id -> {status, closed_at} ze spar_knowhow_summary (null = brak wiersza)
         let filterStepKey = null;
 
@@ -518,23 +509,9 @@
                     currentStepLabel: cur ? cur.label : 'Wszystko ukończone',
                     segs,
                     lastAct: lastAct[p.id] || null,
-                    deadline: computeDeadline(p),
                     phase: computePhase(p, steps),
                 };
             });
-        }
-
-        // LICZNIK TERMINU UMOWNEGO: deadline_at (oferta: 4–8 tyg. od pełnej płatności).
-        // slack = dni do terminu (ujemny = po terminie) — klucz sortowania aktywnych.
-        function computeDeadline(p) {
-            if (p.status === 'zamkniety') return { kind: 'closed', slack: 1000 };
-            if (!p.deadline_at) return { kind: 'none', slack: 999 };
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            const dl = new Date(p.deadline_at);
-            const daysLeft = Math.round((dl - today) / DAY);
-            const total = Math.max(1, Math.round((dl - new Date(new Date(p.created_at).setHours(0, 0, 0, 0))) / DAY));
-            const elapsed = Math.max(0, total - daysLeft);
-            return { kind: 'active', daysLeft, total, elapsed, overdue: daysLeft < 0, slack: daysLeft };
         }
 
         // ============ RENDER: etapy + chipy (badge = ilu aktywnych projektów czeka na tym kroku) ============
@@ -698,7 +675,11 @@
                 if (ra !== rb) return ra - rb;                        // active → paused → completed → cancelled
                 const da = isDemo(a) ? 1 : 0, db = isDemo(b) ? 1 : 0;
                 if (da !== db) return da - db;                         // DEMO na końcu swojej grupy
-                if (ra === 0) return (aggByProj[a.id]?.deadline?.slack ?? 999) - (aggByProj[b.id]?.deadline?.slack ?? 999); // aktywne wg zapasu terminu
+                if (ra === 0) { // aktywne wg fazy procesu (dalej = wyżej), potem najnowsze
+                    const pa = PHASE_ORDER.indexOf(aggByProj[a.id]?.phase || 'spowiednik');
+                    const pb = PHASE_ORDER.indexOf(aggByProj[b.id]?.phase || 'spowiednik');
+                    if (pa !== pb) return pb - pa;
+                }
                 return new Date(b.created_at) - new Date(a.created_at);
             });
 
@@ -776,7 +757,7 @@
                         <div class="pc-title" style="${demo ? (lcBadge ? 'padding-right:6px' : 'padding-right:66px') : ''}">${escapeHtml(title)}</div>
                         <div class="pc-client">${escapeHtml(clientLine) || '&nbsp;'}${waIcon(p)}</div>
                     </div>
-                    ${(demo && !lcBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : phaseBadge}${lcBadge}</div>`}
+                    ${lcBadge ? `<div class="flex flex-col items-end gap-1 flex-shrink-0">${lcBadge}</div>` : ''}
                 </div>
 
                 <div>
@@ -787,7 +768,7 @@
                     </div>
                 </div>
 
-                <div class="pc-tempo">${renderDeadlineLC(p, agg)}</div>
+                <div class="pc-tempo">${phaseBadge}${startHtml(p)}</div>
 
                 <div class="pc-foot">
                     <div class="flex items-center gap-2.5 min-w-0">${linksHtml}</div>
@@ -796,48 +777,17 @@
             </div>`;
         }
 
-        // licznik terminu wg stanu lifecycle: wstrzymany = pauza (bez czerwonego),
-        // anulowany/zakończony = bez licznika
-        function renderDeadlineLC(p, agg) {
-            const lc = lifecycleOf(p);
-            if (lc === 'cancelled') {
-                return `<div class="tempo-cancel"><i class="ph ph-x-circle"></i>Projekt anulowany — bez terminu</div>`;
-            }
-            if (lc === 'completed') {
-                return `<div class="tempo-cancel" style="color:#4c7a5c"><i class="ph ph-check-circle"></i>Projekt zakończony</div>`;
-            }
-            const t = agg.deadline;
-            if (lc === 'paused') {
-                const sub = (t && t.kind === 'active')
-                    ? ` · ${t.overdue ? Math.abs(t.daysLeft) + ' dni po terminie' : t.daysLeft + ' dni do terminu'}`
-                    : '';
-                const w = (t && t.kind === 'active') ? Math.round(Math.min(t.elapsed, t.total) / t.total * 100) : 0;
-                return `<div class="tempo-top">
-                        <span class="tempo-lbl"><i class="ph ph-pause-circle"></i>Termin umowny</span>
-                        <span class="tempo-paused"><i class="ph ph-pause"></i>Wstrzymany${sub}</span>
-                    </div>
-                    <div class="tempo-bar"><span style="width:${w}%;background:#3f3f46"></span></div>`;
-            }
-            return renderDeadline(t);
-        }
-
-        // widżet licznika terminu umownego (deadline_at)
-        function renderDeadline(t) {
-            if (!t || t.kind === 'closed') {
-                return `<div class="tempo-closed"><i class="ph ph-lock-simple"></i>Projekt zamknięty — bez licznika</div>`;
-            }
-            if (t.kind === 'none') {
-                return `<div class="tempo-closed"><i class="ph ph-calendar-x"></i>Bez terminu umownego</div>`;
-            }
-            const col = t.overdue ? '#e5484d' : (t.daysLeft < 7 ? '#e5484d' : (t.daysLeft < 14 ? '#f5a623' : '#0070f3'));
-            const w = t.overdue ? 100 : Math.round(Math.min(t.elapsed, t.total) / t.total * 100);
-            const over = t.overdue ? `<span class="tempo-over"><i class="ph ph-warning"></i>PO TERMINIE +${Math.abs(t.daysLeft)} ${Math.abs(t.daysLeft) === 1 ? 'dzień' : 'dni'}</span>` : '';
-            const txt = t.daysLeft === 0 ? 'Termin dziś' : `${t.daysLeft} ${t.daysLeft === 1 ? 'dzień' : 'dni'} do terminu`;
-            return `<div class="tempo-top">
-                    <span class="tempo-lbl"><i class="ph ph-calendar-blank"></i>Termin umowny</span>
-                    ${over || `<span class="tempo-day" style="color:${col}">${txt}</span>`}
-                </div>
-                <div class="tempo-bar"><span style="width:${w}%;background:${col}"></span></div>`;
+        // mały druk daty startu = wypełnienie spowiednika (projekt ręczny: data utworzenia)
+        function startHtml(p) {
+            const kh = knowhowByProj[p.id];
+            let iso = null, src = '';
+            if (kh && kh.status === 'closed' && kh.closed_at) { iso = kh.closed_at; src = 'spowiednik wypełniony'; }
+            else if (!p.spar_session_id) { iso = p.created_at; src = 'projekt utworzony'; }
+            if (!iso) return '';
+            const d = new Date(iso); if (isNaN(d.getTime())) return '';
+            const dd = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const full = d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+            return `<span class="pc-start" title="Start: ${src} ${full}">start ${dd}</span>`;
         }
 
         // ============ NOWY PROJEKT (ręczny) ============
