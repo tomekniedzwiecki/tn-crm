@@ -2513,7 +2513,9 @@
 <!-- SEKCJA:07-mid-cta END -->
 
     <!-- SEKCJA:08-zamow START -->
-<section id="zamow" class="zm-section sect-pad">
+<section id="zamow" class="zm-section sect-pad zc-checkout" data-zc-layout="steps"
+         data-zc-product="{{WF2_PRODUCT_ID}}"
+         data-zc-api="https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-landing-api">
   <div class="wrap">
     <h2 class="h2 zm-title">Zamów Odsączek</h2>
 
@@ -2553,15 +2555,21 @@
 
       <div class="zm-checkout-card reveal"><!-- SKORKA modulu checkout-inline@2 pod Odsaczka (aliasy tokenow; mechanika NIETYKALNA) -->
 <style>
-  #zamow .zc-checkout{
+  /* root modulu = section#zamow (kontrakt: skrypt czyta config i stawia stany na
+     getElementById('zamow'), a CSS stanow celuje .zc-checkout[data-zc-*] — ten sam element).
+     Neutralizacja bazy modulu na sekcji: tlo i rytm sekcji rzadza (zm-section/sect-pad). */
+  #zamow.zc-checkout{
     --zc-bg:transparent; --zc-card:var(--card); --zc-border:var(--line);
     --zc-text:var(--ink); --zc-muted:var(--body);
     --zc-accent:var(--cta); --zc-accent-text:var(--cta-ink);
     --zc-radius:var(--radius-lg); --zc-radius-sm:var(--radius-sm); --zc-radius-cta:var(--radius-lg);
     --zc-shadow:none; --zc-font:var(--font-text);
+    background:var(--paper);
+    padding-block:clamp(56px, 8vw, var(--sect-pad-d));
+    padding-inline:0;
   }
-  #zamow .zc-checkout .zc-eyebrow{font-family:var(--font-text)}
-  #zamow .zc-checkout .zc-h2{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em}
+  #zamow.zc-checkout .zc-eyebrow{font-family:var(--font-text)}
+  #zamow.zc-checkout .zc-h2{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em}
 </style>
 
 <style>
@@ -2800,8 +2808,7 @@
   }
 </style>
 
-<div class="zc-checkout" data-zc-layout="steps" data-zc-product="{{WF2_PRODUCT_ID}}"
-     data-zc-api="https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-landing-api">
+<div class="zc-inline"><!-- markup modulu; root/konfiguracja zyje na section#zamow -->
   <div class="zc-wrap">
     <header class="zc-head">
       <p class="zc-eyebrow">Zamówienie</p>
@@ -4067,102 +4074,8 @@
       box-shadow: var(--shadow-lg);
     }
 
-    /* Skin przyszłego modułu checkout */
-    .zm-checkout-card form {
-      display: grid;
-      gap: var(--s2);
-    }
-
-    .zm-checkout-card input:not([type="radio"]):not([type="checkbox"]),
-    .zm-checkout-card textarea,
-    .zm-checkout-card select {
-      box-sizing: border-box;
-      width: 100%;
-      min-height: 54px;
-      padding: var(--s2);
-      background: var(--card);
-      color: var(--ink);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      font: inherit;
-    }
-
-    .zm-checkout-card textarea {
-      min-height: 110px;
-      resize: vertical;
-    }
-
-    .zm-checkout-card input:focus,
-    .zm-checkout-card textarea:focus,
-    .zm-checkout-card select:focus {
-      border-color: var(--cta);
-      outline: none;
-    }
-
-    .zm-checkout-card input[type="radio"] {
-      width: 22px;
-      height: 22px;
-      margin: 0;
-      accent-color: var(--cta);
-    }
-
-    .zm-checkout-card .payment-option,
-    .zm-checkout-card .payment-card,
-    .zm-checkout-card [data-payment-option] {
-      display: flex;
-      align-items: center;
-      gap: var(--s2);
-      box-sizing: border-box;
-      min-height: 66px;
-      padding: var(--s2);
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-    }
-
-    .zm-checkout-card .payment-option:has(input[type="radio"]:checked),
-    .zm-checkout-card .payment-card:has(input[type="radio"]:checked),
-    .zm-checkout-card [data-payment-option]:has(input[type="radio"]:checked),
-    .zm-checkout-card [aria-checked="true"] {
-      border-color: var(--cta);
-    }
-
-    .zm-checkout-card button[type="submit"],
-    .zm-checkout-card input[type="submit"],
-    .zm-checkout-card .btn.cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      width: 100%;
-      min-height: 58px;
-      padding: var(--s2) var(--s3);
-      background: var(--cta);
-      color: var(--cta-ink);
-      border: 1px solid var(--cta);
-      border-radius: var(--radius-lg);
-      font: inherit;
-      font-weight: 700;
-      text-align: center;
-      cursor: pointer;
-    }
-
-    .zm-checkout-card button[type="submit"]:hover,
-    .zm-checkout-card input[type="submit"]:hover,
-    .zm-checkout-card .btn.cta:hover {
-      background: var(--cta-hover);
-      border-color: var(--cta-hover);
-    }
-
-    .zm-checkout-card .return-note,
-    .zm-checkout-card .checkout-return,
-    .zm-checkout-card [data-return-note] {
-      color: var(--body);
-      font-size: 13px;
-      line-height: 1.4;
-      text-align: center;
-    }
+    /* (skin szkieletu pod modul checkout USUNIETY przy montazu — LL-032:
+       modul checkout-inline@2 niesie kompletne wlasne style .zc-*) */
 
     .zm-benefits {
       display: grid;
