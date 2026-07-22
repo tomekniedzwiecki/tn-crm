@@ -313,6 +313,9 @@ def cmd_home(a):
     html = open(a.file, encoding="utf-8").read()
     dom, custom = _active_domain(sid)
     html = _substitute(html, "", f"https://{dom}", pr.get("pixel_id"), None, a.strip_noindex or custom)
+    if not getattr(a, "no_harden", False):
+        html = _harden(html, pr["id"], pr.get("name"))
+        log("harden: strip komentarzy + collapse + fingerprint (ochrona przed kopiami)")
     d = adapter_ok({"action": "publish_landing", "shop_id": sid, "path": "", "html": html}, "publish_landing(home)")
     url = d.get("url") or f"https://{dom}"
     live = requests.get(url, timeout=30).status_code
@@ -362,6 +365,8 @@ def main():
                    help="pomiń ochronę przed kopiami (strip komentarzy+collapse+fingerprint)")
     s = sub.add_parser("home", help="publikacja strony głównej (path:'')")
     s.add_argument("project"); s.add_argument("file"); s.add_argument("--strip-noindex", action="store_true")
+    s.add_argument("--no-harden", dest="no_harden", action="store_true",
+                   help="pomiń ochronę przed kopiami (strip komentarzy+collapse+fingerprint)")
     s = sub.add_parser("page", help="generyczna podstrona z pliku (prawne/kontakt)")
     s.add_argument("project"); s.add_argument("path"); s.add_argument("file")
     s.add_argument("--name"); s.add_argument("--strip-noindex", action="store_true")
