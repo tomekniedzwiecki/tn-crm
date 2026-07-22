@@ -116,7 +116,7 @@ ANALYZER = r"""
     return null;
   }
   var PAYTOK=['blik','visa','mastercard','mc','karta','przelew'];// 'za pobraniem' USUNIETE (kalibracja 19.07): COD to metoda platnosci (Etap5 COD-first, manifest grep_forbidden 'za pobraniem DOZWOLONE'), nie imitacja marki karty wymagajaca SVG-logo
-  var out={spacings:[],fonts:[],accents:{},texts:[],focus:[],touch:[],imgs:[],forbidden:[],quotes:[],dblspace:[],sticky:null,blocks:[],paychips:[],hasPayBadges:false,vw:window.innerWidth,vh:window.innerHeight};
+  var out={spacings:[],fonts:[],accents:{},texts:[],focus:[],touch:[],imgs:[],forbidden:[],quotes:[],dblspace:[],sticky:null,blocks:[],paychips:[],txtoverflow:[],hasPayBadges:false,vw:window.innerWidth,vh:window.innerHeight};
   // walk elements
   var all=document.querySelectorAll('body *');
   var fontSet={},sizeSet={},accentList=[];
@@ -163,6 +163,30 @@ ANALYZER = r"""
     if(r.width>0&&r.height>0&&el.matches('.btn,button,[role=button],.pay-badges,.pill,form,input,select,textarea,figure')){
       var k=kindOf(el);
       if(k){out.blocks.push({sec:sectionOf(el),pid:pid(el.parentElement),kind:k,x:Math.round(r.x),y:Math.round(r.y+window.scrollY),w:Math.round(r.width),h:Math.round(r.height),tag:el.tagName.toLowerCase(),cls:(el.className&&typeof el.className==='string'?el.className.split(' ')[0]:'')});}
+    }
+    // PASS 4 — tekst wystaje/uciety w kapsule (pill/chip/badge/callout/tag/label) —
+    // feedback Tomka 22.07: pille hero z nowrap wystawaly z boxow. Mierzymy REALNA TRESC:
+    // dzieci nie-absolute (absolute = celowe etykiety hr-callout) + gole text-nodes (Range).
+    // NIE scrollWidth — Chrome wlicza don absolute ::after (hairline chipu = false positive).
+    if(r.width>0&&r.height>0&&r.height<=120&&cs.textOverflow!=='ellipsis'){
+      var clsStr=(el.className&&typeof el.className==='string')?el.className:'';
+      if(/(^|[ _-])(pill|chip|badge|callout|tag|label)($|[ _-])/i.test(clsStr)){
+        var ovx=0,oi,och,ocr;
+        for(oi=0;oi<el.children.length;oi++){
+          och=el.children[oi];
+          if(och.tagName==='BR'||getComputedStyle(och).position==='absolute')continue;
+          ocr=och.getBoundingClientRect();
+          if(ocr.width===0&&ocr.height===0)continue;
+          ovx=Math.max(ovx,ocr.right-r.right,r.left-ocr.left);
+        }
+        for(oi=0;oi<el.childNodes.length;oi++){
+          var tn=el.childNodes[oi];
+          if(tn.nodeType!==3||!tn.textContent.trim())continue;
+          try{var rg=document.createRange();rg.selectNode(tn);var trr=rg.getBoundingClientRect();
+              ovx=Math.max(ovx,trr.right-r.right,r.left-trr.left);}catch(e){}
+        }
+        if(ovx>2){out.txtoverflow.push({sec:sectionOf(el),cls:clsStr.split(' ')[0],txt:(el.textContent||'').trim().slice(0,40),ov:Math.round(ovx)});}
+      }
     }
     // paychip: imitacja marki platnosci POZA kanonicznym .pay-badges
     if(r.width>0&&r.height>0&&!el.closest('.pay-badges')){
@@ -820,6 +844,21 @@ def check_interactive(D, add, vw):
             add("interakcje",loc,"Martwa interakcja: driven-property identyczna przy min i max (przesuniecie nic nie zmienia w %d monitorowanych elementach)"%(s["monitored"]),
                 "P1","Suwak musi sterowac widoczna zmiana (--t/opacity/transform); patrz F5 wzorzec-matka #3","skrypt")
 
+def check_text_overflow(D, add, vw):
+    # feedback Tomka 22.07 (pille hero Ugniatka): tekst NIE MOZE wystawac z kapsuly ani byc
+    # uciety — kazdy hit = P1; fix z reguly: mniejsza czcionka i/lub white-space:normal.
+    seen = set()
+    for t in D.get("txtoverflow", [])[:12]:
+        key = (t.get("sec"), t.get("cls"), t.get("txt"))
+        if key in seen:
+            continue
+        seen.add(key)
+        add("kapsuly", "%s @%d" % (t.get("sec") or "?", vw),
+            "tekst wystaje/uciety w .%s: '%s' (o %dpx)"
+            % (t.get("cls") or "?", t.get("txt", ""), t.get("ov", 0)),
+            "P1", "zmniejsz font-size / zdejmij white-space:nowrap / poszerz kapsule", "skrypt")
+
+
 def paybadges_guard(D, add):
     """Imitacje marek platnosci poza SSOT: klaster=P0, pojedynczy=P1, brak kanonu przy CTA=P2.
     Zwraca liste pid-ow klastrow do auto-swap (--fix)."""
@@ -1094,6 +1133,8 @@ def main():
     check_crop(D_desk, add, fetch_img)
     check_interactive(D_desk, add, 1280)
     check_interactive(D_mob, add, 390)
+    check_text_overflow(D_desk, add, 1280)
+    check_text_overflow(D_mob, add, 390)
     paybadges_guard(D_desk, add)
     check_scrim_plateau(D_desk, add)
     check_fade_line(D_mob, add)

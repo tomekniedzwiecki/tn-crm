@@ -231,6 +231,34 @@ postery tt, UGC, D-art, brand, pay-badges, OG) — NIE w tabeli (gate je wyklucz
 render = ten produkt?); PASS 5 SEMANTYKA działa na **CAŁEJ stronie PO kodzie** (czy podpisy/role/
 dane spójne). Oba potrzebne — F3A nie zwalnia z PASS 5 i odwrotnie.
 
+## 4c. GATE ANATOMII CZŁOWIEKA (część F3A — feedback Tomka 22.07, hero-L Ugniatka)
+
+**Powód:** hero LIVE z człowiekiem miał OBIE dłonie z wykręconymi nadgarstkami i nienaturalnym
+chwytem uchwytów — gate wierności patrzył na PRODUKT, nikt nie miał obowiązkowego punktu
+„czy CZŁOWIEK jest anatomicznie poprawny". Nienaturalna anatomia obniża zaufanie do całej strony.
+
+**PREWENCJA (w prompcie — nie dopuszczać, nie tylko łapać):**
+- Wizja sceny z człowiekiem PREFERUJE proste układy dłoni: dłoń owinięta wokół uchwytu,
+  dłoń płasko na powierzchni, ręce skrzyżowane/wzdłuż ciała. ⛔ UNIKAJ w wizji: chwyty
+  oburącz za plecami/za głową, splecione palce, silne skróty perspektywiczne dłoni,
+  trzymanie dwóch uchwytów jednocześnie w trudnej pozie — to generatorowi wychodzi najgorzej.
+- Do promptu scen z widocznymi rękami DOPISZ (to opis CZŁOWIEKA-scenografii, nie produktu —
+  zasada „prompt = wizja sceny" go dopuszcza): `natural relaxed hands, straight wrists,
+  anatomically correct comfortable grip` + NEG: `twisted or bent-back wrists, contorted
+  fingers, extra or fused fingers, impossible hand poses`.
+- Wybieraj kadry, gdzie dłonie są DRUGOPLANOWE (małe w kadrze / częściowo zasłonięte) —
+  im większa dłoń w kadrze, tym większe ryzyko.
+
+**WERDYKT (obowiązkowy punkt obu par oczu F3A dla KAŻDEJ sceny z widocznym człowiekiem):**
+- **ANATOMIA:** dłonie (5 palców, zgięcia w naturalne strony, nadgarstki bez wykręceń,
+  chwyt ergonomicznie możliwy i sensowny), twarz (symetria, oczy), kończyny (proporcje,
+  stawy zginają się we właściwą stronę). Werdykt per scena: `anatomia: OK` albo
+  `anatomia: FAIL — <co>`.
+- **1 FAIL anatomii = REGEN** (drabina jak przy cechach produktu; anatomia NIE jest
+  waivable notą — wykręcona dłoń to nie „rekwizyt scenografii").
+- Zapis w `dopasowanie/WIERNOSC.md` w kolumnie uwag/cech wiersza sceny: `anatomia:OK`
+  (sceny bez człowieka — pomiń; gate nie wymaga wpisu dla packszotów).
+
 ## 5. FAKTY TWARDE (nie odkrywać ponownie)
 
 - Makiety i output gpt-image-2 = max **1536×1024 / 1024×1536** — regen nie podnosi rozdz.

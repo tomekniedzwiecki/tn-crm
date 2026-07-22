@@ -344,6 +344,22 @@ sceneria / stylizacja / rekwizyty / ANTY-CASTING z `ICP-GRUPA-DOCELOWA.md §5` (
 wszystkim — bohater kadru = persona rdzeniowa ICP). Brak ICP = osąd agenta jak dziś. To domyka
 oś „człowiek/świat ← persona": przewodnik dostaje wreszcie realne źródło, nie zgadywankę.
 
+**F1.7b — SCENY ANIMOWANE „ANIM-3" (feedback Tomka 22.07 — animacja hero jest na tyle mocna,
+że landing dostaje budżet na ruch w TRZECH miejscach; wybór ZAWCZASU, na etapie planowania
+grafik — nie doklejka na końcu).** PRZEWODNIK niesie obowiązkowy blok `## SCENY ANIMOWANE`:
+**hero + DWIE dodatkowe sekcje**, każda z wpisem {sekcja · nośnik ruchu · beat pętli (co się
+rusza, jak wraca do klatki 1)}. Kryteria wyboru dwóch dodatkowych:
+(1) scena ma NATURALNY NOŚNIK RUCHU FIZYCZNEGO (para/płyn/tkanina/sypkie/dym/światło/włosy/
+olej) — produkt pozostaje statyką (doktryna hero-video, LL-022); (2) rozrzut po narracji —
+jedna w górnej, jedna w dolnej połowie strony (nie dwie sąsiednie); (3) preferuj typ osadzenia
+B/C fullframe (ruch działa najmocniej na pełnym kadrze); ⛔ nie sekcje TOR-I (już żyją
+interakcją), nie zamow/faq. **Grafiki scen ANIM w F2/F3 są KOMPONOWANE POD RUCH** (wzorzec
+mata-v6): nośnik ruchu „WYSTAWIONY" — ma przestrzeń w kadrze i nie jest przycięty krawędzią,
+zero tekstu wpieczonego w strefie ruchu, kompozycja znosi delikatny dryf pętli. W F6 sceny
+ANIM dostają klipy Kling i2v (pętla first=last) jak hero — budżet +2 klipy (~0,35 $/klip).
+Jeśli po F3 któraś scena ANIM straciła nośnik ruchu — wybierz inną scenę ALBO 1 regeneracja
+pod ruch (z notą LEDGER).
+
 **F1.7a — ROLA PRODUKTU W ŁUKU NARRACYJNYM (EMOCJA↔PRODUKT; Drapek 18.07 — scena PROBLEM
 pokazywała psa KULĄCEGO SIĘ DEFENSYWNIE przy NASZEJ desce = przekaz „nasz produkt = źródło
 stresu", odwrotny do intencji).** Karta KAŻDEJ sceny (F1.7) MUSI jawnie określać ROLĘ w łuku
@@ -1217,8 +1233,13 @@ wyglądu żadnego kadru.**
   playera** — siatka 9:16 (desktop 4-5 kafli grid auto-fit; mobile snap-scroll widać 1.2 kafla),
   IO-autoplay mute TYLKO widoczne (unmute jednego wycisza resztę), `preload=none`, poster
   REHOSTOWANY (cover CDN WYGASA — własna klatka ffmpeg), per-kafel głośnik + atrybucja „@autor";
-  klik = lightbox 9:16 z dźwiękiem. TYLKO po vision-gate on-product; <3 PASS → tryb 1-wideo lub
-  pominięcie. Pipeline i ryzyko: sekcja 5;
+  klik = lightbox 9:16 z dźwiękiem. TYLKO po vision-gate on-product; <3 PASS → tryb 1-wideo.
+  **⛔ SEKCJA WIDEO NIE ZNIKA PO CICHU (feedback Tomka 22.07 — Ugniatek: kuracja odrzuciła
+  8/8 klipów źródłowych i sekcja „wyparowała"): 0 keep z kuracji → PLAN B = 2-3 WŁASNE klipy
+  ruchu produktu (Kling i2v ze scen F3, pionowe 9:16 lub kadr sceny, pętla first=last,
+  BEZ atrybucji @autor — to nasz materiał, nie UGC) w tym samym module rail. Dopiero gdy
+  i to niewykonalne (brak scen nadających się do ruchu) → SKIP z notą LEDGER + wpisem
+  w MANIFEŚCIE.** Pipeline i ryzyko: sekcja 5;
 - pomiar (sekcja 5), JSON-LD @graph, `{{PIXEL_ID}}`/`{{CANONICAL_URL}}`+noindex;
 - dane twarde 1:1, zakazy (sekcja 4), jasne tła, tech budżet (sekcja 5).
 

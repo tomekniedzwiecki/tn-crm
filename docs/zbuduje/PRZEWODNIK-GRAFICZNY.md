@@ -109,6 +109,25 @@ packshotem-refem wzmocniła produkt i porzuciła słabo określony stary sposób
   frame" + wymuszenie starego sposobu). **Generacja F3: ref = styl-master, NIE packshot** (packshot
   wciąga produkt do kadru). Kontrola końcowa: FINALNY-PASS PASS 5 pyt. 6.
 
+## SCENY ANIMOWANE — ANIM-3 (F1.7b; feedback Tomka 22.07) — BLOK OBOWIĄZKOWY
+Landing dostaje ruch w TRZECH miejscach: **hero + DWIE sekcje**, wybrane TUTAJ (zawczasu,
+żeby F2/F3 komponowały grafiki POD ruch — wzorzec mata-v6), nie doklejone na końcu.
+Format bloku w przewodniku landingu:
+```
+## SCENY ANIMOWANE
+1. hero        — nośnik: <para/tkanina/płyn/...> — beat: <co się rusza i jak wraca do klatki 1>
+2. <sekcja-A>  — nośnik: ... — beat: ...
+3. <sekcja-B>  — nośnik: ... — beat: ...
+```
+- Kryteria wyboru A/B: (1) scena ma NATURALNY nośnik ruchu FIZYCZNEGO (para, płyn, tkanina,
+  sypkie, dym, światło, olej, włosy) — produkt zawsze statyką; (2) rozrzut po narracji:
+  jedna sekcja w górnej, jedna w dolnej połowie strony; (3) preferuj typ osadzenia B/C
+  (fullframe — ruch gra najmocniej); ⛔ nie TOR-I (żyje interakcją), nie zamow/faq.
+- Seed sceny ANIM dodatkowo KOMPONUJE POD RUCH: nośnik „WYSTAWIONY" (ma przestrzeń w kadrze,
+  nie jest przycięty krawędzią), zero tekstu wpieczonego w strefie ruchu, kompozycja znosi
+  delikatny dryf pętli (first=last).
+- F6 generuje klipy Kling i2v dla wszystkich trzech (budżet +2 klipy ~0,35 $/szt. poza hero).
+
 ## WYJĄTKI OD REGUŁY ŚWIATA (świadome)
 - Opinie (klasa U): surowe UGC, ramkowane — autentyczność > spójność świata.
 - Oferta „Zamów" (klasa P): czysty packshot na jasnym jednolitym — świadomie clean.
