@@ -196,7 +196,10 @@
                 <div id="proj-grid" class="proj-grid"></div>
                 <div id="empty-state" class="hidden py-16 text-center text-zinc-500">
                     <i class="ph ph-app-window text-4xl mb-3 block text-zinc-700"></i>
-                    Brak projektów. Nowy projekt powstaje automatycznie po pełnej płatności /aplikacja — albo dodaj ręcznie.
+                    <span id="empty-msg">Brak projektów. Nowy projekt powstaje automatycznie po pełnej płatności /aplikacja — albo dodaj ręcznie.</span>
+                    <button id="empty-reset" onclick="resetFilters()" class="hidden mt-4 mx-auto flex items-center gap-2 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-4 py-2 text-xs transition-colors">
+                        <i class="ph ph-funnel-x"></i>Wyczyść filtry i pokaż wszystkie
+                    </button>
                 </div>
 
             </div>
@@ -603,6 +606,17 @@
             renderPhaseChips(); renderCards();
         }
 
+        // reset WSZYSTKICH filtrów widoku (przycisk w pustym stanie)
+        function resetFilters() {
+            viewLC = new Set(LC_ORDER); saveViewLC();
+            filterPhase = null;
+            filterStepKey = null;
+            const s = document.getElementById('search'); if (s) s.value = '';
+            const bar = document.getElementById('filter-bar');
+            bar.classList.add('hidden'); bar.classList.remove('flex');
+            renderLifecycleChips(); renderPhaseChips(); renderStages(); renderCards();
+        }
+
         // ============ FILTR STANU (chipy) ============
         function renderLifecycleChips() {
             const wrap = document.getElementById('lc-filter'); if (!wrap) return;
@@ -672,7 +686,9 @@
         function renderCards() {
             const grid = document.getElementById('proj-grid');
             const q = (document.getElementById('search')?.value || '').trim().toLowerCase();
-            let rows = viewLC.size ? projects.filter(p => viewLC.has(lifecycleOf(p))) : [];
+            // brak zaznaczonych stanów = bez filtra (odznaczenie wszystkich chipów NIE może
+            // wyglądać jak awaria — incydent „niczego nie widzę" 22.07)
+            let rows = viewLC.size ? projects.filter(p => viewLC.has(lifecycleOf(p))) : projects.slice();
             if (filterPhase) rows = rows.filter(p => aggByProj[p.id]?.phase === filterPhase);
             if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
             if (q) { const toks = q.split(/\s+/).filter(Boolean).map(foldStr); rows = rows.filter(p => { const idx = p._idx || ''; return toks.every(t => idx.includes(t)); }); }
@@ -687,6 +703,16 @@
             });
 
             document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
+            // pusta lista przy ISTNIEJĄCYCH projektach = ukryły je filtry → powiedz to wprost + daj reset
+            if (!rows.length && projects.length) {
+                document.getElementById('empty-msg').textContent =
+                    `${projects.length} ${projects.length === 1 ? 'projekt ukryty' : (projects.length < 5 ? 'projekty ukryte' : 'projektów ukrytych')} przez filtry lub wyszukiwanie.`;
+                document.getElementById('empty-reset').classList.remove('hidden');
+            } else if (!rows.length) {
+                document.getElementById('empty-msg').textContent =
+                    'Brak projektów. Nowy projekt powstaje automatycznie po pełnej płatności /aplikacja — albo dodaj ręcznie.';
+                document.getElementById('empty-reset').classList.add('hidden');
+            }
             document.getElementById('count-label').textContent = rows.length
                 ? `${rows.length} ${rows.length === 1 ? 'projekt' : (rows.length < 5 ? 'projekty' : 'projektów')}` : '';
             grid.innerHTML = rows.map(renderCard).join('');
