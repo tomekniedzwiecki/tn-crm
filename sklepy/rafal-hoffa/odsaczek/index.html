@@ -531,6 +531,39 @@
       opacity: 1;
     }
 
+    /* ANIM-3 (LL-041): sceny ambient zawies + mid-cta; LL-049 — kazdy viewport */
+    .anim-video {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--mo-dur-l) var(--mo-ease);
+    }
+
+    .anim-video.on {
+      opacity: 1;
+    }
+
+    #mid-cta .mc-scene .anim-video {
+      object-position: center 62%;
+      border-radius: var(--radius-lg);
+    }
+
+    #mid-cta .mc-chips {
+      z-index: 2;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .anim-video {
+        transition: none !important;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .hr-video {
         transition: none !important;
@@ -1063,6 +1096,8 @@
 
     <div class="zw-layout">
       <figure class="zw-photo reveal">
+        <video class="anim-video" muted loop playsinline preload="none"
+          poster="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odsaczek/assets/sc-zawieszony.webp" data-anim-src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odsaczek/assets/anim-zawieszony.mp4"></video>
         <img
           src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odsaczek/assets/sc-zawieszony.webp"
           width="1400"
@@ -2999,6 +3034,8 @@
 <section id="mid-cta" class="mc-section sect-pad" aria-labelledby="mc-title">
   <div class="wrap">
     <figure class="mc-scene reveal">
+        <video class="anim-video" muted loop playsinline preload="none"
+          poster="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odsaczek/assets/mc-scena.webp" data-anim-src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odsaczek/assets/anim-mc.mp4"></video>
       <img
         src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odsaczek/assets/mc-scena.webp"
         width="1536"
@@ -5614,6 +5651,9 @@
 
     #final .fn-wrap {
       display: grid;
+      /* minmax(0,1fr), NIE 1fr: kolumna sterowana min-content nie kurczyla sie <390px
+         i dawala poziomy scroll na 375/360 (werdykt F6) */
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--s4);
     }
 
@@ -5792,6 +5832,9 @@
       #final .fn-pill {
         width: 100%;
         justify-content: flex-start;
+        /* LL-040/werdykt F6: nowrap wypychal karte o 6px @360 („Płatność online lub
+           przy odbiorze" min-content 322px) — kapsula moze sie zawinac na najwezszych */
+        white-space: normal;
       }
 
       #final .fn-lockup {
@@ -5882,7 +5925,7 @@
   .sticky-buy .sb{display:flex;align-items:center;gap:12px;max-width:var(--content-w);margin:0 auto}
   .sticky-buy .sb-thumb{width:44px;height:44px;border-radius:var(--radius-sm);object-fit:cover;flex:0 0 auto;background:var(--paper-2)}
   .sticky-buy .sb-info{flex:1;min-width:0}
-  .sticky-buy .sb-price{font-weight:700;font-size:16.5px;color:var(--ink)}
+  .sticky-buy .sb-price{font-weight:700;font-size:16.5px;color:var(--ink);white-space:nowrap}
   .sticky-buy .sb-price b{font-family:var(--font-display);font-weight:700}
   .sticky-buy .sb-sub{font-size:11.5px;color:var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sticky-buy .btn{padding:13px 24px;font-size:15.5px;white-space:nowrap}
@@ -5965,6 +6008,39 @@
     video.src =
       "https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odsaczek/assets/hero-video.mp4";
     video.load();
+  })();
+</script>
+
+<script>
+  (() => {
+    // ANIM-3: lazy ambient sceny [data-anim-src] — kazdy viewport (LL-049)
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+    if (reducedMotion.matches || !("IntersectionObserver" in window)) return;
+
+    const vids = document.querySelectorAll("video.anim-video[data-anim-src]");
+    if (!vids.length) return;
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        const v = en.target;
+        if (!en.isIntersecting) { if (v._on) v.pause(); return; }
+        if (!v.src) {
+          v.addEventListener("canplay", () => {
+            const p = v.play();
+            const ok = () => { v.classList.add("on"); v._on = true; };
+            if (p && typeof p.then === "function") p.then(ok).catch(() => {});
+            else ok();
+          }, { once: true });
+          v.src = v.getAttribute("data-anim-src");
+          v.load();
+        } else if (v._on) {
+          const p = v.play();
+          if (p && typeof p.catch === "function") p.catch(() => {});
+        }
+      });
+    }, { rootMargin: "240px 0px", threshold: 0.15 });
+
+    vids.forEach((v) => io.observe(v));
   })();
 </script>
 
