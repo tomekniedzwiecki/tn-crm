@@ -359,3 +359,89 @@ jest tylko **wybór** konta (act_ wpisujemy ręcznie w panelu).
 
 > **[ŻYWO]** Potwierdzić na **1. realnym przebiegu**, że kreator Leadsie pozwala utworzyć **nowe** konto
 > reklamowe, gdy klient **już ma** istniejące (opcja „Create new Meta asset" / wariant linku `/create`).
+
+---
+
+## 13. ŚCIEŻKA RĘCZNA (równorzędna wobec Leadsie)
+
+**Decyzja Tomka (22.07, WIĄŻĄCA).** Ręczny onboarding Meta to **PEŁNOPRAWNA, RÓWNORZĘDNA** ścieżka
+obok kreatora Leadsie — **nie** „główna + fallback". Test Leadsie ujawnił próg **RC2137**: konto FB
+**bez potwierdzonego e-maila** nie utworzy Business Portfolio w kreatorze. Przy tej niepewności klient
+musi mieć drugą, tak samo dobrą drogę. Decyzja o wejściu na plan Leadsie **$129/mies.** zapadnie
+**po porównaniu** obu ścieżek na realnym teście pracownika (liczba kliknięć/czas do uzupełnienia niżej).
+
+### Pętla automatyzacji BEZ webhooka
+
+Ścieżka ręczna nie ma odbicia webhookiem (Leadsie go daje). Domknięcie robi **weryfikator**:
+
+```
+Klient przechodzi kroki ręcznie (portal, zadanie ads_konto, „Ścieżka B")
+   │  nadaje partner access do BM Tomka (737839566050751) w Ustawieniach → Partnerzy
+   ▼
+Klient wkleja act_ ID konta reklamowego w pole na dole zadania ads_konto
+   │  wf2-portal task_save: normalizacja + (gdy meta_ad_account_id PUSTE) zapis na projekt
+   ▼
+wf2-ads-verify (po WF2_META_TOKEN, cron/przycisk) czyta konto przez Graph API
+   │  potwierdza dostęp / walutę PLN / strefę Europe-Warsaw / płatność / pixel
+   ▼
+Auto-odhaczenie checklisty VERBATIM (to samo co przy Leadsie) + spend_cap
+```
+
+### Kroki ręczne (portal `ads_konto`, „Ścieżka B — ręcznie, krok po kroku")
+
+Każdy krok ma **deep-link** (`target=_blank`; Meta sama przekierowuje do właściwego BM usera):
+
+1. **Portfolio biznesowe** — `https://business.facebook.com/latest/business_home?nav_ref=bm_home_redirect&bm_redirect_migration=true`
+   (brak → „Utwórz"; formularz poprosi o **e-mail firmowy**).
+2. **Konto reklamowe** — `https://business.facebook.com/settings/ad-accounts` (Dodaj → Utwórz nowe).
+   ⚠️ **WYRÓŻNIONE OSTRZEŻENIE:** waluta **PLN**, strefa **Europe/Warsaw** — **NIE DA SIĘ zmienić później**.
+3. **Płatności ręczne** — przy 1. konfiguracji płatności wybierz **PŁATNOŚCI RĘCZNE** (BLIK/przelew/PayU):
+   `https://business.facebook.com/billing_hub/payment_settings`. Doładowania **ZAWSZE z poziomu tego
+   konkretnego konta** (ogólny przelew utyka na saldzie profilu — incydent 1000 zł, §8).
+4. **Partner access** — `https://business.facebook.com/settings/partners` → Dodaj → „Nadaj partnerowi
+   dostęp do zasobów" → ID **737839566050751** (przycisk „Kopiuj" w portalu) → zaznacz konto reklamowe
+   + strona + Instagram → uprawnienia **„Zarządzaj"**.
+5. **Wklej act_** — klient kopiuje `act_…` (spod nazwy konta na `.../settings/ad-accounts`) do pola
+   klienckiego w zadaniu `ads_konto`.
+
+Miejsca na **zrzuty ekranu**: struktura `<div class="shot" data-shot="krok-N">[zrzut ekranu — wkrótce]</div>`
+po każdym kroku — placeholder dyskretny, zrzuty dojdą po teście pracownika.
+
+### RC2137 przy OBU ścieżkach
+
+Próg e-maila FB dotyczy nie tylko kreatora. Przy ścieżce ręcznej **formularz Meta i tak pyta o e-mail**
+(w polu przy tworzeniu portfolio, krok 1). Ścieżka A dostaje w portalu zdanie ratunkowe: „Centrum kont →
+Dane osobowe → Dane kontaktowe, potwierdź kodem i ponów". Gdy to nie pomaga → ścieżka ręczna (klient
+przechodzi ten sam próg e-maila świadomie, w polu formularza).
+
+### Pole klienckie + propagacja (kod)
+
+- `wf2-portal` `CLIENT_FIELD_WHITELIST.ads_konto = ['ad_account_id']` — **ŚWIADOME** przywrócenie
+  JEDNEGO pola (reszta reliktów self-attestation pozostaje usunięta).
+- `task_save` (`ads_konto`): normalizacja — same cyfry → `act_`+cyfry; `act_\d+` → as-is; inny format →
+  zostaje w `fields` bez propagacji. `meta_ad_account_id` PUSTE → zapis + `wf2_activities(action='ads_manual_id')`.
+  Kolumna zajęta INNĄ wartością → nota „⚠️ AUTOMAT: klient podał inne ID konta (X) niż zapisane (Y) —
+  potwierdź właściwe" (dedup po otwartej nocie). Zapis `fields` idzie tym samym atomowym RPC
+  `wf2_step_merge` (`p_block_merge=true`) co reszta kroków `ads_*` — bez wyścigu z verify/connect.
+- **`wf2-ads-verify` BEZ zmian logiki** — już weryfikuje z `meta_ad_account_id` (§9). Ścieżka ręczna
+  zasila tę samą kolumnę, więc verify domyka środowisko identycznie jak po Leadsie.
+
+### Checklista — jak się odhacza przy ścieżce B
+
+Pozycje `ads_konto` „(Leadsie — automat)" odhaczają się **same** przy ścieżce A (webhook `wf2-ads-connect`).
+Przy ścieżce B odhacza je **weryfikator** (po podaniu `act_` — waluta/strefa) albo **Tomek ręcznie**
+(konto + partner access — dostęp potwierdza verify przez odczyt konta). Brak ptaszka „automat" **nie**
+znaczy, że klient nic nie zrobił — patrz opis kroku w panelu.
+
+### Porównanie kliknięć (do uzupełnienia po teście pracownika)
+
+| Etap | Leadsie (kreator) | Ręcznie (ścieżka B) |
+|---|---|---|
+| Portfolio biznesowe | [ŻYWO] | [ŻYWO] |
+| Konto reklamowe (PLN/Warsaw) | [ŻYWO] | [ŻYWO] |
+| Płatności ręczne | [ŻYWO] | [ŻYWO] |
+| Partner access | [ŻYWO] | [ŻYWO] |
+| **Łącznie kliknięć / czas** | **[ŻYWO]** | **[ŻYWO]** |
+
+> **[ŻYWO]** Wypełnić po pierwszym realnym przejściu obu ścieżek przez pracownika — to dane do decyzji
+> $129/mies. za Leadsie (§6).

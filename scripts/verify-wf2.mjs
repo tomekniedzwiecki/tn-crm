@@ -266,6 +266,20 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     : bad('portal.html leadsie', 'brak leadsieConnectBlock / tytułu przycisku');
   panelSrc.includes('adsKontoLeadsieBlock') ? ok('projekt.html: sekcja „Połączenia Leadsie" (adsKontoLeadsieBlock)') : bad('projekt.html leadsie', 'brak adsKontoLeadsieBlock');
 
+  // ── ŚCIEŻKA RĘCZNA (równorzędna, decyzja Tomka 22.07; SSOT §13) — pętla bez webhooka ──
+  // portal ma Ścieżkę B (ręczny onboarding krok po kroku)
+  /Ręcznie,\s*krok po kroku/.test(portalHtml)
+    ? ok('portal.html: Ścieżka B „Ręcznie, krok po kroku" (onboarding ręczny)')
+    : bad('portal.html ścieżka ręczna', 'brak frazy „Ręcznie, krok po kroku" w ads_konto');
+  // whitelist ads_konto == ['ad_account_id'] (świadome przywrócenie JEDNEGO pola)
+  /ads_konto:\s*\["ad_account_id"\]/.test(portalSrc)
+    ? ok('wf2-portal: CLIENT_FIELD_WHITELIST.ads_konto == ["ad_account_id"]')
+    : bad('wf2-portal whitelist ads_konto', 'brak ads_konto: ["ad_account_id"] w CLIENT_FIELD_WHITELIST');
+  // task_save ads_konto: normalizacja act_ + propagacja (ads_manual_id)
+  (portalSrc.includes('ads_manual_id') && portalSrc.includes('act_${rawId}') && portalSrc.includes('/^act_\\d+$/'))
+    ? ok('wf2-portal: task_save ads_konto normalizuje act_ + propaguje (ads_manual_id)')
+    : bad('wf2-portal normalizacja act_', 'brak normalizacji act_ / ads_manual_id w task_save ads_konto');
+
   // settings: klucz istnieje (odczyt service-role); migracja obecna
   const kr = await rest('settings?select=key&key=eq.wf2_leadsie_connect_url', SK);
   (kr.status < 300 && Array.isArray(kr.data) && kr.data.length === 1) ? ok('settings.wf2_leadsie_connect_url istnieje') : bad('settings wf2_leadsie_connect_url', `status ${kr.status}, rows ${Array.isArray(kr.data) ? kr.data.length : '?'}`);
@@ -480,15 +494,22 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   (/deploy:wf2"[\s\S]*deploy:wf2-ads-connect[\s\S]*deploy:wf2-ads-verify/.test(pkg) || (/"deploy:wf2":[^\n]*wf2-ads-connect/.test(pkg) && /"deploy:wf2":[^\n]*wf2-ads-verify/.test(pkg)))
     ? ok('package.json deploy:wf2 obejmuje wf2-ads-connect + wf2-ads-verify') : bad('deploy:wf2', 'deploy:wf2 nie deployuje connect/verify');
 
-  // (poz.13) CLIENT_FIELD_WHITELIST bez reliktów ads_konto/ads_budzet
+  // (poz.13) CLIENT_FIELD_WHITELIST: ads_konto == ["ad_account_id"] (ŚWIADOME 1 pole, ścieżka ręczna
+  // 22.07), reszta reliktów self-attestation ZABITA (ads_budzet brak; bm_id/partner_id/amount/confirmation
+  // brak). ad_account_id dozwolone WYŁĄCZNIE w ads_konto (single-element) — nie jako relikt gdzie indziej.
   {
     const wlStart = portalSrc.indexOf('CLIENT_FIELD_WHITELIST');
     const wlBlock = wlStart >= 0 ? portalSrc.slice(wlStart, portalSrc.indexOf('};', wlStart)) : '';
-    // sprawdzamy KLUCZE mapy (ads_konto:/ads_budzet:) i CUDZYSŁOWNE wartości (relikty jako "bm_id"),
-    // żeby nie łapać nazw reliktów wymienionych w komentarzu wyjaśniającym (bez cudzysłowów).
-    (!/ads_konto:\s*\[/.test(wlBlock) && !/ads_budzet:\s*\[/.test(wlBlock) && !/"bm_id"|"partner_id"|"ad_account_id"|"amount"|"confirmation"/.test(wlBlock))
-      ? ok('wf2-portal CLIENT_FIELD_WHITELIST: brak reliktów ads_konto/ads_budzet (self-attestation zabita)')
-      : bad('CLIENT_FIELD_WHITELIST relikty', 'nadal jest ads_konto/ads_budzet/"bm_id"/"partner_id"/"ad_account_id"/"confirmation"');
+    // sprawdzamy KLUCZE mapy i CUDZYSŁOWNE wartości (relikty jako "bm_id"), żeby nie łapać nazw
+    // reliktów wymienionych w komentarzu wyjaśniającym (bez cudzysłowów). ad_account_id ma paść
+    // TYLKO wewnątrz ads_konto: ["ad_account_id"] — poza nim żadnego "ad_account_id".
+    const adAcctOccurrences = (wlBlock.match(/"ad_account_id"/g) || []).length;
+    (/ads_konto:\s*\["ad_account_id"\]/.test(wlBlock)
+      && !/ads_budzet:\s*\[/.test(wlBlock)
+      && !/"bm_id"|"partner_id"|"amount"|"confirmation"/.test(wlBlock)
+      && adAcctOccurrences === 1)
+      ? ok('wf2-portal CLIENT_FIELD_WHITELIST: ads_konto==["ad_account_id"], reszta reliktów zabita (ads_budzet/bm_id/partner_id/amount/confirmation)')
+      : bad('CLIENT_FIELD_WHITELIST relikty', 'ads_konto != ["ad_account_id"] albo wróciły relikty ads_budzet/bm_id/partner_id/amount/confirmation');
   }
 
   // (P0/poz.14) portal CLIENT_WS: Leadsie-first — 737839566050751 TYLKO w fallbacku <details> ads_konto

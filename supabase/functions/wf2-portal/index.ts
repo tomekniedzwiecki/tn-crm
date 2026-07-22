@@ -96,9 +96,13 @@ function isViewableMedia(url: string): boolean {
 const CLIENT_FIELD_WHITELIST: Record<string, string[]> = {
   firma:           ["nip", "data_rejestracji"],
   pl_dane:         ["company", "nip", "regon", "address", "nrb", "email_kontakt", "phone", "return_address"],
-  // ads_konto / ads_budzet USUNIĘTE (Etap 4 runda 2): to były relikty self-attestation
-  // (bm_id/partner_id/ad_account_id · amount/method/confirmation). Prawdę o koncie ustala teraz
-  // webhook wf2-ads-connect + weryfikator wf2-ads-verify (Graph API) — klient niczego nie deklaruje.
+  // ads_konto: JEDNO pole (ad_account_id) — ŚWIADOME przywrócenie pod ŚCIEŻKĘ RĘCZNĄ (równorzędną
+  // wobec Leadsie, decyzja Tomka 22.07). Pętla bez webhooka: klient wkleja act_ konta reklamowego →
+  // task_save normalizuje i (gdy meta_ad_account_id PUSTE) propaguje na projekt → weryfikator
+  // wf2-ads-verify potwierdza dostęp/walutę/resztę przez Graph API. Pozostałe relikty self-attestation
+  // POZOSTAJĄ usunięte (ads_konto: bm_id/partner_id · ads_budzet: amount/method/confirmation) —
+  // prawdę o koncie ustala webhook wf2-ads-connect + weryfikator, nie deklaracja klienta.
+  ads_konto:       ["ad_account_id"],
   ads_strona:      ["fanpage_url", "instagram_url"],
 };
 
@@ -589,6 +593,40 @@ Deno.serve(async (req: Request) => {
     } else {
       const { error } = await sb.from("wf2_steps").insert({ project_id: p.id, step_key, data: newData });
       if (error) return json({ error: "save_failed" }, 500);
+    }
+
+    // ads_konto (ŚCIEŻKA RĘCZNA — pętla bez webhooka): klient wkleił act_ swojego konta reklamowego.
+    // Normalizacja: same cyfry → 'act_'+cyfry; już 'act_\d+' → as-is; inny format → zostaje w fields
+    // bez propagacji (nie zgadujemy). Gdy wf2_projects.meta_ad_account_id PUSTE → zapis tam +
+    // wf2_activities(ads_manual_id). Kolumna zajęta INNĄ wartością → nota do potwierdzenia (dedup po
+    // otwartej nocie). Weryfikator wf2-ads-verify sprawdzi resztę środowiska tym samym act_.
+    if (step_key === "ads_konto" && typeof cleaned.ad_account_id === "string" && cleaned.ad_account_id) {
+      const rawId = cleaned.ad_account_id.trim();
+      let actId: string | null = null;
+      if (/^\d+$/.test(rawId)) actId = `act_${rawId}`;
+      else if (/^act_\d+$/.test(rawId)) actId = rawId;
+      if (actId) {
+        const { data: proj } = await sb.from("wf2_projects")
+          .select("meta_ad_account_id").eq("id", p.id).maybeSingle();
+        const cur = String((proj as Record<string, unknown> | null)?.meta_ad_account_id || "").trim();
+        if (!cur) {
+          await sb.from("wf2_projects").update({ meta_ad_account_id: actId }).eq("id", p.id);
+          await sb.from("wf2_activities").insert({
+            project_id: p.id, actor: "client", action: "ads_manual_id",
+            description: `Klient podał ${actId} (ścieżka ręczna)`,
+          });
+        } else if (cur !== actId) {
+          const { data: dup } = await sb.from("wf2_notes")
+            .select("id").eq("project_id", p.id).eq("status", "open")
+            .like("body", "⚠️ AUTOMAT: klient podał inne ID konta%").limit(1);
+          if (!dup || dup.length === 0) {
+            await sb.from("wf2_notes").insert({
+              project_id: p.id, tag: "blokada", status: "open", author: "auto",
+              body: `⚠️ AUTOMAT: klient podał inne ID konta (${actId}) niż zapisane (${cur}) — potwierdź właściwe.`.slice(0, 1000),
+            });
+          }
+        }
+      }
     }
 
     // pl_dane: dane sprzedawcy żyją w dokumentach sklepu → auto re-publish (koalescencja 60 s,
