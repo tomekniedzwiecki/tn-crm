@@ -309,7 +309,7 @@
                 <button onclick="pkShow('manual')" class="text-left border border-[#2a2a2a] hover:border-[#0070f3]/60 rounded-lg p-5 transition-colors">
                     <div class="w-9 h-9 rounded-md bg-zinc-800/80 flex items-center justify-center mb-3"><i class="ph ph-list-magnifying-glass text-zinc-300 text-lg"></i></div>
                     <div class="text-white font-medium text-sm mb-1">Wybierz ręcznie</div>
-                    <div class="text-zinc-500 text-[11.5px] leading-relaxed">Wszystkie zatwierdzone produkty z radaru (/trendy) — zdjęcia z aukcji AliExpress.</div>
+                    <div class="text-zinc-500 text-[11.5px] leading-relaxed">Wszystkie zatwierdzone produkty z radaru (/trendy) — zdjęcia z aukcji AliExpress (fallback: okładka z TikToka).</div>
                 </button>
                 <button id="pk-reroll-card" onclick="closePicker(); rerollPortfolio()" class="hidden md:col-span-2 text-left border border-[#2a2a2a] hover:border-[#f5a623]/60 rounded-lg p-5 transition-colors">
                     <div class="w-9 h-9 rounded-md bg-[#f5a623]/10 flex items-center justify-center mb-3"><i class="ph ph-arrows-clockwise text-[#f5b955] text-lg"></i></div>
@@ -339,7 +339,7 @@
                 <input id="pk-search" class="fld mb-4 flex-shrink-0" placeholder="Szukaj po nazwie lub kategorii…" oninput="renderPicker()">
                 <div id="pk-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2.5 overflow-y-auto pr-1" style="min-height:200px"></div>
                 <div class="flex items-center justify-between mt-4 pt-4 border-t border-[#1f1f1f] flex-shrink-0">
-                    <span class="text-zinc-600 text-[11px]">Zatwierdzone na /trendy · zdjęcia z aukcji AliExpress · sort: potencjał (heat)</span>
+                    <span class="text-zinc-600 text-[11px]">Zatwierdzone na /trendy · zdjęcia z aukcji AliExpress lub okładki TikToka · sort: potencjał (heat)</span>
                     <button onclick="closePicker(); openProductModal()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff]">Dodaj ręcznie (spoza radaru)</button>
                 </div>
             </div>
@@ -494,6 +494,21 @@
         let editingProductId = null;
         let ttProducts = null;   // cache radaru /trendy (approved)
         let ttCardCache = {};    // tt_product_id -> pełny wiersz do karty produktu
+        // Miniatura produktu radaru — snapshot Ali jest best-effort (bywa NULL), więc pełna kaskada:
+        // kurowana → główna ze snapshotu aukcji → zdjęcie kandydata WYBRANEJ aukcji (chosen_link)
+        // → trwały cover z TikToka (rehost w Storage). Kandydat niedopasowany do chosen_link
+        // to potencjalnie INNY produkt — pomijany.
+        function ttThumb(t) {
+            if (!t) return '';
+            const snap = t.curated_image || t.ali_main || t.ali_img;
+            if (snap) return snap;
+            const cid = (String(t.chosen_link || '').match(/item\/(\d+)/) || [])[1];
+            if (cid && Array.isArray(t.ali_candidates)) {
+                const hit = t.ali_candidates.find(x => x && (String(x.id) === cid || String(x.link || '').includes('/' + cid + '.')));
+                if (hit && hit.img) return hit.img;
+            }
+            return t.cover || '';
+        }
         let pendingTT = null;
         let genMap = {};         // bud_session_id -> generacje z lejka /sklep
         let noteFilter = 'open';
@@ -2222,7 +2237,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
         }
         function wyAliprice() {
             const p = drawerProduct();
-            const img = (wyTT && (wyTT.curated_image || wyTT.ali_img)) || (p && p.cover_url) || '';
+            const img = (wyTT && ttThumb(wyTT)) || (p && p.cover_url) || '';
             if (!img) { showToast('Brak zdjęcia produktu', 'error'); return; }
             navigator.clipboard.writeText(img).catch(() => {});
             window.open('https://www.aliprice.com/', '_blank');
@@ -2235,14 +2250,14 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             box.innerHTML = '<div class="text-zinc-600 text-[11px]">Sprawdzam aukcję…</div>';
             const [{ data }] = await Promise.all([
                 supabaseClient.from('bud_tt_products')
-                    .select('id, chosen_link, curated_image, ali_src:ali_snapshot->>source, ali_sale:ali_snapshot->price->>sale, ali_img:ali_snapshot->>main_image, ali_at:ali_snapshot->>fetched_at')
+                    .select('id, chosen_link, curated_image, cover, ali_candidates, ali_src:ali_snapshot->>source, ali_sale:ali_snapshot->price->>sale, ali_img:ali_snapshot->>main_image, ali_at:ali_snapshot->>fetched_at')
                     .eq('id', p.tt_product_id).maybeSingle(),
                 getUsdRate(),
             ]);
             if (my !== wySeq || !document.getElementById('wy-ali')) return;
             wyTT = data || null;
             if (!wyTT) { box.innerHTML = ''; return; }
-            const aliImg = wyTT.curated_image || wyTT.ali_img;
+            const aliImg = ttThumb(wyTT);
             const imgEl = document.getElementById('wy-img');
             if (aliImg && imgEl) { imgEl.href = aliImg; imgEl.classList.remove('hidden'); }
             const offerEl = document.getElementById('wy-offer');
@@ -2274,7 +2289,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                     if (ttProducts) return;
                     const [{ data }] = await Promise.all([
                         supabaseClient.from('bud_tt_products')
-                            .select('id, pl_name, category, curated_image, chosen_link, heat, ali_main:ali_snapshot->>main_image, ali_price:ali_snapshot->price->>sale, ali_src:ali_snapshot->>source')
+                            .select('id, pl_name, category, curated_image, chosen_link, heat, cover, ali_candidates, ali_main:ali_snapshot->>main_image, ali_price:ali_snapshot->price->>sale, ali_src:ali_snapshot->>source')
                             .eq('status', 'approved').order('heat', { ascending: false }).range(0, 499),
                         getUsdRate(),
                     ]);
@@ -2337,7 +2352,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
         }
         function renderAutoGrid() {
             document.getElementById('pk-auto-grid').innerHTML = pkProposal.map((x, i) => {
-                const t = x.t; const img = t.curated_image || t.ali_main;
+                const t = x.t; const img = ttThumb(t);
                 const pln = t.ali_price && usdRate ? Math.round(parseFloat(t.ali_price) * usdRate) : null;
                 const badge = t.ali_src === 'detail' ? '<span class="text-[9px] bg-[#45a557]/15 text-[#62c073] px-1.5 py-0.5 rounded">aukcja żywa</span>' : '<span class="text-[9px] bg-[#f5a623]/15 text-[#f5b955] px-1.5 py-0.5 rounded">do weryfikacji</span>';
                 return `<div class="relative border ${x.sel ? 'border-[#0070f3]/60' : 'border-[#2a2a2a] opacity-40'} rounded-md p-2.5 cursor-pointer transition-all" onclick="pkToggle(${i})">
@@ -2364,7 +2379,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 return {
                     project_id: projectId, sort: products.length + i, name: t.pl_name, status: 'kandydat',
                     margin_mode: 'test', tt_product_id: t.id, supplier_url: t.chosen_link || null,
-                    cover_url: t.curated_image || t.ali_main || null,
+                    cover_url: ttThumb(t) || null,
                     cost_purchase: cost, price: cost != null ? suggestTestPrice(cost) : null, fees_pct: 2,
                 };
             });
@@ -2381,7 +2396,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             const q = (document.getElementById('pk-search').value || '').toLowerCase();
             const items = (ttProducts || []).filter(t => !q || (t.pl_name || '').toLowerCase().includes(q) || (t.category || '').toLowerCase().includes(q));
             document.getElementById('pk-grid').innerHTML = items.map(t => {
-                const img = t.curated_image || t.ali_main;
+                const img = ttThumb(t);
                 const inPortfolio = products.some(p => p.tt_product_id === t.id);
                 const takenElse = !inPortfolio && pkTakenGlobal.has(t.id);
                 const dead = inPortfolio || takenElse;
@@ -2402,7 +2417,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             pendingTT = t.id;
             document.getElementById('pm-name').value = t.pl_name || '';
             document.getElementById('pm-supplier').value = t.chosen_link || '';
-            document.getElementById('pm-cover').value = t.curated_image || t.ali_main || '';
+            document.getElementById('pm-cover').value = ttThumb(t) || '';
             loadModalAuction(t.id);
         }
         async function previewGenLanding(sessId) {
@@ -2433,7 +2448,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 if (ttCardCache[p.tt_product_id]) tt = ttCardCache[p.tt_product_id];
                 else {
                     const { data } = await supabaseClient.from('bud_tt_products')
-                        .select('id, pl_name, category, heat, max_plays, tiktok_url, chosen_link, curated_image, gallery_curated, videos_curated, videos, tt_shop, ali_src:ali_snapshot->>source, ali_sale:ali_snapshot->price->>sale, ali_img:ali_snapshot->>main_image, ali_title:ali_snapshot->>title, ali_reviews:ali_snapshot->>review_stats')
+                        .select('id, pl_name, category, heat, max_plays, tiktok_url, chosen_link, curated_image, cover, ali_candidates, gallery_curated, videos_curated, videos, tt_shop, ali_src:ali_snapshot->>source, ali_sale:ali_snapshot->price->>sale, ali_img:ali_snapshot->>main_image, ali_title:ali_snapshot->>title, ali_reviews:ali_snapshot->>review_stats')
                         .eq('id', p.tt_product_id).maybeSingle();
                     tt = data || null; if (tt) ttCardCache[p.tt_product_id] = tt;
                 }
@@ -2463,7 +2478,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
         }
         function fmtPlays(n) { n = Number(n)||0; return n >= 1e6 ? (n/1e6).toFixed(1).replace('.',',') + ' mln' : n >= 1e3 ? Math.round(n/1e3) + ' tys.' : String(n); }
         function renderCard(p, tt) {
-            const img = (tt && (tt.curated_image || tt.ali_img)) || p.cover_url;
+            const img = (tt && ttThumb(tt)) || p.cover_url;
             const usd = tt ? parseFloat(tt.ali_sale) : NaN;
             // purchasePln — NIE 'costPln': lokalny const shadowował globalną funkcję costPln(c)
             // i wywalał całą kartę (TypeError w reduce kosztów — visual-verify 21.07).
@@ -2560,7 +2575,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             box.innerHTML = '<div class="text-zinc-600 text-[11px]">Sprawdzam aukcję…</div>';
             const [{ data }] = await Promise.all([
                 supabaseClient.from('bud_tt_products')
-                    .select('id, chosen_link, curated_image, cover, ali_src:ali_snapshot->>source, ali_sale:ali_snapshot->price->>sale, ali_img:ali_snapshot->>main_image, ali_at:ali_snapshot->>fetched_at')
+                    .select('id, chosen_link, curated_image, cover, ali_candidates, ali_src:ali_snapshot->>source, ali_sale:ali_snapshot->price->>sale, ali_img:ali_snapshot->>main_image, ali_at:ali_snapshot->>fetched_at')
                     .eq('id', ttId).maybeSingle(),
                 getUsdRate(),
             ]);
@@ -2619,7 +2634,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             ttProducts = null; ttCardCache = {};
         }
         function pmSearchImage(kind) {
-            const img = modalTT && (modalTT.curated_image || modalTT.ali_img || modalTT.cover) || document.getElementById('pm-cover').value;
+            const img = (modalTT && ttThumb(modalTT)) || document.getElementById('pm-cover').value;
             if (!img) { showToast('Brak zdjęcia produktu', 'error'); return; }
             if (kind === 'lens') { window.open('https://lens.google.com/uploadbyurl?url=' + encodeURIComponent(img), '_blank'); return; }
             navigator.clipboard.writeText(img).catch(() => {});
@@ -2808,7 +2823,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                     const cost = isNaN(usd) ? null : Math.round(usd * usdRate * 100) / 100;
                     return { project_id: projectId, sort: baseSort + 1 + i, name: t.pl_name, status: 'kandydat',
                         margin_mode: 'test', tt_product_id: t.id, supplier_url: t.chosen_link || null,
-                        cover_url: t.curated_image || t.ali_main || null,
+                        cover_url: ttThumb(t) || null,
                         cost_purchase: cost, price: cost != null ? suggestTestPrice(cost) : null, fees_pct: 2 };
                 });
                 const { error: insErr } = await supabaseClient.from('wf2_products').insert(rows);
