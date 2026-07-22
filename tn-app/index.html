@@ -175,7 +175,7 @@
                 <div class="flex flex-wrap items-center gap-3 mb-5">
                     <label class="searchbox">
                         <i class="ph ph-magnifying-glass text-zinc-500"></i>
-                        <input id="search" type="text" placeholder="Szukaj: aplikacja, klient, e-mail, telefon, domena…" oninput="renderCards()">
+                        <input id="search" type="text" aria-label="Szukaj projektu" placeholder="Szukaj: aplikacja, klient, e-mail, telefon, domena…" oninput="renderCards()">
                     </label>
                     <div id="lc-filter" class="lc-filter"></div>
                     <div id="filter-bar" class="hidden items-center gap-2">
@@ -224,13 +224,13 @@
             <h3 class="text-white text-lg font-semibold mb-1">Nowy projekt</h3>
             <p class="text-zinc-500 text-xs mb-4">Dla projektu spoza lejka /aplikacja. Projekty z opłaconych sesji sparingu tworzą się automatycznie.</p>
             <div class="space-y-3">
-                <div><label class="text-xs text-zinc-500 block mb-1">Nazwa aplikacji (opcjonalnie)</label>
+                <div><label for="np-name" class="text-xs text-zinc-500 block mb-1">Nazwa aplikacji (opcjonalnie)</label>
                     <input id="np-name" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
-                <div><label class="text-xs text-zinc-500 block mb-1">Imię i nazwisko klienta</label>
+                <div><label for="np-customer" class="text-xs text-zinc-500 block mb-1">Imię i nazwisko klienta</label>
                     <input id="np-customer" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
-                <div><label class="text-xs text-zinc-500 block mb-1">E-mail</label>
+                <div><label for="np-email" class="text-xs text-zinc-500 block mb-1">E-mail</label>
                     <input id="np-email" type="email" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
-                <div><label class="text-xs text-zinc-500 block mb-1">Telefon</label>
+                <div><label for="np-phone" class="text-xs text-zinc-500 block mb-1">Telefon</label>
                     <input id="np-phone" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
             </div>
             <div class="flex justify-end gap-2 mt-5">
@@ -321,7 +321,8 @@
             return (p.customer_name || 'Projekt') + ' (bez nazwy)';
         }
         function initials(str) {
-            const s = (str || '').replace(/^DEMO\s+/i, '').trim();
+            // wytnij dopiski w nawiasach — „Jan Kowalski (bez nazwy)" ma dać „JK", nie „J("
+            const s = (str || '').replace(/^DEMO\s+/i, '').replace(/\s*\([^)]*\)/g, '').trim();
             if (!s) return '?';
             const parts = s.split(/\s+/).filter(Boolean);
             return ((parts[0]?.[0] || '') + (parts.length > 1 ? parts[1][0] : '')).toUpperCase() || s[0].toUpperCase();
