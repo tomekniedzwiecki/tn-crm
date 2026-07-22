@@ -675,10 +675,12 @@
                 if (ra !== rb) return ra - rb;                        // active → paused → completed → cancelled
                 const da = isDemo(a) ? 1 : 0, db = isDemo(b) ? 1 : 0;
                 if (da !== db) return da - db;                         // DEMO na końcu swojej grupy
-                if (ra === 0) { // aktywne wg fazy procesu (dalej = wyżej), potem najnowsze
+                if (ra === 0) { // aktywne wg fazy procesu (dalej = wyżej), potem wg widocznej daty startu
                     const pa = PHASE_ORDER.indexOf(aggByProj[a.id]?.phase || 'spowiednik');
                     const pb = PHASE_ORDER.indexOf(aggByProj[b.id]?.phase || 'spowiednik');
                     if (pa !== pb) return pb - pa;
+                    const sa = startInfoOf(a).iso || a.created_at, sb = startInfoOf(b).iso || b.created_at;
+                    return new Date(sb) - new Date(sa);
                 }
                 return new Date(b.created_at) - new Date(a.created_at);
             });
@@ -777,12 +779,17 @@
             </div>`;
         }
 
-        // mały druk daty startu = wypełnienie spowiednika (projekt ręczny: data utworzenia)
-        function startHtml(p) {
+        // data startu = wypełnienie spowiednika (projekt ręczny: data utworzenia);
+        // ta sama data jest kluczem sortu w ramach fazy — to co widać, po tym sortujemy
+        function startInfoOf(p) {
             const kh = knowhowByProj[p.id];
-            let iso = null, src = '';
-            if (kh && kh.status === 'closed' && kh.closed_at) { iso = kh.closed_at; src = 'spowiednik wypełniony'; }
-            else if (!p.spar_session_id) { iso = p.created_at; src = 'projekt utworzony'; }
+            if (kh && kh.status === 'closed' && kh.closed_at) return { iso: kh.closed_at, src: 'spowiednik wypełniony' };
+            if (!p.spar_session_id) return { iso: p.created_at, src: 'projekt utworzony' };
+            return { iso: null, src: '' };
+        }
+        // mały druk daty startu w wierszu fazy
+        function startHtml(p) {
+            const { iso, src } = startInfoOf(p);
             if (!iso) return '';
             const d = new Date(iso); if (isNaN(d.getTime())) return '';
             const dd = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
