@@ -72,6 +72,7 @@ const ATTACH_BUCKET = 'spar-knowhow'
 const MAX_ATTACH_BYTES = 20 * 1024 * 1024
 const ATTACH_MIME: Record<string, string> = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' }
 const MAX_ATTACH_PER_SESSION = 30
+const MAX_ATTACH_PER_SESSION_STAGE1 = 8 // spinacz w zwykłej rozmowie (przed pełną płatnością)
 const MAX_ATTACH_PER_HOUR = 10
 const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.6-sol'
 // 3000: odpowiedź z markerem <projekt> (pełny brief z 4 widokami) potrafi
@@ -1376,17 +1377,21 @@ Deno.serve(async (req) => {
       const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
       const au = await verifyAuthUser(req, sb)
       const { data: sess } = await sb.from('spar_sessions')
-        .select('id, lead_id, auth_user_id, full_paid_at, knowhow_closed_at, idea_source, problem_summary, preview_brief')
+        .select('id, lead_id, auth_user_id, email, full_paid_at, knowhow_closed_at, idea_source, problem_summary, preview_brief')
         .eq('id', sessionId).maybeSingle()
       if (!sess) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, corsHeaders)
       const ownerId = (sess.auth_user_id as string | null) || null
       if (ownerId && !isTrustedInternalCall(req) && (!au || au.id !== ownerId)) {
         return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
       }
-      // Spinacz istnieje TYLKO w trybie spowiednika (po pełnej płatności, przed
-      // domknięciem etapu) — spójnie z twardym lockiem tur po knowhow_closed_at.
-      if (!sess.full_paid_at) return jsonResponse({ error: 'tylko_spowiednik' }, 403, corsHeaders)
+      // Spinacz działa w CAŁEJ rozmowie (decyzja Tomka 2026-07-22) — wcześniej tylko
+      // spowiednik. Zwykła rozmowa: wymóg podanego kontaktu (anty-abuse na anonimach);
+      // po domknięciu etapu know-how tur i plików nie przyjmujemy (jak dotąd).
       if (sess.knowhow_closed_at) return jsonResponse({ error: 'knowhow_zamkniety' }, 403, corsHeaders)
+      const attachPreFull = !sess.full_paid_at
+      if (attachPreFull && !sess.email && !au?.email) {
+        return jsonResponse({ error: 'wymagany_email', message: 'Dodawanie plików działa po podaniu kontaktu w rozmowie.' }, 403, corsHeaders)
+      }
       const leadId = (sess.lead_id as string | null) || null
 
       if (body.event === 'knowhow_attach_init') {
@@ -1407,7 +1412,10 @@ Deno.serve(async (req) => {
             .eq('session_id', sessionId).eq('kind', 'zalacznik').not('file_path', 'is', null)
             .gte('created_at', new Date(Date.now() - 3600_000).toISOString()),
         ])
-        if ((attTotal || 0) >= MAX_ATTACH_PER_SESSION) {
+        // Zwykła rozmowa (przed pełną płatnością): niższy sufit per sesja — plik ma
+        // wspierać projektowanie, nie służyć za darmowy OCR (spowiednik: pełny limit).
+        const sessionCap = attachPreFull ? MAX_ATTACH_PER_SESSION_STAGE1 : MAX_ATTACH_PER_SESSION
+        if ((attTotal || 0) >= sessionCap) {
           return jsonResponse({ error: 'limit_zalacznikow', message: 'Osiągnięto limit załączników w tej rozmowie.' }, 429, corsHeaders)
         }
         if ((attHour || 0) >= MAX_ATTACH_PER_HOUR) {
@@ -1566,7 +1574,7 @@ Deno.serve(async (req) => {
         console.error('[spar-chat] attach items insert error:', itemsErr)
         await stampKnowhowError(sb, sessionId, leadId, 'extract_error', `załącznik ${filename}: insert ${itemsErr.message || '?'}`)
       }
-      await refreshKnowhowSummary(sb, sessionId, leadId, (sess.idea_source as string | null) || 'wlasny')
+      if (!attachPreFull) await refreshKnowhowSummary(sb, sessionId, leadId, (sess.idea_source as string | null) || 'wlasny')
 
       // ── FALLBACK ACK w tle (incydent magm5 2026-07-19) ─────────────────────
       // Po sukcesie front woła turę AI attachAck (stream: „przeczytałem plik, oto
@@ -1613,7 +1621,9 @@ Deno.serve(async (req) => {
             max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
             reasoning_effort: 'low', // fallback — tańsza tura niż główny 'medium'
             messages: [
-              { role: 'system', content: `${ackSysPrompt}\n\n${knowhowInstruction(ackIdeaSource)}` },
+              // Zwykła rozmowa (przed pełną płatnością): czysty prompt sparingu —
+              // doklejenie instrukcji spowiednika wypaczałoby ton tury ack.
+              { role: 'system', content: attachPreFull ? ackSysPrompt : `${ackSysPrompt}\n\n${knowhowInstruction(ackIdeaSource)}` },
               ...ackMsgs,
               { role: 'user', content: attachAckTrigger(ackFilename) },
             ],
@@ -1718,11 +1728,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
     }
     // Tura AI po udanym odczycie załącznika (bez tury usera — wiadomość
-    // [ZAŁĄCZNIK: …] już siedzi w historii po knowhow_attach_done).
-    const attachAck = body.attachAck === true && isKnowHowMode
-    if (body.attachAck === true && !isKnowHowMode) {
-      return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
-    }
+    // [ZAŁĄCZNIK: …] już siedzi w historii po knowhow_attach_done). Od 2026-07-22
+    // działa w KAŻDYM trybie (spinacz w całej rozmowie, decyzja Tomka).
+    const attachAck = body.attachAck === true
     const attachAckName = String(body.attachName || 'plik').trim().slice(0, 200)
 
     // Decyzja Tomka 2026-07-11: etap spowiednika KOŃCZY SIĘ twardo. Po knowhow_closed_at
@@ -1887,16 +1895,16 @@ Deno.serve(async (req) => {
         .eq('session_id', sessionId)
         .eq('channel', mode)
         .order('id', { ascending: true }),
-      isKnowHowMode
-        ? supabase
-            .from('spar_knowhow_items')
-            .select('content, created_at')
-            .eq('session_id', sessionId)
-            .eq('kind', 'zalacznik')
-            .not('file_path', 'is', null)
-            .order('created_at', { ascending: true })
-            .limit(20)
-        : Promise.resolve({ data: [] as Array<{ content: string; created_at: string }> }),
+      // Lista załączników sesji — od 2026-07-22 spinacz działa w CAŁEJ rozmowie
+      // (decyzja Tomka), więc dociągamy ją w każdym trybie (tani indeksowany select).
+      supabase
+        .from('spar_knowhow_items')
+        .select('content, created_at')
+        .eq('session_id', sessionId)
+        .eq('kind', 'zalacznik')
+        .not('file_path', 'is', null)
+        .order('created_at', { ascending: true })
+        .limit(20),
     ])
 
     if (historyError) {
@@ -2075,6 +2083,20 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
       sessionContext += `\n\n${RESIGNATION_INSTRUCTION}`
       // Sparing: poproś model, by przy werdykcie dołączył źródło pomysłu (idea_source).
       if (!isKnowHowMode) sessionContext += `\n\n${KH.idea_hint}`
+      // ── Załączniki w ZWYKŁEJ rozmowie (2026-07-22, decyzja Tomka) ─────────
+      // Spinacz działa przez całą rozmowę (po podaniu kontaktu). Model musi znać
+      // mechanikę (wskazuje spinacz, nie wymyśla innych kanałów) i AKTYWNIE
+      // korzystać z odczytanej treści plików — audyt 426 rozmów: userzy chcieli
+      // wgrywać cenniki/grafiki już na etapie projektowania.
+      if (!isKnowHowMode) {
+        sessionContext += `\n\n[ZAŁĄCZNIKI OD ROZMÓWCY — MECHANIKA] Rozmówca może dodać plik (PDF, PNG lub JPG, do 20 MB) przyciskiem SPINACZA po lewej stronie pola wiadomości (na komputerze działa też przeciągnięcie pliku na okno rozmowy); spinacz pojawia się po podaniu kontaktu. System sam odczytuje plik i wstawia jego treść do rozmowy jako wiadomość rozmówcy w bloku [ZAŁĄCZNIK: nazwa] — traktuj ją jak pełnoprawny wsad (cennik, oferta, zrzut ekranu, dokument branżowy) i AKTYWNIE wykorzystuj te konkrety w projektowaniu narzędzia, karcie projektu i opisach widoków. NIGDY nie mów, że nie możesz otworzyć pliku, skoro jego treść jest w rozmowie. Gdy rozmówca chce coś przesłać — wskaż spinacz; NIE proponuj maila ani innych kanałów. Inne formaty: poproś o PDF albo zrzut ekranu.`
+        const sparAttachList = ((knowhowAttachRaw || []) as Array<{ content: string; created_at: string }>)
+          .map((a) => `- ${String(a.content || '').trim()} (${String(a.created_at || '').slice(0, 10)})`)
+          .filter((l) => l.length > 4)
+        if (sparAttachList.length) {
+          sessionContext += `\n\n[PLIKI DODANE PRZEZ ROZMÓWCĘ — ZNASZ ICH TREŚĆ] W tej rozmowie są pliki:\n${sparAttachList.join('\n')}\nIch pełna odczytana treść jest w historii w blokach [ZAŁĄCZNIK: …]. ZANIM o coś zapytasz, sprawdź, czy odpowiedź nie jest już w tych blokach — jeśli jest, potwierdź ją i buduj na niej (dane z plików wzbogacają kartę projektu i widoki <projekt>).`
+        }
+      }
 
       // ── [STAN SESJI] — twarde fakty per tura ──────────────────────────────
       // Model NIE skanuje historii w poszukiwaniu stanu (werdykt/karta/płatność/
@@ -2084,6 +2106,15 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         const st: string[] = []
         st.push(`werdykt: ${(existingSession.verdict as string | null) || 'jeszcze nie wydany'}`)
         st.push(`rezerwacja 500 zł opłacona: ${existingSession.paid_at ? 'TAK' : 'NIE'}`)
+        {
+          // Dwustopniowy filtr (2026-07-22): model ma znać krok decyzji rozmówcy.
+          const wn = (existingSession.wniosek_status as string | null) || null
+          if (existingSession.verdict === 'zielony' && !existingSession.paid_at) {
+            if (!wn) st.push('wniosek o współpracę: JESZCZE NIE ZGŁOSZONY — pierwszy krok to bezpłatne zgłoszenie projektu (przycisk w karcie), mów o nim jako o kroku bez ryzyka')
+            else if (wn === 'pending') st.push('wniosek o współpracę: ZGŁOSZONY, czeka na przegląd Tomka — nie ponaglaj płatności (karta 500 zł pojawi się po kwalifikacji); możesz spokojnie dopracowywać projekt')
+            else if (wn === 'accepted') st.push('wniosek o współpracę: ZAAKCEPTOWANY — projekt zakwalifikowany do rozmowy z Tomkiem; następny krok to rezerwacja 500 zł (w pełni zwrotna), prowadź do niej wg DRZEWA DOMYKANIA')
+          }
+        }
         if (existingSession.makieta_last_at && !existingSession.paid_at) {
           st.push(`karta rezerwacji była już wystawiona w tej rozmowie (${String(existingSession.makieta_last_at).slice(0, 16)}) — nie wystawiaj jej drugi raz bez nowej treści/odpowiedzi na obiekcję`)
         }

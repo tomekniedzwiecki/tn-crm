@@ -1185,7 +1185,16 @@ Deno.serve(async (req) => {
       if (wnErr) console.error('[spar-followups] wniosek_accepted fetch error:', wnErr)
       const wnSess = ((wnRows || []) as SessionRow[]).filter((s) => s.pipeline_override !== 'resigned' && s.pipeline_override !== 'lost')
       for (const s of wnSess) {
-        await sendOnce('wniosek_accepted', s)
+        const mailed = await sendOnce('wniosek_accepted', s)
+        // Lustro SMS przy pierwszej wysyłce maila (mail bywa niezauważony, a ręczny
+        // akcept Tomka to najgorętszy moment leada) — tylko za zgodą SMS.
+        if (mailed && s.phone && s.sms_consent_at && !s.sms_opt_out) {
+          try {
+            const code = await getOrCreateShortCode(supabase, s.id)
+            const msg = composeSms('Tomek przejrzal Twoj projekt i zaprasza na wspolna rozmowe. Zarezerwuj termin (500 zl, w pelni zwrotne):', code)
+            await sendSmsOnce('wniosek_accepted_sms', s, msg)
+          } catch (e) { console.error('[spar-followups] wniosek_accepted sms error:', e) }
+        }
       }
     }
 
