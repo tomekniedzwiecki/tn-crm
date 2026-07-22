@@ -129,7 +129,7 @@
 - **Dokument / podstawa:** **Umowa wykupu Udziału**; § 9 umowy — po 12 mies. od startu, cena = **36× średniej miesięcznej kwoty Udziału** z ostatnich 12 mies., **nie mniej niż 30 750 zł brutto** (2× cena budowy brutto; próg OBUSTRONNY — także wcześniejszy wykup przy zbyciu, § 10).
 - **Pułapki:**
   - Z chwilą zapłaty wykupu wygasają Udział i opieka (§ 7); Tomek przekazuje administrację, dostępy i pełne repo.
-  - Zbycie biznesu z pominięciem procedury: kary tylko wobec Przedsiębiorcy; wobec Konsumenta/PNPK — wymagalność ceny wykupu (§ 10; wcześniejszy wykup = 36× śr. z pełnych miesięcy, nie mniej niż 30 750 zł brutto).
+  - Zbycie biznesu z pominięciem procedury (bez przejęcia obowiązków przez nabywcę): cena wykupu staje się wymagalna wobec KAŻDEGO Partnera — od Rewizji 5 umowa NIE zawiera kar umownych (§ 10 ust. 2; wcześniejszy wykup = 36× śr. z pełnych miesięcy, nie mniej niż 2× cena budowy brutto — {{PROG_WYKUPU_BRUTTO}}).
 
 ---
 
