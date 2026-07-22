@@ -153,7 +153,7 @@ preview ma projekt — np. loczek/odpalak). Pełna tabela artefakt→krok+kind+f
 - **F2.5 branding + styl-master + tokeny** → `lp_styl_marka` · fields {marka_nazwa, slug, font, paleta, styl_master_url, tokens_url, brand_dir} · artefakty: `styl_master` + `branding` (favicon / wordmark / logo-combo z Storage) + `doc` TOKENS-MAKIETY.md (SSOT tokenów makiety, `panel-sync.py doc` → wf2-docs).
 - **F2 makiety 🏁** → `lp_makiety` · fields {sekcje_count, makiety, tor_i, akcept} · REHOST każdej makiety do `bud-assets/<slug>/makiety/` (`storage_upload(..., max_width=1440, to_webp=True, quality=82)`) → `artifact_add` kind `makieta` (mobile → `makieta_mobile`), `meta={section:'03-problem', viewport:'desktop'|'mobile'}`.
 - **F3 grafiki** → `lp_grafiki` · fields {assets_dir, distinct_views, mapa_url, waga_first} · artefakty: `scena`/`image` (grafiki produkcyjne), `doc` MAPA-ASSETOW.md.
-- **F4 kod** → `lp_kod` · `product_meta(pid, {repo_path})` + fields {preview_url, video_count} · artefakt `link`/`screenshot_final` (podgląd).
+- **F4 kod** → `lp_kod` · `product_meta(pid, {repo_path})` + fields {preview_url, video_count} · artefakt `link`/`screenshot_final` (podgląd). **PO smoke PASS: podgląd z ŻYWYM checkoutem na platformie (LL-038)** — `platform-sync.py product <proj> <slug>` + `publish` (wymaga `platform_shop_id` projektu; `repo_path` BEZ prefiksu `tn-crm/`); hydratacja `{{WF2_PRODUCT_ID}}` zachodzi TYLKO w publish, więc formularz zamówienia działa wyłącznie na wersji z platformy; wrapper checkout-inline MUSI mieć `data-zc-product` ORAZ `data-zc-api` (gate-check FAIL); panel: przycisk „Zobacz landing (platforma)" w krokach lp_* + „landing ↗" w matrycy; finalny re-publish po F7 nadpisuje podgląd.
 - **F7.1 dopasowanie** → `lp_dopasowanie` · fields {sekcje_done, ssim_min, dopasowanie_dir} · artefakty `dowod`/`proof` (kompozyty NN-*.png).
 - **F5 życie** → `lp_zycie` · fields {motion_dna, interakcja_flagowa, tor_i_done} · artefakt `video`/`screenshot_final`.
 - **F6/F7/F8 finisz 🏁** → `lp_finisz` · fields {gate_check, landing_url, nowe_wnioski} · artefakty `gate_check`, `landing_live`, `screenshot_final`; `product_meta(pid, {status:'gotowy'})`; `project_link_add(proj, 'Landing <slug>', <preview_url>, 'ph-eye')` gdy jest URL.
@@ -1597,6 +1597,14 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-22 (PODGLĄD Z ŻYWYM CHECKOUTEM PO F4 — feedback Tomka, Odsączek/LL-038):** checkout
+  ma działać bezpośrednio na landingu już na etapie podglądu (wzorzec mata-v6). Fabryka po F4
+  (smoke PASS) wykonuje `platform-sync product` + `publish` → landing na domenie sklepu z
+  zahydratowanym `{{WF2_PRODUCT_ID}}` i działającym formularzem; panel dostał przycisk „Zobacz
+  landing (platforma)" w warsztatach kroków lp_* (landingPreviewBlock). Gate rozszerzony:
+  wrapper checkout-inline bez `data-zc-product`+`data-zc-api` = FAIL (incydent: montaż Odsączka
+  zgubił data-zc-api → moduł renderował fallback zamiast formularza).
 
 - **2026-07-22 (PIERWSZY PRZEBIEG PRODUKCYJNY — Ugniatek, klient Hoffa):** pełny cykl F0→F8
   na kliencie produkcyjnym zamknięty z gate 0 FAIL (PASS=122). Do fabryki weszły w trakcie:

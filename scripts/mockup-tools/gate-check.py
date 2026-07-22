@@ -457,6 +457,23 @@ def check_cta(res, M, ctx):
             if s_id and ci_kl2 in markup[start:end].lower():
                 total_thr += 1
                 break
+        # LL-038: wrapper modulu checkout-inline MUSI miec OBA zywe atrybuty:
+        # data-zc-product (placeholder {{WF2_PRODUCT_ID}} hydratyzuje publish) ORAZ
+        # data-zc-api — bez api buildConfig zwraca null i modul renderuje fallback
+        # "Zamowienie chwilowo niedostepne" zamiast formularza (incydent Odsaczek 22.07).
+        tag = re.search(r'<[a-z][a-z0-9]*\b[^>]*class="[^"]*' + re.escape(ci_kl2) + r'[^"]*"[^>]*>',
+                        markup, re.I)
+        if tag:
+            t = tag.group(0)
+            has_pid = re.search(r'data-zc-product="[^"]+"', t)
+            has_api = re.search(r'data-zc-api="https?://[^"]+"', t)
+            ok_attr = bool(has_pid and has_api)
+            brak = " + ".join(n for n, h in (("data-zc-product", has_pid),
+                                             ("data-zc-api", has_api)) if not h)
+            res.add("cta", "checkout-inline: wrapper ma data-zc-product + data-zc-api",
+                    status_for(ok_attr, "FAIL"),
+                    "oba atrybuty obecne" if ok_attr else
+                    "brak %s na wrapperze %s — modul pokaze fallback zamiast formularza" % (brak, ci_kl2))
     ok_min = total_thr >= min_count
     res.add("cta", "liczba [%s] >= %d" % (attr, min_count),
             status_for(ok_min, m.get("min_count_severity", sev)),
