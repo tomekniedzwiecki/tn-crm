@@ -483,8 +483,9 @@
             document.addEventListener('keydown', onDocKeydown);
             if (cfg.layout === 'drawer') {
                 refs.panel.addEventListener('keydown', onPanelKeydown);
-                if (refs.closeBtn) refs.closeBtn.addEventListener('click', api.close);
-                if (refs.overlay && cfg.closeOnOverlay) refs.overlay.addEventListener('click', api.close);
+                // `api` jest przypisywane po bind() — wiązać przez domknięcie, nie referencję (crash drawera).
+                if (refs.closeBtn) refs.closeBtn.addEventListener('click', function () { api.close(); });
+                if (refs.overlay && cfg.closeOnOverlay) refs.overlay.addEventListener('click', function () { api.close(); });
             }
             if (refs.fsBtn) refs.fsBtn.addEventListener('click', function () { toggleFullscreen(); });
             if (cfg.readonly) return;   // brak kompozytora — nic więcej nie wiążemy
