@@ -340,6 +340,20 @@ gate=team JWT; model `WFA_TEST_OPENAI_MODEL` default `gpt-4o`; marker `<zgloszen
 Karta „Testy aplikacji" w portalu widoczna gdy krok `testy_klienta` ma status `in_progress`/`done`.
 Koncept (SSOT): `docs/stworze/MODUL-TESTY-KLIENTA.md`.
 
+### Moduł „Prospektor" (`/tn-app/prospektor`) — outbound fabryki aplikacji
+Odwrócony lejek: baza firm → AI research (web_search) → pomysł aplikacji dla branży (bramka
+anty-saturacji) → hiper-dopasowany 1. kontakt (mail+LinkedIn) → kolejka akceptacji Tomka →
+**draft w Gmailu (system NIGDY nie wysyła sam)**. **SSOT: `docs/stworze/PROSPEKTOR-PLAN.md`
+(sekcja STAN WDROŻENIA = prawda) — CZYTAĆ przed pracą.** Tabele `wfp_*` (RLS wyłącznie
+team_members), edge `wfp-engine` (akcje research/idea/mail/gmail_draft/status_change/save_setting;
+gate verifyTeamMember; limit dzienny `settings.wfp_daily_cap`), prompty w `settings.wfp_prompt_*`
++ `wfp_stopka_prawna` (stopka PKE/RODO doklejana WYŁĄCZNIE w gmail_draft variant first).
+Rejestr wertykali `wfp_verticals` = wyłączność branż (zajety blokuje pomysły; auto-awans
+wyslany→w_grze, deal→zajety). Lead z prospekta TYLKO przez `lead-upsert`
+(lead_source='prospektor' pomija automatyzację lead_created — inaczej poszedłby mail powitalny!).
+Suppression: opt-out nieodwracalny z UI, rekordów z opt-out nie usuwamy. Migracja:
+`node scripts/apply-wfp-prospektor.mjs`.
+
 ## Procedury Claude
 
 ### Tworzenie umów dla klientów

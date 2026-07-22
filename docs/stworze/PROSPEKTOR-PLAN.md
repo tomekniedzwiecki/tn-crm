@@ -1,7 +1,27 @@
 # PROSPEKTOR — outbound fabryki aplikacji (moduł TN App)
 
-> Wersja: 1.1 (2026-07-22, sesja nocna; po adwersarskiej krytyce Opus — poprawki K1-K3, W1-W9, N1-N6 wplecione). Status: SPEC → implementacja.
+> Wersja: 1.2 (2026-07-23 rano). Status: **WDROŻONE — LIVE**.
 > Właściciel decyzji: Tomek. Decyzje podjęte autonomicznie w nocy oznaczono [DECYZJA-NOC] — do retro-akceptacji.
+
+## 0. STAN WDROŻENIA (prawda, 2026-07-23)
+
+- [x] Migracja `20260722t_wfp_prospektor.sql` ZASTOSOWANA (4 tabele wfp_* + RLS team, RPC
+  `wfp_kpi()`, 16 wertykali seed, 4 prompty + `wfp_daily_cap` w settings, leads constraint
+  +'prospektor'). Aplikacja/re-aplikacja: `node scripts/apply-wfp-prospektor.mjs` (idempotentne).
+- [x] Edge `wfp-engine` LIVE (deploy: `npm run deploy:wfp-engine`); `lead-upsert` zredeployowany
+  ('prospektor' pomija automatyzację lead_created; nowy script `deploy:lead-upsert`).
+- [x] Panel `crm.tomekniedzwiecki.pl/tn-app/prospektor` LIVE (sidebar + rewrite).
+- [x] `npm run test:webhooks` 4/4 OK (tpay nietknięty).
+- [x] E2E na produkcji 13/13 PASS (pełny cykl: research→idea→mail→gmail_draft→statusy→opt-out→
+  gate'y 401/409; koszt cyklu AI ~0,38 USD ≈ 1,55 zł/firmę). Draft testowy trafił do Gmaila
+  (claude3@) — dowód działania toru draftów.
+- [x] Weryfikacja wizualna (desktop+mobile) + pętla poprawek: fix pustego ekranu na init,
+  responsywny Import, przycisk „Usuń rekord" (chroni suppression — opt-out nieusuwalny z UI),
+  auto-wysokość noty saturacji. Re-weryfikacja 4/4 PASS.
+- Znane drobiazgi (świadomie zostawione): koszt AI w KPI liczy też usage testów (kronika kosztów,
+  ~0,38 USD startowe); podświetlenie aktywnej pozycji sidebara = pre-existing w shared-sidebar
+  (dotyczy wszystkich stron tn-app); threading 2. kontaktu w wątku Gmaila = przyszłość
+  (pole `reply_thread_hex` gotowe).
 
 ## 1. Cel i koncepcja
 
