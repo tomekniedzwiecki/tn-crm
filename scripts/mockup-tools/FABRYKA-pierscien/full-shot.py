@@ -26,9 +26,15 @@ PUB = 'https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachm
 def fullshot(width, mobile, nazwa):
     port = sd.free_port()
     profile = tempfile.mkdtemp(prefix='fs-')
-    proc = subprocess.Popen([sd.chrome_path(), '--headless=new', '--disable-gpu', '--no-first-run',
+    # viewport height REALNE okno (nie scrollHeight!). LL-054: ustawienie height=scrollHeight
+    # przez setDeviceMetricsOverride EKSPLODUJE jednostki vh (100vh liczone od gigantycznego
+    # viewportu) -> hero/sceny rozdymane, pelny zrzut klamie. Pelen zrzut robimy przez
+    # captureBeyondViewport + clip 0..docH przy NORMALNYM viewporcie.
+    vh = 844 if mobile else 900
+    proc = subprocess.Popen([sd.chrome_path(), '--headless=new', '--disable-gpu', '--hide-scrollbars',
+                             '--no-first-run', '--force-device-scale-factor=1',
                              '--remote-debugging-port=%d' % port, '--user-data-dir=' + profile,
-                             '--window-size=%d,1000' % width, 'about:blank'])
+                             '--window-size=%d,%d' % (width, vh), 'about:blank'])
     try:
         sd.wait_debugger(port)
         tabs = sd.cdp_get(port, '/json/list')
@@ -42,15 +48,18 @@ def fullshot(width, mobile, nazwa):
                 node = node['result']
             return node.get('value')
 
-        ws.call('Emulation.setDeviceMetricsOverride', {'width': width, 'height': 1000,
+        ws.call('Emulation.setDeviceMetricsOverride', {'width': width, 'height': vh,
                                                        'deviceScaleFactor': 1, 'mobile': mobile})
         ws.call('Page.navigate', {'url': URL})
         time.sleep(10)
-        h = int(js('document.documentElement.scrollHeight') or 8000)
-        ws.call('Emulation.setDeviceMetricsOverride', {'width': width, 'height': min(h, 16000),
-                                                       'deviceScaleFactor': 1, 'mobile': mobile})
-        time.sleep(2.5)
-        shot = ws.call('Page.captureScreenshot', {'format': 'png'}, timeout=120)
+        # domknij stan finalny (reveal .in, transitions off) + lazy-img (scroll dol->gora)
+        ws.call('Runtime.evaluate', {'expression': sd.FORCE_FINAL})
+        ws.call('Runtime.evaluate', {'expression': 'window.scrollTo(0,document.body.scrollHeight);'}); time.sleep(1.6)
+        ws.call('Runtime.evaluate', {'expression': 'window.scrollTo(0,0);'}); time.sleep(1.2)
+        h = min(int(js('Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)') or 8000), 30000)
+        # captureBeyondViewport maluje CALY dokument bez rozciagania viewportu (vh pozostaje = vh)
+        shot = ws.call('Page.captureScreenshot', {'format': 'png', 'captureBeyondViewport': True,
+                        'clip': {'x': 0, 'y': 0, 'width': width, 'height': h, 'scale': 1}}, timeout=120)
         sh = shot.get('result', shot)
         if 'result' in sh and isinstance(sh['result'], dict):
             sh = sh['result']

@@ -122,6 +122,15 @@ def _fade_frame(mp4_url):
         return False
 
 
+def _card_video(slug):
+    """Okładka-wideo karty produktu = animowany `assets/hero-video.mp4` (feedback Tomka 22.07:
+    „miniaturki produktów to miały być te animowane mp4 z hero"). Zwraca URL mp4 gdy HEAD 200,
+    inaczej None (fallback: statyczna okładka). To PROSTA ścieżka: ten sam klip hero, który
+    napędza landing, wchodzi 1:1 na kafel strony głównej (autoplay muted loop, poster=okładka)."""
+    u = f"{PUB}/bud-assets/{slug}/assets/hero-video.mp4"
+    return u if _url_ok(u) else None
+
+
 def _hero_video(slug):
     """Klip do karty produktu na home (decyzja Tomka 21.07: wideo = kafel karty, NIE hero).
     Preferencja: card-loop (dedykowany, fullframe) → hero-loop TYLKO gdy bez fade pod copy.
@@ -181,12 +190,27 @@ def collect(pid):
             "landing": p["platform_page_url"], "cover": cover,
             "cover2": _hover_img(p["slug"], cover),
             "hero_video": _hero_video(p["slug"]),
+            "card_video": _card_video(p["slug"]),
         })
     return {"project": pr, "parasol": _parasol_slug(pr), "products": prods}
 
 
 CARD_KEYS = ("CARD_URL", "CARD_IMG", "CARD_IMG2", "CARD_NAME", "CARD_HOOK", "CARD_PRICE", "CARD_PID",
-             "CARD_CTA", "CARD_ALT", "CARD_VID_MP4", "CARD_VID_WEBM")
+             "CARD_CTA", "CARD_ALT", "CARD_VID_MP4", "CARD_VID_WEBM", "CARD_MEDIA")
+
+
+def _card_media(p):
+    """Element medialny kafla: `<video>` (autoplay muted loop, poster=okładka statyczna) gdy produkt
+    ma `assets/hero-video.mp4`, inaczej `<img>` jak dotąd (fallback). Wstawiany przez {{CARD_MEDIA}}."""
+    import html
+    alt = html.escape(f"{p['mini']} — {p['hook']}", quote=True)
+    if p.get("card_video"):
+        return ('<video class="product-card__video" muted loop playsinline autoplay '
+                'preload="metadata" poster="%s" aria-label="%s">'
+                '<source src="%s" type="video/mp4"></video>'
+                % (p["cover"], alt, p["card_video"]))
+    return ('<img src="%s" width="720" height="720" alt="%s" loading="lazy" decoding="async">'
+            % (p["cover"], alt))
 
 
 def _render_html(template, data):
@@ -204,7 +228,8 @@ def _render_html(template, data):
         vals = {"CARD_URL": p["landing"], "CARD_IMG": p["cover"], "CARD_IMG2": p.get("cover2") or p["cover"],
                 "CARD_NAME": p["mini"], "CARD_HOOK": p["hook"], "CARD_PRICE": p["price_pl"], "CARD_PID": p["id"],
                 "CARD_CTA": f"Zobacz {p['mini']}", "CARD_ALT": f"{p['mini']} — {p['hook']}",
-                "CARD_VID_MP4": hv.get("mp4") or "", "CARD_VID_WEBM": hv.get("webm") or ""}
+                "CARD_VID_MP4": hv.get("mp4") or "", "CARD_VID_WEBM": hv.get("webm") or "",
+                "CARD_MEDIA": _card_media(p)}
         for k in CARD_KEYS:
             c = c.replace("{{%s}}" % k, str(vals[k]))
         cards.append(c.strip())

@@ -44,6 +44,13 @@ proporcja, cover):
 - **Obraz** — jeden kadr per produkt, WSZYSTKIE karty w tej samej proporcji (domyślnie 1/1;
   4/5 dopuszczalne gdy wszystkie kadry pionowe). Reguła wyboru kadru (idempotentna):
   `scenes/oferta.webp` → `gallery-curated/…` pierwszy kadr → `scenes/hero-d.webp`.
+- **Okładka karty = animowany `hero-video.mp4` (feedback Tomka 22.07: „miniaturki produktów to
+  miały być te animowane mp4 z hero").** Gdy istnieje `bud-assets/<slug>/assets/hero-video.mp4`
+  (HEAD 200), element medialny kafla to `<video autoplay muted loop playsinline preload="metadata">`
+  z klipem hero, a **`poster` = statyczna okładka** z reguły wyżej (pierwsza klatka do czasu startu
+  klipu). Brak klipu = statyczny `<img>` (fallback jak dotąd). Render podmienia media przez
+  `{{CARD_MEDIA}}` w CARD-TEMPLATE (home-forge `_card_media` / `_card_video`); ten sam klip, który
+  napędza landing, wchodzi 1:1 na kafel — zero nowej generacji.
 - **Nazwa mini-marki** — w foncie display PARASOLA (nie produktu!).
 - **Hook** — jedno zdanie (źródło: 1. zdanie meta-description landingu; fallback: descriptor
   z `platform_name` po „—").
@@ -206,6 +213,12 @@ brandowa intro) = wyjątek świadomie uzasadniony w nocie kroku, nadal w limicie
 
 ## CHANGELOG
 
+- **1.4 (2026-07-22)** — feedback Tomka „miniaturki produktów na zaradek.pl to miały być te
+  animowane mp4 z hero": okładka kafla = `<video>` z `bud-assets/<slug>/assets/hero-video.mp4`
+  (autoplay muted loop playsinline, `poster` = statyczna okładka), fallback statyczny gdy brak
+  klipu. Kontrakt render: element medialny CARD-TEMPLATE = `{{CARD_MEDIA}}` (home-forge
+  `_card_media` buduje `<video>`/`<img>`; `_card_video` HEAD-uje `assets/hero-video.mp4`).
+  CSS kafla obejmuje `video` (`object-fit:cover`).
 - **1.3 (2026-07-21 noc)** — AUTOMAT card-loopów: `cardloop-forge.py` (scan/gen/run) —
   tor ręczny z v1.2 zamieniony w narzędzie fabryki (scene-brief GPT → scena z refami →
   bramka wierności vision → Kling pętla → RMS → upload → dowody QA); prompt-mapa pl_glowna

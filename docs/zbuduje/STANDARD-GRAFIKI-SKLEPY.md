@@ -268,6 +268,15 @@ a ad-forge zapisuje URL z sufiksem `?v=<stamp>` → ręczny „czysty" URL = DRU
 WERYFIKUJE, że wiersze istnieją; koszt fal też już zalogowany przez ad-forge (weryfikacja, bez
 ponownego `cost_add`); `activity_add('ads_done', '🏁 …')`.
 
+**§G7-preview — 🖼️ PODGLĄDY POSTÓW (OBOWIĄZKOWE w kroku `ads_zestaw`).** Po skompletowaniu zestawu
+(`COPY-ZESTAW.md` + kreacje) krok `ads_zestaw` OBOWIĄZKOWO emituje deterministyczne podglądy postów
+Meta (feed) narzędziem `scripts/mockup-tools/ad-post-preview.py` — 6 makiet per produkt (3 statyki 4:5
++ 3 klatki wideo-wariantów) do Storage `bud-assets/<slug>/ads/preview/post-N.webp` jako artefakty
+`artifact_add(step='ads_zestaw', kind='proof', label='Podgląd posta: <kąt/wariant> — <headline>')`,
+żeby Tomek widział, jak kreacja + copy złożą się na realny post (nagłówek marki, primary text, kreacja,
+karta linku z „Kup teraz"). W podglądzie ⛔ NIE renderujemy ŻADNEJ ceny (ZG10) — cena żyje wyłącznie
+na landingu.
+
 ### G8 — RETRO
 **Cel:** lekcje wracają do standardu. Po zamknięciu produktu wpisz nowe wnioski (który KĄT/layout
 wygrał w wynikach, gdzie padła bramka, jaki fail generatora) do CHANGELOG tego SSOT i/lub do
