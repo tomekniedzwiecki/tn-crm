@@ -122,6 +122,11 @@ Progi w `gate-manifest.json` → `layout_diff.progi` (`pustka_*`, `gutter_*`), k
 FAIL Odpalak (wideo+zamów+hero+final), PASS Drapek (0/13) + Loczek (0/12). Self-checki nie wymagają IR.
 
 ## ZASADY DODATKOWE
+- **Splice: auto-fix id sekcji na KAŻDE odstępstwo** (lekcja Skrolik 22.07): koder mimo
+  briefu daje własne id (`02-demo`, `final-cta`) — splice() ma przemapować id PIERWSZEGO
+  `<section id="...">` na kanoniczny sid, wraz z selektorami `#id` w CSS/JS i
+  `getElementById` (wzór: FABRYKA-pierscien/call-sections.py). Twardy fail tylko gdy
+  brak jakiegokolwiek `<section id>`.
 - Sekcja bardzo złożona (gęsta siatka) → potnij makietę na pod-bloki (DCGen/LaTCoder),
   koduj blokami, składaj wg bboxów.
 - Assety (zdjęcia/ikony) — realne pliki (kadry z makiety tylko jako [D]-ozdobniki);

@@ -5910,9 +5910,14 @@
 </div>
 <script>
 (function(){try{
-  var stickyEl=document.querySelector('.sticky-buy'),heroEl=document.querySelector('.hero');
+  // IO hero + IO #zamow: sticky chowa sie nad hero ORAZ gdy checkout w viewporcie
+  // (wymog integracji checkout-inline@2 — sticky przyslania CTA kasy na mobile)
+  var stickyEl=document.querySelector('.sticky-buy'),heroEl=document.querySelector('.hero'),
+      zamowEl=document.getElementById('zamow'),heroVis=true,zamowVis=false;
+  function upd(){(heroVis||zamowVis)?stickyEl.classList.remove('show'):stickyEl.classList.add('show');}
   if(stickyEl&&heroEl&&'IntersectionObserver'in window){
-    new IntersectionObserver(function(es){es.forEach(function(en){en.isIntersecting?stickyEl.classList.remove('show'):stickyEl.classList.add('show');});},{threshold:0}).observe(heroEl);
+    new IntersectionObserver(function(es){es.forEach(function(en){heroVis=en.isIntersecting;});upd();},{threshold:0}).observe(heroEl);
+    if(zamowEl){new IntersectionObserver(function(es){es.forEach(function(en){zamowVis=en.isIntersecting;});upd();},{threshold:0}).observe(zamowEl);}
   }else if(stickyEl){stickyEl.classList.add('show');}
 }catch(e){try{document.querySelector('.sticky-buy').classList.add('show');}catch(_e){}}
 })();
@@ -6005,7 +6010,7 @@
       const a = e.target.closest('a[href="#zamow"]');
       if (!a || !mq.matches) return;
       const form = document.querySelector("#zamow .zc-form");
-      if (!form) return;
+      if (!form || !form.offsetParent) return; // form ukryty (preview/fallback) -> natywna kotwica #zamow
       e.preventDefault();
       const tb = document.querySelector(".topbar");
       const off = (tb && getComputedStyle(tb).position === "sticky" ? tb.offsetHeight : 0) + 10;

@@ -15,7 +15,7 @@ JS = """<script>
       const a = e.target.closest('a[href="#zamow"]');
       if (!a || !mq.matches) return;
       const form = document.querySelector("#zamow .zc-form");
-      if (!form) return;
+      if (!form || !form.offsetParent) return; // form ukryty (preview/fallback) -> natywna kotwica #zamow
       e.preventDefault();
       const tb = document.querySelector(".topbar");
       const off = (tb && getComputedStyle(tb).position === "sticky" ? tb.offsetHeight : 0) + 10;
