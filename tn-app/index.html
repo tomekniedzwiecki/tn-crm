@@ -22,6 +22,7 @@
         .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
         @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
         .animate-enter { animation: fadeIn .4s ease-out forwards; }
+        /* chip kroku (badge = ilu projektów czeka na tym kroku) */
         .step-chip { display:inline-flex; align-items:center; gap:7px; position:relative;
             border:1px solid #2a2a2a; background:#0a0a0a; color:#a1a1aa;
             border-radius:6px; padding:8px 14px; font-size:12.5px; cursor:pointer; transition:all .15s ease; }
@@ -30,6 +31,109 @@
         .step-badge { position:absolute; top:-7px; right:-7px; min-width:18px; height:18px; padding:0 5px;
             border-radius:6px; font-size:10.5px; font-weight:600; display:flex; align-items:center; justify-content:center; color:#fff; }
         .owner-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
+        /* ── SIATKA KART PROJEKTÓW ─────────────────────────────────────────── */
+        .proj-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+        @media (min-width:768px){ .proj-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+        @media (min-width:1280px){ .proj-grid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+        .pcard { position:relative; display:flex; flex-direction:column; gap:13px; min-width:0;
+            background:#0a0a0a; border:1px solid #1f1f1f; border-radius:12px; padding:16px 16px 14px;
+            cursor:pointer; transition:border-color .15s ease, background .15s ease, transform .12s ease; }
+        .pcard:hover { border-color:#2e2e2e; background:#0d0d0d; transform:translateY(-1px); }
+        .pcard.is-demo { background:#080808; border-color:#171717; }
+        .pcard.is-demo:hover { border-color:#232323; }
+        .pcard.is-demo .pc-title { color:#c4c4c4; }
+        /* nagłówek */
+        .pc-head { display:flex; align-items:flex-start; gap:11px; min-width:0; }
+        .pc-mono { width:42px; height:42px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+            font:600 15px/1 'Inter',sans-serif; color:#fff; background:linear-gradient(135deg,#1a1a1a,#111); border:1px solid #262626; }
+        .pc-tt { flex:1; min-width:0; }
+        .pc-title { color:#fff; font-weight:600; font-size:16.5px; letter-spacing:-.01em; line-height:1.25;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .pc-client { color:#8b8b94; font-size:13px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .wa-ic { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:6px;
+            color:#25D366; vertical-align:-5px; margin-left:2px; transition:background .15s ease; }
+        .wa-ic:hover { background:rgba(37,211,102,.14); }
+        .wa-ic i { font-size:15px; }
+        .pc-badge { flex-shrink:0; display:inline-block; padding:4px 10px; border-radius:6px; border:1px solid; font-size:11.5px; font-weight:500; white-space:nowrap; }
+        .demo-tag { position:absolute; top:12px; right:12px; font:600 9px/1 ui-monospace,monospace; letter-spacing:.08em;
+            color:#52525b; border:1px solid #232323; border-radius:5px; padding:3px 6px; background:#0a0a0a; }
+        /* proces: 5 segmentów etapów */
+        .pc-seg { display:flex; gap:4px; }
+        .pc-seg > span { flex:1; height:6px; border-radius:3px; background:#1c1c1c; overflow:hidden; position:relative; }
+        .pc-seg > span.s-done { background:#45a557; }
+        .pc-seg > span.s-prog { background:#0070f3; }
+        .pc-metarow { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        .pc-stage { color:#a1a1aa; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .pc-stage b { color:#e4e4e7; font-weight:600; }
+        .pc-pct { font:500 12.5px/1 'JetBrains Mono',monospace; color:#8b8b94; flex-shrink:0; }
+        /* licznik terminu umownego (4–8 tyg. od pełnej płatności) */
+        .pc-tempo { border-top:1px solid #161616; padding-top:12px; }
+        .tempo-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
+        .tempo-lbl { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#8b8b94; }
+        .tempo-day { font:600 13.5px/1 'JetBrains Mono',monospace; }
+        .tempo-bar { height:5px; border-radius:3px; background:#161616; overflow:hidden; }
+        .tempo-bar > span { display:block; height:100%; border-radius:3px; transition:width .3s ease; }
+        .tempo-over { display:inline-flex; align-items:center; gap:4px; font:600 11px/1 ui-monospace,monospace; letter-spacing:.03em;
+            color:#e5484d; border:1px solid rgba(229,72,77,.4); background:rgba(229,72,77,.1); border-radius:5px; padding:3px 6px; }
+        .tempo-paused { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:#a1a1aa; }
+        .tempo-cancel { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#52525b; }
+        .tempo-closed { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#52525b; }
+        /* stopka: linki infrastruktury + spowiednik + aktywność */
+        .pc-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .pc-links { display:flex; align-items:center; gap:2px; }
+        .pc-link { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:7px;
+            color:#6b6b74; transition:all .15s ease; }
+        .pc-link:hover { color:#52a8ff; background:rgba(0,112,243,.1); }
+        .pc-link i { font-size:15px; }
+        .pc-portlabel { font-size:12.5px; color:#8b8b94; white-space:nowrap; }
+        .kh-chip { display:inline-flex; align-items:center; gap:4px; font:500 11px/1 'Inter',sans-serif; border:1px solid; border-radius:6px; padding:4px 7px; white-space:nowrap; }
+        .kh-done { color:#62c073; border-color:rgba(69,165,87,.3); background:rgba(69,165,87,.08); }
+        .kh-open { color:#f26d78; border-color:rgba(229,72,77,.35); background:rgba(229,72,77,.08); }
+        .pc-act { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#6b6b74; white-space:nowrap; }
+        /* pole wyszukiwania */
+        .searchbox { display:flex; align-items:center; gap:8px; background:#0a0a0a; border:1px solid #1f1f1f; border-radius:8px; padding:7px 11px; }
+        .searchbox:focus-within { border-color:rgba(0,112,243,.5); }
+        .searchbox input { background:transparent; border:none; outline:none; color:#fff; font-size:13px; width:230px; max-width:56vw; }
+        .searchbox input::placeholder { color:#52525b; }
+
+        /* ── stan cyklu życia (lifecycle) — osobny wymiar od statusu pipeline ── */
+        .lc-badge { flex-shrink:0; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;
+            border:1px solid; font-size:10.5px; font-weight:600; letter-spacing:.01em; white-space:nowrap; }
+        .lc-badge i { font-size:11px; }
+        .pcard.is-idle { opacity:.6; }
+        .pcard.is-idle:hover { opacity:.82; }
+        /* menu ⋯ w rogu karty (zmiana stanu bez wchodzenia w projekt) */
+        .pc-menu { position:absolute; top:8px; right:8px; z-index:20; }
+        .pc-menu-btn { width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:6px;
+            color:#8b8b94; background:rgba(10,10,10,.55); border:1px solid transparent; cursor:pointer; transition:all .15s ease; }
+        .pc-menu-btn:hover { color:#fff; background:#161616; border-color:#2a2a2a; }
+        .pc-menu-dd { position:absolute; top:calc(100% + 4px); right:0; min-width:172px; background:#0d0d0d; border:1px solid #2a2a2a;
+            border-radius:8px; padding:4px; box-shadow:0 8px 26px rgba(0,0,0,.55); display:none; }
+        .pc-menu.open .pc-menu-dd { display:block; }
+        .pc-menu-hd { font:600 9px/1 ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; color:#52525b; padding:6px 8px 4px; }
+        .pc-menu-it { width:100%; display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:6px; font-size:12.5px;
+            color:#c4c4c4; background:transparent; border:none; cursor:pointer; text-align:left; transition:background .12s ease; }
+        .pc-menu-it:hover { background:#161616; color:#fff; }
+        .pc-menu-it .lc-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+        .pc-menu-it .lc-check { margin-left:auto; color:#62c073; font-size:13px; opacity:0; }
+        .pc-menu-it.is-cur .lc-check { opacity:1; }
+        .pc-menu-sep { height:1px; background:#1f1f1f; margin:5px 2px; }
+        .pc-menu-del { color:#f26d78; }
+        .pc-menu-del:hover { background:rgba(229,72,77,.12); color:#f26d78; }
+        .pc-menu-del i { font-size:14px; }
+        /* chipy filtra widoku (stan) obok wyszukiwarki */
+        .lc-filter { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+        .lc-chip { display:inline-flex; align-items:center; gap:7px; border:1px solid #232323; background:#0a0a0a; color:#8b8b94;
+            border-radius:7px; padding:6px 11px; font-size:12px; cursor:pointer; transition:all .15s ease; user-select:none; }
+        .lc-chip:hover { color:#e4e4e7; border-color:#333; }
+        .lc-chip.on { color:#fff; }
+        .lc-chip .lc-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; background:#3f3f46; }
+        .lc-chip .lc-n { font:600 11px/1 'JetBrains Mono',monospace; color:#6b6b74; }
+        .lc-chip.on .lc-n { color:#c9c9d0; }
+        .lc-chip.is-zero { opacity:.42; }
+        /* karta ma miejsce w prawym górnym rogu na menu ⋯ (żeby nie kolidowało z badge/tagiem) */
+        .pcard .pc-head { padding-right:24px; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -48,38 +152,44 @@
         </header>
 
         <div class="flex-1 overflow-y-auto p-6 lg:p-10">
-            <div class="max-w-7xl mx-auto animate-enter">
+            <div class="max-w-[1400px] mx-auto animate-enter">
 
                 <div class="mb-8">
                     <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Aplikacje — wspólne SaaS</h1>
-                    <p class="text-zinc-500">Projekty po pełnej płatności /aplikacja: fundament → infrastruktura → budowa MVP → jakość → start → stery.</p>
+                    <p class="text-zinc-500">Projekty po pełnej płatności /aplikacja: fundament → infrastruktura → budowa MVP → landing i jakość → start → stery. Termin umowny: <span class="text-zinc-300">4–8 tyg.</span> od pełnej płatności.</p>
                 </div>
 
-                <!-- Przegląd kroków — nagłówek-pasek (klik = rozwiń/zwiń). Zwinięte: chipy kroków z badge>0 (gdzie stoją projekty) -->
-                <div class="mb-8">
-                    <div id="stages-bar" onclick="toggleStages()" class="flex items-center gap-3 flex-wrap cursor-pointer select-none">
-                        <div class="flex items-center gap-2 flex-shrink-0">
-                            <i id="stages-chevron" class="ph ph-caret-right text-zinc-500"></i>
-                            <span class="text-sm font-medium text-zinc-300">Przegląd kroków</span>
-                        </div>
-                        <div id="stages-compact" class="flex flex-wrap items-center gap-2.5"></div>
-                    </div>
+                <!-- Etapy z chipami kroków (badge = ilu projektów czeka na tym kroku; klik = filtr kart).
+                     Zwinięte domyślnie — karty są bohaterem, panel kroków rozwija się na żądanie. -->
+                <div class="mb-9">
+                    <button id="stages-toggle" onclick="toggleStages()" class="w-full flex items-center gap-3 text-left border border-[#1f1f1f] hover:border-[#2e2e2e] bg-[#0a0a0a] rounded-lg px-4 py-2.5 transition-colors">
+                        <i class="ph ph-squares-four text-zinc-400"></i>
+                        <span class="text-zinc-200 text-sm font-medium">Kroki i filtry etapów</span>
+                        <span id="stages-summary" class="text-zinc-500 text-xs font-mono"></span>
+                        <i id="stages-caret" class="ph ph-caret-down text-zinc-500 ml-auto transition-transform"></i>
+                    </button>
                     <div id="stages-wrap" class="space-y-5 mt-5 hidden"></div>
                 </div>
 
-                <!-- Pasek nad listą: filtr po kroku -->
-                <div class="flex items-center gap-3 mb-4 min-h-[26px]">
+                <!-- Pasek nad listą: wyszukiwarka + chipy stanu + aktywny filtr + licznik -->
+                <div class="flex flex-wrap items-center gap-3 mb-5">
+                    <label class="searchbox">
+                        <i class="ph ph-magnifying-glass text-zinc-500"></i>
+                        <input id="search" type="text" placeholder="Szukaj: aplikacja, klient, e-mail, telefon, domena…" oninput="renderCards()">
+                    </label>
+                    <div id="lc-filter" class="lc-filter"></div>
                     <div id="filter-bar" class="hidden items-center gap-2">
                         <span class="text-zinc-500 text-xs">Filtr:</span>
                         <span id="filter-label" class="text-[#52a8ff] text-xs font-medium"></span>
                         <button onclick="clearFilter()" class="text-zinc-500 hover:text-white text-xs underline">wyczyść</button>
                     </div>
                     <span id="sync-note" class="text-zinc-700 text-[11px] ml-auto"></span>
+                    <span id="count-label" class="text-zinc-600 text-xs font-mono"></span>
                 </div>
 
-                <!-- Lista projektów — kafelki -->
-                <div id="projects-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
-                <div id="empty-state" class="hidden py-16 text-center text-zinc-500 bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg">
+                <!-- Siatka kart projektów -->
+                <div id="proj-grid" class="proj-grid"></div>
+                <div id="empty-state" class="hidden py-16 text-center text-zinc-500">
                     <i class="ph ph-app-window text-4xl mb-3 block text-zinc-700"></i>
                     Brak projektów. Nowy projekt powstaje automatycznie po pełnej płatności /aplikacja — albo dodaj ręcznie.
                 </div>
@@ -87,6 +197,26 @@
             </div>
         </div>
     </main>
+
+    <!-- Modal potwierdzenia usunięcia projektu -->
+    <div id="del-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeDelModal()">
+        <div class="w-full max-w-md bg-[#0a0a0a] border border-[#333] rounded-xl p-6" onclick="event.stopPropagation()">
+            <div class="flex items-start gap-3.5 mb-4">
+                <div class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                     style="background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4)"><i class="ph ph-warning text-[20px] text-[#f26d78]"></i></div>
+                <div class="min-w-0">
+                    <div class="text-white font-semibold text-[15.5px]">Usunąć projekt?</div>
+                    <div id="del-name" class="text-[#f5b955] text-[13px] mt-1 font-medium truncate"></div>
+                </div>
+            </div>
+            <p class="text-zinc-400 text-[13px] leading-relaxed mb-5">Ta operacja jest <b class="text-[#f26d78]">nieodwracalna</b>. Bezpowrotnie skasuje cały projekt razem z krokami i postępem, notatkami, kroniką aktywności, danymi od klienta, zgłoszeniami testów i dostępem klienta do portalu.</p>
+            <div class="flex items-center justify-end gap-2.5">
+                <button onclick="closeDelModal()" class="px-4 py-2.5 rounded-lg border border-[#2e2e2e] bg-[#111] text-zinc-300 text-[13px] font-medium hover:bg-[#18181b] transition-colors">Anuluj</button>
+                <button id="del-confirm-btn" onclick="confirmDeleteProject()" class="px-4 py-2.5 rounded-lg text-[13px] font-semibold text-white transition-colors"
+                        style="background:#e5484d" onmouseover="this.style.background='#f26d78'" onmouseout="this.style.background='#e5484d'">Tak, usuń bezpowrotnie</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: nowy projekt (ręczne dodanie — projekt spoza lejka) -->
     <div id="new-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeNewModal()">
@@ -117,10 +247,14 @@
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
 
+        const DAY = 86400000;
+
         let stepDefs = [];        // wfa_step_defs (active, sorted)
-        let projects = [];        // wfa_projects
+        let defByKey = {};        // key -> def
+        let maxStage = 5;
+        let projects = [];        // wfa_projects (bez is_test)
         let stepsByProj = {};     // project_id -> [wfa_steps skrót]
-        let aggByProj = {};       // project_id -> {total, done, currentKey, currentLabel}
+        let aggByProj = {};       // project_id -> {pct, done, total, currentKey, currentStage, currentStageLabel, segs[], deadline, lastAct}
         let knowhowByProj = {};   // project_id -> {status, closed_at} ze spar_knowhow_summary (null = brak wiersza)
         let filterStepKey = null;
 
@@ -136,15 +270,33 @@
         };
         const BADGE_COLORS = { admin: '#0070f3', client: '#f5a623', auto: '#45a557' };
         const OWNER_LABEL = { admin: 'Tomek', client: 'Klient', auto: 'Auto' };
-        // Statusy pojedynczego kroku (wfa_steps.status) — kolory spójne z projekt.html (.st-*)
-        const STEP_LABELS = { pending: 'Do zrobienia', in_progress: 'W trakcie', done: 'Ukończone', skipped: 'Pominięte', blocked: 'Zablokowane' };
-        const STEP_STATUS_META = {
-            done:        { cls: 'border-[#45a557]/45 bg-[#45a557]/10 text-[#4cb782]' },
-            in_progress: { cls: 'border-[#f5a623]/45 bg-[#f5a623]/10 text-[#f5b955]' },
-            blocked:     { cls: 'border-[#e5484d]/45 bg-[#e5484d]/10 text-[#f26d78]' },
-            skipped:     { cls: 'border-[#262626] text-zinc-600 line-through' },
-            pending:     { cls: 'border-[#2a2a2a] text-zinc-400' },
+
+        // ── STAN CYKLU ŻYCIA (lifecycle) — NIEZALEŻNY od statusu pipeline ──
+        const LC_ORDER = ['active', 'paused', 'completed', 'cancelled'];
+        const LC_META = {
+            active:    { label: 'Aktywny',    plural: 'Aktywne',    color: '#0070f3', icon: 'ph-play-circle' },
+            paused:    { label: 'Wstrzymany', plural: 'Wstrzymane', color: '#f5a623', icon: 'ph-pause-circle' },
+            completed: { label: 'Zakończony', plural: 'Zakończone', color: '#45a557', icon: 'ph-check-circle' },
+            cancelled: { label: 'Anulowany',  plural: 'Anulowane',  color: '#e5484d', icon: 'ph-x-circle' },
         };
+        const LC_RANK = { active: 0, paused: 1, completed: 2, cancelled: 3 };
+        function lifecycleOf(p) { return LC_META[p.lifecycle] ? p.lifecycle : 'active'; }
+
+        // widok listy: które stany pokazywać (multi-toggle). Domyślnie tylko aktywne.
+        function loadViewLC() {
+            try { const raw = JSON.parse(localStorage.getItem('wfa_view_lifecycle'));
+                if (Array.isArray(raw)) { const s = new Set(raw.filter(x => LC_META[x])); return s; } } catch (_) {}
+            return new Set(['active']);
+        }
+        function saveViewLC() { try { localStorage.setItem('wfa_view_lifecycle', JSON.stringify([...viewLC])); } catch (_) {} }
+        let viewLC = loadViewLC();
+
+        // składanie diakrytyków — wyszukiwanie działa bez polskich znaków (fachmat = fąchmąt)
+        function foldStr(s) {
+            return (s || '').toLowerCase()
+                .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e').replace(/ł/g,'l')
+                .replace(/ń/g,'n').replace(/ó/g,'o').replace(/ś/g,'s').replace(/ż/g,'z').replace(/ź/g,'z');
+        }
 
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
@@ -153,21 +305,26 @@
         function relDate(iso) {
             if (!iso) return '—';
             const d = new Date(iso); if (isNaN(d.getTime())) return '—';
-            const diff = Math.round((new Date().setHours(0,0,0,0) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
-            if (diff <= 0) return 'dziś'; if (diff === 1) return 'wczoraj'; return diff + ' dni temu';
+            const diff = Math.round((new Date().setHours(0,0,0,0) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / DAY);
+            if (diff <= 0) return 'dziś'; if (diff === 1) return 'wczoraj';
+            if (diff < 7) return diff + ' dni temu';
+            if (diff < 30) return Math.floor(diff/7) + ' tyg. temu';
+            return Math.floor(diff/30) + ' mies. temu';
         }
-        // Badge terminu umownego (oferta: 4-8 tyg. od pełnej płatności): żółty <14 dni, czerwony <7 / po terminie
-        function deadlineBadge(p) {
-            if (!p.deadline_at) return '<span class="text-zinc-700 text-[11px]">—</span>';
-            const days = Math.ceil((new Date(p.deadline_at) - new Date()) / 86400000);
-            const cls = days < 0 ? 'border-[#e5484d]/50 text-[#f26d78]' : days < 7 ? 'border-[#e5484d]/50 text-[#f26d78]' : days < 14 ? 'border-[#f5a623]/50 text-[#f5b955]' : 'border-[#2a2a2a] text-zinc-400';
-            const txt = days < 0 ? Math.abs(days) + ' dni PO' : days + ' dni';
-            return `<span class="inline-flex items-center gap-1 border ${cls} rounded-md px-2 py-0.5 text-[11px]"><i class="ph ph-calendar-blank"></i>${txt}</span>`;
+        function isDemo(p) {
+            const s = ((p.name || '') + ' ' + (p.customer_name || '')).trim().toUpperCase();
+            return s.startsWith('DEMO');
         }
         function projName(p) {
             const n = (p.name || '').trim();
             if (n) return n;
             return (p.customer_name || 'Projekt') + ' (bez nazwy)';
+        }
+        function initials(str) {
+            const s = (str || '').replace(/^DEMO\s+/i, '').trim();
+            if (!s) return '?';
+            const parts = s.split(/\s+/).filter(Boolean);
+            return ((parts[0]?.[0] || '') + (parts.length > 1 ? parts[1][0] : '')).toUpperCase() || s[0].toUpperCase();
         }
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
@@ -194,20 +351,40 @@
         }
 
         // ============ DANE ============
+        // ~30 kroków/projekt — serwer (max-rows) tnie KAŻDE zapytanie do 1000 wierszy
+        // niezależnie od range/limit. Jawna paginacja stronami po 1000, inaczej postęp
+        // części projektów liczyłby się z uciętych danych (feedback-postgrest-1000-row-default).
+        async function fetchAllSteps() {
+            const all = []; const PAGE = 1000;
+            for (let from = 0; ; from += PAGE) {
+                const { data, error } = await supabaseClient.from('wfa_steps')
+                    .select('project_id, step_key, status')
+                    .order('project_id', { ascending: true }).range(from, from + PAGE - 1);
+                if (error) { console.error('wfa_steps page', from, error); showToast('Błąd kroków: ' + error.message, 'error'); break; }
+                all.push(...(data || []));
+                if (!data || data.length < PAGE) break;
+            }
+            return all;
+        }
+
         async function loadAll() {
             // 1) auto-sync: opłacone sesje sparingu -> wfa_projects (SECURITY DEFINER; zero zmian w tpay/spar-chat)
             let created = 0;
             try { const { data } = await supabaseClient.rpc('wfa_sync_projects'); created = data || 0; } catch (e) { console.warn('wfa_sync_projects', e); }
 
-            // 2) definicje + projekty
-            const [defsQ, projQ] = await Promise.all([
+            // 2) definicje + projekty + kronika (błędy NIE mogą być ciche — pusta lista
+            //    wygląda jak „brak projektów"; incydent 13.07)
+            const [defsQ, projQ, actQ] = await Promise.all([
                 supabaseClient.from('wfa_step_defs').select('*').eq('active', true).order('stage').order('sort'),
                 supabaseClient.from('wfa_projects').select('*').order('created_at', { ascending: false }).range(0, 999),
+                supabaseClient.from('wfa_activities').select('project_id, created_at, action, description').order('created_at', { ascending: false }).range(0, 499),
             ]);
-            // Błędy NIE mogą być ciche — pusta lista wygląda jak „brak projektów" (incydent 13.07)
             if (defsQ.error) { console.error('wfa_step_defs:', defsQ.error); showToast('Błąd definicji kroków: ' + defsQ.error.message, 'error'); }
             if (projQ.error) { console.error('wfa_projects:', projQ.error); showToast('Błąd listy projektów: ' + projQ.error.message, 'error'); }
+            if (actQ.error) console.warn('wfa_activities:', actQ.error);
             stepDefs = defsQ.data || [];
+            defByKey = {}; maxStage = 1;
+            stepDefs.forEach(d => { defByKey[d.key] = d; maxStage = Math.max(maxStage, d.stage); });
             projects = (projQ.data || []).filter(p => !p.is_test);
 
             // 3) dosiej brakujące instancje kroków per projekt (nowe defs)
@@ -215,10 +392,9 @@
             // TypeError wykładał całe loadAll); opakowujemy w Promise.resolve + drugi argument then.
             await Promise.all(projects.map(p => Promise.resolve(supabaseClient.rpc('wfa_ensure_steps', { p_project: p.id })).then(() => {}, () => {})));
 
-            // 4) instancje kroków — GOTCHA PostgREST: default 1000 wierszy, przy 30 krokach/projekt szybko przekroczone
-            const stepsQ = await supabaseClient.from('wfa_steps').select('project_id, step_key, status').range(0, 9999);
-            if (stepsQ.error) { console.error('wfa_steps:', stepsQ.error); showToast('Błąd kroków: ' + stepsQ.error.message, 'error'); }
-            stepsByProj = {}; (stepsQ.data || []).forEach(s => { (stepsByProj[s.project_id] = stepsByProj[s.project_id] || []).push(s); });
+            // 4) instancje kroków (pełna paginacja)
+            const steps = await fetchAllSteps();
+            stepsByProj = {}; steps.forEach(s => { (stepsByProj[s.project_id] = stepsByProj[s.project_id] || []).push(s); });
 
             // 5) status spowiednika per projekt — budowa rusza dopiero po status='closed'
             // (klient klika „To już wszystko"). Brak wiersza / błąd = traktuj jak „w toku".
@@ -231,60 +407,113 @@
                 projects.forEach(p => { if (p.spar_session_id) knowhowByProj[p.id] = bySid[p.spar_session_id] || null; });
             }
 
+            // ostatnia aktywność per projekt (lista jest desc → pierwsza napotkana = najnowsza)
+            const lastAct = {};
+            (actQ.data || []).forEach(a => { if (!lastAct[a.project_id]) lastAct[a.project_id] = a; });
+
             const note = document.getElementById('sync-note');
             if (note) note.textContent = created > 0 ? `zsynchronizowano ${created} nowy(ch) projekt(ów) z sparingu` : '';
 
-            computeAgg();
+            computeAgg(lastAct);
+            buildSearchIndex();
             renderStages();
+            renderLifecycleChips();
             renderCards();
         }
 
-        // Postęp + „aktualny krok": pierwszy nie-done/nie-skipped krok wg kolejności definicji (etap → sort)
-        function computeAgg() {
+        // Indeks wyszukiwania per projekt — składany RAZ po load. Obejmuje WSZYSTKO,
+        // po czym sensownie się szuka: nazwę aplikacji, slug, klienta, e-mail, telefon
+        // (surowy + same cyfry), domenę, URL-e (app/landing/repo), projekt Vercel, ref
+        // Supabase, notatki, status pipeline (PL) i stan lifecycle (PL). Foldowany.
+        function buildSearchIndex() {
+            const COLS = ['name','slug','customer_name','customer_email','customer_phone','domain',
+                'app_url','landing_url','repo_url','vercel_project','supabase_ref','notes'];
+            projects.forEach(p => {
+                const parts = [];
+                COLS.forEach(c => { if (p[c]) parts.push(String(p[c])); });
+                if (p.customer_phone) { const d = String(p.customer_phone).replace(/\D/g, ''); if (d) parts.push(d); }
+                parts.push(STATUS_META[p.status]?.label || p.status || '');
+                parts.push(LC_META[lifecycleOf(p)].label);
+                p._idx = foldStr(parts.join(' '));
+            });
+        }
+
+        // Postęp, segmenty etapów, aktualny krok, licznik terminu — wszystko z jednego przebiegu.
+        function computeAgg(lastAct) {
             const defOrder = stepDefs.map(d => d.key);
-            const defMap = {}; stepDefs.forEach(d => defMap[d.key] = d);
             aggByProj = {};
             projects.forEach(p => {
                 const steps = stepsByProj[p.id] || [];
-                const countable = steps.filter(s => s.status !== 'skipped');
+
+                // postęp globalny (bez skipped w mianowniku — spójne z paskiem segmentów)
+                const countable = steps.filter(s => s.status !== 'skipped' && defByKey[s.step_key]);
                 const done = countable.filter(s => s.status === 'done').length;
+                const pct = countable.length ? Math.round(done / countable.length * 100) : 0;
+
+                // aktualny krok = pierwszy niezamknięty wg kolejności definicji
                 let currentKey = null;
                 for (const key of defOrder) {
-                    const open = steps.some(s => s.step_key === key && s.status !== 'done' && s.status !== 'skipped');
-                    if (open) { currentKey = key; break; }
+                    if (steps.some(s => s.step_key === key && s.status !== 'done' && s.status !== 'skipped')) { currentKey = key; break; }
                 }
+                const cur = currentKey ? defByKey[currentKey] : null;
+
+                // segmenty etapów 1..maxStage: done=zielony, started=niebieski
+                const segs = [];
+                for (let n = 1; n <= maxStage; n++) {
+                    const inst = steps.filter(s => { const d = defByKey[s.step_key]; return d && d.stage === n; });
+                    if (!inst.length) { segs.push(''); continue; }
+                    const full = inst.every(s => s.status === 'done' || s.status === 'skipped');
+                    const started = full || inst.some(s => s.status === 'done' || s.status === 'in_progress');
+                    segs.push(full ? 's-done' : started ? 's-prog' : '');
+                }
+
                 aggByProj[p.id] = {
-                    total: countable.length, done,
-                    pct: countable.length ? Math.round(done / countable.length * 100) : 0,
+                    pct, done, total: countable.length,
                     currentKey,
-                    currentLabel: currentKey ? (defMap[currentKey]?.label || currentKey) : 'Wszystko ukończone',
+                    currentStage: cur ? cur.stage : null,
+                    currentStageLabel: cur ? cur.stage_label : 'Ukończono',
+                    currentStepLabel: cur ? cur.label : 'Wszystko ukończone',
+                    segs,
+                    lastAct: lastAct[p.id] || null,
+                    deadline: computeDeadline(p),
                 };
             });
         }
 
-        // ============ RENDER: etapy + chipy ============
-        // Chip kroku — używany i w rozwiniętej sekcji, i w kompaktowym pasku.
-        // event.stopPropagation: klik w chip filtruje kafelki, a nie toggluje sekcję.
-        function stepChipHtml(d, cnt) {
-            const badge = cnt > 0 ? `<span class="step-badge" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}">${cnt}</span>` : '';
-            const mileMark = d.milestone_label ? '<i class="ph ph-flag-checkered text-[10px] opacity-70" title="kamień milowy"></i>' : '';
-            return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="event.stopPropagation();toggleFilter('${d.key}')" title="${OWNER_LABEL[d.owner]}${d.milestone_label ? ' · kamień milowy' : ''}">
-                <span class="owner-dot" style="background:${BADGE_COLORS[d.owner]}"></span>
-                <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${mileMark}${badge}</button>`;
+        // LICZNIK TERMINU UMOWNEGO: deadline_at (oferta: 4–8 tyg. od pełnej płatności).
+        // slack = dni do terminu (ujemny = po terminie) — klucz sortowania aktywnych.
+        function computeDeadline(p) {
+            if (p.status === 'zamkniety') return { kind: 'closed', slack: 1000 };
+            if (!p.deadline_at) return { kind: 'none', slack: 999 };
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const dl = new Date(p.deadline_at);
+            const daysLeft = Math.round((dl - today) / DAY);
+            const total = Math.max(1, Math.round((dl - new Date(new Date(p.created_at).setHours(0, 0, 0, 0))) / DAY));
+            const elapsed = Math.max(0, total - daysLeft);
+            return { kind: 'active', daysLeft, total, elapsed, overdue: daysLeft < 0, slack: daysLeft };
         }
 
+        // ============ RENDER: etapy + chipy (badge = ilu aktywnych projektów czeka na tym kroku) ============
         function renderStages() {
             const wrap = document.getElementById('stages-wrap');
             const stages = {};
             stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, defs: [] }).defs.push(d); });
-            const activeProjects = projects.filter(p => p.status !== 'zamkniety');
+            const activeProjects = projects.filter(p => lifecycleOf(p) === 'active');
             const countByKey = {};
             activeProjects.forEach(p => { const k = aggByProj[p.id]?.currentKey; if (k) countByKey[k] = (countByKey[k] || 0) + 1; });
+            const sum = document.getElementById('stages-summary');
+            if (sum) sum.textContent = activeProjects.length ? `${activeProjects.length} aktywnych w toku` : '';
 
-            // Pełne 5 etapów (widoczne po rozwinięciu)
             wrap.innerHTML = Object.keys(stages).sort((a, b) => a - b).map(num => {
                 const st = stages[num];
-                const chips = st.defs.map(d => stepChipHtml(d, countByKey[d.key] || 0)).join('');
+                const chips = st.defs.map(d => {
+                    const cnt = countByKey[d.key] || 0;
+                    const badge = cnt > 0 ? `<span class="step-badge" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}">${cnt}</span>` : '';
+                    const mileMark = d.milestone_label ? '<i class="ph ph-flag-checkered text-[10px] opacity-70"></i>' : '';
+                    return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="toggleFilter('${d.key}')" title="${OWNER_LABEL[d.owner]}${d.milestone_label ? ' · kamień milowy' : ''}">
+                        <span class="owner-dot" style="background:${BADGE_COLORS[d.owner]}"></span>
+                        <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${mileMark}${badge}</button>`;
+                }).join('');
                 return `<div>
                     <div class="flex items-baseline gap-2 mb-2.5">
                         <span class="text-[11px] font-mono font-semibold tracking-wider text-zinc-300">ETAP ${num}</span>
@@ -293,140 +522,244 @@
                     <div class="flex flex-wrap gap-2.5">${chips}</div>
                 </div>`;
             }).join('');
-
-            // Kompaktowy pasek (widoczny gdy zwinięte): TYLKO kroki, na których stoją projekty (badge>0)
-            const bar = document.getElementById('stages-compact');
-            const hotDefs = stepDefs.filter(d => (countByKey[d.key] || 0) > 0);
-            bar.innerHTML = hotDefs.length
-                ? hotDefs.map(d => stepChipHtml(d, countByKey[d.key])).join('')
-                : '<span class="text-zinc-600 text-xs">brak aktywnych kroków</span>';
-
-            applyStagesOpen();
         }
 
-        // Sekcja etapów: domyślnie ZWINIĘTA; stan w localStorage 'tnapp_stages_open' ('1'/'0')
-        function applyStagesOpen() {
-            const open = localStorage.getItem('tnapp_stages_open') === '1';
-            document.getElementById('stages-wrap').classList.toggle('hidden', !open);
-            document.getElementById('stages-compact').classList.toggle('hidden', open);
-            document.getElementById('stages-chevron').className = 'ph ' + (open ? 'ph-caret-down' : 'ph-caret-right') + ' text-zinc-500';
-        }
         function toggleStages() {
-            const open = localStorage.getItem('tnapp_stages_open') === '1';
-            localStorage.setItem('tnapp_stages_open', open ? '0' : '1');
-            applyStagesOpen();
+            const w = document.getElementById('stages-wrap');
+            const open = w.classList.toggle('hidden') === false;
+            document.getElementById('stages-caret').style.transform = open ? 'rotate(180deg)' : '';
         }
 
         function toggleFilter(key) {
+            // klik chipa w rozwiniętym panelu ustawia filtr; przy aktywnym filtrze panel zostaje otwarty
             filterStepKey = filterStepKey === key ? null : key;
             const bar = document.getElementById('filter-bar');
             if (filterStepKey) {
-                const d = stepDefs.find(x => x.key === filterStepKey);
-                document.getElementById('filter-label').textContent = 'projekty na kroku „' + (d?.label || key) + '"';
+                const d = defByKey[filterStepKey];
+                document.getElementById('filter-label').textContent = 'krok „' + (d?.label || key) + '"';
                 bar.classList.remove('hidden'); bar.classList.add('flex');
             } else { bar.classList.add('hidden'); bar.classList.remove('flex'); }
             renderStages(); renderCards();
         }
         function clearFilter() { toggleFilter(filterStepKey); }
 
-        // ============ RENDER: kafelki ============
-        function renderCards() {
-            const grid = document.getElementById('projects-grid');
-            let rows = projects;
-            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
-            document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
-            const defMap = {}; stepDefs.forEach(d => defMap[d.key] = d);
-
-            grid.innerHTML = rows.map(p => {
-                const agg = aggByProj[p.id] || { pct: 0, done: 0, total: 0, currentKey: null };
-                const sm = STATUS_META[p.status] || STATUS_META.fundament;
-
-                // AKTUALNY KROK — wyeksponowany chip (bursztyn) + owner; zielony gdy wszystko ukończone
-                const curDef = agg.currentKey ? defMap[agg.currentKey] : null;
-                const currentBlock = curDef
-                    ? `<div class="flex items-center gap-2.5 flex-wrap">
-                        <span class="inline-flex items-center gap-1.5 border border-[#f5a623]/45 bg-[#f5a623]/10 text-[#f5b955] rounded-md px-2.5 py-1 text-xs"><i class="ph ${escapeHtml(curDef.icon)}"></i>${escapeHtml(curDef.label)}</span>
-                        <span class="inline-flex items-center gap-1.5 text-[11px] text-zinc-500"><span class="owner-dot" style="background:${BADGE_COLORS[curDef.owner]}"></span>${OWNER_LABEL[curDef.owner] || ''}</span>
-                    </div>`
-                    : `<span class="inline-flex items-center gap-1.5 border border-[#45a557]/45 bg-[#45a557]/10 text-[#4cb782] rounded-md px-2.5 py-1 text-xs"><i class="ph ph-check-circle"></i>Wszystko ukończone</span>`;
-
-                // SPOWIEDNIK — bramka startu budowy: czerwony „w toku" (nie zaczynaj), zielony po domknięciu.
-                // Tylko projekty z sesją sparingu; brak wiersza summary = w toku (bezpieczny default).
-                const kh = knowhowByProj[p.id];
-                const khClosed = !!(kh && kh.status === 'closed');
-                const khBadge = p.spar_session_id
-                    ? (khClosed
-                        ? `<span class="inline-flex items-center gap-1.5 border border-[#45a557]/45 bg-[#45a557]/10 text-[#4cb782] rounded-md px-2.5 py-1 text-[11px]" title="klient domknął spowiednika${kh.closed_at ? ' · ' + relDate(kh.closed_at) : ''} — można budować"><i class="ph ph-check-circle"></i>Spowiednik ukończony</span>`
-                        : `<span class="inline-flex items-center gap-1.5 border border-[#e5484d]/45 bg-[#e5484d]/10 text-[#f26d78] rounded-md px-2.5 py-1 text-[11px]" title="czekamy, aż klient kliknie „To już wszystko" — nie zaczynaj budowy"><i class="ph ph-hourglass-high"></i>Spowiednik w toku</span>`)
-                    : '';
-
-                // Stopka: domena, deadline, utworzony + ikonki-linki
-                const domain = p.domain
-                    ? `<a href="https://${escapeHtml(p.domain)}" target="_blank" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 border border-[#0070f3]/40 text-[#52a8ff] rounded-md px-2 py-0.5 text-[11px] hover:bg-[#0070f3]/10"><i class="ph ph-globe"></i>${escapeHtml(p.domain)}</a>`
-                    : '';
-                const links = [];
-                if (p.repo_url) links.push(`<a href="${escapeHtml(p.repo_url)}" target="_blank" onclick="event.stopPropagation()" title="repo" class="text-zinc-500 hover:text-[#52a8ff]"><i class="ph ph-git-branch"></i></a>`);
-                if (p.app_url) links.push(`<a href="${escapeHtml(p.app_url)}" target="_blank" onclick="event.stopPropagation()" title="aplikacja" class="text-zinc-500 hover:text-[#52a8ff]"><i class="ph ph-rocket-launch"></i></a>`);
-                if (p.landing_url) links.push(`<a href="${escapeHtml(p.landing_url)}" target="_blank" onclick="event.stopPropagation()" title="landing" class="text-zinc-500 hover:text-[#52a8ff]"><i class="ph ph-browser"></i></a>`);
-
-                return `<div onclick="location.href='/tn-app/projekt?id=${p.id}'" class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 hover:border-[#333] cursor-pointer transition-colors">
-                    <div class="flex items-start justify-between gap-3 mb-4">
-                        <div class="min-w-0">
-                            <div class="text-white text-lg font-semibold truncate">${escapeHtml(projName(p))}</div>
-                            <div class="text-zinc-500 text-xs truncate mt-0.5">${escapeHtml(p.customer_name || '')}${p.customer_email ? ' · ' + escapeHtml(p.customer_email) : ''}</div>
-                        </div>
-                        <div class="flex items-center gap-2 flex-shrink-0">
-                            <span class="inline-block px-2 py-0.5 rounded-md border text-[11px] font-medium ${sm.cls}">${sm.label}</span>
-                            <button onclick="event.stopPropagation();location.href='/tn-app/projekt?id=${p.id}'" class="inline-flex items-center gap-1 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-2.5 py-1 text-[11px] transition-colors">Otwórz <i class="ph ph-arrow-right"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <div class="text-[10px] font-mono uppercase text-zinc-600 mb-1.5">Aktualny krok</div>
-                        ${khBadge ? `<div class="mb-2">${khBadge}</div>` : ''}
-                        ${currentBlock}
-                    </div>
-
-                    <div class="mb-4">
-                        <div class="flex items-center gap-2">
-                            <div class="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div class="h-full bg-[#0070f3] rounded-full" style="width:${agg.pct}%"></div></div>
-                            <span class="text-zinc-400 text-[11px] font-mono">${agg.pct}%</span>
-                        </div>
-                        <div class="text-zinc-600 text-[10px] mt-0.5">${agg.done}/${agg.total} kroków</div>
-                    </div>
-
-                    <div class="space-y-1.5">${renderStageMini(p)}</div>
-
-                    <div class="border-t border-[#1a1a1a] pt-3 mt-3 flex items-center gap-3 flex-wrap text-[11px]">
-                        ${domain}
-                        ${deadlineBadge(p)}
-                        <span class="text-zinc-600">utworzony ${relDate(p.created_at)}</span>
-                        ${links.length ? `<span class="ml-auto flex items-center gap-2.5 text-sm">${links.join('')}</span>` : ''}
-                    </div>
-                </div>`;
+        // ============ FILTR STANU (chipy) ============
+        function renderLifecycleChips() {
+            const wrap = document.getElementById('lc-filter'); if (!wrap) return;
+            const counts = { active: 0, paused: 0, completed: 0, cancelled: 0 };
+            projects.forEach(p => { counts[lifecycleOf(p)]++; });
+            wrap.innerHTML = LC_ORDER.map(lc => {
+                const m = LC_META[lc], n = counts[lc], on = viewLC.has(lc);
+                const style = on ? `border-color:${m.color};` : '';
+                const dot = on ? `background:${m.color}` : '';
+                return `<button class="lc-chip ${on ? 'on' : ''} ${n === 0 ? 'is-zero' : ''}" style="${style}" onclick="toggleViewLC('${lc}')" title="${m.plural} — pokaż/ukryj">
+                    <span class="lc-dot" style="${dot}"></span>${m.plural}<span class="lc-n">${n}</span></button>`;
             }).join('');
         }
+        function toggleViewLC(lc) {
+            if (viewLC.has(lc)) viewLC.delete(lc); else viewLC.add(lc);
+            saveViewLC(); renderLifecycleChips(); renderCards();
+        }
 
-        // Etapy kompaktowo w kafelce: 5 wierszy E1..E5 + krótka nazwa + mini progress + done/total (zielone gdy etap ukończony)
-        function renderStageMini(p) {
-            const stages = {};
-            stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, defs: [] }).defs.push(d); });
-            const steps = stepsByProj[p.id] || [];
-            const stepByKey = {}; steps.forEach(s => { stepByKey[s.step_key] = s; });
-            return Object.keys(stages).sort((a, b) => a - b).map(n => {
-                const st = stages[n];
-                const inst = st.defs.filter(d => (stepByKey[d.key]?.status || 'pending') !== 'skipped');
-                const done = inst.filter(d => stepByKey[d.key]?.status === 'done').length;
-                const total = inst.length;
-                const pct = total ? Math.round(done / total * 100) : 0;
-                const full = total > 0 && done === total;
-                return `<div class="flex items-center gap-2">
-                    <span class="text-[10px] font-mono font-semibold tracking-wider ${full ? 'text-[#62c073]' : 'text-zinc-500'} w-6 flex-shrink-0">E${n}</span>
-                    <span class="text-[11px] ${full ? 'text-[#62c073]' : 'text-zinc-500'} flex-1 min-w-0 truncate">${escapeHtml(st.label)}</span>
-                    <div class="w-24 h-1 bg-zinc-800 rounded-full overflow-hidden flex-shrink-0"><div class="h-full ${full ? 'bg-[#45a557]' : 'bg-[#0070f3]'} rounded-full" style="width:${pct}%"></div></div>
-                    <span class="text-[10px] font-mono text-zinc-500 w-8 flex-shrink-0 text-right">${done}/${total}</span>
-                </div>`;
-            }).join('');
+        // ============ MENU ⋯ + zmiana stanu ============
+        function toggleMenu(e, id) {
+            e.stopPropagation();
+            const el = document.getElementById('menu-' + id);
+            const willOpen = el && !el.classList.contains('open');
+            document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+            if (willOpen) el.classList.add('open');
+        }
+        document.addEventListener('click', () => { document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open')); });
+
+        // ── usuwanie projektu (z modalem ostrzegawczym; kaskada FK skasuje wszystko powiązane) ──
+        let delTargetId = null;
+        function askDeleteProject(id) {
+            document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+            const p = projects.find(x => x.id === id); if (!p) return;
+            delTargetId = id;
+            const who = p.customer_name && (p.name || '').trim() ? ` — ${p.customer_name}` : '';
+            document.getElementById('del-name').textContent = `${projName(p)}${who}`;
+            document.getElementById('del-modal').classList.remove('hidden');
+        }
+        function closeDelModal() { delTargetId = null; document.getElementById('del-modal').classList.add('hidden'); }
+        async function confirmDeleteProject() {
+            if (!delTargetId) return;
+            const id = delTargetId;
+            const btn = document.getElementById('del-confirm-btn');
+            btn.disabled = true; btn.textContent = 'Usuwam…';
+            const { error } = await supabaseClient.from('wfa_projects').delete().eq('id', id);
+            btn.disabled = false; btn.textContent = 'Tak, usuń bezpowrotnie';
+            if (error) { showToast('Błąd usuwania: ' + error.message, 'error'); return; }
+            projects = projects.filter(x => x.id !== id);
+            closeDelModal();
+            buildSearchIndex(); renderLifecycleChips(); renderCards();
+            showToast('Projekt usunięty', 'success');
+        }
+
+        async function setLifecycle(id, lc) {
+            const p = projects.find(x => x.id === id); if (!p) return;
+            const prev = lifecycleOf(p);
+            document.querySelectorAll('.pc-menu.open').forEach(m => m.classList.remove('open'));
+            if (prev === lc) return;
+            p.lifecycle = lc;
+            const { error } = await supabaseClient.from('wfa_projects').update({ lifecycle: lc }).eq('id', id);
+            if (error) { p.lifecycle = prev; showToast('Błąd zmiany stanu: ' + error.message, 'error'); return; }
+            buildSearchIndex(); renderLifecycleChips(); renderCards();
+            showToast('Stan: ' + LC_META[lc].label, 'success');
+        }
+
+        // ============ RENDER: karty ============
+        function renderCards() {
+            const grid = document.getElementById('proj-grid');
+            const q = (document.getElementById('search')?.value || '').trim().toLowerCase();
+            let rows = viewLC.size ? projects.filter(p => viewLC.has(lifecycleOf(p))) : [];
+            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
+            if (q) { const toks = q.split(/\s+/).filter(Boolean).map(foldStr); rows = rows.filter(p => { const idx = p._idx || ''; return toks.every(t => idx.includes(t)); }); }
+
+            rows.sort((a, b) => {
+                const ra = LC_RANK[lifecycleOf(a)], rb = LC_RANK[lifecycleOf(b)];
+                if (ra !== rb) return ra - rb;                        // active → paused → completed → cancelled
+                const da = isDemo(a) ? 1 : 0, db = isDemo(b) ? 1 : 0;
+                if (da !== db) return da - db;                         // DEMO na końcu swojej grupy
+                if (ra === 0) return (aggByProj[a.id]?.deadline?.slack ?? 999) - (aggByProj[b.id]?.deadline?.slack ?? 999); // aktywne wg zapasu terminu
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
+            document.getElementById('count-label').textContent = rows.length
+                ? `${rows.length} ${rows.length === 1 ? 'projekt' : (rows.length < 5 ? 'projekty' : 'projektów')}` : '';
+            grid.innerHTML = rows.map(renderCard).join('');
+        }
+
+        function renderCard(p) {
+            const agg = aggByProj[p.id] || {};
+            const sm = STATUS_META[p.status] || STATUS_META.fundament;
+            const demo = isDemo(p);
+            const lc = lifecycleOf(p);
+            const lcM = LC_META[lc];
+            const idle = (lc === 'paused' || lc === 'cancelled'); // wyszarz jak DEMO
+            const lcBadge = lc !== 'active'
+                ? `<span class="lc-badge" style="color:${lcM.color};border-color:${lcM.color}59;background:${lcM.color}14"><i class="ph ${lcM.icon}"></i>${lcM.label}</span>`
+                : '';
+            const menuHtml = `<div class="pc-menu" id="menu-${p.id}" onclick="event.stopPropagation()">
+                <button class="pc-menu-btn" title="Zmień stan projektu" onclick="toggleMenu(event,'${p.id}')"><i class="ph ph-dots-three-outline"></i></button>
+                <div class="pc-menu-dd">
+                    <div class="pc-menu-hd">Stan projektu</div>
+                    ${LC_ORDER.map(k => { const m = LC_META[k]; return `<button class="pc-menu-it ${lc === k ? 'is-cur' : ''}" onclick="setLifecycle('${p.id}','${k}')"><span class="lc-dot" style="background:${m.color}"></span>${m.label}<i class="ph ph-check lc-check"></i></button>`; }).join('')}
+                    <div class="pc-menu-sep"></div>
+                    <button class="pc-menu-it pc-menu-del" onclick="askDeleteProject('${p.id}')"><i class="ph ph-trash"></i>Usuń projekt</button>
+                </div></div>`;
+            const title = projName(p);
+            // linia klienta: unikaj powtórki gdy nazwa aplikacji = nazwa klienta
+            const clientLine = ((p.name || '').trim() && p.customer_name) ? p.customer_name : (p.customer_email || p.customer_name || '');
+            // ikona WhatsApp obok klienta (gdy jest numer) — klik nie otwiera projektu
+            function waIcon(pr) {
+                if (!pr.customer_phone) return '';
+                const digits = pr.customer_phone.replace(/\D/g, '').replace(/^00/, '');
+                const wa = digits.length === 9 ? '48' + digits : digits;
+                return ` <a href="https://wa.me/${wa}" target="_blank" rel="noopener" title="Napisz na WhatsApp: ${escapeHtml(pr.customer_phone)}"
+                    onclick="event.stopPropagation()" class="wa-ic"><i class="ph-fill ph-whatsapp-logo"></i></a>`;
+            }
+
+            // segmenty etapów
+            const segHtml = (agg.segs || []).map(c => `<span class="${c}"></span>`).join('');
+            const stageTxt = agg.currentStage
+                ? `Etap ${agg.currentStage} · <b>${escapeHtml(agg.currentStageLabel)}</b>`
+                : `<b class="text-[#62c073]">Ukończono</b>`;
+
+            // stopka: linki infrastruktury (domena / repo / aplikacja / landing)
+            const links = [];
+            if (p.domain) links.push(`<a href="https://${escapeHtml(p.domain)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${escapeHtml(p.domain)}" class="pc-link"><i class="ph ph-globe"></i></a>`);
+            if (p.repo_url) links.push(`<a href="${escapeHtml(p.repo_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="repo" class="pc-link"><i class="ph ph-git-branch"></i></a>`);
+            if (p.app_url) links.push(`<a href="${escapeHtml(p.app_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="aplikacja" class="pc-link"><i class="ph ph-rocket-launch"></i></a>`);
+            if (p.landing_url) links.push(`<a href="${escapeHtml(p.landing_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="landing" class="pc-link"><i class="ph ph-browser"></i></a>`);
+            const linksHtml = links.length
+                ? `<div class="pc-links">${links.join('')}</div>`
+                : `<span class="pc-portlabel text-zinc-700">Brak linków</span>`;
+
+            // SPOWIEDNIK — bramka startu budowy: czerwony „w toku" (nie zaczynaj), zielony po domknięciu.
+            // Tylko projekty z sesją sparingu; brak wiersza summary = w toku (bezpieczny default).
+            const kh = knowhowByProj[p.id];
+            const khClosed = !!(kh && kh.status === 'closed');
+            const khHtml = p.spar_session_id
+                ? (khClosed
+                    ? `<span class="kh-chip kh-done" title="klient domknął spowiednika${kh.closed_at ? ' · ' + escapeHtml(relDate(kh.closed_at)) : ''} — można budować"><i class="ph ph-check-circle"></i>Spowiednik</span>`
+                    : `<span class="kh-chip kh-open" title="czekamy, aż klient kliknie „To już wszystko" — nie zaczynaj budowy"><i class="ph ph-hourglass-high"></i>Spowiednik</span>`)
+                : '';
+
+            const actHtml = agg.lastAct ? `<span class="pc-act"><i class="ph ph-clock-countdown"></i>${escapeHtml(relDate(agg.lastAct.created_at))}</span>` : '';
+
+            return `<div class="pcard${demo ? ' is-demo' : ''}${idle ? ' is-idle' : ''}" onclick="location.href='/tn-app/projekt?id=${p.id}'">
+                ${demo ? '<span class="demo-tag" style="right:38px">DEMO</span>' : ''}
+                ${menuHtml}
+                <div class="pc-head">
+                    <div class="pc-mono">${escapeHtml(initials(title))}</div>
+                    <div class="pc-tt">
+                        <div class="pc-title" style="${demo ? (lcBadge ? 'padding-right:6px' : 'padding-right:66px') : ''}">${escapeHtml(title)}</div>
+                        <div class="pc-client">${escapeHtml(clientLine) || '&nbsp;'}${waIcon(p)}</div>
+                    </div>
+                    ${(demo && !lcBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}${lcBadge}</div>`}
+                </div>
+
+                <div>
+                    <div class="pc-seg mb-2">${segHtml}</div>
+                    <div class="pc-metarow">
+                        <span class="pc-stage" title="krok: ${escapeHtml(agg.currentStepLabel || '')}">${stageTxt}</span>
+                        <span class="pc-pct">${agg.pct || 0}% · ${agg.done || 0}/${agg.total || 0}</span>
+                    </div>
+                </div>
+
+                <div class="pc-tempo">${renderDeadlineLC(p, agg)}</div>
+
+                <div class="pc-foot">
+                    <div class="flex items-center gap-2.5 min-w-0">${linksHtml}</div>
+                    <div class="flex items-center gap-2.5 flex-shrink-0">${khHtml}${actHtml}</div>
+                </div>
+            </div>`;
+        }
+
+        // licznik terminu wg stanu lifecycle: wstrzymany = pauza (bez czerwonego),
+        // anulowany/zakończony = bez licznika
+        function renderDeadlineLC(p, agg) {
+            const lc = lifecycleOf(p);
+            if (lc === 'cancelled') {
+                return `<div class="tempo-cancel"><i class="ph ph-x-circle"></i>Projekt anulowany — bez terminu</div>`;
+            }
+            if (lc === 'completed') {
+                return `<div class="tempo-cancel" style="color:#4c7a5c"><i class="ph ph-check-circle"></i>Projekt zakończony</div>`;
+            }
+            const t = agg.deadline;
+            if (lc === 'paused') {
+                const sub = (t && t.kind === 'active')
+                    ? ` · ${t.overdue ? Math.abs(t.daysLeft) + ' dni po terminie' : t.daysLeft + ' dni do terminu'}`
+                    : '';
+                const w = (t && t.kind === 'active') ? Math.round(Math.min(t.elapsed, t.total) / t.total * 100) : 0;
+                return `<div class="tempo-top">
+                        <span class="tempo-lbl"><i class="ph ph-pause-circle"></i>Termin umowny</span>
+                        <span class="tempo-paused"><i class="ph ph-pause"></i>Wstrzymany${sub}</span>
+                    </div>
+                    <div class="tempo-bar"><span style="width:${w}%;background:#3f3f46"></span></div>`;
+            }
+            return renderDeadline(t);
+        }
+
+        // widżet licznika terminu umownego (deadline_at)
+        function renderDeadline(t) {
+            if (!t || t.kind === 'closed') {
+                return `<div class="tempo-closed"><i class="ph ph-lock-simple"></i>Projekt zamknięty — bez licznika</div>`;
+            }
+            if (t.kind === 'none') {
+                return `<div class="tempo-closed"><i class="ph ph-calendar-x"></i>Bez terminu umownego</div>`;
+            }
+            const col = t.overdue ? '#e5484d' : (t.daysLeft < 7 ? '#e5484d' : (t.daysLeft < 14 ? '#f5a623' : '#0070f3'));
+            const w = t.overdue ? 100 : Math.round(Math.min(t.elapsed, t.total) / t.total * 100);
+            const over = t.overdue ? `<span class="tempo-over"><i class="ph ph-warning"></i>PO TERMINIE +${Math.abs(t.daysLeft)} ${Math.abs(t.daysLeft) === 1 ? 'dzień' : 'dni'}</span>` : '';
+            const txt = t.daysLeft === 0 ? 'Termin dziś' : `${t.daysLeft} ${t.daysLeft === 1 ? 'dzień' : 'dni'} do terminu`;
+            return `<div class="tempo-top">
+                    <span class="tempo-lbl"><i class="ph ph-calendar-blank"></i>Termin umowny</span>
+                    ${over || `<span class="tempo-day" style="color:${col}">${txt}</span>`}
+                </div>
+                <div class="tempo-bar"><span style="width:${w}%;background:${col}"></span></div>`;
         }
 
         // ============ NOWY PROJEKT (ręczny) ============
@@ -435,11 +768,13 @@
             document.getElementById('np-name').focus();
         }
         function closeNewModal() { document.getElementById('new-modal').classList.add('hidden'); }
-        // A8: Escape zamyka modal (null-safe, spójnie z resztą panelu tn-app).
+        // A8: Escape zamyka modale (null-safe, spójnie z resztą panelu tn-app).
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
-            const m = document.getElementById('new-modal');
-            if (m && !m.classList.contains('hidden')) closeNewModal();
+            const nm = document.getElementById('new-modal');
+            if (nm && !nm.classList.contains('hidden')) closeNewModal();
+            const dm = document.getElementById('del-modal');
+            if (dm && !dm.classList.contains('hidden')) closeDelModal();
         });
         async function createProject() {
             const btn = document.getElementById('np-save'); btn.disabled = true;
