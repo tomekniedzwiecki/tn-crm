@@ -237,10 +237,10 @@ export const CHECKLIST_MAP: Record<string, Record<string, string>> = {
 
   // ══════════ ETAP 4: ŚRODOWISKO REKLAMOWE ══════════
   ads_konto: {
-    // klucze = VERBATIM z WS ads_konto (projekt.html) — tor Leadsie (przebudowa 21.07)
-    "Konto reklamowe istnieje i połączone (Leadsie — automat)":
+    // klucze = VERBATIM z WS ads_konto (projekt.html) — flow RĘCZNY (Tomek 22.07: tor Leadsie uśpiony)
+    "Konto reklamowe utworzone i udostępnione do BM Tomka":
       "Konto reklamowe utworzone i połączone",
-    "Partner access do BM Tomka — nadany przez Leadsie (automat)":
+    "Partner access do BM Tomka — pełna kontrola nadana":
       "Nadane uprawnienia do wspólnej obsługi konta",
     "Waluta PLN + strefa Europe/Warsaw zweryfikowane w Business Settings":
       "Konto w złotówkach i polskiej strefie czasu",
@@ -250,8 +250,8 @@ export const CHECKLIST_MAP: Record<string, Record<string, string>> = {
       "Przygotowane dokumenty firmy (na wypadek weryfikacji)",
   },
   ads_strona: {
-    // klucze = VERBATIM z WS ads_strona (przebudowa 21.07 — strona powstaje w kreatorze Leadsie)
-    "Strona FB istnieje i udostępniona do BM Tomka (Leadsie — automat)":
+    // klucze = VERBATIM z WS ads_strona (flow RĘCZNY — Tomek 22.07: tor Leadsie uśpiony)
+    "Strona FB udostępniona do BM Tomka":
       "Strona firmy na Facebooku gotowa i połączona",
     "Logo, cover, sekcja Informacje (dane firmy + link do sklepu)":
       "Logo, tło i dane firmy na stronie",

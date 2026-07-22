@@ -65,11 +65,13 @@ const isConnected = (a: LeadsieAsset) => (a.connectionStatus || "").toLowerCase(
 const isManage = (a: LeadsieAsset) => /manage|owner|admin|advertise|full[_\s-]*control/i.test(a.accessLevel || "");
 
 // VERBATIM z WS w tn-sklepy/projekt.html (klucz deduplikacji checklisty — nie parafrazować!).
-// Tor Leadsie po przebudowie 21.07: automat odhacza konto reklamowe + partner access (krok
-// ads_konto) oraz stronę FB (krok ads_strona). Te teksty muszą być 1:1 z WS panelu i CHECKLIST_MAP.
-const CHECK_PARTNER_ACCESS = "Partner access do BM Tomka — nadany przez Leadsie (automat)";
-const CHECK_KONTO = "Konto reklamowe istnieje i połączone (Leadsie — automat)";
-const CHECK_STRONA = "Strona FB istnieje i udostępniona do BM Tomka (Leadsie — automat)";
+// ⚠️ Tor Leadsie UŚPIONY decyzją Tomka 22.07 (flow klienta = wyłącznie ścieżka ręczna) — ta funkcja
+// jest zdeployowana ale nieaktywna (settings.wf2_leadsie_connect_url = ''); trzymamy ją spójną na
+// wypadek powrotu. Teksty muszą pozostać 1:1 z WS panelu i CHECKLIST_MAP (odhacza je ręczny flow /
+// weryfikator wf2-ads-verify).
+const CHECK_PARTNER_ACCESS = "Partner access do BM Tomka — pełna kontrola nadana";
+const CHECK_KONTO = "Konto reklamowe utworzone i udostępnione do BM Tomka";
+const CHECK_STRONA = "Strona FB udostępniona do BM Tomka";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);

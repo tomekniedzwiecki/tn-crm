@@ -259,18 +259,29 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     ? ok('wf2-portal: blok leadsie bez summary_url/linków (klient = tylko flagi)')
     : bad('wf2-portal leadsie sanityzacja', 'blok leadsie przecieka linki/summary do klienta');
 
-  // front: przycisk w portalu + sekcja w panelu
+  // front: tor Leadsie UŚPIONY (Tomek 22.07) — przycisk „Połącz konta reklamowe" USUNIĘTY z portalu
+  // klienta (funkcja leadsieConnectBlock skasowana). Panel admina zachowuje dormant „Połączenia Leadsie".
   const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
-  (portalHtml.includes('leadsieConnectBlock') && portalHtml.includes('Połącz konta reklamowe'))
-    ? ok('portal.html: przycisk „Połącz konta reklamowe" (leadsieConnectBlock)')
-    : bad('portal.html leadsie', 'brak leadsieConnectBlock / tytułu przycisku');
-  panelSrc.includes('adsKontoLeadsieBlock') ? ok('projekt.html: sekcja „Połączenia Leadsie" (adsKontoLeadsieBlock)') : bad('projekt.html leadsie', 'brak adsKontoLeadsieBlock');
+  (!portalHtml.includes('leadsieConnectBlock') && !portalHtml.includes('Połącz konta reklamowe'))
+    ? ok('portal.html: przycisk Leadsie „Połącz konta reklamowe" USUNIĘTY (flow ręczny; tor uśpiony)')
+    : bad('portal.html leadsie usunięcie', 'portal wciąż zawiera leadsieConnectBlock / „Połącz konta reklamowe"');
+  panelSrc.includes('adsKontoLeadsieBlock') ? ok('projekt.html: sekcja „Połączenia Leadsie" (adsKontoLeadsieBlock — dormant, wgląd admina)') : bad('projekt.html leadsie', 'brak adsKontoLeadsieBlock');
 
-  // ── ŚCIEŻKA RĘCZNA (równorzędna, decyzja Tomka 22.07; SSOT §13) — pętla bez webhooka ──
-  // portal ma Ścieżkę B (ręczny onboarding krok po kroku)
-  /Ręcznie,\s*krok po kroku/.test(portalHtml)
-    ? ok('portal.html: Ścieżka B „Ręcznie, krok po kroku" (onboarding ręczny)')
-    : bad('portal.html ścieżka ręczna', 'brak frazy „Ręcznie, krok po kroku" w ads_konto');
+  // ── FLOW RĘCZNY (decyzja Tomka 22.07; SSOT §13) — jedyna ścieżka onboardingu reklamowego ──
+  // portal ads_konto = 5 kroków ręcznych z deep-linkami (bez kreatora/Leadsie)
+  (/step-manual/.test(portalHtml) && portalHtml.includes('737839566050751') && portalHtml.includes('business.facebook.com/settings/partners'))
+    ? ok('portal.html: flow ręczny ads_konto (kroki step-manual + BM ID + deep-linki)')
+    : bad('portal.html flow ręczny', 'brak kroków ręcznych (step-manual/BM ID/partners) w ads_konto');
+
+  // portal CLIENT_WS ads_* (konto/strona/budżet) NIE zawiera odwołań do Leadsie/kreatora (tor uśpiony)
+  {
+    const aStart = portalHtml.indexOf('ads_konto: {');
+    const aEnd = portalHtml.indexOf('pl_domena: {', aStart);
+    const adsWs = aStart >= 0 && aEnd > aStart ? portalHtml.slice(aStart, aEnd) : '';
+    (adsWs && !/leadsie/i.test(adsWs))
+      ? ok('portal CLIENT_WS ads_*: zero odwołań do Leadsie/kreatora (flow ręczny)')
+      : bad('portal CLIENT_WS ads_* leadsie', 'CLIENT_WS ads_* wciąż wspomina Leadsie');
+  }
   // whitelist ads_konto == ['ad_account_id'] (świadome przywrócenie JEDNEGO pola)
   /ads_konto:\s*\["ad_account_id"\]/.test(portalSrc)
     ? ok('wf2-portal: CLIENT_FIELD_WHITELIST.ads_konto == ["ad_account_id"]')
@@ -512,16 +523,15 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
       : bad('CLIENT_FIELD_WHITELIST relikty', 'ads_konto != ["ad_account_id"] albo wróciły relikty ads_budzet/bm_id/partner_id/amount/confirmation');
   }
 
-  // (P0/poz.14) portal CLIENT_WS: Leadsie-first — 737839566050751 TYLKO w fallbacku <details> ads_konto
+  // (Tomek 22.07; SSOT §13) portal CLIENT_WS.ads_konto: flow RĘCZNY — BM ID w treści głównej
+  // (kroki step-manual), zero <details> kreatora, zero „Połącz konta"/Leadsie
   {
     const kStart = portalHtml.indexOf('ads_konto: {');
     const kEnd = portalHtml.indexOf('ads_strona: {', kStart);
     const kBlock = kStart >= 0 && kEnd > kStart ? portalHtml.slice(kStart, kEnd) : '';
-    const detailsIdx = kBlock.indexOf('<details');
-    const idIdx = kBlock.indexOf('737839566050751');
-    (kBlock.includes('Połącz konta reklamowe') && detailsIdx >= 0 && idIdx > detailsIdx)
-      ? ok('portal CLIENT_WS.ads_konto: Leadsie-first, 737839566050751 tylko w fallbacku <details>')
-      : bad('portal CLIENT_WS.ads_konto', 'ID BM poza zwijanym fallbackiem albo brak „Połącz konta"');
+    (kBlock.includes('737839566050751') && /step-manual/.test(kBlock) && !/leadsie/i.test(kBlock) && !kBlock.includes('Połącz konta reklamowe'))
+      ? ok('portal CLIENT_WS.ads_konto: flow ręczny (BM ID w treści głównej, zero Leadsie/„Połącz konta")')
+      : bad('portal CLIENT_WS.ads_konto', 'brak kroków ręcznych/BM ID albo pozostałość Leadsie/„Połącz konta"');
     // ads_budzet PREPAID-first (płatności ręczne) + ostrzeżenie o przelewie; kwoty bez zmian (1000 zł)
     const bStart = portalHtml.indexOf('ads_budzet: {');
     const bEnd = portalHtml.indexOf('pl_domena: {', bStart);
@@ -530,8 +540,16 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
       ? ok('portal CLIENT_WS.ads_budzet: prepaid-first (płatności ręczne) + ostrzeżenie o przelewie (1000 zł)')
       : bad('portal CLIENT_WS.ads_budzet', 'brak płatności ręcznych / ostrzeżenia o przelewie / kwoty 1000 zł');
   }
-  // zadanie ads_strona: „Załatwione w tym samym kreatorze" zamiast dublowania CTA (poz.14)
-  portalHtml.includes('Załatwione w tym samym kreatorze') ? ok('portal: ads_strona przy connected_page → „Załatwione w tym samym kreatorze" (bez drugiego CTA)') : bad('portal ads_strona CTA', 'brak komunikatu „Załatwione w tym samym kreatorze"');
+  // (Tomek 22.07; SSOT §13) zadanie ads_strona: tworzenie RĘCZNE (facebook.com/pages/create) +
+  // dostęp nadawany w tym samym kroku „Partnerzy" co konto; zero Leadsie/kreatora
+  {
+    const sStart = portalHtml.indexOf('ads_strona: {');
+    const sEnd = portalHtml.indexOf('ads_budzet: {', sStart);
+    const sBlock = sStart >= 0 && sEnd > sStart ? portalHtml.slice(sStart, sEnd) : '';
+    (sBlock.includes('facebook.com/pages/create') && /Partnerzy/.test(sBlock) && !/leadsie/i.test(sBlock))
+      ? ok('portal CLIENT_WS.ads_strona: tworzenie ręczne (pages/create) + dostęp w „Partnerzy", zero Leadsie')
+      : bad('portal CLIENT_WS.ads_strona', 'brak pages/create / „Partnerzy" albo pozostałość Leadsie');
+  }
 
   // (poz.12) checklist-map preflight: komentarz wspomina creative-probe
   /celowo POMINIĘTE[\s\S]{0,120}(creative-probe|ads_create_creative)/i.test(mapSrc) || /creative-probe/i.test(mapSrc)

@@ -1,5 +1,21 @@
 # Onboarding reklamowy przez Leadsie (Etap 4 — SSOT)
 
+> ## ⛔ 22.07: TOR LEADSIE UŚPIONY (decyzja Tomka, WIĄŻĄCA)
+>
+> **Flow klienta = WYŁĄCZNIE ścieżka ręczna (§13).** Ścieżka Leadsie WYLATUJE z powierzchni
+> klienta i z tekstów: przycisk „Połącz konta reklamowe" usunięty z portalu
+> (`tn-sklepy/portal.html`), `settings.wf2_leadsie_connect_url` = `''` (fail-closed — nic się nie
+> renderuje). **Infrastruktura Leadsie zostaje zdeployowana jako UŚPIONA na wypadek powrotu — NIE
+> kasować:** webhook `wf2-ads-connect` (spójne stałe checklisty), sekret `WF2_LEADSIE_SECRET`,
+> konto/plan Leadsie, klucz `settings.wf2_leadsie_connect_url`, dormant sekcja „Połączenia Leadsie"
+> w panelu admina (`adsKontoLeadsieBlock`).
+>
+> **§12 (polityka dedykowanego konta) OBOWIĄZUJE** — nowe, dedykowane konto klient tworzy **ręcznie**
+> (krok 2 ścieżki §13), nie przez kreator/`/create` Leadsie. Domknięcie środowiska = weryfikator
+> `wf2-ads-verify` (Graph API) + ręczne odhaczenie Tomka, gdy brak `WF2_META_TOKEN`.
+>
+> _Sekcje 1–11 poniżej opisują UŚPIONY tor Leadsie (dokumentacja na wypadek powrotu)._
+
 Jednoklikowy tor nadania **partner access** do BM Tomka (Meta Business Portfolio
 `737839566050751`) w krokach klienckich `ads_konto` / `ads_strona`. Zastępuje ręczne
 klikanie w Business Suite: klient loguje się do Facebooka, zaznacza konto reklamowe +
@@ -57,11 +73,12 @@ zły/nieznany → 200 z `{ok:false}` (retry Leadsie nic nie naprawi — ślad w 
   assets:[{kind,name,status,access,link}] }`. Ten sam blok trafia do **ads_konto** i
   **ads_strona** (lustro).
 - **Mapowanie asset → krok / checklista:** webhook odhacza w `ads_konto.data.checklist`
-  **DWIE** pozycje — `"Konto reklamowe istnieje i połączone (Leadsie — automat)"` oraz
-  `"Partner access do BM Tomka — nadany przez Leadsie (automat)"` — i **tylko gdy** jest
+  **DWIE** pozycje — `"Konto reklamowe utworzone i udostępnione do BM Tomka"` oraz
+  `"Partner access do BM Tomka — pełna kontrola nadana"` — i **tylko gdy** jest
   `ad_account` w stanie `Connected` z poziomem `Manage/Owner/Admin/Advertise/Full control`
   (allowlista poszerzona, case-insensitive — za wąska = cichy no-op toru). W `ads_strona.data.checklist`
-  odhacza `"Strona FB istnieje i udostępniona do BM Tomka (Leadsie — automat)"` gdy strona `Connected`.
+  odhacza `"Strona FB udostępniona do BM Tomka"` gdy strona `Connected`. _(Teksty przemianowane 22.07 —
+  sufiks „(Leadsie — automat)" usunięty; stałe w kodzie i CHECKLIST_MAP zaktualizowane, tor uśpiony.)_
   Unia — nigdy nie odznacza; scalanie przez RPC **`wf2_step_merge`** (atomowy `jsonb_set` + unia
   checklisty w JEDNYM `UPDATE` — bez read-modify-write, koniec lost-update z cronem verify).
   `pending → in_progress` gdy pojawią się jakiekolwiek assety Meta.
@@ -316,9 +333,11 @@ Podpięcie connectora → zamknij i otwórz sesję na nowo, zanim liczysz na `ad
 ## 12. ISTNIEJĄCE KONTO KLIENTA — POLITYKA DEDYKOWANEGO KONTA
 
 **Decyzja Tomka (22.07, WIĄŻĄCA).** Klient z **już istniejącym** kontem reklamowym Meta **i tak
-zakłada NOWE, DEDYKOWANE** konto pod wspólny biznes (ten sklep). W kroku `ads_konto` kreator Leadsie
-ma opcję **„Create new Meta asset"** (oraz wariant linku `/create`) — klient tworzy nowe konto **mimo**
-posiadania starego. **NIE** podpinamy istniejącego konta klienta jako konta projektu.
+zakłada NOWE, DEDYKOWANE** konto pod wspólny biznes (ten sklep). Nowe konto klient tworzy **ręcznie**
+w kroku 2 ścieżki §13 (Ustawienia → Konta reklamowe → **Utwórz nowe konto reklamowe**), od razu z
+walutą **PLN** + strefą **Europe/Warsaw**. **NIE** podpinamy istniejącego konta klienta jako konta
+projektu. _(Tor Leadsie uśpiony — droga „Create new Meta asset" / wariant linku `/create` w kreatorze
+NIE jest już używana; opis pozostaje w §1–11 na wypadek powrotu.)_
 
 ### Dlaczego (powody do treści)
 
@@ -357,25 +376,27 @@ czasem) **albo** wyjątkowo używamy **dziewiczego istniejącego** (kryteria wy�
 **Odhaczanie checklisty** (`konto` + `partner access`) **bez zmian** — dostęp JEST, niejednoznaczny
 jest tylko **wybór** konta (act_ wpisujemy ręcznie w panelu).
 
-> **[ŻYWO]** Potwierdzić na **1. realnym przebiegu**, że kreator Leadsie pozwala utworzyć **nowe** konto
-> reklamowe, gdy klient **już ma** istniejące (opcja „Create new Meta asset" / wariant linku `/create`).
+> **[UŚPIONE]** Gałąź multi-account `wf2-ads-connect` opisuje zachowanie webhooka Leadsie (dormant —
+> tor uśpiony 22.07). Przy ścieżce ręcznej (§13) klient sam wkleja `act_` dedykowanego konta, więc
+> problem „które konto dedykowane" nie występuje. Notatka wróci do walidacji, gdyby tor Leadsie
+> reaktywowano.
 
 ---
 
-## 13. ŚCIEŻKA RĘCZNA (równorzędna wobec Leadsie)
+## 13. ŚCIEŻKA RĘCZNA (JEDYNA ścieżka klienta — tor Leadsie uśpiony)
 
-**Decyzja Tomka (22.07, WIĄŻĄCA).** Ręczny onboarding Meta to **PEŁNOPRAWNA, RÓWNORZĘDNA** ścieżka
-obok kreatora Leadsie — **nie** „główna + fallback". Test Leadsie ujawnił próg **RC2137**: konto FB
-**bez potwierdzonego e-maila** nie utworzy Business Portfolio w kreatorze. Przy tej niepewności klient
-musi mieć drugą, tak samo dobrą drogę. Decyzja o wejściu na plan Leadsie **$129/mies.** zapadnie
-**po porównaniu** obu ścieżek na realnym teście pracownika (liczba kliknięć/czas do uzupełnienia niżej).
+**Decyzja Tomka (22.07, WIĄŻĄCA).** Ręczny onboarding Meta to **JEDYNA** ścieżka klienta w Etapie 4 —
+tor Leadsie uśpiony (banner na górze). Wcześniej ręczna droga była „równorzędna" wobec kreatora; po
+teście, który ujawnił próg **RC2137** (konto FB **bez potwierdzonego e-maila** nie utworzy Business
+Portfolio), Tomek zdecydował prowadzić onboarding **wyłącznie ręcznie**. Infrastruktura Leadsie
+(webhook, sekret, konto/plan **$129/mies.** nieaktywowany) zostaje uśpiona na wypadek powrotu.
 
 ### Pętla automatyzacji BEZ webhooka
 
 Ścieżka ręczna nie ma odbicia webhookiem (Leadsie go daje). Domknięcie robi **weryfikator**:
 
 ```
-Klient przechodzi kroki ręcznie (portal, zadanie ads_konto, „Ścieżka B")
+Klient przechodzi kroki ręcznie (portal, zadanie ads_konto — 5 kroków z deep-linkami)
    │  nadaje partner access do BM Tomka (737839566050751) w Ustawieniach → Partnerzy
    ▼
 Klient wkleja act_ ID konta reklamowego w pole na dole zadania ads_konto
@@ -387,7 +408,7 @@ wf2-ads-verify (po WF2_META_TOKEN, cron/przycisk) czyta konto przez Graph API
 Auto-odhaczenie checklisty VERBATIM (to samo co przy Leadsie) + spend_cap
 ```
 
-### Kroki ręczne (portal `ads_konto`, „Ścieżka B — ręcznie, krok po kroku")
+### Kroki ręczne (portal `ads_konto` — treść główna zadania)
 
 Każdy krok ma **deep-link** (`target=_blank`; Meta sama przekierowuje do właściwego BM usera):
 
@@ -407,12 +428,11 @@ Każdy krok ma **deep-link** (`target=_blank`; Meta sama przekierowuje do właś
 Miejsca na **zrzuty ekranu**: struktura `<div class="shot" data-shot="krok-N">[zrzut ekranu — wkrótce]</div>`
 po każdym kroku — placeholder dyskretny, zrzuty dojdą po teście pracownika.
 
-### RC2137 przy OBU ścieżkach
+### RC2137 — próg e-maila FB (krok 1)
 
-Próg e-maila FB dotyczy nie tylko kreatora. Przy ścieżce ręcznej **formularz Meta i tak pyta o e-mail**
-(w polu przy tworzeniu portfolio, krok 1). Ścieżka A dostaje w portalu zdanie ratunkowe: „Centrum kont →
-Dane osobowe → Dane kontaktowe, potwierdź kodem i ponów". Gdy to nie pomaga → ścieżka ręczna (klient
-przechodzi ten sam próg e-maila świadomie, w polu formularza).
+Formularz Meta pyta o **e-mail firmowy** przy tworzeniu portfolio (krok 1). Konto FB **bez
+potwierdzonego e-maila** utknie na progu **RC2137**. Zdanie ratunkowe siedzi w portalu **przy kroku 1**
+(tworzenie portfolio): „Centrum kont → Dane osobowe → Dane kontaktowe, potwierdź kodem i ponów".
 
 ### Pole klienckie + propagacja (kod)
 
@@ -426,12 +446,14 @@ przechodzi ten sam próg e-maila świadomie, w polu formularza).
 - **`wf2-ads-verify` BEZ zmian logiki** — już weryfikuje z `meta_ad_account_id` (§9). Ścieżka ręczna
   zasila tę samą kolumnę, więc verify domyka środowisko identycznie jak po Leadsie.
 
-### Checklista — jak się odhacza przy ścieżce B
+### Checklista — jak się odhacza (flow ręczny)
 
-Pozycje `ads_konto` „(Leadsie — automat)" odhaczają się **same** przy ścieżce A (webhook `wf2-ads-connect`).
-Przy ścieżce B odhacza je **weryfikator** (po podaniu `act_` — waluta/strefa) albo **Tomek ręcznie**
-(konto + partner access — dostęp potwierdza verify przez odczyt konta). Brak ptaszka „automat" **nie**
-znaczy, że klient nic nie zrobił — patrz opis kroku w panelu.
+Pozycje po przemianowaniu (22.07, sufiks „(Leadsie — automat)" usunięty): `ads_konto` = **„Konto
+reklamowe utworzone i udostępnione do BM Tomka"** + **„Partner access do BM Tomka — pełna kontrola
+nadana"**; `ads_strona` = **„Strona FB udostępniona do BM Tomka"**. Odhacza je **weryfikator**
+`wf2-ads-verify` (po podaniu `act_` — waluta/strefa) albo **Tomek ręcznie** (konto + partner access —
+dostęp potwierdza verify przez odczyt konta). Uśpiony webhook `wf2-ads-connect` trzyma te same stałe
+VERBATIM na wypadek powrotu. Brak ptaszka **nie** znaczy, że klient nic nie zrobił — patrz opis kroku w panelu.
 
 ### Porównanie kliknięć (do uzupełnienia po teście pracownika)
 
