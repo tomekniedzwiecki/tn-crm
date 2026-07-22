@@ -51,7 +51,7 @@
 - **Dokument / podstawa:** **Regulamin § 9** (Umowa Rezerwacyjna zawierana przez wpłatę po akceptacji Regulaminu). Potwierdzenie na trwałym nośniku.
 - **Pułapki:**
   - **500 zł jest W PEŁNI ZWROTNE** — to **zaliczka**, **nie zadatek** (wyłączony art. 394 k.c.). Nie obiecywać „przepada".
-  - Zwrot: 7 dni od decyzji o niezawieraniu współpracy; automatyczny zwrot, jeśli umowa nie zawarta w 60 dni [wg regulaminu, do potwierdzenia].
+  - Zwrot: 7 dni od decyzji o niezawieraniu współpracy; rezygnacja e-mailem w każdej chwili = pełny zwrot. (Auto-zwrot po 60 dniach USUNIĘTY — decyzja Tomka 22.07.)
   - **Sama rezerwacja 500 zł NIE tworzy projektu w systemie** (decyzja Tomka 21.07 — projekt wf2/wfa powstaje dopiero po pełnej płatności za budowę). Nie startować prac na samej rezerwacji.
 
 ### 3. Rozmowa 1:1 + plan przedsięwzięcia  ·  [opcjonalnie NDA]
@@ -80,6 +80,7 @@
   - **Skutki wcześniejszego rozpoczęcia:** przy odstąpieniu przed pełnym wykonaniem — zapłata proporcjonalna wg **Harmonogramu wartości Etapów** (art. 35 UoPK). Po pełnym wykonaniu za wyraźną zgodą i po pouczeniu — prawo odstąpienia **wygasa** (art. 38 UoPK).
   - **Zgoda „Inspiracje" jest dobrowolna** — brak zgody nie wpływa na warunki. Nie łączyć jej z akceptacją umowy w jeden „pakiet".
   - Wzór umowy udostępnić **przed** zawarciem (transparencja przedkontraktowa, art. 12 UoPK).
+  - **Budżet reklamowy rozruchu finansuje Partner** (§ 1 ust. 4 umowy) — poinformować Klienta **przed podpisaniem**; zapewnienie środków = element współdziałania (brak środków = brak współdziałania, § 1 ust. 5).
 
 ### 5. Podpis + faktura
 - **Kto:** obie strony podpisują; Tomek wystawia fakturę.
@@ -111,6 +112,7 @@
 - **Dokument / podstawa:** § 1 i § 6 umowy — Udział **10% Przychodu** naliczany od startu, pobór przez **Stripe Connect** (Partner = *merchant of record*). Stała opieka i serwis bez dodatkowych opłat (§ 7).
 - **Pułapki:**
   - **Wyłączny kanał płatności** — Partner przyjmuje płatności tylko przez zintegrowane kanały (zakaz omijania systemu, § 6 ust. 4).
+  - **Budżet reklamowy rozruchu (media, np. Meta Ads) ponosi Partner** (§ 1 ust. 4); Tomek prowadzi kampanie bez dodatkowego wynagrodzenia, wydatki rozliczane z konta reklamowego Partnera.
   - Koszty zmienne (prowizje Stripe, SMS, API, AI przy wolumenie) obciążają **Partnera** od 1. dnia (§ 11).
   - Infrastruktura: 12 mies. płaci Tomek, potem podział 90/10.
 
@@ -123,10 +125,10 @@
 
 ### 10. (kiedyś) Wykup Udziału
 - **Kto:** Partner wykupuje.
-- **Dokument / podstawa:** **Umowa wykupu Udziału**; § 9 umowy — po 12 mies. od startu, cena = **36× średniej miesięcznej kwoty Udziału** z ostatnich 12 mies.
+- **Dokument / podstawa:** **Umowa wykupu Udziału**; § 9 umowy — po 12 mies. od startu, cena = **36× średniej miesięcznej kwoty Udziału** z ostatnich 12 mies., **nie mniej niż 30 750 zł brutto** (2× cena budowy brutto; próg OBUSTRONNY — także wcześniejszy wykup przy zbyciu, § 10).
 - **Pułapki:**
   - Z chwilą zapłaty wykupu wygasają Udział i opieka (§ 7); Tomek przekazuje administrację, dostępy i pełne repo.
-  - Zbycie biznesu z pominięciem procedury: kary tylko wobec Przedsiębiorcy; wobec Konsumenta/PNPK — wymagalność ceny wykupu (§ 10).
+  - Zbycie biznesu z pominięciem procedury: kary tylko wobec Przedsiębiorcy; wobec Konsumenta/PNPK — wymagalność ceny wykupu (§ 10; wcześniejszy wykup = 36× śr. z pełnych miesięcy, nie mniej niż 30 750 zł brutto).
 
 ---
 
@@ -154,7 +156,7 @@
 
 1. **[DO POTWIERDZENIA] Bramka zgody konsumenckiej dla TN App.** Opisałem ją analogicznie do mechanizmu z Umowy Budowy (§ 14, art. 21 ust. 2 UoPK). CLAUDE.md opisuje szczegółowo bramkę `work_consent` dla **wf2 (sklepy)**; dla **wfa (aplikacje)** trzeba potwierdzić, czy istnieje analogiczna twarda bramka w portalu /twoj-biznes TN App i czy fabryka sprawdza ją przed startem Etapu 1. Jeśli nie — wdrożyć albo pilnować ręcznie wg tej checklisty.
 2. **[DO POTWIERDZENIA] Faktura — zaliczkowa vs końcowa i VAT.** Zostawiłem oba warianty; moment obowiązku VAT (w tym przy poborze application_fee w Stripe) do ustalenia z księgową (spójne z notatką v4 umowy). Kwota po rezerwacji ~14 875 brutto zakłada 23% VAT.
-3. **[DO POTWIERDZENIA] Terminy z Regulaminu.** 3 dni robocze na kontakt po wpłacie i 60-dniowy auto-zwrot rezerwacji są w Regulaminie oznaczone jako [DO POTWIERDZENIA — TOMEK]. Ta checklista je powtarza — zsynchronizować po decyzji.
+3. **[DO POTWIERDZENIA] Termin kontaktu z Regulaminu.** 3 dni robocze na kontakt po wpłacie oznaczone w Regulaminie jako [DO POTWIERDZENIA — TOMEK]. (Automatyczny zwrot rezerwacji po 60 dniach USUNIĘTY decyzją Tomka 22.07 — checklista już go nie zawiera.)
 4. **[DO POTWIERDZENIA] Które NDA domyślnie.** Wpisałem: jednostronne (Tomek zobowiązany, chroni pomysł Klienta) jako domyślne dla ostrożnego Klienta; wzajemne, gdy obie strony wnoszą know-how. Potwierdź domyślny wybór i czy NDA w ogóle proponować proaktywnie, czy tylko na prośbę Klienta.
 5. **Reżim 49 zł — art. 38 ust. 1 pkt 1 UoPK (zsynchronizowano z Regulaminem §8).** Regulamin przesądził mechanizm usługowy (usługa cyfrowa wykonywana natychmiast na żądanie): utrata prawa odstąpienia po pełnym wykonaniu za wyraźną zgodą, zapłata proporcjonalna przy odstąpieniu w trakcie (art. 35). Checklista używa już tylko art. 38 ust. 1 pkt 1 — wariant „pkt 13" wycofany z treści operatywnej.
 6. **[DO POTWIERDZENIA] Prawa autorskie a moment przejścia.** Podkreśliłem, że prawa przechodzą z chwilą **późniejszego** z: odbioru danego rezultatu i zapłaty CAŁOŚCI ceny (§ 8 ust. 2), nie z podpisu. Istotne przy fakturze zaliczkowej — jeśli płatność jest rozbita, do pełnej zapłaty (i odbioru) prawa nie przechodzą (przed tym: wąska licencja testowa).

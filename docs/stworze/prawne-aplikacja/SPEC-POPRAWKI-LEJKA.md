@@ -75,16 +75,21 @@ umowy o budowę, oddajemy całe 500 zł" (bez „przepada", bez zadatku).
 **Wymagania produktowe (z Regulaminu §9 — DOPISANE do spec):**
 1. **Kontakt w 3 dni robocze od wpłaty** — po zaksięgowaniu rezerwacji uruchomić zadanie/przypomnienie
    kontaktu 1:1 (SLA 3 dni robocze). [Termin oznaczony w Regulaminie jako DO POTWIERDZENIA — TOMEK.]
-2. **Automatyczny zwrot po 60 dniach** — jeśli w ciągu 60 dni od wpłaty nie dojdzie do zawarcia
-   Umowy Budowy, rezerwacja zwracana automatycznie tym samym kanałem (chyba że Klient zgodzi się na
-   przedłużenie). Wymaga: pole `reservation_paid_at`, job/cron liczący 60 dni, ścieżka refundu.
-   [Okno 60 dni — DO POTWIERDZENIA — TOMEK.]
-3. **Zwrot 7 dni od decyzji** o niezawieraniu współpracy (na życzenie Klienta lub decyzję którejkolwiek
+2. **Zwrot 7 dni od decyzji** o niezawieraniu współpracy (na życzenie Klienta lub decyzję którejkolwiek
    strony) — szybsza ścieżka niż ustawowe 14 dni; obsłużyć ręczny trigger zwrotu.
-4. **Rezygnacja e-mailem w każdej chwili** przed zawarciem Umowy Budowy = pełny zwrot; przyjąć zgłoszenie
+3. **Rezygnacja e-mailem w każdej chwili** przed zawarciem Umowy Budowy = pełny zwrot; przyjąć zgłoszenie
    na `ceo@tomekniedzwiecki.pl` (adres ujednolicony z Regulaminem).
-5. Potwierdzenie zawarcia Umowy Rezerwacyjnej na trwałym nośniku (e-mail) — jak w istniejącym przepływie
+4. Potwierdzenie zawarcia Umowy Rezerwacyjnej na trwałym nośniku (e-mail) — jak w istniejącym przepływie
    zamówienia.
+5. **Kwoty prezentowane w ofercie/checkoucie (NIE w regulaminie).** Regulamin nie podaje już kwot (decyzja
+   Tomka 22.07), więc oferta i checkout MUSZĄ pokazać cenę PRZED zapłatą: cena kolejnej rozmowy (49 zł),
+   Opłata Rezerwacyjna (500 zł) oraz cena budowy — jednoznacznie, przy przycisku z obowiązkiem zapłaty
+   (art. 12 i art. 17 UoPK). Budżet reklamowy rozruchu (jeśli komunikowany na tym etapie) finansuje klient
+   (Partner) — patrz Umowa Budowy § 1 ust. 4.
+
+> **Uwaga (decyzja Tomka 22.07):** automatyczny zwrot rezerwacji po 60 dniach USUNIĘTY — nie wdrażamy
+> pola `reservation_paid_at`/crona 60 dni na potrzeby auto-refundu; zwrot idzie ścieżką ręczną (7 dni od
+> decyzji) oraz na rezygnację e-mailem w każdej chwili.
 
 ## Kolejność wdrożenia
 

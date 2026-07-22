@@ -19,12 +19,12 @@ w wykonaniu **§ 9 umowy o wykonanie i wdrożenie aplikacji z dnia {{DATA_UMOWY}
 
 ## § 2. Cena wykupu
 
-1. Cena wykupu, zgodnie z Umową główną, wynosi **36-krotność średniej miesięcznej kwoty Udziału z ostatnich 12 (dwunastu) miesięcy**, tj.:
+1. Cena wykupu, zgodnie z Umową główną, wynosi **36-krotność średniej miesięcznej kwoty Udziału z ostatnich 12 (dwunastu) miesięcy, nie mniej jednak niż 30 750 zł brutto (§ 9 ust. 1 Umowy głównej)**, tj.:
 
    > **Cena wykupu = {{KWOTA_WYKUPU}} zł brutto** (słownie: {{KWOTA_WYKUPU_SLOWNIE}}) — kwota zawiera należny podatek VAT (spójnie z Udziałem, który jest kwotą brutto — § 6 ust. 5 Umowy głównej).
 
 2. Sposób wyliczenia (12 miesięcznych kwot Udziału, średnia, mnożnik 36) przedstawia **Załącznik nr 1 do Umowy wykupu**, stanowiący jej integralną część.
-3. **Wcześniejszy wykup przy zbyciu biznesu (przed upływem 12 miesięcy od Startu produkcyjnego).** Jeżeli wykup następuje przed zbyciem Aplikacji lub biznesu przed upływem 12 miesięcy (§ 10 ust. 1 Umowy głównej), cenę wykupu oblicza się jako **36-krotność średniej miesięcznej kwoty Udziału z dostępnych pełnych miesięcy kalendarzowych od Startu produkcyjnego, nie mniej jednak niż 15 375 zł brutto**; jeżeli nie zakończył się jeszcze żaden pełny miesiąc kalendarzowy, stosuje się wyłącznie wskazaną cenę minimalną. Pozostałe zasady (kwota brutto, Załącznik nr 1 — z wyliczeniem z dostępnych miesięcy) stosuje się odpowiednio.
+3. **Wcześniejszy wykup przy zbyciu biznesu (przed upływem 12 miesięcy od Startu produkcyjnego).** Jeżeli wykup następuje przed zbyciem Aplikacji lub biznesu przed upływem 12 miesięcy (§ 10 ust. 1 Umowy głównej), cenę wykupu oblicza się jako **36-krotność średniej miesięcznej kwoty Udziału z dostępnych pełnych miesięcy kalendarzowych od Startu produkcyjnego, nie mniej jednak niż 30 750 zł brutto**; jeżeli nie zakończył się jeszcze żaden pełny miesiąc kalendarzowy, stosuje się wyłącznie wskazaną cenę minimalną. Pozostałe zasady (kwota brutto, Załącznik nr 1 — z wyliczeniem z dostępnych miesięcy) stosuje się odpowiednio.
 
 ## § 3. Płatność
 
@@ -90,4 +90,4 @@ Przekazanie potwierdza **protokół przekazania** podpisany przez obie Strony.
 - **Forma podpisu: pisemna albo QES.** To umowa dotycząca praw i wygaszająca wierzytelność — **nie** wystarczy forma dokumentowa/mail. Trzymaj się § 6.
 - **Termin przekazania 14 dni** liczony od skutku wykupu (zapłata). Przy racie ostatniej — ustal wprost, czy przekazanie następuje po ostatniej racie, czy wcześniej za zabezpieczeniem.
 - Skoreluj z **Umową główną** (wykup = § 9, tryb zbycia biznesu = § 10) — jeśli tam mnożnik/okres inne niż 36×/12 mies., popraw tutaj (Umowa główna = SSOT).
-- **Wcześniejszy wykup (§ 2 ust. 3) = minimum 15 375 zł brutto** (cena budowy brutto; § 10 ust. 1 Umowy głównej po Rewizji 2) — [DO POTWIERDZENIA — TOMEK: kwotę minimalną można ustalić inną]. Uwaga: standardowy wykup po 12 mies. (§ 9) NIE ma dolnego progu — asymetria zgłoszona w raporcie, decyzja Tomka.
+- **Próg minimalny wykupu = 30 750 zł brutto** (2× cena budowy brutto), OBUSTRONNY — dotyczy zarówno standardowego wykupu po 12 mies. (§ 2 ust. 1; § 9 ust. 1 Umowy głównej), jak i wcześniejszego przy zbyciu biznesu (§ 2 ust. 3; § 10 ust. 1 Umowy głównej). Decyzja Tomka 22.07; asymetria (próg tylko przy wcześniejszym wykupie) zniesiona. Wykup jest uprawnieniem Operatora (opcja, nie obowiązek). [DO POTWIERDZENIA — TOMEK: wysokość progu; przyjęto 2× cena budowy brutto.]

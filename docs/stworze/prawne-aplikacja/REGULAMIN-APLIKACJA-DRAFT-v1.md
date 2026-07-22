@@ -12,10 +12,10 @@ To streszczenie ma pomóc Ci szybko zrozumieć, na co się umawiamy. Nie zastęp
 
 1. **Kto i co.** Prowadzę serwis „Aplikacja" pod adresem tomekniedzwiecki.pl/aplikacja. Możesz przeglądać stronę, założyć konto, porozmawiać z asystentem AI o pomyśle na własne narzędzie, a po zawarciu umowy — korzystać z portalu klienta.
 2. **Rozmawiasz z systemem AI.** Rozmowy prowadzi asystent oparty na sztucznej inteligencji, działający w moim imieniu i wyraźnie oznaczony w interfejsie. Plany, makiety, raporty i prototypy powstają z udziałem AI — mają charakter poglądowy i koncepcyjny, nie są poradą inwestycyjną ani obietnicą wyników.
-3. **Pierwsza rozmowa jest darmowa.** Za pierwszą rozmowę projektową nic nie płacisz. Każda kolejna rozmowa kosztuje 49 zł.
-4. **Kolejna rozmowa (49 zł) wykonuje się od razu.** Prosisz o natychmiastowe wykonanie usługi. Po jej pełnym wykonaniu (przeprowadzeniu rozmowy z wygenerowaniem materiałów) tracisz prawo odstąpienia; jeśli odstąpisz w trakcie — zapłacisz tylko za to, co już wykonano.
-5. **Rezerwacja 500 zł jest w pełni zwrotna.** Jeżeli nie zawrzemy umowy o budowę — z dowolnego powodu, Twojego albo mojego — oddaję całe 500 zł. Jeśli wejdziemy we współpracę, 500 zł pomniejsza cenę budowy. To **nie jest zadatek** i nie przepada.
-6. **Budowa aplikacji to osobna, pisemna umowa.** Sam Regulamin o niej tylko informuje. Orientacyjnie: cena 12 500 zł netto (15 375 zł brutto, rezerwacja wliczona) oraz wynagrodzenie od przychodu (Udział) 10% do czasu wykupu. Wzór umowy pokażę Ci przed jej zawarciem.
+3. **Pierwsza rozmowa jest darmowa.** Za pierwszą rozmowę projektową nic nie płacisz. Każda kolejna rozmowa jest odpłatna — w cenie wskazanej w Serwisie w chwili zamówienia.
+4. **Kolejna rozmowa (odpłatna) wykonuje się od razu.** Prosisz o natychmiastowe wykonanie usługi. Po jej pełnym wykonaniu (przeprowadzeniu rozmowy z wygenerowaniem materiałów) tracisz prawo odstąpienia; jeśli odstąpisz w trakcie — zapłacisz tylko za to, co już wykonano.
+5. **Rezerwacja jest w pełni zwrotna.** Jeżeli nie zawrzemy umowy o budowę — z dowolnego powodu, Twojego albo mojego — oddaję całą wpłaconą kwotę. Jeśli wejdziemy we współpracę, rezerwacja pomniejsza cenę budowy. To **nie jest zadatek** i nie przepada.
+6. **Budowa aplikacji to osobna, pisemna umowa.** Sam Regulamin o niej tylko informuje. Orientacyjnie: jednorazowa cena budowy (w wysokości wskazanej w aktualnej ofercie, z zaliczoną rezerwacją) oraz wynagrodzenie od przychodu (Udział) 10% do czasu wykupu. Wzór umowy pokażę Ci przed jej zawarciem.
 7. **Bez gwarancji wyników.** Robię swoją robotę najlepiej, jak potrafię, ale to biznes — nikt uczciwy nie zagwarantuje przychodu ani zysku. Treści z AI mogą zawierać błędy; decyzje podejmujesz Ty.
 8. **Galeria „Inspiracje" tylko za Twoją zgodą.** Nic nie publikuję bez Twojej osobnej, dobrowolnej zgody. Publikacja obejmuje Materiały Pokazowe (roboczą nazwę, makiety, ogólny opis funkcji) bez danych bezpośrednio Cię identyfikujących, a zgodę możesz cofnąć w każdej chwili.
 9. **Twoje prawa.** Jako konsument (lub przedsiębiorca na prawach konsumenta) masz 14 dni na odstąpienie od umów odpłatnych. Reklamacje rozpatruję w 14 dni. Twoje dane przetwarzam zgodnie z Polityką Prywatności.
@@ -47,7 +47,7 @@ Ilekroć w Regulaminie mowa jest o:
 - **Rozmowie Projektowej (Rozmowie)** — rozumie się przez to prowadzoną z Asystentem AI rozmowę o pomyśle Klienta na narzędzie cyfrowe, w wyniku której powstają materiały poglądowe (plan, makiety, raport, prototyp i podobne).
 - **Materiałach Koncepcyjnych** — rozumie się przez to materiały wygenerowane z udziałem AI w toku Rozmowy (plany, makiety, raporty, prototypy, wizualizacje), mające charakter poglądowy i koncepcyjny.
 - **Portalu Klienta** — rozumie się przez to panel udostępniany Klientowi po zawarciu Umowy Budowy, służący komunikacji z Usługodawcą i śledzeniu postępów prac.
-- **Opłacie Rezerwacyjnej (Rezerwacji)** — rozumie się przez to opłatę 500 zł, o której mowa w §9.
+- **Opłacie Rezerwacyjnej (Rezerwacji)** — rozumie się przez to w pełni zwrotną opłatę rezerwacyjną, w wysokości wskazanej w Serwisie, o której mowa w §9.
 - **Umowie Budowy** — rozumie się przez to odrębną umowę o zbudowanie i rozkręcenie aplikacji (pełny tytuł: **„Umowa o wykonanie i wdrożenie aplikacji"**), zawieraną w formie pisemnej albo z kwalifikowanym podpisem elektronicznym, opisaną informacyjnie w §10.
 - **Galerii Inspiracji** — rozumie się przez to publiczną galerię prezentującą przykładowe projekty, o której mowa w §11.
 - **Materiałach Pokazowych** — rozumie się przez to zanonimizowane elementy projektu prezentowane za zgodą Klienta w Galerii Inspiracji oraz w materiałach promocyjnych Usługodawcy: roboczą nazwę narzędzia, makiety i zrzuty ekranu oraz ogólny opis funkcji (§11).
@@ -114,9 +114,9 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 ---
 
-## §8. Kolejna Rozmowa Projektowa (49 zł)
+## §8. Kolejna Rozmowa Projektowa (odpłatna)
 
-1. Każda Rozmowa Projektowa następująca po pierwszej, bezpłatnej, jest **odpłatna i kosztuje 49 zł brutto** (cena zawiera należny podatek VAT).
+1. Każda Rozmowa Projektowa następująca po pierwszej, bezpłatnej, jest **odpłatna — w cenie brutto wskazanej w Serwisie w chwili zamówienia** (cena zawiera należny podatek VAT).
 2. Umowa o kolejną Rozmowę zawierana jest z chwilą dokonania płatności, po uprzedniej akceptacji Regulaminu. Klient potwierdza zamówienie przyciskiem oznaczonym słowami wskazującymi na obowiązek zapłaty (art. 17 ustawy o prawach konsumenta). Płatność następuje online — akceptowane są w szczególności **BLIK oraz szybkie płatności online** (przelew, karta).
 3. **Kolejna Rozmowa jest usługą cyfrową wykonywaną natychmiast na żądanie Klienta.** Zaznaczając przy płatności **jedno pole wyboru (checkbox)**, Klient będący Konsumentem lub PNPK jednocześnie **żąda rozpoczęcia i wykonania usługi przed upływem 14-dniowego terminu do odstąpienia od umowy** oraz **przyjmuje do wiadomości, że po pełnym wykonaniu usługi utraci prawo odstąpienia od umowy** (art. 38 ust. 1 pkt 1 ustawy o prawach konsumenta).
 4. **Pełnym wykonaniem usługi** jest wygenerowanie i udostępnienie Klientowi kompletu materiałów końcowych Rozmowy albo wykorzystanie przewidzianego limitu tur Rozmowy; zakończenie usługi jest sygnalizowane komunikatem w interfejsie.
@@ -127,20 +127,19 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 ---
 
-## §9. Rezerwacja współpracy (500 zł)
+## §9. Rezerwacja współpracy
 
-1. **Opłata Rezerwacyjna wynosi 500 zł** i jest **w pełni zwrotną opłatą rezerwacyjną (zaliczką na poczet ceny budowy)** — a **nie wynagrodzeniem** za przygotowanie planu przedsięwzięcia ani za rozmowę o współpracy. Umowa Rezerwacyjna zawierana jest z chwilą wniesienia Opłaty Rezerwacyjnej, po uprzedniej akceptacji Regulaminu. Płatność następuje online — akceptowane są w szczególności **BLIK oraz szybkie płatności online** (przelew, karta).
+1. **Opłata Rezerwacyjna, w wysokości wskazanej w Serwisie,** jest **w pełni zwrotną opłatą rezerwacyjną (zaliczką na poczet ceny budowy)** — a **nie wynagrodzeniem** za przygotowanie planu przedsięwzięcia ani za rozmowę o współpracy. Umowa Rezerwacyjna zawierana jest z chwilą wniesienia Opłaty Rezerwacyjnej, po uprzedniej akceptacji Regulaminu. Płatność następuje online — akceptowane są w szczególności **BLIK oraz szybkie płatności online** (przelew, karta).
 2. Czynności przygotowawcze związane z Rezerwacją są **nieodpłatne**. W ich ramach Usługodawca:
    a) przygotowuje **indywidualny plan przedsięwzięcia** dla projektu narzędzia zdefiniowanego w Rozmowie — w tym zakres pierwszej wersji, model przychodów, drogę do pierwszych stałych klientów, harmonogram oraz zasady współpracy i rozliczeń;
    b) kontaktuje się z Klientem osobiście i przeprowadza wspólną rozmowę o planie oraz o warunkach ewentualnej Umowy Budowy.
    Usługodawca kontaktuje się z Klientem w terminie **3 dni roboczych od wpłaty** [DO POTWIERDZENIA — TOMEK].
-3. **Opłata Rezerwacyjna jest w pełni zwrotna.** Jeżeli Strony nie zawrą Umowy Budowy — niezależnie od tego, która Strona i z jakiego powodu podejmie taką decyzję — Usługodawca zwraca Klientowi **całe 500 zł**, w terminie do **7 dni** od decyzji o niezawieraniu współpracy, tym samym kanałem, którym dokonano płatności.
+3. **Opłata Rezerwacyjna jest w pełni zwrotna.** Jeżeli Strony nie zawrą Umowy Budowy — niezależnie od tego, która Strona i z jakiego powodu podejmie taką decyzję — Usługodawca zwraca Klientowi **całą wpłaconą Opłatę Rezerwacyjną**, w terminie do **7 dni** od decyzji o niezawieraniu współpracy, tym samym kanałem, którym dokonano płatności.
 4. **Rezygnacja jest możliwa w każdej chwili** — wystarczy wiadomość e-mail na adres z §1 ust. 2. Rezygnacja przed zawarciem Umowy Budowy skutkuje pełnym zwrotem Opłaty Rezerwacyjnej.
-5. Jeżeli **Umowa Budowy nie zostanie zawarta w ciągu 60 dni od wpłaty**, Opłata Rezerwacyjna jest **zwracana automatycznie**, chyba że Klient zgodzi się na przedłużenie tego terminu [DO POTWIERDZENIA — TOMEK].
-6. W przypadku zawarcia Umowy Budowy Opłata Rezerwacyjna **zaliczana jest na poczet ceny budowy** (§10 ust. 3).
-7. **Opłata Rezerwacyjna nie jest zadatkiem w rozumieniu art. 394 Kodeksu cywilnego.** Strony wyłączają stosowanie art. 394 Kodeksu cywilnego do Opłaty Rezerwacyjnej. Opłata nie podlega przepadkowi ani zwrotowi w podwójnej wysokości; ma charakter zaliczki w pełni zwrotnej.
-8. Zawarcie Umowy Rezerwacyjnej nie zobowiązuje żadnej ze Stron do zawarcia Umowy Budowy. Usługodawca potwierdza zawarcie Umowy Rezerwacyjnej na **Trwałym nośniku** (wiadomość e-mail).
-9. Zasady i tryb ustawowego odstąpienia wspólne dla Konsumentów i PNPK określa §16; nie ograniczają one pełnej zwrotności z ust. 3.
+5. W przypadku zawarcia Umowy Budowy Opłata Rezerwacyjna **zaliczana jest na poczet ceny budowy** (§10 ust. 3).
+6. **Opłata Rezerwacyjna nie jest zadatkiem w rozumieniu art. 394 Kodeksu cywilnego.** Strony wyłączają stosowanie art. 394 Kodeksu cywilnego do Opłaty Rezerwacyjnej. Opłata nie podlega przepadkowi ani zwrotowi w podwójnej wysokości; ma charakter zaliczki w pełni zwrotnej.
+7. Zawarcie Umowy Rezerwacyjnej nie zobowiązuje żadnej ze Stron do zawarcia Umowy Budowy. Usługodawca potwierdza zawarcie Umowy Rezerwacyjnej na **Trwałym nośniku** (wiadomość e-mail).
+8. Zasady i tryb ustawowego odstąpienia wspólne dla Konsumentów i PNPK określa §16; nie ograniczają one pełnej zwrotności z ust. 3.
 
 ---
 
@@ -149,7 +148,7 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 1. Poniższe postanowienia mają charakter **informacyjny** (transparencja przedkontraktowa, art. 12 ustawy o prawach konsumenta). Sama budowa i rozkręcenie aplikacji **nie są przedmiotem niniejszego Regulaminu** — odbywają się na podstawie **odrębnej Umowy Budowy** (pełny tytuł: **„Umowa o wykonanie i wdrożenie aplikacji"**), którą Strony zawierają po ustaleniu planu przedsięwzięcia.
 2. **Umowa Budowy zawierana jest w formie pisemnej albo z kwalifikowanym podpisem elektronicznym.** Wynika to z faktu, że obejmuje ona przeniesienie autorskich praw majątkowych do stworzonego oprogramowania i materiałów, dla którego przepisy prawa autorskiego zastrzegają formę pisemną pod rygorem nieważności. Umowy Budowy nie zawiera się przez samą akceptację Regulaminu ani przez płatność online.
 3. **Główne warunki Umowy Budowy — orientacyjnie:**
-   a) **cena budowy** wynosi **12 500 zł netto (15 375 zł brutto)**; Opłata Rezerwacyjna (§9) jest w nią wliczona, więc po jej zaliczeniu do zapłaty pozostaje orientacyjnie **14 875 zł brutto**;
+   a) **cena budowy** jest jednorazowa i wskazana w aktualnej ofercie (Serwisie); Opłata Rezerwacyjna (§9) jest w nią wliczona, więc po jej zaliczeniu do zapłaty pozostaje odpowiednio niższa kwota;
    b) **autorskie prawa majątkowe** do stworzonego oprogramowania i materiałów **przechodzą na Klienta na zasadach określonych w Umowie Budowy — z chwilą odbioru danego rezultatu, nie wcześniej niż z chwilą zapłaty całości ceny budowy**;
    c) niezależnie od ceny budowy Usługodawcy przysługuje **wynagrodzenie od przychodu (Udział) w wysokości 10%**, należne do czasu wykupu na zasadach określonych w Umowie Budowy;
    d) **wykup** dotyczy **wyłącznie wcześniejszego zakończenia naliczania Udziału oraz przejęcia przez Klienta administracji infrastrukturą** aplikacji — **nie** nabycia praw autorskich (te Klient nabywa na zasadach z lit. b — z chwilą odbioru danego rezultatu, nie wcześniej niż z chwilą zapłaty całości ceny budowy) — i następuje według formuły określonej w Umowie Budowy.
@@ -296,7 +295,7 @@ Poniżej lista miejsc, w których przyjąłem założenie wymagające decyzji To
 
 1. **Adres kontaktowy = `ceo@tomekniedzwiecki.pl` (ujednolicono 22.07).** Wcześniejszy draft używał `biuro@`; ujednolicono na `ceo@tomekniedzwiecki.pl` — adres istniejący, używany w Polityce Prywatności serwisu i w linii sklepów (spójne z „Reply-to = ceo@"). Skrzynki `biuro@` nie zakładamy z automatu. Zmiana objęła §1 ust. 2 (kontakt/reklamacje/odstąpienia), §13 (reklamacje), §16 ust. 3 (odstąpienia) i wzór formularza (Załącznik nr 1). **[DO POTWIERDZENIA — TOMEK: docelowy adres kontaktowy; jeśli wolisz `biuro@`, trzeba tę skrzynkę utworzyć.]**
 
-2. **Cena budowy — 12 500 zł netto / 15 375 zł brutto, rezerwacja wliczona.** Przyjąłem z polecenia. Wyliczyłem orientacyjną pozostałość po rezerwacji: 15 375 − 500 = 14 875 zł brutto. Potwierdź, czy 500 zł ma być odejmowane od kwoty brutto (tak przyjąłem), czy inaczej. UWAGA HISTORYCZNA: starsze wpisy pamięci mówiły o innych kwotach (14 000 zł brutto + 20% udziałów, później 30 000 zł „pół na pół" + 20%) — w Regulaminie użyłem WYŁĄCZNIE liczb z tego zadania (12 500 netto + Udział 10%). Jeśli aktualna oferta na stronie mówi co innego, trzeba zsynchronizować (zgodnie z protokołem SSOT oferty).
+2. **[DECYZJA TOMKA 22.07] Kwoty ofertowe przeniesione do oferty/Serwisu — Regulamin bez kwot.** Z Regulaminu usunięto wszystkie kwoty ofertowe (cena rozmowy, opłata rezerwacyjna, cena budowy, kwota pozostała) — żyją w Serwisie/aktualnej ofercie i w checkoucie. Uzasadnienie: zmiana cennika nie wymaga zmiany Regulaminu; obowiązki informacyjne (art. 12 UoPK) spełniane są w ofercie/checkoucie PRZED zamówieniem (checkout MUSI pokazać cenę przed zapłatą — patrz SPEC-POPRAWKI-LEJKA P6). Mechanika bez zmian (zwrotność rezerwacji, zaliczenie na cenę budowy, reżim usługi cyfrowej rozmowy odpłatnej). Stawkę Udziału 10% pozostawiono jako orientacyjny parametr (nie „kwota" pieniężna; jednakowa dla wszystkich partnerów). UWAGA HISTORYCZNA: starsze drafty podawały 12 500 netto / 15 375 brutto / 14 875 pozostałe (a jeszcze wcześniej 14 000 + 20%, 30 000 „pół na pół" + 20%) — usunięto z treści.
 
 3. **Forma i konstrukcja Umowy Budowy — napięcie do rozstrzygnięcia.** Polecenie kazało uzasadnić formę pisemną „przeniesieniem autorskich praw majątkowych" i tak napisałem (§10 ust. 2). Jednak pamięć („KONSTRUKCJA 10%", decyzja 11.07) opisuje mechanizm oparty na **licencji wyłącznej zamiast przeniesienia praw** (przeniesienie pełni praw dopiero przy wykupie). Prawnie forma pisemna jest wymagana w OBU wariantach (przeniesienie — art. 53 pr. aut.; licencja wyłączna — art. 67 ust. 5 pr. aut.), więc uzasadnienie formy się broni niezależnie. Do decyzji: czy w §10 ma być „przeniesienie", „wyłączna licencja z wykupem praw", czy sformułowanie obejmujące oba — muszę to zsynchronizować z faktyczną treścią wzoru `umowy/umowa-budowa-aplikacji.html`.
 
@@ -322,9 +321,9 @@ Poniżej lista miejsc, w których przyjąłem założenie wymagające decyzji To
 
 14. **Termin kontaktu po wpłacie rezerwacji — 3 dni robocze [DO POTWIERDZENIA — TOMEK].** §9 ust. 2. Wpisałem 3 dni robocze od wpłaty; potwierdź lub zmień.
 
-15. **Automatyczny zwrot rezerwacji po 60 dniach [DO POTWIERDZENIA — TOMEK].** §9 ust. 5. Jeżeli Umowa Budowy nie zostanie zawarta w ciągu 60 dni od wpłaty — zwrot automatyczny, chyba że Klient zgodzi się na przedłużenie. Potwierdź długość okna (60 dni).
+15. **[DECYZJA TOMKA 22.07] Automatyczny zwrot rezerwacji po 60 dniach — USUNIĘTY.** Dawny §9 ust. 5 (auto-zwrot po 60 dniach) zniesiony. Zostaje: pełna zwrotność na każde żądanie (rezygnacja e-mailem w każdej chwili), zwrot w 7 dni od decyzji o niezawieraniu współpracy, kontakt w 3 dni robocze. Ustępy §9 przenumerowano (dawne 6–9 → 5–8).
 
-16. **VAT Opłaty Rezerwacyjnej 500 zł — DO KSIĘGOWEJ.** Po reframie (§9) 500 zł to w pełni zwrotna opłata rezerwacyjna / zaliczka na poczet ceny budowy, a nie wynagrodzenie za plan/rozmowę (te są nieodpłatne). Arytmetykę po rezerwacji ujednolicono na BRUTTO (§10 ust. 3 lit. a): 500 zł to kwota brutto faktycznie zapłacona przez Klienta, więc do zapłaty pozostaje **15 375 − 500 = 14 875 zł brutto** (bez rozbijania na netto). Do potwierdzenia z księgową: moment powstania obowiązku podatkowego dla zaliczki rezerwacyjnej i stawka VAT (czy zaliczka rodzi obowiązek VAT z chwilą wpłaty, mimo pełnej zwrotności) oraz charakter 500 zł jako **kaucji zwrotnej do czasu zaliczenia** na poczet ceny budowy.
+16. **VAT Opłaty Rezerwacyjnej — DO KSIĘGOWEJ (flaga zostaje).** Po reframie (§9) Opłata Rezerwacyjna to w pełni zwrotna opłata rezerwacyjna / zaliczka na poczet ceny budowy, a nie wynagrodzenie za plan/rozmowę (te są nieodpłatne). Opłata Rezerwacyjna to kwota brutto faktycznie zapłacona przez Klienta, o którą pomniejsza się cenę budowy (bez rozbijania na netto; konkretne kwoty w ofercie/Serwisie, nie w Regulaminie). Do potwierdzenia z księgową: moment powstania obowiązku podatkowego dla zaliczki rezerwacyjnej i stawka VAT (czy zaliczka rodzi obowiązek VAT z chwilą wpłaty, mimo pełnej zwrotności) oraz charakter Opłaty Rezerwacyjnej jako **kaucji zwrotnej do czasu zaliczenia** na poczet ceny budowy.
 
 17. **§10 — moment przejścia praw ZSYNCHRONIZOWANY z Umową Budowy (22.07).** Zgodnie z Umową Budowy §8 ust. 2 prawa autorskie przechodzą z chwilą **późniejszego** z: (a) odbioru danego rezultatu, (b) zapłaty całości ceny budowy — nie „z chwilą zapłaty ceny" bez odbioru. §10 ust. 3 lit. b i lit. d używają teraz sformułowania ogólnego odsyłającego do tej zasady. Wykup nadal dotyczy WYŁĄCZNIE wcześniejszego zakończenia naliczania Udziału i przejęcia administracji infrastrukturą (lit. d), nie nabycia praw. Utrzymać spójność z faktyczną treścią wzoru umowy (`umowy/umowa-budowa-aplikacji.html`) przed publikacją.
 
