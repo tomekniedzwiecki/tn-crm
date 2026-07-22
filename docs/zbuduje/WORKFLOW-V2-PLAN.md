@@ -28,17 +28,21 @@ gate `x-wf2-secret==WF2_GEN_SECRET` | service-role key | team JWT).
   klienta zajęty w Trevio) — przepięty ze sklepu współdzielonego „test", domena `trafionek.pl`
   podpięta (add_domain + dns_set OK), produkty/kroki Etapu 3 cofnięte do republikacji na nowym sklepie.
 
-## 0a-sexies. ⛔ WYBÓR PRODUKTÓW = BRAMKA TOMKA + PINEZKI/„PRZELOSUJ" (2026-07-21 późny wieczór — NADPISUJE 0a-quinquies!)
+## 0a-sexies. ⛔ WYBÓR PRODUKTÓW = BRAMKA TOMKA (2026-07-21 późny wieczór — NADPISUJE 0a-quinquies!)
 
-Dyrektywa Tomka (przy projekcie Hoffy; migracja `20260722b_wf2_products_pinned.sql` WDROŻONA):
+Dyrektywa Tomka (przy projekcie Hoffy):
 **produkty do portfela wybiera SAM Tomek w panelu — fabryka NIE startuje, dopóki portfel nie
 jest skompletowany, i NICZEGO nie losuje z własnej inicjatywy.**
-- **Panel (`projekt.html` + `panel-core.js`):** „Produkty" = picker (ręczny wybór z radaru
-  i/lub „Wylosuj" dopełniające do celu 3); **„Przelosuj" wymienia WYŁĄCZNIE produkty BEZ
-  pinezki** (`wf2_products.pinned`, toggle 📌 w macierzy desktop+mobile; zaznaczone zostają);
-  losowanie/przelosowanie = czysty los (Fisher-Yates, równe szanse, zero scoringu) z puli
-  approved MINUS produkty zajęte w JAKIMKOLWIEK projekcie (pkTakenGlobal — także w panelu,
-  wcześniej tylko CLI) MINUS obecny portfel (wymieniane nie wracają w tym samym losowaniu).
+- **Panel (`projekt.html` + `panel-core.js`):** „Produkty" = picker (ręczny wybór z radaru —
+  kolejność kart ZAWSZE losowa, tasowanie przy każdym wejściu [dyrektywa 22.07] — i/lub
+  „Wylosuj" dopełniające do celu 3); niechciane produkty Tomek usuwa z listy portfela;
+  losowanie = czysty los (Fisher-Yates, równe szanse, zero scoringu) z puli approved MINUS
+  produkty zajęte w JAKIMKOLWIEK projekcie (pkTakenGlobal — także w panelu, wcześniej tylko
+  CLI) MINUS obecny portfel.
+  **AKTUALIZACJA 22.07 wieczór: pinezka (📌) + karta „Przelosuj portfel" USUNIĘTE decyzją
+  Tomka** (UI + funkcje togglePin/rerollPortfolio wycięte z projekt.html i panel-core.js;
+  kolumna `wf2_products.pinned` z migracji `20260722b` została w bazie, nieużywana; checklista
+  kroku `wybor` zmigrowana w wf2_steps — pozycja o „Przelosuj" usunięta).
 - **Krok `wybor` auto-podąża za portfelem** (`syncWyborStep()` po każdej zmianie): pusty=
   `pending` · częściowy=`in_progress` · ≥3=`done` (+checklista VERBATIM odhaczona — wymóg
   blokady kolejności faz). `milestone_label='Portfel skompletowany — produkty wybrane przez

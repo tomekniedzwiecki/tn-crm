@@ -11,7 +11,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.2/src/index.js" integrity="sha384-J7cw2fbG1T4C5MirTVUxsZGaMfw2m0XsCgOQEqUvB1OF9VIsHWuZF1GmyVRzs7eu" crossorigin="anonymous"></script>
     <script src="../components/shared-sidebar.js"></script>
     <link rel="stylesheet" href="panel.css?v=2026072105">
-    <script src="panel-core.js?v=2026072105"></script>
+    <script src="panel-core.js?v=2026072201"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
@@ -311,11 +311,6 @@
                     <div class="text-white font-medium text-sm mb-1">Wybierz ręcznie</div>
                     <div class="text-zinc-500 text-[11.5px] leading-relaxed">Wszystkie zatwierdzone produkty z radaru (/trendy) — zdjęcia z aukcji AliExpress (fallback: okładka z TikToka).</div>
                 </button>
-                <button id="pk-reroll-card" onclick="closePicker(); rerollPortfolio()" class="hidden md:col-span-2 text-left border border-[#2a2a2a] hover:border-[#f5a623]/60 rounded-lg p-5 transition-colors">
-                    <div class="w-9 h-9 rounded-md bg-[#f5a623]/10 flex items-center justify-center mb-3"><i class="ph ph-arrows-clockwise text-[#f5b955] text-lg"></i></div>
-                    <div class="text-white font-medium text-sm mb-1">Przelosuj portfel</div>
-                    <div id="pk-reroll-desc" class="text-zinc-500 text-[11.5px] leading-relaxed"></div>
-                </button>
             </div>
 
             <!-- losowanie: prawdziwy random z całej puli zatwierdzonych -->
@@ -339,7 +334,7 @@
                 <input id="pk-search" class="fld mb-4 flex-shrink-0" placeholder="Szukaj po nazwie lub kategorii…" oninput="renderPicker()">
                 <div id="pk-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2.5 overflow-y-auto pr-1" style="min-height:200px"></div>
                 <div class="flex items-center justify-between mt-4 pt-4 border-t border-[#1f1f1f] flex-shrink-0">
-                    <span class="text-zinc-600 text-[11px]">Zatwierdzone na /trendy · zdjęcia z aukcji AliExpress lub okładki TikToka · sort: potencjał (heat)</span>
+                    <span class="text-zinc-600 text-[11px]">Zatwierdzone na /trendy · zdjęcia z aukcji AliExpress lub okładki TikToka · kolejność losowa</span>
                     <button onclick="closePicker(); openProductModal()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff]">Dodaj ręcznie (spoza radaru)</button>
                 </div>
             </div>
@@ -1012,8 +1007,8 @@
                 check:['Shortlista nazw pojemnych z WOLNYMI domenami .pl (RDAP/WHOIS) + web-check kolizji','Nazwa wybrana → project.name (top-3 + rekomendacja w notatce)','Tagline + opis marki → pola projektu (zasilą stronę główną)','Paleta 6 hex (JASNE tła) + fonty latin-ext → pola projektu','Logo lockup + favicon (selektor @32px) wgrane do Storage brand/','Artefakty w wf2_artifacts (kind=brand) + koszty w wf2_costs','Domena wybrana i wolna → project.domain (zakup = krok Domena marki)','Werdykt rubryką 6×T/N (32/16/metafora/flat/zero liter/mono) — bez 6×T = FAIL','Kompozyt kontekstowy (favicon @16/32/64 jasne+ciemne, lockupy) → wf2_artifacts'], prompt:'marka' },
             // krok PROJEKTOWY (21.07): fabryka LOSUJE portfel komendą panel-sync.py wybor —
             // cała pula approved z /trendy, równe szanse (SystemRandom, ZERO scoringu), różnorodność kategorii
-            wybor: { desc:'Wybór produktów do portfela = DECYZJA TOMKA w panelu (BRAMKA startu fabryki — fabryka NICZEGO nie losuje sama i nie startuje, dopóki portfel nie jest skompletowany). Tomek dodaje produkty ręcznie z radaru (/trendy) i/lub dopełnia losowaniem (przycisk „Produkty"); „Przelosuj" wymienia wyłącznie produkty BEZ pinezki (zaznaczone zostają). Losowanie zawsze z całej puli zatwierdzonych, równe szanse, bez scoringu. Kalkulacja ceny = OSOBNY krok per produkt.',
-                check:['Produkty wybrane przez Tomka (ręcznie i/lub losowaniem w panelu)','Niechciane wymienione przez „Przelosuj" (pinezka chroni zaznaczone)','Portfel skompletowany — fabryka może startować'], prompt:'wybor' },
+            wybor: { desc:'Wybór produktów do portfela = DECYZJA TOMKA w panelu (BRAMKA startu fabryki — fabryka NICZEGO nie losuje sama i nie startuje, dopóki portfel nie jest skompletowany). Tomek dodaje produkty ręcznie z radaru (/trendy) i/lub dopełnia losowaniem (przycisk „Produkty"); niechciane usuwa z listy portfela. Losowanie zawsze z całej puli zatwierdzonych, równe szanse, bez scoringu. Kalkulacja ceny = OSOBNY krok per produkt.',
+                check:['Produkty wybrane przez Tomka (ręcznie i/lub losowaniem w panelu)','Portfel skompletowany — fabryka może startować'], prompt:'wybor' },
             // dedykowany warsztat kalkulacjaBody (cena zakupu + sprzedaż + marża 10–15% + drabinka + aukcja);
             // checklistę odhacza fabryka przez panel-sync (VERBATIM — klucz deduplikacji ze stanem)
             kalkulacja: { desc:'Kalkulacja ceny produktu: potwierdź cenę zakupu z żywej aukcji (source=detail), ustal cenę sprzedaży z narzutem 10–15% (cena psychologiczna) i zaakceptuj drabinkę cenową (TEST→SCALE→OPT). Bez zaakceptowanej drabinki silnik cen NIE rusza produktu.',
@@ -2294,6 +2289,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                         getUsdRate(),
                     ]);
                     ttProducts = data || [];
+                    pkShuffleTT();   // świeżo pobrana pula też od razu w losowej kolejności
                 })(),
             ]);
             pkTakenGlobal = new Set((takenQ.data || []).filter(r => r.project_id !== projectId).map(r => r.tt_product_id));
@@ -2319,19 +2315,20 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 document.getElementById('pk-auto-desc').textContent = products.length
                     ? (n ? `Portfel: ${products.length}/${PORTFOLIO_TARGET} — wylosuję ${n} z całej puli zatwierdzonych. Liczbę zmienisz w środku.` : `Portfel ma już ${products.length} produktów (cel ${PORTFOLIO_TARGET}) — możesz dolosować więcej.`)
                     : `Pusty portfel — wylosuję ${PORTFOLIO_TARGET} produktów z całej puli zatwierdzonych (czysty los, bez algorytmów).`;
-                const rc = document.getElementById('pk-reroll-card');
-                if (rc) {
-                    rc.classList.toggle('hidden', !products.length);
-                    const loose = products.filter(p => !p.pinned).length;
-                    document.getElementById('pk-reroll-desc').textContent = loose
-                        ? `Wymienia ${loose} z ${products.length} produktów BEZ pinezki na nowe losowe — zaznaczone (📌 na liście portfela) zostają. Kasuje postęp wymienianych.`
-                        : `Wszystkie ${products.length} produkty są zaznaczone pinezką — odepnij te, które mam wymienić.`;
-                }
             }
             if (view === 'auto') { document.getElementById('pk-auto-n').value = Math.max(1, pkAutoDefaultCount() || 3); pkAutoRefresh(); }
-            if (view === 'manual') { renderPicker(); document.getElementById('pk-search').focus(); }
+            if (view === 'manual') { pkShuffleTT(); renderPicker(); document.getElementById('pk-search').focus(); }
         }
         function pkAutoDefaultCount() { return Math.max(0, PORTFOLIO_TARGET - products.length); }
+        // Ręczny wybór ZAWSZE w losowej kolejności (Tomek 22.07: „abym nie musiał ciągle
+        // na górze widzieć tych samych") — tasowanie przy każdym wejściu do widoku
+        function pkShuffleTT() {
+            if (!ttProducts) return;
+            for (let i = ttProducts.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [ttProducts[i], ttProducts[j]] = [ttProducts[j], ttProducts[i]];
+            }
+        }
         // Fisher-Yates na kopii puli — każdy zatwierdzony produkt ma RÓWNĄ szansę
         // (pomija produkty tego portfela ORAZ zajęte w innych projektach fabryki)
         function pkAutoPropose(n) {
@@ -2784,55 +2781,6 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             Object.assign(st, upd);
             if (target === 'done') showToast('🏁 Portfel skompletowany — fabryka może startować', 'success');
             renderPills(); renderNextStep(); renderStage(); renderHeader();
-        }
-
-        // ── Pinezka: zaznaczony produkt NIE podlega wymianie przy „Przelosuj" (22.07)
-        async function togglePin(pid) {
-            const p = products.find(x => x.id === pid); if (!p) return;
-            const next = !p.pinned;
-            const { error } = await supabaseClient.from('wf2_products').update({ pinned: next }).eq('id', pid);
-            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
-            p.pinned = next;
-            renderStage();
-            showToast(next ? `📌 „${p.name}" zostaje przy przelosowaniu` : `„${p.name}" — może zostać wymieniony`, 'success');
-        }
-
-        // ── „Przelosuj" (22.07, dyrektywa Tomka): wymienia WYŁĄCZNIE produkty bez pinezki.
-        // Nowe = czysty los (Fisher-Yates, równe szanse) z całej puli zatwierdzonych,
-        // minus produkty zajęte w JAKIMKOLWIEK projekcie i minus obecny portfel
-        // (wymieniane nie wracają w tym samym losowaniu).
-        async function rerollPortfolio() {
-            const out = products.filter(p => !p.pinned);
-            if (!out.length) { showToast('Wszystkie produkty są zaznaczone pinezką — odepnij te, które mam wymienić', 'error'); return; }
-            const adv = out.filter(p => !['kandydat', 'w_budowie'].includes(p.status));
-            if (!confirm(`Przelosować ${out.length} z ${products.length} produktów portfela?\n\nWymienione zostaną:\n${out.map(p => '· ' + p.name).join('\n')}\n${adv.length ? '\n⚠️ UWAGA: ' + adv.map(p => `„${p.name}" (status: ${(PRODUCT_STATUS_META[p.status]?.label) || p.status})`).join(', ') + ' — postęp przepadnie!\n' : ''}\nZaznaczone pinezką zostają. Usunięcie kasuje kroki, artefakty i koszty wymienianych (radar /trendy nietknięty).`)) return;
-            const btn = document.getElementById('reroll-btn'); if (btn) btn.disabled = true;
-            try {
-                await pkLoadData();
-                await getUsdRate();
-                const curIds = new Set(products.map(p => p.tt_product_id).filter(Boolean));
-                const pool = (ttProducts || []).filter(t => !curIds.has(t.id) && !pkTakenGlobal.has(t.id));
-                for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-                const fresh = pool.slice(0, out.length);
-                if (!fresh.length) { showToast('Pula zatwierdzonych wyczerpana — nie mam czym wymienić', 'error'); return; }
-                const { error: delErr } = await supabaseClient.from('wf2_products').delete().in('id', out.map(p => p.id));
-                if (delErr) { showToast('Błąd usuwania: ' + delErr.message, 'error'); return; }
-                const baseSort = Math.max(-1, ...products.filter(p => p.pinned).map(p => p.sort ?? 0));
-                const rows = fresh.map((t, i) => {
-                    const usd = parseFloat(t.ali_price);
-                    const cost = isNaN(usd) ? null : Math.round(usd * usdRate * 100) / 100;
-                    return { project_id: projectId, sort: baseSort + 1 + i, name: t.pl_name, status: 'kandydat',
-                        margin_mode: 'test', tt_product_id: t.id, supplier_url: t.chosen_link || null,
-                        cover_url: ttThumb(t) || null,
-                        cost_purchase: cost, price: cost != null ? suggestTestPrice(cost) : null, fees_pct: 2 };
-                });
-                const { error: insErr } = await supabaseClient.from('wf2_products').insert(rows);
-                if (insErr) { showToast('Błąd dodawania: ' + insErr.message, 'error'); await loadAll(); return; }
-                logActivity('products_rerolled', `Przelosowano portfel (pinezki zostały): −${out.length} (${out.map(p => p.name).join(', ')}) → +${rows.length} (${rows.map(r => r.name).join(', ')})`);
-                await loadAll();
-                await syncWyborStep();
-                showToast(fresh.length < out.length ? `Wymieniono tylko ${fresh.length}/${out.length} — pula zatwierdzonych wyczerpana` : `Przelosowano ${fresh.length} — zaznaczone zostały`, fresh.length < out.length ? 'error' : 'success');
-            } finally { if (btn) btn.disabled = false; }
         }
 
         // ============ AKCJE: projekt ============

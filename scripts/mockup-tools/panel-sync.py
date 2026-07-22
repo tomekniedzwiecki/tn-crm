@@ -695,17 +695,16 @@ def kalkulacja(project, product, margin_min=10.0, margin_max=15.0, cost_usd=None
 
 # ── 4c. wybor — krok PROJEKTOWY Etapu 1: ⛔ BRAMKA TOMKA (dyrektywa 21.07 wieczór) ──
 # Krok „Wybór produktów" = DECYZJA TOMKA W PANELU: dodaje produkty ręcznie z radaru
-# i/lub dopełnia losowaniem (przycisk „Produkty"); „Przelosuj" wymienia wyłącznie
-# produkty BEZ pinezki (wf2_products.pinned). FABRYKA NIE STARTUJE i NICZEGO nie losuje
-# sama, dopóki portfel nie jest skompletowany przez Tomka — sesja autonomiczna NIE
-# odpala tej komendy (guard: --od-tomka). Losowanie (gdy zlecone): PRAWDZIWY random
-# (SystemRandom, równe szanse, zero scoringu — decyzja 17.07), różnorodność kategorii
-# (druga runda bez filtra gdy pula wąska). Cel portfela = 3 (decyzja 19.07).
-# checklista VERBATIM z WS['wybor'] w tn-sklepy/projekt.html.
+# i/lub dopełnia losowaniem (przycisk „Produkty"); niechciane usuwa z listy portfela
+# (pinezka + „Przelosuj portfel" USUNIĘTE decyzją Tomka 22.07). FABRYKA NIE STARTUJE
+# i NICZEGO nie losuje sama, dopóki portfel nie jest skompletowany przez Tomka — sesja
+# autonomiczna NIE odpala tej komendy (guard: --od-tomka). Losowanie (gdy zlecone):
+# PRAWDZIWY random (SystemRandom, równe szanse, zero scoringu — decyzja 17.07),
+# różnorodność kategorii (druga runda bez filtra gdy pula wąska). Cel portfela = 3
+# (decyzja 19.07). checklista VERBATIM z WS['wybor'] w tn-sklepy/projekt.html.
 PORTFEL_CEL = 3
 WYBOR_CHECKLIST = [
     {"t": "Produkty wybrane przez Tomka (ręcznie i/lub losowaniem w panelu)", "done": True},
-    {"t": 'Niechciane wymienione przez „Przelosuj" (pinezka chroni zaznaczone)', "done": True},
     {"t": "Portfel skompletowany — fabryka może startować", "done": True},
 ]
 
@@ -750,7 +749,7 @@ def wybor_portfel(project, count=None, dry_run=False, od_tomka=False):
     if not dry_run and not od_tomka:
         raise SystemExit(
             "wybor: ⛔ BRAMKA TOMKA (dyrektywa 21.07) — produkty do portfela wybiera Tomek "
-            "w panelu (Dodaj produkty / Wylosuj / Przelosuj z pinezką). Fabryka nie startuje "
+            "w panelu (Dodaj produkty / Wylosuj). Fabryka nie startuje "
             "bez skompletowanego portfela i NICZEGO nie losuje sama. Jeśli Tomek jawnie "
             "zlecił losowanie z CLI — powtórz z flagą --od-tomka.")
     existing = _get("wf2_products", {"project_id": f"eq.{project}", "select": "id,tt_product_id,name"})

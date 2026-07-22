@@ -622,7 +622,6 @@ function renderMatrix(prodDefs) {
             </td>
             ${cells}
             ${admin ? `<td class="px-3 py-2.5 text-right whitespace-nowrap">
-                <button class="p-1 ${p.pinned ? 'text-[#f5a623]' : 'text-zinc-600 hover:text-zinc-300'}" onclick="event.stopPropagation();togglePin('${p.id}')" data-tip-title="${p.pinned ? 'Zaznaczony — zostaje przy przelosowaniu' : 'Zaznacz produkt'}" data-tip-desc="„Przelosuj" wymienia wyłącznie produkty bez pinezki"><i class="${p.pinned ? 'ph-fill' : 'ph'} ph-push-pin"></i></button>
                 <button class="text-zinc-600 hover:text-[#52a8ff] p-1" onclick="openCard('${p.id}')" title="Karta produktu"><i class="ph ph-identification-card"></i></button>
                 <button class="text-zinc-600 hover:text-white p-1" onclick="openProductModal('${p.id}')" title="Edycja"><i class="ph ph-pencil-simple"></i></button>
                 <button class="text-zinc-600 hover:text-[#e5484d] p-1" onclick="event.stopPropagation();deleteProduct('${p.id}')" title="Usuń produkt"><i class="ph ph-trash"></i></button>
@@ -679,7 +678,6 @@ function renderMatrixCards(prodDefs) {
             : '';
         const adminActions = admin
             ? `<div class="mxc-actions">
-                <button class="mxc-act${p.pinned ? '' : ' mxc-act-dim'}" style="${p.pinned ? 'color:#f5a623' : ''}" onclick="event.stopPropagation();togglePin('${p.id}')" title="${p.pinned ? 'Zaznaczony — zostaje przy przelosowaniu' : 'Zaznacz (Przelosuj go nie wymieni)'}"><i class="${p.pinned ? 'ph-fill' : 'ph'} ph-push-pin"></i></button>
                 <button class="mxc-act" onclick="openCard('${p.id}')" title="Karta produktu"><i class="ph ph-identification-card"></i></button>
                 <button class="mxc-act" onclick="openProductModal('${p.id}')" title="Edycja"><i class="ph ph-pencil-simple"></i></button>
                 <button class="mxc-act mxc-act-del" onclick="event.stopPropagation();deleteProduct('${p.id}')" title="Usuń produkt"><i class="ph ph-trash"></i></button>
