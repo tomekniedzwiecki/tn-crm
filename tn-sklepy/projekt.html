@@ -1217,6 +1217,8 @@
                     ${mdLite(d.instructions_md)}</div>`;
             }
 
+            // podgląd landinga w krokach fabryki (Etap 2): platforma najpierw, preview crm jako zapas
+            if (d.key.startsWith('lp_') && p) h += landingPreviewBlock(p);
             // special-case: fabryka banerów ad-forge — galeria kreacji + timeline agr_* + akcept
             if (d.key === 'ads_grafiki' && p) h += adsGrafikiBlock(p);
             // special-case: wideo — status + player link
@@ -1379,6 +1381,18 @@
                 box.innerHTML = h;
             } catch (e) { box.innerHTML = `<div class="text-xs text-[#f26d78] py-2">Błąd stanu platformy: ${escapeHtml(e.message)}</div>`; }
         }
+        // ── podgląd landinga w krokach lp_* (Etap 2): przycisk na platformę (żywy checkout),
+        //    zapas = preview robocze z crm (fields.preview_url kroku lp_kod) ──
+        function landingPreviewBlock(p) {
+            const kod = stepFor('lp_kod', p.id);
+            const prev = kod && kod.data && kod.data.fields && kod.data.fields.preview_url;
+            if (!p.platform_page_url && !prev) return '';
+            return '<div class="flex flex-wrap items-center gap-2">'
+                + (p.platform_page_url ? `<a href="${escapeHtml(p.platform_page_url)}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 bg-[#0070f3] hover:bg-[#1a82ff] text-white text-xs font-medium rounded-md px-3 py-1.5 transition-colors"><i class="ph ph-rocket-launch"></i> Zobacz landing (platforma)</a>` : '')
+                + (prev ? `<a href="${escapeHtml(prev)}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#555] text-zinc-300 text-xs rounded-md px-3 py-1.5 transition-colors"><i class="ph ph-browser"></i> Podgląd roboczy (crm)</a>` : '')
+                + '</div>';
+        }
+
         // ── platforma: stan produktu (kolumny platform_*) w krokach pl_produkt / pl_landing ──
         function platformProductInfo(p) {
             const rows = [
