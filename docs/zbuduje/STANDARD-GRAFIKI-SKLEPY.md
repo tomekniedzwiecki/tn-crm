@@ -645,3 +645,26 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
   do bud-assets/<slug>/ads/dowody/, activity. Panel: CTA „Generuj przez ad-forge (sesja)" — jedyny silnik
   (Manus usunięty 19.07, patrz wpis niżej). GOTCHA: PATCH labeli z polskimi znakami przez czysty UTF-8 Python, NIE curl
   (cp1250 psuje diakrytyki w bazie).
+
+- **2026-07-22 — v9 LEKCJE PRZEBIEGU ZARADEK (3 produkty, pass-2 wyłapał realne FAIL-e):**
+  (1) **Scena użycia vs USP:** dla produktów „zdalnych/bezdotykowych" (pilot, sterowanie) model
+  uparcie lepi dłoń do ekranu — 2 fixy edit NIE przestawiły pozy; skuteczne = przepisanie
+  `scene_vision` w state (produkt-bohater BEZ telefonu/dłoni) + `--regen` kąta. Edit dobrze robi
+  retusze lokalne (usuń obiekt/okrąg dotyku), źle — zmiany kompozycji.
+  (2) **Kąt problem dla produktów wellness:** PRZED wolno pokazywać wyłącznie CZYNNOŚĆ
+  (niewygodne sięganie/ręczne ugniatanie), NIGDY stan ciała (grymas bólu, trzymanie się za plecy,
+  strefy bólu) — pierwotny brief „napięcie→odprężenie" = twardy FAIL G5 (wellness before-after);
+  hook przerobiony na kontrast METODY („RĘCZNE UGNIATANIE → 6 GŁOWIC") przechodzi.
+  (3) **SQUARE_RECOMPOSE potrafi odjechać** — wygenerować NOWĄ scenę zamiast przekompozycji
+  (incydent Ugniatek 1:1: inna kompozycja + „Ügniatek" + czerwona strefa bólu + inne urządzenie);
+  bramka kwadratu (litery VERBATIM + zgodność kompozycji z 4:5) jest OBOWIĄZKOWA per format,
+  fix = ponowny `--gen-11` kąta.
+  (4) **Scramble-plakietki na korpusie produktu:** edit odtwarzający napis marki na plakietce
+  losuje pseudo-marki (GJUMAGA/MARSEUI/MEZEXEX) — po 1 nieudanym ficie NIE losować dalej:
+  usunąć napis DETERMINISTYCZNIE (PIL: blend sąsiednich pasów korpusu + blur) albo kazać editowi
+  usunąć plakietkę całkiem („czysty korpus" = pominięcie detalu, nie fałszerstwo).
+  (5) **Wyciek nazwy fontu do copy:** model potrafi doklieć nazwę kroju do tekstu na banerze
+  („za pobraniem in Figtree") — bramka G4 musi czytać KAŻDY blok tekstu litera-po-literze,
+  także drobny.
+  (6) **Kotwice cech niewidzialnych (Bluetooth):** linia calloutu ma wskazywać fale sygnału /
+  korpus, nie przycisk — kotwica na przycisku sugeruje fałszywą funkcję przycisku.
