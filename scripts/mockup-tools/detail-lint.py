@@ -145,8 +145,22 @@ ANALYZER = r"""
       // (#DCD3C2) nie osiagnie 4.5:1 bez zejscia w kolor kolidujacy z CTA -> to konwencja, nie zgrzyt.
       var _txt=(el.textContent||'').trim();
       var _deco=el.closest('[aria-hidden="true"]')||/^[\s★☆✦✧⭐✰⯨]+$/.test(_txt);
+      // overmedia (22.07, cap wideo-rail): tekst na scrimie/gradientach lub na <img>/<video>
+      // NIE podlega checkowi solid-bg (effBg przeskakuje background-image i klamie tlem sekcji);
+      // czytelnosc takich tekstow ocenia worst-pixel-under-text + vision/rubryka.
+      var overmedia=false;
+      (function(){var n=el;while(n&&n!==document.documentElement){var c=getComputedStyle(n);
+        if(c.backgroundImage&&c.backgroundImage!=='none'){overmedia=true;return;}
+        var b=rgb(c.backgroundColor);if(b&&b.a>0.5)return;
+        n=n.parentElement;}})();
+      if(!overmedia){var anc=el,dep=0;
+        while(anc.parentElement&&dep<2&&!overmedia){anc=anc.parentElement;dep++;
+          for(var k=0;k<anc.children.length;k++){var ch=anc.children[k];
+            if(ch.tagName!=='IMG'&&ch.tagName!=='VIDEO')continue;
+            var mr=ch.getBoundingClientRect();
+            if(mr.left<=r.left+2&&mr.right>=r.right-2&&mr.top<=r.top+2&&mr.bottom>=r.bottom-2){overmedia=true;break;}}}}
       if(!_deco){
-        out.texts.push({sec:sectionOf(el),fs:Math.round(fsz*10)/10,fw:fw,col:[Math.round(col.r),Math.round(col.g),Math.round(col.b)],bg:[Math.round(bgc.r),Math.round(bgc.g),Math.round(bgc.b)],cr:Math.round(cr*100)/100,large:large,txt:(el.textContent||'').trim().slice(0,40),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),w:Math.round(r.width),h:Math.round(r.height)});
+        out.texts.push({sec:sectionOf(el),fs:Math.round(fsz*10)/10,fw:fw,col:[Math.round(col.r),Math.round(col.g),Math.round(col.b)],bg:[Math.round(bgc.r),Math.round(bgc.g),Math.round(bgc.b)],cr:Math.round(cr*100)/100,large:large,overmedia:overmedia,txt:(el.textContent||'').trim().slice(0,40),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),w:Math.round(r.width),h:Math.round(r.height)});
       }
       sizeSet[Math.round(fsz*10)/10]=(sizeSet[Math.round(fsz*10)/10]||0)+1;
     }
@@ -157,7 +171,8 @@ ANALYZER = r"""
     }
     // images
     if(el.tagName==='IMG'){
-      out.imgs.push({sec:sectionOf(el),src:el.currentSrc||el.src,nw:el.naturalWidth,nh:el.naturalHeight,rw:Math.round(r.width),rh:Math.round(r.height),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),cls:(el.className||''),alt:el.getAttribute('alt'),objfit:cs.objectFit,objpos:cs.objectPosition});
+      var infixed=false;(function(){var n=el;while(n&&n!==document.documentElement){var pp=getComputedStyle(n).position;if(pp==='fixed'||pp==='sticky'){infixed=true;return;}n=n.parentElement;}})();
+      out.imgs.push({sec:sectionOf(el),src:el.currentSrc||el.src,nw:el.naturalWidth,nh:el.naturalHeight,rw:Math.round(r.width),rh:Math.round(r.height),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),cls:(el.className||''),alt:el.getAttribute('alt'),objfit:cs.objectFit,objpos:cs.objectPosition,infixed:infixed});
     }
     // PASS 4 — bloki interaktywne/wizualne (odstepy) + paychip collector
     if(r.width>0&&r.height>0&&el.matches('.btn,button,[role=button],.pay-badges,.pill,form,input,select,textarea,figure')){
@@ -1021,6 +1036,7 @@ def main():
     # ---- WCAG contrast (solid bg) ----
     seen=set()
     for t in D_desk["texts"]:
+        if t.get("overmedia"): continue  # scrim/gradient/na-obrazie -> worst-pixel + vision, nie solid-bg
         thr=3.0 if t["large"] else 4.5
         key=(tuple(t["col"]),tuple(t["bg"]),t["fs"])
         if t["cr"]<thr and key not in seen and len(t["txt"])>2:
@@ -1048,11 +1064,20 @@ def main():
             na=nw/nh; ra=rw/rh
             if abs(na-ra)/na>0.06:
                 add("obrazy",im["sec"]+" / "+base,f"Znieksztalcenie (fill): natural AR {round(na,2)} vs box {round(ra,2)}","P1","object-fit:cover/contain","skrypt")
-        # dedup
+        # dedup: P0 TYLKO gdy OBA wystapienia to duze kadry (>=320px) w roznych sekcjach
+        # narracyjnych — pelnoprawna scena zduplikowana. Powtorka jako MINIATURA-ODWOLANIE
+        # (favicon, thumb rekapu/kasy/sticky, <320px) lub packshot w #zamow (karta produktu
+        # przy kasie = kontrakt LL-046) — P2 informacyjne, nie blokuje.
         if h in hashes:
-            add("obrazy",im["sec"]+" / "+base,f"DUPLIKAT assetu (hash {h[:6]}) — ten sam obraz co w sekcji '{hashes[h][0]}' ({hashes[h][1]})","P0","Ten sam obraz w 2 rolach/miejscach — uzyj innego lub potwierdz celowosc","skrypt")
+            psec,pbase,prw=hashes[h]
+            duza_para = rw>=320 and prw>=320
+            kasa = im["sec"]=="zamow" or psec=="zamow"
+            if duza_para and not kasa:
+                add("obrazy",im["sec"]+" / "+base,f"DUPLIKAT assetu (hash {h[:6]}) — ten sam obraz co w sekcji '{psec}' ({pbase})","P0","Ten sam kadr jako scena w 2 sekcjach — uzyj innego","skrypt")
+            else:
+                add("obrazy",im["sec"]+" / "+base,f"Powtorka assetu jako miniatura/odwolanie ({rw}px vs {prw}px w '{psec}')","P2","Potwierdz celowosc (rekap/brand/karta kasy = OK)","skrypt")
         else:
-            hashes[h]=(im["sec"],base)
+            hashes[h]=(im["sec"],base,rw)
         # alt on content (non-scene) images
         if "scene" not in (im["cls"] or "") and (im["alt"] is None):
             add("obrazy",im["sec"]+" / "+base,"Brak atrybutu alt na obrazie tresciowym","P2","Dodaj alt","skrypt")
@@ -1086,7 +1111,8 @@ def main():
         add("kolor","hero/problem/demo/benefits",f"({len(wp)} tekstow nad scenami ma teoretyczny worst-pixel <3 — do potwierdzenia vision, scrim moze wystarczac)","P2","Weryfikacja blur/vision","skrypt(bound)")
 
     # ---- bbox overlap of two content photos (image-on-image) ----
-    photos=[im for im in D_desk["imgs"] if im["nw"]>0 and "scene" not in (im["cls"] or "")]
+    # obrazy w kontenerach fixed/sticky (topbar, sticky-buy) nachodza na flow Z NATURY — poza checkiem
+    photos=[im for im in D_desk["imgs"] if im["nw"]>0 and "scene" not in (im["cls"] or "") and not im.get("infixed")]
     for i in range(len(photos)):
         for j in range(i+1,len(photos)):
             a,b=photos[i],photos[j]

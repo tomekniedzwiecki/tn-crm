@@ -1,7 +1,10 @@
 <!--
   LANDING RUNTIME (workflow v2 / fabryka landingów) — WKLEJANY PRZED </body> każdego landinga.
   Kontrakt DOM:
-    - CTA:   <a data-checkout href="#zamow">…</a>  → runtime podmienia href na checkout_url z API
+    - CTA:   <a data-checkout href="#zamow">…</a>  → gdy strona MA checkout inline
+             (#zamow.zc-checkout, moduł checkout-inline@2) href ZOSTAJE #zamow (feedback
+             Tomka 22.07 — CTA nie może wywozić klienta do kasy platformy z własnego
+             checkoutu); podmiana na checkout_url z API TYLKO bez checkoutu inline (fallback)
     - CENA:  <span data-price>149,90 zł</span>     → runtime nadpisuje AKTUALNĄ ceną (zapieczona = fallback)
              <span data-price-raw>149.90</span>    → wariant bez formatowania (opcjonalny)
     - SOLD (opcjonalny, UCZCIWY social-proof z REALNYCH zamówień naszego sklepu):
@@ -64,7 +67,10 @@
       document.querySelectorAll('[data-price]').forEach(function (el) { el.textContent = fmtPln(state.price); });
       document.querySelectorAll('[data-price-raw]').forEach(function (el) { el.textContent = String(state.price); });
     }
-    if (state.checkoutUrl) {
+    // checkout inline na stronie (moduł checkout-inline@2) => CTA scrollują do #zamow,
+    // NIE wywozimy klienta do kasy platformy (feedback Tomka 22.07)
+    var inlineCheckout = document.querySelector('#zamow.zc-checkout, #zamow .zc-checkout');
+    if (state.checkoutUrl && !inlineCheckout) {
       document.querySelectorAll('[data-checkout]').forEach(function (a) {
         if (a.tagName === 'A') a.setAttribute('href', decorateCheckoutUrl(state.checkoutUrl));
       });

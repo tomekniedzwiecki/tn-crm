@@ -330,6 +330,26 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
   /* stany maszyny — pokazywanie paneli */
   .zc-checkout[data-zc-state="waiting_blik"] .zc-form,
   .zc-checkout[data-zc-state="success"] .zc-form{display:none}
+  /* ── MOBILE POLISH (LL-043; feedback Tomka 22.07: checkout na telefonie "ciasno, wasko") ──
+     Zasada: <600px formularz dostaje PELNA szerokosc (minimalne marginesy), touch-targety
+     >=52px, wieksze tytuly krokow, przycisk "Dalej" pod kciuk. Mechanika/JS NIETYKALNE. */
+  @media (max-width:599px){
+    .zc-checkout .zc-wrap{padding:0 10px}
+    .zc-checkout .zc-card{padding:16px 12px}
+    .zc-checkout .zc-form{gap:16px}
+    .zc-checkout .zc-main{gap:16px}
+    .zc-checkout .zc-fields{max-width:none}
+    .zc-checkout .zc-in{height:52px}
+    .zc-checkout .zc-opt{padding:14px 12px}
+    .zc-checkout .zc-legend{font-size:17px}
+    .zc-checkout[data-zc-layout="steps"] .zc-step-head{padding:15px 14px;gap:11px}
+    .zc-checkout[data-zc-layout="steps"] .zc-step-body{padding:0 14px 16px}
+    .zc-checkout[data-zc-layout="steps"] .zc-step-num{width:28px;height:28px;font-size:14px}
+    .zc-checkout[data-zc-layout="steps"] .zc-step-title{font-size:16px}
+    .zc-checkout[data-zc-layout="steps"] .zc-step-next{width:100%;min-height:50px;text-align:center}
+    .zc-checkout .zc-cta{min-height:58px}
+  }
+
   @media (prefers-reduced-motion:reduce){
     .zc-checkout .zc-spin,.zc-checkout .zc-blik-wait .zc-pulse{animation:none}
   }
@@ -630,7 +650,7 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
         productVariantId: ov.productVariantId,
         name: ov.name || document.title,
         price: (ov.price != null ? Number(ov.price) : null),
-        thumb: ov.thumb || '',
+        thumb: ov.thumb || root.getAttribute('data-zc-thumb-src') || '',
         checkoutFallbackUrl: ov.checkoutFallbackUrl || '',
         termsUrl: ov.termsUrl, privacyUrl: ov.privacyUrl,
         merchant: ov.merchant || '',
@@ -651,7 +671,9 @@ WYMAGANIA DOM: na stronie MUSI istnieć element z id="zamow" (kotwica CTA). Konf
           productVariantId: d.platform.variant_id,
           name: d.name || document.title,
           price: (d.price != null ? Number(d.price) : null),
-          thumb: '',
+          // platforma nie przechowuje zdjec produktu (API: POST products = tylko name+price),
+          // wiec miniatura podsumowania = packshot ze skorki (LL-046)
+          thumb: root.getAttribute('data-zc-thumb-src') || '',
           checkoutFallbackUrl: d.checkout_url || '',
           termsUrl: null, privacyUrl: null,
           merchant: '',

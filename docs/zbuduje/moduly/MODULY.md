@@ -37,6 +37,23 @@ nagłówkowym pliku `<moduł>@<wersja>.html`. Proporcje i JS = nietykalne; token
 - Źródłem wersji jest ZAWSZE konkretny commit dobrego landingu (nie „z głowy").
 
 ## CHANGELOG
+- **2026-07-22 — wideo-rail@1: FIX desktop `.vid__tile` width:100% (LL-045):** `width:auto`
+  na grid-item z absolute-content (intrinsic 0) NIE rozciąga kafla do kolumny — kafel zapadał
+  się do ~2px (Ugniatek). Remontaż żywych landingów z kanonu.
+- **2026-07-22 — checkout-inline@2: `data-zc-thumb-src` (LL-046):** platforma nie przechowuje
+  zdjęć produktu (POST products = tylko name+price) → miniatura podsumowania była pustym
+  placeholderem. Nowy atrybut na rootcie (`data-zc-thumb-src="<packshot>"`) używany jako
+  thumb w obu trybach buildConfig (override i wf2-landing-api). Wklejone do żywych:
+  ugniatek, odsaczek. Powiązane (nie-moduł): nazwa produktu platformy = marketingowa
+  mini-marka (rename = ensure_product + przepięcie sluga, wzór FABRYKA-koszyk/rename-platform.py);
+  osadzenie: `.zm-grid` align-items:start (karta produktu NIE dziedziczy wysokości formularza).
+- **2026-07-22 — checkout-inline@2: blok MOBILE POLISH (LL-043, feedback Tomka „ciasno, wąsko"):**
+  `@media (max-width:599px)` — wrap 10px, card 16/12, pola 52px, opcje-radio 14/12, tytuły
+  kroków 16px, „Dalej" full-width min-height 50px, CTA ≥58px, `.zc-fields` bez cap 520px.
+  Zasada OSADZENIA: karta-wrapper wokół modułu NA MOBILE znika (padding 0, border 0, bg
+  transparent) — moduł niesie własną kartę; zagnieżdżone paddingi duszą pola (Odsączek:
+  ~220px na inputy przy 390px viewportu). Wklejone do żywych: ugniatek, odsaczek (mata =
+  starsza kopia @2 bez bloku — dokleić przy najbliższym dotknięciu). Mechanika/JS nietknięte.
 - **2026-07-21 — checkout-inline@2 (NOWA WERSJA — porządek w checkoucie, decyzje Tomka):**
   (1) **PŁATNOŚĆ BEZ PRESELEKCJI** — COD nie jest już domyślnie zaznaczony; „przy odbiorze"
   (CTA + microcopy) pojawia się WYŁĄCZNIE po świadomym wyborze COD; submit bez wyboru =

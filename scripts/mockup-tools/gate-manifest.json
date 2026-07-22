@@ -563,7 +563,7 @@
  "_usuniete_f1_marza_20_07": "USUNIETE (dyrektywa Tomka 20.07): blok f1_marza — ekonomia polki, marza, landed/COD. Fabryka landingow NIE ocenia oplacalnosci produktu ani nie wydaje werdyktow GO/NO-GO: gdy produkt wchodzi do budowy, decyzja zakupowa juz zapadla (Etap 1 / radar). Funkcja check_f1_marza usunieta z gate-check.py. Patrz STANDARD-LANDING-SKLEPY.md 'F-1 — INWENTARZ MATERIALU'.",
  "published": {
   "severity": "FAIL",
-  "_opis": "Tryb GO-LIVE (--published <url|sciezka>; task#3). Pobiera LIVE html i FAIL gdy zostaly artefakty preview: {{}} placeholder, noindex (niewidoczne dla Google), nierozwiazane URL-e prawne / pixel / product-id. Preview (bez --published) NIE sprawdza — placeholdery OCZEKIWANE. file://sciezka / lokalna sciezka dozwolone (test go-live bez realnego URL). Blad pobrania / 5xx / 429 = WARN (blip), 404 = FAIL (strona nie zyje).",
+  "_opis": "Tryb GO-LIVE (--published <url|sciezka>; task#3). Pobiera LIVE html i FAIL gdy zostaly artefakty preview: {{}} placeholder, noindex (niewidoczne dla Google), nierozwiazane URL-e prawne / pixel / product-id. Preview (bez --published) NIE sprawdza — placeholdery OCZEKIWANE. file://sciezka / lokalna sciezka dozwolone (test go-live bez realnego URL). Blad pobrania / 5xx / 429 = WARN (blip), 404 = FAIL (strona nie zyje). UWAGA 22.07: {{PIXEL_ID}} jest OCZEKIWANY na LIVE (INIT-GUARD snippetu; platforma wstrzykuje pixel sama), noindex sprawdzany TYLKO w <meta> (slowo pada w komentarzach dokumentacyjnych), product-id tylko w klamrach. LL-048 (22.07): cena NIE MOZE byc zapieczona w <title>/meta/og/JSON-LD — zyje tylko w tresci przez [data-price] (runtime); OG-obrazek tez bez ceny (chip COD zamiast badge).",
   "http_transient_codes": [
    408,
    425,
@@ -575,12 +575,12 @@
   ],
   "fail_regex": [
    {
-    "regex": "\\{\\{",
-    "label": "nierozwiazany placeholder {{...}}"
+    "regex": "\\{\\{(?!PIXEL_ID\\}\\})[A-Z_][A-Z_0-9]*\\}\\}",
+    "label": "nierozwiazany placeholder {{...}} (poza {{PIXEL_ID}} = INIT-GUARD kontraktu runtime)"
    },
    {
-    "regex": "noindex",
-    "label": "noindex na produkcji (niewidoczne dla Google)"
+    "regex": "<meta[^>]*noindex[^>]*>",
+    "label": "meta noindex na produkcji (niewidoczne dla Google)"
    },
    {
     "regex": "REGULAMIN_URL|POLITYKA_URL|PRYWATNOSC_URL|ZWROTY_URL|DOSTAWA_URL|KONTAKT_URL|COOKIES_URL|ODSTAPIENIE_URL|CANONICAL_URL",
@@ -591,12 +591,24 @@
     "label": "martwy link do platformy ODR (wygaszona 20.07.2025 — SSOT PRAWNE.md)"
    },
    {
-    "regex": "PIXEL_ID|WF2_PRODUCT_ID|PRODUCT_ID",
-    "label": "nierozwiazany pixel / product-id"
+    "regex": "\\{\\{(WF2_)?PRODUCT_ID\\}\\}",
+    "label": "nierozwiazany product-id (checkout martwy)"
    },
    {
     "regex": "fbq\\(\\s*['\"]init['\"]\\s*,\\s*['\"]\\s*['\"]\\s*\\)",
     "label": "pusty Pixel init fbq('init','')"
+   },
+   {
+    "regex": "<title>[^<]*\\d+,\\d{2}\\s*zł",
+    "label": "cena zapieczona w <title> (LL-048 — cena zmienna, silnik cen)"
+   },
+   {
+    "regex": "<meta[^>]+content=\\\"[^\\\"]*\\d+,\\d{2}\\s*zł[^\\\"]*\\\"",
+    "label": "cena zapieczona w meta description / og:* (LL-048)"
+   },
+   {
+    "regex": "\\\"price\\\"\\s*:\\s*\\\"\\d",
+    "label": "cena zapieczona w JSON-LD offers (LL-048 — usun blok offers)"
    }
   ]
  },

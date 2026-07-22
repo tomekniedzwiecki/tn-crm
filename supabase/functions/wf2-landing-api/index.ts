@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     //     checkout-inline@1 do złożenia zamówienia z poziomu landinga.
     const { data, error } = await supabase
       .from("wf2_products")
-      .select("project_id, name, price, checkout_url, status, margin_mode, platform_product_id, platform_variant_id")
+      .select("project_id, name, platform_name, price, checkout_url, status, margin_mode, platform_product_id, platform_variant_id")
       .eq("id", id)
       .maybeSingle();
     if (error) throw error;
@@ -84,7 +84,9 @@ Deno.serve(async (req) => {
 
     return json(
       {
-        name: data.name,
+        // nazwa KLIENTOWA (LL-046): platform_name = marketingowa mini-marka (trafia do
+        // podsumowania checkoutu); robocze wf2_products.name tylko fallbackiem
+        name: data.platform_name || data.name,
         price: data.price != null ? Number(data.price) : null,
         currency: "PLN",
         checkout_url: data.checkout_url || null,

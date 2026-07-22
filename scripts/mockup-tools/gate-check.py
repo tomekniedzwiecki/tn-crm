@@ -864,38 +864,25 @@ def check_baza(res, M, ctx):
                 ("marka '%s'" % nm) if ok else "brak rezerwacji nazwy dla slug")
 
 def check_wideo_kafle(res, M, ctx):
+    """LL-044 (22.07): sekcja wideo = klipy DODANE do produktu, self-host w bud-assets/<slug>/tt/.
+    Check: liczba kafli .vid__tile == liczba unikalnych self-host .mp4 z /tt/ (spojnosc sekcji)
+    + zero OBCYCH hostow .mp4 (self-host obowiazkowy). Porownanie do videos_curated.keep
+    = MARTWE (kuracja wideo zdeprecjonowana). 0 kafli = SKIP (stan danych produktu)."""
     m = M["wideo_kafle"]; sev = m["severity"]; html = ctx["html"]
-    # licz kafle: literalne <video ORAZ (opcj.) unikalne sciezki .mp4 (lazy data-src)
-    n_tags = len(re.findall(re.escape(m["video_tag"]), html, re.I))
-    n_mp4 = 0
-    if m.get("licz_mp4_z_url"):
-        n_mp4 = len(set(url_asset_path(u) for u in ctx["urls"] if u.lower().split("?")[0].endswith(".mp4")))
-    n_video = max(n_tags, n_mp4)
-    if n_video == 0:
-        res.add("wideo_kafle", "kafle wideo == keep", "SKIP", "brak wideo (tagow <video ani .mp4) w HTML")
+    n_tiles = len(re.findall(r'<li class="vid__tile"', html))
+    mp4 = set(u.split("?")[0] for u in ctx["urls"] if u.lower().split("?")[0].endswith(".mp4"))
+    tt_mp4 = set(u for u in mp4 if "/tt/" in u)
+    obce = set(u for u in mp4 if u.startswith("http") and "supabase.co/storage" not in u)
+    if obce:
+        res.add("wideo_kafle", "wideo self-host (LL-044)", status_for(False, sev),
+                "obce hosty .mp4: %s" % sorted(obce)[:2])
+    if n_tiles == 0:
+        res.add("wideo_kafle", "kafle == klipy dodane (LL-044)", "SKIP",
+                "brak sekcji wideo (0 kafli) — stan danych produktu, nota w MANIFESCIE")
         return
-    downgrade = bool(re.search(m["downgrade_regex"], ctx["ledger"] or "", re.I))
-    # keep z bazy
-    n_keep = None
-    env = ctx["env"]
-    if not ctx["no_net"] and env.get(M["supabase"]["key_env"]) and ctx["product_key"]:
-        rows = pg_get(env, M, M["baza"]["tabela_produkty"],
-                      {"id": "eq." + ctx["product_key"], "select": M["baza"]["kolumny_kuracji"]["videos"]},
-                      ctx["timeout"])
-        if rows:
-            v = rows[0].get(M["baza"]["kolumny_kuracji"]["videos"])
-            if v is not None:
-                n_keep = curated_keep_count(v)
-    if n_keep is None:
-        if downgrade:
-            res.add("wideo_kafle", "kafle wideo == keep", "PASS", "%d kafli; downgrade wideo w LEDGER" % n_video)
-        else:
-            res.add("wideo_kafle", "kafle wideo == keep", "SKIP",
-                    "%d kafli; brak videos_curated z bazy do porownania" % n_video)
-        return
-    ok = (n_video == n_keep) or downgrade
-    res.add("wideo_kafle", "kafle wideo == keep", status_for(ok, sev),
-            "kafle=%d keep=%d%s" % (n_video, n_keep, " (downgrade)" if downgrade else ""))
+    ok = n_tiles == len(tt_mp4)
+    res.add("wideo_kafle", "kafle == klipy dodane (LL-044)", status_for(ok, sev),
+            "kafle=%d self-host tt=%d" % (n_tiles, len(tt_mp4)))
 
 def check_makiety_mobile(res, M, ctx):
     m = M["makiety_mobile"]; sev = m["severity"]; arch = ctx["archiwum"]

@@ -215,10 +215,10 @@ nie zatrzymuj pracy i nie otwieraj dyskusji o sprzedawalności.
 Co F-1 robi naprawdę: **liczy MATERIAŁ, żeby zaplanować robotę graficzną.** Ze snapshotu:
 ile realnych kadrów produktowych po odsiewie (≥2 czyste packshoty = lekka faza graficzna;
 mniej = planuj CROP-y/regeneracje i doliczy czas), ile opinii z treścią i zdjęciami (materiał
-do sekcji opinii), ile klipów wideo (≥6 = sekcja multi-wideo; mniej = pojedynczy klip albo
-sekcja odpada), jakie specs są PUSTE (→ zero zmyślonych cm/kg w copy). To jest kosztorys
-pracy, nie ocena biznesu. Wynik F-1 nigdy nie brzmi „produkt odpada", tylko „ta strona
-wymaga X regeneracji i nie dostanie sekcji wideo".
+do sekcji opinii), ile klipów wideo DODANYCH do produktu (`tiktok_url` + `ali_snapshot.
+video_url` — LL-044: N dodanych = N kafli, 0 = brak sekcji jako stan danych), jakie specs
+są PUSTE (→ zero zmyślonych cm/kg w copy). To jest kosztorys pracy, nie ocena biznesu.
+Wynik F-1 nigdy nie brzmi „produkt odpada", tylko „ta strona wymaga X regeneracji".
 
 **F0 — DANE + VISION-GATE.** Snapshot z `bud_tt_products.ali_snapshot` (tytuł, opinie
 z text_pl, review_stats, sku_prices; PUSTE specs = tylko komunikaty jakościowe, zero
@@ -358,7 +358,11 @@ mata-v6): nośnik ruchu „WYSTAWIONY" — ma przestrzeń w kadrze i nie jest pr
 zero tekstu wpieczonego w strefie ruchu, kompozycja znosi delikatny dryf pętli. W F6 sceny
 ANIM dostają klipy Kling i2v (pętla first=last) jak hero — budżet +2 klipy (~0,35 $/klip).
 Jeśli po F3 któraś scena ANIM straciła nośnik ruchu — wybierz inną scenę ALBO 1 regeneracja
-pod ruch (z notą LEDGER).
+pod ruch (z notą LEDGER). **⛔ LL-049 (feedback Tomka 22.07 „na mobile nie ma animowanego
+video w hero"): ambient hero-video (i sceny ANIM) GRA NA KAŻDYM VIEWPORCIE — desktop
+I mobile; jedyny guard w JS = `prefers-reduced-motion` (autoplay mobilny wymaga muted +
+playsinline, oba są w wzorcu). Guard `min-width:768` w starterze ambient = BŁĄD wzorca,
+usunięty z żywych landingów.**
 
 **F1.7a — ROLA PRODUKTU W ŁUKU NARRACYJNYM (EMOCJA↔PRODUKT; Drapek 18.07 — scena PROBLEM
 pokazywała psa KULĄCEGO SIĘ DEFENSYWNIE przy NASZEJ desce = przekaz „nasz produkt = źródło
@@ -1222,25 +1226,38 @@ etapie kodu (Z2: kod nie dodaje niczego, czego nie ma na makiecie). Pozycje mech
 wyglądu żadnego kadru.**
 
 - pay-badges z kanonicznego bloku (hero/oferta/sticky wg mapy anty-duplikacji);
-- sticky przycisk zamówienia (mobile, po hero, IO) + KAŻDE CTA `data-checkout` → checkout_url;
+- sticky przycisk zamówienia (mobile, po hero, IO) + KAŻDE CTA `data-checkout` → **#zamow
+  (checkout inline na stronie; LL-047, feedback Tomka 22.07: CTA NIE wywozi klienta do kasy
+  platformy — runtime snippet podmienia href na checkout_url TYLKO gdy strona nie ma
+  `#zamow.zc-checkout`)**;
 - prawdziwe opinie z aukcji ZE ZDJĘCIAMI (kafle + lightbox z pełną treścią; wzorzec:
   drukarka-3d ~l.1324; ae-pic rehost do `bud-assets/<slug>/` przed użyciem);
 - **galeria „zobacz produkt" = WYŁĄCZNIE realne kadry z kuracji (`gallery_curated`, klasa R)**
   — AI-sceny (S) ZAKAZANE jako slajd galerii/karty (mogą być tłem sekcji, nie dowodem);
   lightbox + alt PL z `alt_pl`; szczegóły `docs/zbuduje/GALERIA-ALI.md`;
 - realne zdjęcia produktu w karcie/galerii/ofercie (AI nie zastępuje dowodu);
-- **sekcja WIDEO TikToka: 4-6 kurowanych (`videos_curated` keep:true), self-host MP4 bez ramki
-  playera** — siatka 9:16 (desktop 4-5 kafli grid auto-fit; mobile snap-scroll widać 1.2 kafla),
-  IO-autoplay mute TYLKO widoczne (unmute jednego wycisza resztę), `preload=none`, poster
-  REHOSTOWANY (cover CDN WYGASA — własna klatka ffmpeg), per-kafel głośnik + atrybucja „@autor";
-  klik = lightbox 9:16 z dźwiękiem. TYLKO po vision-gate on-product; <3 PASS → tryb 1-wideo.
-  **⛔ SEKCJA WIDEO NIE ZNIKA PO CICHU (feedback Tomka 22.07 — Ugniatek: kuracja odrzuciła
-  8/8 klipów źródłowych i sekcja „wyparowała"): 0 keep z kuracji → PLAN B = 2-3 WŁASNE klipy
-  ruchu produktu (Kling i2v ze scen F3, pionowe 9:16 lub kadr sceny, pętla first=last,
-  BEZ atrybucji @autor — to nasz materiał, nie UGC) w tym samym module rail. Dopiero gdy
-  i to niewykonalne (brak scen nadających się do ruchu) → SKIP z notą LEDGER + wpisem
-  w MANIFEŚCIE.** Pipeline i ryzyko: sekcja 5;
+- **sekcja WIDEO = klipy DODANE DO PRODUKTU, zero kuracji fabryki, DOCELOWO 4-5 KAFLI
+  (LL-044 + korekta Tomka 22.07: „po 4-5 video w tej sekcji"; wcześniej: „usuń całkiem to
+  analizowanie i pokazuj te video, które są dodane do produktu — nie chcę, żebyś ty o tym
+  decydował")**: pula klipów produktu = `bud_tt_products.tiktok_url` (klip dodany jawnie
+  w radarze; atrybucja „@autor" z URL-a) + `ali_snapshot.video_url` (wideo aukcji; bez
+  atrybucji) + `videos_curated.items[]` (SUROWA lista klipów radaru — pola werdykt/keep
+  IGNOROWANE). Kolejność kafli DETERMINISTYCZNA, bez oceny treści: jawnie dodane najpierw
+  (tiktok_url, ali), potem reszta puli wg `plays` DESC, do N=5 (mniej w puli = tyle, ile
+  jest; klip niepobieralny yt-dlp = pomiń z notą, NIE zastępuj). Fabryka NIE ocenia
+  treści/jakości/przydatności klipów i NICZEGO nie generuje zamiast nich; CAP-y = opisowe
+  (co widać), bez wartościowania. Self-host obowiązkowy: yt-dlp na URL-e TikToka / pobranie
+  ali video_url (UA Mozilla + referer aliexpress.com) → ffmpeg web (CRF 27, faststart,
+  dźwięk zostaje) + poster własną klatką → `bud-assets/<slug>/tt/`. Moduł wideo-rail@1
+  (IO-autoplay mute, unmute-exclusive, `preload=none`, kropki mobile; ⛔ LL-045: desktopowy
+  `.vid__tile` MUSI mieć `width:100%`, nie `auto` — karta jest absolute-content i kafel
+  zapada się do ~2px). **0 klipów w puli = brak sekcji — stan DANYCH produktu (nota
+  w MANIFEŚCIE), nie decyzja fabryki.** Pipeline: sekcja 5;
 - pomiar (sekcja 5), JSON-LD @graph, `{{PIXEL_ID}}`/`{{CANONICAL_URL}}`+noindex;
+  **⛔ CENA NIGDY W METADANYCH (LL-048):** `<title>`, meta description, og:title/description,
+  OG-obrazek (chip „Płatność przy odbiorze" zamiast badge ceny) i JSON-LD offers — BEZ ceny
+  (cenę prowadzi silnik cen; zapieczona = przyszłe kłamstwo w SERP/social). Cena żyje TYLKO
+  w treści strony przez `[data-price]` (hydratacja runtime). Gate published egzekwuje;
 - dane twarde 1:1, zakazy (sekcja 4), jasne tła, tech budżet (sekcja 5).
 
 ---
@@ -1251,7 +1268,7 @@ wyglądu żadnego kadru.**
 HERO = kompletna mikro-oferta 1. ekranu (h1-echo → sub „dla kogo+efekt" → scena z produktem →
 chip REDUKCJI RYZYKA [płatność przy odbiorze / bez ryzyka / gwarancja zwrotu] → cena → JEDNO
 CTA → mikrocopy) · pas zaufania/COD 1-2-3 (narracja
-procesu) · problem→rozwiązanie · demo „jak działa" 1-2-3 · sekcja wideo (4-6 kurowanych) · korzyści
+procesu) · problem→rozwiązanie · demo „jak działa" 1-2-3 · sekcja wideo (klipy dodane do produktu, LL-044) · korzyści
 (konkrety z aukcji) · UCZCIWE porównanie z JEDNYM prawdziwym minusem · galeria (lazy,
 lightbox, wpleść UGC) · social proof (3-6 opinii ze zdjęciami; małe N uczciwie; 0 opinii →
 sekcję pomiń) · oferta box #zamow („co dostajesz", warianty-buttony gdy API poda, gwarancja
@@ -1533,29 +1550,21 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 ### 7c. Materiał źródłowy (aukcja/snapshot)
 - **`source='detail'` = warunek konieczny budowy**; `search`/`have` = STOP (galeria bywa
   INNYM produktem — Latarek 17.07). Kuracja galerii → `bud_tt_products.gallery_curated`.
-- **Sekcja wideo = WARUNKOWA, nie domyślna (masażer 19.07):** kolumny `videos`/`max_plays`
-  w `bud_tt_products` bywają niezerowe, gdy `tt_shop` = **null** i `video_url` = null → 0 realnych
-  źródeł. Przed planowaniem sekcji wideo ZAWSZE zweryfikować `tt_shop.videos`/`video_url`
-  w SNAPSHOCIE (nie w kolumnach ani briefie); 0 źródeł = sekcję pominąć, `videos_curated`
-  zapisać ze `skip=true`.
+- **Sekcja wideo = klipy DODANE do produktu, 4-5 kafli (LL-044 v2; zastępuje regułę
+  „warunkowa" z 19.07):** pula = `tiktok_url` + `ali_snapshot.video_url` + surowe
+  `videos_curated.items[]` (werdykty kuracji IGNOROWANE; ⛔ NIE kolumna-licznik `videos` —
+  `tt_shop.videos` bywa już wyczyszczone ze snapshotu). Kolejność: jawnie dodane → plays
+  DESC, do 5. 0 w puli = brak sekcji z notą w MANIFEŚCIE (stan danych, nie decyzja).
 - **„Battery Powered" + „Batteries Included=No" = pułapka POZORNA** dla elektroniki: opis
   (`Charging Method`/mAh) rozstrzyga, czy to akumulator USB — czytać pełny `description`
   PRZED interpretacją specs (specs niosą odziedziczone tagi, jak „NAILCLIPPERS" Drapka).
 - Dane ZAWSZE ze snapshotu (nie z odziedziczonego briefu); puste specs → komunikaty
   jakościowe **+ wymiary z rozmiarówek galerii (kuracja DANE) uzupełniają specs**.
-- Vision-gate zdjęć, opinii i WIDEO (off-product w obie strony) — obowiązkowy (F0).
-- **Kuracja wideo → `bud_tt_products.videos_curated jsonb`** (mirror `gallery_curated`; migracja
-  `20260717c_videos_curated.sql`): vision-gate — ⚠️ POSTER BYWA CLICKBAITEM (Odpalak 17.07:
-  3 top klipy 110M plays = drama-ragebait bez produktu, postery myliły) → dla SHORTLISTY
-  pobierz MP4 i gate'uj po KLATCE ŚRODKOWEJ, nie po posterze (on-product w obie strony;
-  mem/stock bez produktu = ODRZUĆ; obca marka/watermark czytelny = ODRZUĆ; ≥360p pion 9:16;
-  marka egzemplarza z TikToka może się różnić od aukcji Ali — udokumentuj w KARCIE, landing
-  OK gdy logo nieczytelne, NIGDY do kreacji Meta), typ ujęcia
-  {unboxing|użycie|efekt|reakcja}, ranking plays DESC → eng-rate → dywersyfikacja typów, wybór
-  4-6. `video_count` (pole) ≠ `len(videos)` (cap ~12) — kuracja z REALNEJ tablicy `tt_shop.videos`.
-  Kształt: `{source_ok, product_id, curated_at, items:[{url, author, plays, likes, cover_src,
-  typ, werdykt, keep, kolejnosc, poster_hosted, mp4_hosted, alt_pl, powod}]}` + kopia
-  `FABRYKA-*/<slug>/WIDEO.md`. Sekcja buduje kafle WYŁĄCZNIE z `keep:true`.
+- Vision-gate zdjęć i opinii (off-product w obie strony) — obowiązkowy (F0). **WIDEO = BEZ
+  vision-gate i BEZ kuracji (LL-044):** klipy dodane do produktu idą na landing takie, jakie
+  są (`videos_curated` = zdeprecjonowane dla landingu; historia kuracji: git tego pliku).
+  Klipy z widocznym logo producenta/watermarkiem: na landing TAK (to dodany materiał),
+  do kreacji Meta NIGDY.
 - Rehost zewnętrznych obrazów TYLKO do `bud-assets/<slug>/` — to PREFIX w buckecie
   `attachments` (upload: `/object/attachments/bud-assets/<slug>/...`), nie osobny bucket.
 - Treść odrzuconych infografik producenta wolno cytować (dane z aukcji, nie fantazja).
@@ -1618,6 +1627,16 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-22 (RUNDA 2 FEEDBACKÓW — Zaradek; LL-044v2/045/046/047):** (1) sekcja wideo =
+  4-5 klipów DODANYCH do produktu, zero selekcji (pula: tiktok_url + ali video + surowe
+  videos_curated.items; kolejność deterministyczna plays DESC); (2) wideo-rail `.vid__tile
+  width:100%` (kafel desktop zapadał się do 2px); (3) checkout: osadzenie `align-items:start`
+  + karta produktu sticky, miniatura podsumowania `data-zc-thumb-src` (platforma nie trzyma
+  zdjęć), **`platform-sync product` przy PIERWSZYM tworzeniu produktu dostaje `--name
+  "<Mini-marka> — <krótki opis>"`** (nazwa trafia do kasy/maili platformy; rename po fakcie
+  = przepięcie sluga bez DELETE, wzór FABRYKA-koszyk/rename-platform.py); (4) CTA
+  `data-checkout` → #zamow gdy checkout inline na stronie (guard w runtime snippecie).
 
 - **2026-07-22 (PODGLĄD Z ŻYWYM CHECKOUTEM PO F4 — feedback Tomka, Odsączek/LL-038):** checkout
   ma działać bezpośrednio na landingu już na etapie podglądu (wzorzec mata-v6). Fabryka po F4
