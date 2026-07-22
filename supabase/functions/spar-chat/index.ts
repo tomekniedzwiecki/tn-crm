@@ -1044,16 +1044,18 @@ function buildSteerInstruction(o: Record<string, unknown>): string {
     ? (o.zrodla as Record<string, unknown>[]).slice(0, 4).map((z) => String(z?.tytul || '')).filter(Boolean).join(', ')
     : ''
   const platnosc = String(o.platnosc || '')
-  const wspolne = `DANE Z BADANIA RYNKU (na żywo, REALNE — wykorzystaj je, to nie zgadywanie): ocena=${ocena}. Rynek/nisza: ${rynek} Konkurencja+ceny: ${konk} Czy ktoś płaci: ${platnosc} Powody: ${powody}. Najmocniejszy kąt/luka: ${kierunek}${zrodla ? ` Źródła: ${zrodla}.` : ''}
+  const aiDzwignia = String(o.ai_dzwignia || '')
+  const wspolne = `DANE Z BADANIA RYNKU (na żywo, REALNE — wykorzystaj je, to nie zgadywanie): ocena=${ocena}. Rynek/nisza: ${rynek} Konkurencja+ceny: ${konk} Czy ktoś płaci: ${platnosc} Powody: ${powody}. Najmocniejszy kąt/luka: ${kierunek}${aiDzwignia ? ` Dźwignia AI dla tego narzędzia: ${aiDzwignia}` : ''}${zrodla ? ` Źródła: ${zrodla}.` : ''}
 Ten krok ma REALNIE POMÓC, nie tylko powiedzieć „ok / nie ok". Odezwij się jednym naturalnym komunikatem (BEZ markera <ocena>), który ZACZYNA od 2–3 KONKRETNYCH wniosków z badania — najwięksi konkurenci z cenami, wielkość niszy, największa LUKA — krótko, po ludzku, z ORIENTACYJNYMI przedziałami (nie udawaj precyzji); dokładną liczbę podaj tylko, gdy jesteś jej pewien ze źródła, a gdy nie — powiedz ogólnie, bez liczby. Dopiero na tej podstawie prowadź dalej.`
   if (ocena === 'mocny') {
     return `${wspolne}
-TO ZIELONY KIERUNEK. Po wnioskach zaproponuj KONKRETNE wyostrzenie aplikacji wynikające z luki: „Dlatego proponuję, żeby narzędzie …" — co podkreślić / dodać / odjąć, by trafić dokładnie w tę lukę (rdzeń + maks. 1–2 funkcje wspierające, NIGDY kombajn).
+TO ZIELONY KIERUNEK. Po wnioskach zaproponuj KONKRETNE wyostrzenie aplikacji wynikające z luki: „Dlatego proponuję, żeby narzędzie …" — co podkreślić / dodać / odjąć, by trafić dokładnie w tę lukę (rdzeń + maks. 1–2 funkcje wspierające, NIGDY kombajn). Jeśli badanie wskazało dźwignię AI — wpleć ją w wyostrzenie jako element rdzenia i nazwij korzyść wprost („narzędzie samo przeanalizuje/przygotuje/wykryje…") — to wyróżnik, dzięki któremu produkt robi robotę za użytkownika, a nie tylko zbiera dane.
 NIE wystawiaj jeszcze <projekt> ani <werdykt> — najpierw chcemy JEDNĄ rundę dopracowania kierunku z rozmówcą (podgląd ekranów pokażesz w następnej turze). Zakończ podpowiedziami: marker <opcje>["Tak, w tę stronę","Wolę inny akcent","Pokaż, jak to wygląda"] — tak, by rozmówca miał realny wpływ na wyostrzenie.`
   }
   return `${wspolne}
-TO JESZCZE NIE JEST ZIELONE — NIE wystawiaj podglądu <projekt> ani zielonego <werdykt>. Po wnioskach przekaż „${kierunek}" jako MOCNĄ, pewną rekomendację (nie jako porażkę — jako „mam dla Ciebie lepszą wersję, bo dane pokazują…"), wprost wyprowadzoną z tych danych.
-ZAWSZE zakończ podpowiedziami: marker <opcje>["…","…","…"] z 2–4 krótkimi, klikalnymi odpowiedziami, które popychają DOKŁADNIE w stronę tego kierunku (zgoda na pivot, doprecyzowanie grupy/bólu, „drąż dalej"). Podpowiedzi mają brzmieć jak słowa rozmówcy, nie jak instrukcje.`
+TO JESZCZE NIE JEST ZIELONE — NIE wystawiaj podglądu <projekt> ani zielonego <werdykt>. Po wnioskach przekaż „${kierunek}" jako MOCNĄ, pewną rekomendację (nie jako porażkę — jako „mam dla Ciebie lepszą wersję, bo dane pokazują…"), wprost wyprowadzoną z tych danych. MOSTEK zamiast wyburzania: pokaż, że nowa wersja WYRASTA z pomysłu rozmówcy (jego świat, jego obserwacja) — co z jego wizji zostaje, a co przestawiamy, żeby ktoś realnie płacił. Jeśli badanie wskazało dźwignię AI — wpleć ją w nową wersję jako konkretną korzyść.
+ZAWSZE zakończ podpowiedziami: marker <opcje>["…","…","…"] z 2–4 krótkimi, klikalnymi odpowiedziami, które popychają DOKŁADNIE w stronę tego kierunku (zgoda na pivot, doprecyzowanie grupy/bólu, „drąż dalej"). Podpowiedzi mają brzmieć jak słowa rozmówcy, nie jak instrukcje.
+GDY ROZMÓWCA ODRZUCA PIVOT: nie powtarzaj tego samego argumentu w kółko. Za pierwszym razem spróbuj mostka (jego wersja jako etap/moduł wersji, za którą ktoś płaci). Jeśli ODMÓWI DRUGI RAZ — uszanuj to wprost, ale UCZCIWIE: powiedz, że w tej formie badanie nie potwierdza modelu zarabiania i nie poprowadzisz tego do zielonej karty, bo nie chcesz sprzedawać mu projektu, w który sam nie wierzysz; zostaw otwarte drzwi (może wrócić do mocniejszej wersji w każdej chwili).`
 }
 
 // #1: retry na przejściowy błąd OpenAI (429/5xx/sieć) — pojedynczy blip nie może
@@ -2221,6 +2223,59 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           if (gateOcena && verdict.verdict === 'zielony' && gateOcena.ocena !== 'mocny') {
             console.log('[spar-chat] hard-gate downgrade zielony→zolty (ocena=', gateOcena.ocena, ')')
             verdict.verdict = 'zolty'
+          }
+          // ── RE-GATE PRZY ZIELONYM BEZ „MOCNY" (2026-07-22) ─────────────────
+          // Audyt 426 sesji: 35/70 sesji z oceną „do_poprawy" dostało zielony
+          // werdykt KILKA TUR po badaniu — stary hard-gate działał tylko w turze
+          // z <ocena>, więc pivot nigdy nie był re-weryfikowany. Teraz: pierwszy
+          // zielony werdykt bez zapisanego „mocny" odpala PONOWNE badanie
+          // AKTUALNEJ wersji projektu (loader bramki na froncie działa z eventów).
+          // Mocny → zielony zostaje + świeża ocena w sesji. Inny wynik → żółty
+          // + uczciwa dogrywka tekstem z kierunkiem. Pad badania → przepuszczamy
+          // (nie karzemy usera za blip infrastruktury). Sesje JUŻ zielone
+          // (aktualizacja karty w fazie współpracy) NIE są re-bramkowane.
+          if (verdict.verdict === 'zielony' && !isKnowHowMode && existingSession?.verdict !== 'zielony' && gateOcena?.ocena !== 'mocny') {
+            const storedOcena = String(((existingSession?.assessment as Record<string, unknown> | null) || {}).ocena || '')
+            if (storedOcena !== 'mocny') {
+              try {
+                const brief = ((existingSession?.preview_brief as Record<string, unknown> | null) || {}) as Record<string, unknown>
+                const karta = ((verdict.karta as Record<string, unknown> | null) || {}) as Record<string, unknown>
+                const projektDoOceny: Record<string, unknown> = {
+                  nazwa: brief.nazwa || '',
+                  opis: brief.opis || karta.problem || '',
+                  problem: karta.problem || brief.problem || '',
+                  dla_kogo: brief.dla_kogo || karta.profesja || '',
+                  kto_placi: karta.kto_placi || '',
+                  dzisiejsze_obejscie: karta.dzisiejsze_obejscie || '',
+                  ekrany: karta.ekrany || brief.ekrany || [],
+                  konkurencja: karta.konkurencja || '',
+                }
+                try { controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'badam' })}\n\n`)) } catch { /* klient rozłączony */ }
+                const reOcena = await runGate(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, projektDoOceny, sessionId, (label) => {
+                  try { controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'progress', label })}\n\n`)) } catch { /* klient rozłączony */ }
+                })
+                if (reOcena) {
+                  await supabase.from('spar_sessions')
+                    .update({ assessment: { ...reOcena, at: new Date().toISOString(), awaiting_preview: false }, updated_at: new Date().toISOString() })
+                    .eq('id', sessionId)
+                  try { controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'gotowe', ocena: reOcena })}\n\n`)) } catch { /* klient rozłączony */ }
+                  if (reOcena.ocena !== 'mocny') {
+                    console.log('[spar-chat] re-gate downgrade zielony→zolty (ocena=', reOcena.ocena, ')')
+                    verdict.verdict = 'zolty'
+                    const kier = String(reOcena.kierunek || '').trim()
+                    const dogrywka = `\n\nZanim zepnę to w zieloną kartę — sprawdziłem tę wersję jeszcze raz na żywo i uczciwie: model zarabiania w obecnym kształcie jeszcze się nie spina. ${kier}\n<opcje>["Dobra — prowadź w tę stronę","Co dokładnie się nie spina?"]</opcje>`
+                    assistantText += dogrywka
+                    try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: dogrywka } })}\n\n`)) } catch { /* klient rozłączony */ }
+                  } else {
+                    console.log('[spar-chat] re-gate potwierdził mocny — zielony zostaje')
+                  }
+                } else {
+                  console.warn('[spar-chat] re-gate padł (null) — zielony przepuszczony warunkowo, session:', sessionId)
+                }
+              } catch (rgErr) {
+                console.error('[spar-chat] re-gate exception — zielony przepuszczony warunkowo:', rgErr)
+              }
+            }
           }
 
           // Karta rezerwacji (<makieta>) wystawiona w tej turze → stempel dla
