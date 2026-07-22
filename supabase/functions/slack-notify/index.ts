@@ -1688,6 +1688,7 @@ const SPAR_ARTIFACT_LABELS: Record<string, string> = {
   gtm: 'Plan + reklamy (GTM)',
   landing: 'Strona sprzedażowa',
   prototyp: 'Klikalny prototyp',
+  podglad: 'Podgląd ekranów (czat)',
 }
 function formatSparGenErrorMessage(data: {
   session_id?: string
@@ -1702,9 +1703,15 @@ function formatSparGenErrorMessage(data: {
   const emailLine = data.email ? ` · ${data.email}` : ''
   const projectLine = data.project_name ? `\n🧩 *${data.project_name}*` : ''
   const artLabel = SPAR_ARTIFACT_LABELS[data.artifact || ''] || (data.artifact || 'artefakt')
+  // 'podglad' = pad generacji ekranów w CZACIE (spar-image, cooldown 30 min/sesję)
+  // — rozmówca patrzy na kafelek błędu w momencie „wow"; seria alertów z różnych
+  // sesji = najpewniej OpenAI (quota/status), nie pojedynczy lead.
+  const opis = data.artifact === 'podglad'
+    ? `Padła generacja PODGLĄDU ekranów w czacie (po retry) — rozmówca widzi kafelek błędu w momencie „wow". Kilka takich alertów pod rząd = sprawdź quota/status OpenAI.`
+    : `Zielony lead NIE dostał artefaktu — mail odsłony nie poszedł. Sprawdź i wygeneruj ręcznie z panelu.`
   const blocks: any[] = [
     { type: 'header', text: { type: 'plain_text', text: '🛑 Aplikacja — GENERACJA PADŁA', emoji: true } },
-    { type: 'section', text: { type: 'mrkdwn', text: `Zielony lead NIE dostał artefaktu — mail odsłony nie poszedł. Sprawdź i wygeneruj ręcznie z panelu.\n${headerName}${emailLine}${projectLine}` } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${opis}\n${headerName}${emailLine}${projectLine}` } },
     { type: 'section', fields: [
       { type: 'mrkdwn', text: `*Artefakt:*\n${artLabel}` },
       { type: 'mrkdwn', text: `*Nieudane próby:*\n${typeof data.count === 'number' ? data.count : '?'}` },

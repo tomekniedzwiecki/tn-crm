@@ -13,13 +13,14 @@ NIP 6972240255, REGON 302211341 (dalej: **„Zobowiązany"**).
 
 ## 1. Co jest poufne
 
-Poufne są wszelkie informacje, które Ujawniający przekaże Zobowiązanemu w związku z rozmową o możliwej budowie aplikacji — w szczególności **pomysł, koncepcja biznesowa, założenia produktu, know-how, dane i materiały** — niezależnie od formy: **ustnie, pisemnie, elektronicznie, a także za pośrednictwem systemów AI** wspierających rozmowę.
+Poufne są wszelkie informacje, które Ujawniający przekaże Zobowiązanemu w związku z rozmową o możliwej budowie aplikacji — w szczególności **pomysł, koncepcja biznesowa, założenia produktu, know-how, dane i materiały (w tym załączniki, zrzuty ekranu i pliki przekazane w rozmowie)** — niezależnie od formy: **ustnie, pisemnie, elektronicznie, a także za pośrednictwem systemów AI** wspierających rozmowę.
 
 ## 2. Zakres zobowiązania do poufności
 
 Zobowiązany zobowiązuje się:
 - **zachować te informacje w tajemnicy** i nie ujawniać ich osobom trzecim (poza wyjątkami z pkt 3);
 - **wykorzystać je wyłącznie po to, by ocenić i ewentualnie zrealizować współpracę** z Ujawniającym — i w żadnym innym celu; ochroną objęte są **konkretne poufne informacje i rozwiązania** Ujawniającego, a nie ogólny obszar jego działalności;
+- **nie wykorzystać przekazanego pomysłu, koncepcji ani rozwiązań Ujawniającego do zbudowania — dla siebie ani dla osoby trzeciej — produktu opartego na tym pomyśle**; zobowiązanie to dotyczy konkretnego pomysłu i rozwiązań Ujawniającego, a nie ogólnej wiedzy, umiejętności i doświadczenia Zobowiązanego ani samego działania w tej samej branży (pkt 4);
 - chronić je z należytą starannością.
 
 ## 3. Dozwolone ujawnienia
@@ -58,6 +59,7 @@ W razie naruszenia poufności przez Zobowiązanego, Zobowiązany zapłaci Ujawni
 
 - **Forma i zawarcie:** wystarczy **forma dokumentowa** — zobowiązanie można podpisać elektronicznie (zwykły podpis, skan, e-mail). Nie przenosi ono żadnych praw. **Ujawniający akceptuje niniejszą umowę przez jej podpisanie, potwierdzenie e-mailem albo przez ujawnienie Zobowiązanemu informacji po otrzymaniu tego dokumentu.**
 - **Zastrzeżenie:** samo podpisanie nie zobowiązuje żadnej ze stron do zawarcia umowy o budowę aplikacji (Umowy Budowy).
+- **Pierwszeństwo umowy głównej:** z chwilą zawarcia Umowy Budowy do poufności stosuje się jej postanowienia; niniejsze zobowiązanie stosuje się w zakresie w niej nieuregulowanym.
 - **Prawo:** polskie. Spory — sąd właściwy według przepisów; wobec konsumenta zgodnie z bezwzględnie obowiązującymi przepisami.
 
 |  |  |
@@ -82,3 +84,5 @@ W razie naruszenia poufności przez Zobowiązanego, Zobowiązany zapłaci Ujawni
 **Rewizja po audycie i konsultacji gpt-5.6-sol 21.07 — naniesiono poprawki 19–23** (tytuł „Jednostronna umowa o zachowaniu poufności" + sposób zawarcia sekcja 8; usunięcie frazy o „konkurencyjnym przedsięwzięciu" i jawne wyłączenia „Co Tomkowi wolno" sekcje 2/4; okres 5 lat od ujawnienia albo zakończenia rozmów — co późniejsze sekcja 5; definicja jednego naruszenia + łączny cap 3× {{KARA_KWOTA}} + odpowiedzialność za okoliczności zależne od Tomka + odszkodowanie do rzeczywistej szkody sekcja 6; zwrot/usunięcie na żądanie + procedura incydentowa + prośba o brak danych szczególnych kategorii sekcja 7; warunki dostawców AI/chmury i NDA ≠ umowa powierzenia sekcja 3).
 
 **Rewizja 3 (22.07): ujednolicono rejestr językowy na prawniczy (decyzja Tomka) — bez zmian merytorycznych.**
+
+**Rewizja 4 (22.07, przed publikacją wzoru w lejku):** pkt 2 — dodany pozytywny zakaz „nie zbuduję produktu opartego na Twoim pomyśle — dla siebie ani osoby trzeciej" (sedno obawy leadów z audytu rozmów; carve-outy z pkt 4 spięte odesłaniem); pkt 1 — załączniki/zrzuty/pliki z rozmowy wprost w definicji; pkt 8 — pierwszeństwo poufności z Umowy Budowy po jej zawarciu. **WERSJA PUBLICZNA** (tomekniedzwiecki.pl/aplikacja/nda/) ma dodatkowo baner „WZÓR POGLĄDOWY — wiąże dopiero indywidualny egzemplarz" i NIE zawiera członu o zawarciu „przez ujawnienie informacji po otrzymaniu dokumentu" (żeby publiczny wzór nie wiązał Tomka z każdym, kto wyśle pomysł) ani sekcji NOTATKI.

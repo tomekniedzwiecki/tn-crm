@@ -342,6 +342,39 @@ async function postSlackSparing(type: string, data: Record<string, unknown>): Pr
   }
 }
 
+// Pad generacji → atomowy licznik gen_error_count sesji (RPC spar_bump_gen_error;
+// chip zdrowia w panelu tn-aplikacje zapala się bez zmian w panelu) + alert Slack
+// z cooldownem 30 min/sesję. Audyt 22.07: incydent 18.06 (cały dzień bez podglądów)
+// był niewidoczny — pady żyły wyłącznie w logach edge.
+async function recordGenFailure(
+  supabase: ReturnType<typeof createClient> | null,
+  sessionId: string,
+  view: string,
+  reason: string,
+  meta: { name?: unknown; email?: unknown; project?: unknown; isTest?: boolean },
+): Promise<void> {
+  if (!supabase || !sessionId) return
+  try {
+    const { data, error } = await supabase.rpc('spar_bump_gen_error', { p_session: sessionId })
+    if (error) { console.error('[spar-image] spar_bump_gen_error rpc:', error); return }
+    const row = Array.isArray(data) ? data[0] as Record<string, unknown> : data as Record<string, unknown> | null
+    if (row?.should_alert && !meta.isTest) {
+      await postSlackSparing('spar_gen_error', {
+        session_id: sessionId,
+        funnel: 'aplikacja',
+        name: meta.name ?? null,
+        email: meta.email ?? null,
+        project_name: meta.project ?? null,
+        artifact: 'podglad',
+        error: `${view}: ${reason}`.slice(0, 280),
+        count: typeof row?.new_count === 'number' ? row.new_count : null,
+      })
+    }
+  } catch (err) {
+    console.error('[spar-image] recordGenFailure exception:', err)
+  }
+}
+
 // Po skompletowaniu startowego zestawu ekranów → JEDNA wiadomość-galeria na
 // #sparing. Atomowy claim na slack_preview_notified_at domyka 4 równoległe
 // generacje (tylko jeden request wygra wiersz). is_test pomijane. Regeneracje/
@@ -408,6 +441,12 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'metoda_niedozwolona' }, 405, corsHeaders)
   }
 
+  // Kontekst dla telemetrii padów — outer catch nie widzi zmiennych z try
+  let telSupabase: ReturnType<typeof createClient> | null = null
+  let telSession = ''
+  let telView = ''
+  let telMeta: { name?: unknown; email?: unknown; project?: unknown; isTest?: boolean } = {}
+
   try {
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
@@ -433,10 +472,13 @@ Deno.serve(async (req) => {
       : 'panel'
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    telSupabase = supabase
+    telSession = sessionId
+    telView = view
 
     const { data: session, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, image_count, preview_images, preview_history, problem_summary, auth_user_id')
+      .select('id, preview_brief, image_count, preview_images, preview_history, problem_summary, auth_user_id, name, email, is_test')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -456,6 +498,12 @@ Deno.serve(async (req) => {
       }
     }
     const brief = session.preview_brief as Record<string, unknown> | null
+    telMeta = {
+      name: (session as Record<string, unknown>).name ?? null,
+      email: (session as Record<string, unknown>).email ?? null,
+      project: brief?.nazwa ?? null,
+      isTest: Boolean((session as Record<string, unknown>).is_test),
+    }
     if (!brief) {
       // brief zapisuje spar-chat z markera <projekt> — bez niego nie generujemy
       // (endpoint publiczny: bez tego gate'u każdy mógłby palić obrazki naszym kluczem)
@@ -564,11 +612,13 @@ Deno.serve(async (req) => {
       .upload(path, bytes, { contentType: 'image/png', upsert: true })
     if (uploadError) {
       console.error('[spar-image] upload error:', uploadError)
+      await recordGenFailure(supabase, sessionId, view, `upload: ${uploadError.message || 'błąd storage'}`, telMeta)
       return jsonResponse({ error: 'blad_zapisu' }, 500, corsHeaders)
     }
     const { data: pub } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path)
     const url = pub?.publicUrl
     if (!url) {
+      await recordGenFailure(supabase, sessionId, view, 'brak publicUrl po uploadzie', telMeta)
       return jsonResponse({ error: 'blad_zapisu' }, 500, corsHeaders)
     }
 
@@ -614,6 +664,9 @@ Deno.serve(async (req) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[spar-image] ERROR:', msg)
+    // Telemetria: pad generacji po wyczerpaniu retry (albo nieoczekiwany wyjątek
+    // po przejściu walidacji — telSession puste przy błędach requestu = brak bumpa)
+    await recordGenFailure(telSupabase, telSession, telView, msg, telMeta)
     return jsonResponse({ error: msg === 'openai_images_error' ? 'blad_generowania' : 'blad_serwera' }, 502, corsHeaders)
   }
 })
