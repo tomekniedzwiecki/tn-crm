@@ -184,7 +184,7 @@
 
             <!-- ══════════ IMPORT ══════════ -->
             <section id="tab-import" class="tabpanel hidden p-5 lg:p-8 max-w-[1200px] mx-auto animate-enter">
-                <div class="grid gap-6" style="grid-template-columns:2fr 1fr">
+                <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
                     <div class="min-w-0">
                         <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Import firm</h1>
                         <p class="text-zinc-500 text-sm mb-4">Format wiersza: <code class="text-zinc-300">nazwa; www; email; nip; miasto; wertykal</code> (separator <b>;</b> lub TAB; puste pola OK; nagłówek pomijany).</p>
@@ -510,9 +510,11 @@
             renderList();
             updateAkTabBadge();
             await loadKpi();
-            // podtrzymaj aktywną zakładkę (re-render list dynamicznych)
+            // podtrzymaj aktywną zakładkę (re-render list dynamicznych);
+            // ZAWSZE wywołaj showTab — panel pipeline startuje z .hidden i bez tego
+            // pierwszy load / F5 zostawia pusty ekran
             const active = document.querySelector('.tab-btn.active');
-            if (active && active.dataset.tab!=='pipeline') showTab(active.dataset.tab);
+            showTab(active ? active.dataset.tab : 'pipeline');
         }
 
         // Odśwież pojedynczy rekord + jego koszt AI po akcji silnika.
@@ -941,8 +943,24 @@
             return `<div class="dw-sec" style="border-color:rgba(229,72,77,.35)">
                 <div class="dw-sec-h" style="color:#f26d78"><i class="ph ph-prohibit"></i> STOP / opt-out</div>
                 <div class="text-[12px] text-zinc-500 mb-2.5">Wpis trafia na listę wykluczeń (suppression). Nieodwracalne z panelu — rekord nigdy nie wróci do pipeline'u.</div>
-                <button onclick="optOut('${p.id}')" class="btn btn-d btn-sm"><i class="ph ph-hand-palm"></i> Dodaj do wykluczeń (STOP)</button>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="optOut('${p.id}')" class="btn btn-d btn-sm"><i class="ph ph-hand-palm"></i> Dodaj do wykluczeń (STOP)</button>
+                    <button onclick="deleteProspect('${p.id}')" class="btn btn-sm" style="border-color:rgba(229,72,77,.35);color:#f26d78"><i class="ph ph-trash"></i> Usuń rekord</button>
+                </div>
+                <div class="text-[11px] text-zinc-600 mt-2">„Usuń" kasuje błędny wpis (duplikat, pomyłka importu). Prospekta, który poprosił o STOP, NIE usuwaj — wykluczenie musi zostać na liście.</div>
             </div>`;
+        }
+
+        async function deleteProspect(id){
+            const p = prospects.find(x=>x.id===id); if (!p) return;
+            if (p.opted_out || p.status==='opt_out'){ showToast('Rekord z opt-outem musi zostać (suppression).', 'error'); return; }
+            const ok = await uiConfirm({ title:'Usunąć ten rekord?', body:'Do sprzątania pomyłek importu/duplikatów. Historia zdarzeń zniknie razem z rekordem.', confirmLabel:'Usuń', danger:true });
+            if (!ok) return;
+            const { error } = await supabaseClient.from('wfp_prospects').delete().eq('id', id);
+            if (error){ showToast('Błąd usuwania: '+error.message, 'error'); return; }
+            closeDrawer();
+            showToast('Rekord usunięty.');
+            await loadAll();
         }
 
         async function loadHistory(id){
@@ -1210,7 +1228,7 @@
                 <div class="flex flex-wrap gap-1.5 mb-2.5">${byS}</div>
                 <div class="space-y-2">
                     <div><label class="lbl">Status</label><select id="wt-${v.id}-status" class="inp" onchange="saveVerticalStatus('${v.id}',this.value)">${statusSel}</select></div>
-                    <div><label class="lbl">Nota o saturacji / konkurencji</label><textarea id="wt-${v.id}-sat" class="inp" rows="2">${esc(v.saturation_note||'')}</textarea></div>
+                    <div><label class="lbl">Nota o saturacji / konkurencji</label><textarea id="wt-${v.id}-sat" class="inp" rows="${(v.saturation_note||'').length>90?4:2}" style="min-height:${(v.saturation_note||'').length>90?'84px':'48px'}">${esc(v.saturation_note||'')}</textarea></div>
                     <div><label class="lbl">Notatki</label><textarea id="wt-${v.id}-notes" class="inp" rows="2">${esc(v.notes||'')}</textarea></div>
                     <button onclick="saveVerticalNotes('${v.id}')" class="btn btn-g btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz notatki</button>
                 </div>
