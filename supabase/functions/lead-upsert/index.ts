@@ -55,7 +55,7 @@ interface LeadData {
   budget?: string            // v2: liczba PLN jako string
   experience?: string
   open_question?: string     // v1: "czym się zajmujesz" (deprecated dla nowych)
-  lead_source?: 'website' | 'outreach' | 'manual' | 'stworze' | 'budowanie'
+  lead_source?: 'website' | 'outreach' | 'manual' | 'stworze' | 'budowanie' | 'prospektor'
   // Tracking data
   tracking?: TrackingData
 }
@@ -196,11 +196,12 @@ Deno.serve(async (req) => {
       isNewLead = true
       console.log(`Created new lead: ${email} (id: ${leadId})`)
 
-      // Trigger lead_created automation — POMIJAMY dla 'budowanie' (/sklep) i 'stworze'
-      // (/aplikacja): te leady mają własny lejek mailowy (bud-/spar-drip + followups) i NIE
-      // powinny dostawać generycznego maila „Potwierdzenie zapisu" z /zapisy. Pozostałe
-      // źródła (website/outreach/manual) bez zmian.
-      if (data.lead_source === 'budowanie' || data.lead_source === 'stworze') {
+      // Trigger lead_created automation — POMIJAMY dla 'budowanie' (/sklep), 'stworze'
+      // (/aplikacja) i 'prospektor' (outbound Prospektor): te leady mają własny lejek /
+      // obsługę i NIE powinny dostawać generycznego maila „Potwierdzenie zapisu" z /zapisy.
+      // Dla 'prospektor' generyczny mail powitalny do prospekta = katastrofa wizerunkowa
+      // w reżimie ostrożnego outboundu. Pozostałe źródła (website/outreach/manual) bez zmian.
+      if (data.lead_source === 'budowanie' || data.lead_source === 'stworze' || data.lead_source === 'prospektor') {
         console.log(`Skipping lead_created automation for ${data.lead_source} lead ${leadId} (własny lejek)`)
       } else try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")

@@ -102,6 +102,7 @@ const NAV_ITEMS_SKLEPY = [
 // TN App (workflow budowy aplikacji SaaS po pełnej płatności /aplikacja)
 const NAV_ITEMS_APP = [
     { id: 'index', icon: 'ph-list-checks', label: 'Projekty' },
+    { id: 'prospektor', icon: 'ph-crosshair-simple', label: 'Prospektor' },
     { id: 'skrzynki', icon: 'ph-tray', label: 'Skrzynki' },
     { id: 'activation', icon: 'ph-chart-line-up', label: 'Aktywacja' },
     { id: 'rozliczenia', icon: 'ph-receipt', label: 'Rozliczenia AI' },

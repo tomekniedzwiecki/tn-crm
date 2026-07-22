@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prospektor · TN App</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-app/favicon.svg?v=2">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.91.0"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.2/src/index.js" integrity="sha384-J7cw2fbG1T4C5MirTVUxsZGaMfw2m0XsCgOQEqUvB1OF9VIsHWuZF1GmyVRzs7eu" crossorigin="anonymous"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
+        .animate-enter { animation: fadeIn .4s ease-out forwards; }
+
+        /* ── Zakładki ─────────────────────────────────────────── */
+        .tab-btn { position:relative; display:inline-flex; align-items:center; gap:7px; padding:12px 4px; margin:0 12px;
+            font-size:13.5px; color:#8b8b94; border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap; transition:color .15s; }
+        .tab-btn:first-child { margin-left:0; }
+        .tab-btn:hover { color:#e4e4e7; }
+        .tab-btn.active { color:#fff; border-bottom-color:#0070f3; }
+        .tab-btn .tb-n { font:600 10.5px/1 'JetBrains Mono',monospace; min-width:17px; height:17px; padding:0 4px; border-radius:5px;
+            display:inline-flex; align-items:center; justify-content:center; background:#f5a623; color:#000; }
+
+        /* ── KPI kafle ────────────────────────────────────────── */
+        .kpi-tile { background:#0a0a0a; border:1px solid #1f1f1f; border-radius:10px; padding:11px 13px; min-width:0; }
+        .kpi-n { font:600 21px/1 'Inter',sans-serif; color:#fff; letter-spacing:-.02em; }
+        .kpi-l { font-size:11px; color:#71717a; margin-top:4px; display:flex; align-items:center; gap:5px; }
+        .kpi-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+        /* ── Wspólne kontrolki ────────────────────────────────── */
+        .inp { width:100%; background:#0a0a0a; border:1px solid #262626; border-radius:8px; padding:8px 11px; font-size:13px; color:#fff; }
+        .inp:focus { outline:none; border-color:rgba(0,112,243,.6); }
+        textarea.inp { resize:vertical; line-height:1.5; font-family:inherit; }
+        .lbl { font-size:10.5px; color:#71717a; display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+        .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:8px; padding:8px 14px; font-size:13px;
+            font-weight:600; cursor:pointer; transition:all .15s ease; border:1px solid transparent; white-space:nowrap; }
+        .btn-p { background:#0070f3; color:#fff; } .btn-p:hover { background:#3b8bf5; }
+        .btn-w { background:#fff; color:#000; } .btn-w:hover { background:#e4e4e7; }
+        .btn-g { background:#111; border-color:#2a2a2a; color:#d4d4d8; } .btn-g:hover { background:#18181b; border-color:#3f3f46; color:#fff; }
+        .btn-d { background:transparent; border-color:#e5484d; color:#f26d78; } .btn-d:hover { background:rgba(229,72,77,.12); }
+        .btn-sm { padding:5px 10px; font-size:12px; border-radius:7px; }
+        .btn:disabled { opacity:.45; cursor:not-allowed; }
+        .card { background:#0a0a0a; border:1px solid #1f1f1f; border-radius:12px; }
+        .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:6px; border:1px solid; font-size:11px; font-weight:600; white-space:nowrap; }
+        .chip { display:inline-flex; align-items:center; gap:6px; border:1px solid #232323; background:#0a0a0a; color:#8b8b94;
+            border-radius:7px; padding:6px 11px; font-size:12px; cursor:pointer; transition:all .15s ease; user-select:none; }
+        .chip:hover { color:#e4e4e7; border-color:#333; }
+        .chip.on { color:#fff; border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.1); }
+        .chip .c-n { font:600 10.5px/1 'JetBrains Mono',monospace; color:#6b6b74; }
+        .chip.on .c-n { color:#c9c9d0; }
+
+        /* ── Tabela prospektów ────────────────────────────────── */
+        .pv-tbl { width:100%; border-collapse:collapse; min-width:820px; }
+        .pv-tbl th { text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:#52525b; font-weight:600;
+            padding:9px 12px; border-bottom:1px solid #1f1f1f; white-space:nowrap; }
+        .pv-tbl td { padding:11px 12px; border-bottom:1px solid #141414; font-size:13px; vertical-align:middle; }
+        .pv-tbl tbody tr { cursor:pointer; transition:background .12s; }
+        .pv-tbl tbody tr:hover { background:#0c0c0c; }
+
+        /* ── Drawer ───────────────────────────────────────────── */
+        #drawer { position:fixed; top:0; right:0; height:100%; width:100%; max-width:600px; background:#070707; border-left:1px solid #1f1f1f;
+            transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1); z-index:80; display:flex; flex-direction:column; }
+        #drawer.open { transform:translateX(0); }
+        #drawer-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(2px); z-index:75; }
+        .dw-sec { border:1px solid #1a1a1a; border-radius:12px; padding:15px; background:#0a0a0a; }
+        .dw-sec-h { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#71717a; font-weight:700; margin-bottom:11px; display:flex; align-items:center; gap:7px; }
+        .kv { display:grid; grid-template-columns:112px 1fr; gap:8px; padding:4px 0; font-size:12.5px; }
+        .kv .k { color:#71717a; } .kv .v { color:#d4d4d8; word-break:break-word; }
+        .minichip { display:inline-block; background:#141414; border:1px solid #232323; border-radius:5px; padding:2px 7px; font-size:11px; color:#c4c4c4; margin:0 4px 4px 0; }
+
+        @media (max-width: 640px) {
+            #drawer { max-width:100%; }
+            .kv { grid-template-columns:1fr; gap:2px; }
+        }
+        .link-a { color:#52a8ff; text-decoration:underline; text-underline-offset:2px; word-break:break-all; }
+        .link-a:hover { color:#8bc4ff; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3 min-w-0">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
+                <span class="text-zinc-500 text-xs font-mono truncate">tn-app / <span class="text-zinc-300">prospektor</span></span>
+            </div>
+            <button onclick="loadAll()" class="inline-flex items-center gap-2 border border-[#2a2a2a] bg-[#111] hover:bg-[#18181b] text-zinc-300 hover:text-white rounded-md px-3.5 py-2 text-xs font-medium transition-colors">
+                <i class="ph ph-arrows-clockwise"></i> Odśwież
+            </button>
+        </header>
+
+        <!-- Pasek zakładek -->
+        <div class="border-b border-white/5 bg-black/40 px-6 flex items-center overflow-x-auto flex-shrink-0">
+            <button class="tab-btn active" data-tab="pipeline"   onclick="showTab('pipeline')"><i class="ph ph-funnel"></i> Pipeline</button>
+            <button class="tab-btn"        data-tab="akceptacja" onclick="showTab('akceptacja')"><i class="ph ph-check-square-offset"></i> Akceptacja <span id="ak-tabn" class="tb-n hidden">0</span></button>
+            <button class="tab-btn"        data-tab="wertykale"  onclick="showTab('wertykale')"><i class="ph ph-squares-four"></i> Wertykale</button>
+            <button class="tab-btn"        data-tab="import"     onclick="showTab('import')"><i class="ph ph-upload-simple"></i> Import</button>
+            <button class="tab-btn"        data-tab="ustawienia" onclick="showTab('ustawienia')"><i class="ph ph-gear"></i> Ustawienia</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto">
+            <div id="boot" class="p-10 text-center text-zinc-600 text-sm"><i class="ph ph-circle-notch animate-spin"></i> Ładuję…</div>
+
+            <!-- ══════════ PIPELINE ══════════ -->
+            <section id="tab-pipeline" class="tabpanel hidden p-5 lg:p-8 max-w-[1500px] mx-auto animate-enter">
+                <div id="kpi-wrap" class="mb-6"></div>
+
+                <div class="card p-4 mb-4">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <label class="flex items-center gap-2 bg-[#0a0a0a] border border-[#1f1f1f] focus-within:border-[#0070f3]/50 rounded-lg px-3 py-2 flex-1 min-w-[220px]">
+                            <i class="ph ph-magnifying-glass text-zinc-500"></i>
+                            <input id="pv-search" type="text" oninput="renderList()" placeholder="Szukaj: firma, e-mail, miasto, NIP…" class="bg-transparent outline-none text-white text-sm w-full">
+                        </label>
+                        <select id="pv-vert" onchange="renderList()" class="inp !w-auto min-w-[170px]"><option value="">Wszystkie wertykale</option></select>
+                        <label class="chip" style="cursor:pointer"><input id="pv-optout" type="checkbox" onchange="renderList()" class="accent-[#0070f3]"> Pokaż opt-out</label>
+                    </div>
+                    <div id="pv-status-chips" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Batch -->
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                    <label class="flex items-center gap-2 text-xs text-zinc-400"><input id="pv-selall" type="checkbox" onchange="toggleSelectAll(this.checked)" class="accent-[#0070f3]"> Zaznacz widoczne</label>
+                    <span id="pv-selcount" class="text-xs text-zinc-600"></span>
+                    <button id="pv-batch-btn" onclick="runBatch()" class="btn btn-p btn-sm" disabled><i class="ph ph-stack"></i> Przetwórz zaznaczone</button>
+                    <div id="batch-progress-wrap" class="hidden flex items-center gap-3 flex-1 min-w-[240px]">
+                        <div class="flex-1 h-2 bg-[#141414] rounded-full overflow-hidden"><div id="batch-bar" class="h-full bg-[#0070f3] transition-all" style="width:0%"></div></div>
+                        <span id="batch-text" class="text-xs text-zinc-400 whitespace-nowrap"></span>
+                        <button onclick="batchStop=true" class="btn btn-d btn-sm"><i class="ph ph-stop"></i> Stop</button>
+                    </div>
+                    <span id="pv-count" class="text-xs text-zinc-600 font-mono ml-auto"></span>
+                </div>
+
+                <div class="card overflow-x-auto">
+                    <table class="pv-tbl">
+                        <thead><tr>
+                            <th style="width:34px"></th>
+                            <th>Firma</th><th>Wertykał</th><th>Miasto</th><th>Status</th>
+                            <th class="text-right">Score</th><th class="text-right">Koszt AI</th><th>Aktywność</th>
+                        </tr></thead>
+                        <tbody id="pv-rows"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ══════════ AKCEPTACJA ══════════ -->
+            <section id="tab-akceptacja" class="tabpanel hidden p-5 lg:p-8 max-w-[900px] mx-auto animate-enter">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-white tracking-tight">Kolejka akceptacji</h1>
+                        <p class="text-zinc-500 text-sm mt-0.5">Każda wiadomość zatwierdzana ręcznie. System nigdy nie wysyła — tworzy tylko draft w Gmailu.</p>
+                    </div>
+                    <span id="ak-counter" class="badge bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40 text-[12.5px]">0 czeka na Ciebie</span>
+                </div>
+                <div id="ak-list" class="space-y-4"></div>
+            </section>
+
+            <!-- ══════════ WERTYKALE ══════════ -->
+            <section id="tab-wertykale" class="tabpanel hidden p-5 lg:p-8 max-w-[1200px] mx-auto animate-enter">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-white tracking-tight">Wertykale</h1>
+                        <p class="text-zinc-500 text-sm mt-0.5">Rejestr branż i wyłączność. „Zajęty" blokuje generator pomysłów; „odrzucony" = saturacja.</p>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <div><label class="lbl">Nowy wertykał (nazwa)</label><input id="wt-newname" class="inp !w-[220px]" placeholder="np. Instalatorzy PV"></div>
+                        <button onclick="addVertical()" class="btn btn-w"><i class="ph ph-plus"></i> Dodaj</button>
+                    </div>
+                </div>
+                <div id="wt-list" class="grid gap-4" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))"></div>
+            </section>
+
+            <!-- ══════════ IMPORT ══════════ -->
+            <section id="tab-import" class="tabpanel hidden p-5 lg:p-8 max-w-[1200px] mx-auto animate-enter">
+                <div class="grid gap-6" style="grid-template-columns:2fr 1fr">
+                    <div class="min-w-0">
+                        <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Import firm</h1>
+                        <p class="text-zinc-500 text-sm mb-4">Format wiersza: <code class="text-zinc-300">nazwa; www; email; nip; miasto; wertykal</code> (separator <b>;</b> lub TAB; puste pola OK; nagłówek pomijany).</p>
+                        <textarea id="imp-text" class="inp mb-3" rows="9" placeholder="Firma ABC; abc.pl; biuro@abc.pl; 1234567890; Kraków; instalatorzy-pv&#10;Firma XYZ; xyz.pl; kontakt@xyz.pl; ; Wrocław;"></textarea>
+                        <div class="flex flex-wrap items-center gap-3 mb-4">
+                            <button onclick="analyzeImport()" class="btn btn-g"><i class="ph ph-magic-wand"></i> Sprawdź i podejrzyj</button>
+                            <div><label class="lbl inline">Domyślny wertykał</label> <select id="imp-vert" class="inp !w-auto inline-block"><option value="">— brak —</option></select></div>
+                        </div>
+                        <div id="imp-preview"></div>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="card p-4 mb-4">
+                            <div class="dw-sec-h"><i class="ph ph-buildings"></i> Dodaj 1 firmę</div>
+                            <div class="space-y-2.5">
+                                <div><label class="lbl">Nazwa *</label><input id="sf-name" class="inp"></div>
+                                <div><label class="lbl">WWW</label><input id="sf-www" class="inp" placeholder="firma.pl"></div>
+                                <div><label class="lbl">E-mail</label><input id="sf-email" class="inp"></div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="lbl">NIP</label><input id="sf-nip" class="inp"></div>
+                                    <div><label class="lbl">Miasto</label><input id="sf-city" class="inp"></div>
+                                </div>
+                                <div><label class="lbl">Wertykał</label><select id="sf-vert" class="inp"><option value="">— brak —</option></select></div>
+                                <button onclick="addSingle()" class="btn btn-w w-full"><i class="ph ph-plus"></i> Dodaj firmę</button>
+                            </div>
+                        </div>
+                        <div class="card p-4 text-[12px] text-zinc-500 leading-relaxed">
+                            <div class="dw-sec-h"><i class="ph ph-info"></i> Źródła danych</div>
+                            CEIDG / GUS / KRS / strony firm. <b class="text-zinc-400">Nie kupuj gotowych baz</b> — brak rozliczalnych zgód. Dedup po e-mail/NIP/www chroni przed duplikatami i wskrzeszeniem opt-outów.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ══════════ USTAWIENIA ══════════ -->
+            <section id="tab-ustawienia" class="tabpanel hidden p-5 lg:p-8 max-w-[1000px] mx-auto animate-enter">
+                <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Ustawienia</h1>
+                <p class="text-zinc-500 text-sm mb-6">Prompty AI i stopka prawna. Zapis tworzy kopię zapasową poprzedniej wartości (klucz <code>&lt;key&gt;_backup_RRRRMMDDHHMMSS</code>).</p>
+                <div id="set-wrap" class="space-y-5"></div>
+
+                <div class="card p-5 mt-8">
+                    <div class="dw-sec-h"><i class="ph ph-scales"></i> Zasady (checklista prawna)</div>
+                    <ul class="text-[13px] text-zinc-400 space-y-2 leading-relaxed list-none">
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> PKE art. 398 — cold mail „partnerski" to nadal informacja handlowa. Zarządzamy ryzykiem świadomie.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Pierwszy mail neutralny: bez ofert, cen, linków i załączników.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Opt-out realizowany natychmiast (odpowiedź „STOP" → suppression, rekord nie wraca).</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Źródło danych i klauzula RODO w stopce (doklejane serwerowo przy tworzeniu draftu).</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Preferuj adresy ogólne (biuro@, kontakt@); tor LinkedIn = niższe ryzyko.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Limit wysyłki ręcznej ~20–30/dzień. Śledzenie otwarć w Resend WYŁĄCZONE — mierzymy odpowiedzi.</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Drawer szczegółu -->
+    <div id="drawer-backdrop" class="hidden" onclick="closeDrawer()"></div>
+    <aside id="drawer">
+        <div class="flex items-center justify-between px-5 h-14 border-b border-[#1a1a1a] flex-shrink-0">
+            <div class="min-w-0 flex items-center gap-2.5">
+                <i class="ph ph-crosshair-simple text-[#52a8ff]"></i>
+                <span id="dw-title" class="text-white font-semibold truncate"></span>
+            </div>
+            <button onclick="closeDrawer()" class="p-2 -mr-2 text-zinc-500 hover:text-white"><i class="ph ph-x text-lg"></i></button>
+        </div>
+        <div id="dw-body" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
+    </aside>
+
+    <!-- Modal potwierdzenia (uiConfirm) -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)cmClose(false)">
+        <div class="w-full max-w-md card p-6">
+            <div class="flex items-start gap-3.5 mb-5">
+                <div id="cm-icon" class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(0,112,243,.12);border:1px solid rgba(0,112,243,.4)"><i class="ph ph-question text-[20px] text-[#52a8ff]"></i></div>
+                <div class="min-w-0">
+                    <div id="cm-title" class="text-white font-semibold text-[15.5px]"></div>
+                    <div id="cm-body" class="text-zinc-400 text-[13px] mt-1.5 leading-relaxed"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2.5">
+                <button onclick="cmClose(false)" class="btn btn-g">Anuluj</button>
+                <button id="cm-ok" onclick="cmClose(true)" class="btn btn-w">Potwierdź</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const WFP_ENGINE = SUPABASE_URL + '/functions/v1/wfp-engine';
+        const LEAD_UPSERT = SUPABASE_URL + '/functions/v1/lead-upsert';
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        // ═══════════ STAŁE / META ═══════════
+        const STATUS_ORDER = ['nowy','research','pomysl','mail_gotowy','zaakceptowany','wyslany','odpowiedzial','rozmowa','sparing','deal','odpadl','opt_out'];
+        // Zieleń TYLKO dla 'deal' (zasada „zieleń tylko done"). Fioletu/rose unikamy (styl modułu).
+        const STATUS_META = {
+            nowy:         { label:'Nowy',          cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',  dot:'#a1a1aa' },
+            research:     { label:'Zbadany',       cls:'bg-sky-500/10 text-sky-300 border-sky-500/30',      dot:'#38bdf8' },
+            pomysl:       { label:'Pomysł',        cls:'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40',dot:'#0070f3' },
+            mail_gotowy:  { label:'Mail gotowy',   cls:'bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40',dot:'#f5a623' },
+            zaakceptowany:{ label:'Zaakceptowany', cls:'bg-teal-500/10 text-teal-300 border-teal-500/30',   dot:'#2dd4bf' },
+            wyslany:      { label:'Wysłany',       cls:'bg-[#0891b2]/10 text-[#3fc5e0] border-[#0891b2]/40',dot:'#0891b2' },
+            odpowiedzial: { label:'Odpowiedział',  cls:'bg-cyan-400/10 text-cyan-200 border-cyan-400/30',   dot:'#67e8f9' },
+            rozmowa:      { label:'Rozmowa',       cls:'bg-orange-500/10 text-orange-300 border-orange-500/30', dot:'#fb923c' },
+            sparing:      { label:'Sparing',       cls:'bg-amber-400/10 text-amber-200 border-amber-400/30', dot:'#fbbf24' },
+            deal:         { label:'Deal',          cls:'bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40',dot:'#45a557' },
+            odpadl:       { label:'Odpadł',        cls:'bg-zinc-600/15 text-zinc-500 border-zinc-600/30',   dot:'#52525b' },
+            opt_out:      { label:'Opt-out',       cls:'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40',dot:'#e5484d' },
+        };
+        const RANK = { nowy:0, research:1, pomysl:2, mail_gotowy:3, zaakceptowany:4, wyslany:5, odpowiedzial:6, rozmowa:7, sparing:8, deal:9 };
+        const VERT_STATUS = {
+            otwarty:   { label:'Otwarty',   cls:'bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40' },
+            w_grze:    { label:'W grze',    cls:'bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40' },
+            zajety:    { label:'Zajęty',    cls:'bg-[#0891b2]/10 text-[#3fc5e0] border-[#0891b2]/40' },
+            odrzucony: { label:'Odrzucony', cls:'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40' },
+        };
+        const STEP_PL = { research:'research', idea:'pomysł', mail:'wiadomości' };
+        // Kody błędów silnika → komunikaty po polsku (409 i inne).
+        const ERR_PL = {
+            dzienny_limit:      'Osiągnięto dzienny limit akcji AI. Chronimy wspólną quotę OpenAI — spróbuj później.',
+            wertykal_zajety:    'Wertykał zajęty (deal/sparing) — generator pomysłów zablokowany.',
+            wertykal_odrzucony: 'Wertykał odrzucony (saturacja) — generator pomysłów zablokowany.',
+            brak_wertykalu:     'Przypisz wertykał do prospekta przed generowaniem pomysłu.',
+            zbyt_szybko:        'Za szybko — ta sama akcja przed chwilą. Poczekaj kilka sekund.',
+            opted_out:          'Prospekt na liście wykluczeń (opt-out) — akcje AI/draft zablokowane.',
+            juz_utworzony:      'Draft pierwszego kontaktu już istnieje dla tego prospekta.',
+        };
+        const SETTING_KEYS = [
+            { key:'wfp_prompt_research', label:'Prompt — research firmy', hint:'System prompt analityka (min. 200 znaków).', rows:8 },
+            { key:'wfp_prompt_idea',     label:'Prompt — pomysł aplikacji', hint:'System prompt stratega vertical SaaS (min. 200 znaków).', rows:8 },
+            { key:'wfp_prompt_mail',     label:'Prompt — pierwszy kontakt', hint:'System prompt copy 1. kontaktu (min. 200 znaków).', rows:8 },
+            { key:'wfp_stopka_prawna',   label:'Stopka prawna (doklejana serwerowo)', hint:'Musi zawierać „STOP" i „RODO" (min. 120 znaków). Nigdy nie trafia do pól edycji maila.', rows:8 },
+        ];
+
+        // ═══════════ STAN ═══════════
+        let verticals = [];
+        let prospects = [];
+        let usageByProspect = {};   // id -> suma cost_usd
+        let statusCounts = {};
+        let vCounts = {};           // vertical_id -> {total, byStatus:{}}
+        let kpi = null; let kpiOk = false;
+        let usdPln = 4.0;           // fallback
+        let settingsCache = {};     // key -> value (prompty)
+        const stopkaById = {};      // id -> stopka_preview (z ostatniej akcji mail, tylko w pamięci)
+        let statusFilter = new Set();
+        const selected = new Set();
+        const busyIds = new Set();
+        const akSkipped = new Set();
+        let importRows = [];
+        let curDrawerId = null;
+        let activeVariant = 'A';
+        let mailBuf = {};
+        let batchRunning = false, batchStop = false;
+
+        // ═══════════ HELPERY ═══════════
+        function escapeHtml(str){
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        const esc = escapeHtml;
+        // [W3] tylko http/https w href — chroni przed javascript:/data: (escapeHtml tego nie łapie).
+        function safeUrl(u){ return (u && /^https?:\/\//i.test(String(u).trim())) ? String(u).trim() : '#'; }
+        function foldStr(s){
+            return (s||'').toLowerCase()
+                .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e').replace(/ł/g,'l')
+                .replace(/ń/g,'n').replace(/ó/g,'o').replace(/ś/g,'s').replace(/ż/g,'z').replace(/ź/g,'z');
+        }
+        function showToast(message, type='info'){
+            const t = document.createElement('div');
+            const bg = type==='success' ? '#45a557' : type==='error' ? '#e5484d' : '#0070f3';
+            t.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;max-width:380px;background:${bg};color:#fff;padding:12px 18px;border-radius:8px;font:13.5px/1.4 Inter,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);transition:opacity .3s`;
+            t.textContent = message;
+            document.body.appendChild(t);
+            setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, type==='error'?4200:2600);
+        }
+        function fmtUsdToPln(usd){ const v = (Number(usd)||0)*usdPln; return v>=100 ? v.toFixed(0)+' zł' : v.toFixed(2)+' zł'; }
+        function fmtDate(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return '—';
+            return d.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}); }
+        function relDate(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return '—';
+            const diff=Math.round((Date.now()-d.getTime())/86400000);
+            if(diff<=0) return 'dziś'; if(diff===1) return 'wczoraj'; if(diff<7) return diff+' dni temu';
+            if(diff<30) return Math.floor(diff/7)+' tyg. temu'; return Math.floor(diff/30)+' mies. temu'; }
+        function verticalName(id){ const v=verticals.find(x=>x.id===id); return v ? v.name : '—'; }
+        function verticalStatus(id){ const v=verticals.find(x=>x.id===id); return v ? v.status : null; }
+        function statusBadge(s){ const m=STATUS_META[s]||{label:s,cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'}; return `<span class="badge ${m.cls}">${esc(m.label)}</span>`; }
+        function slugify(s){ return foldStr(s).trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60); }
+        function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+        function normWww(w){ if(!w) return ''; return String(w).trim().replace(/^https?:\/\//i,'').replace(/^www\./i,'').replace(/\/+$/,'').toLowerCase(); }
+        const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        // .rpc() nie ma .catch() (lekcja 13.07) — owijamy w Promise.resolve().then(ok,err).
+        function safeRpc(name, args){ return Promise.resolve(supabaseClient.rpc(name, args)).then(r=>r, e=>({data:null, error:e})); }
+
+        async function checkAuth(){
+            const { data:{ session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            const { error:userErr } = await supabaseClient.auth.getUser();
+            if (userErr) { await supabaseClient.auth.signOut(); window.location.href = Sidebar.getLoginPath(); return null; }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const me = (data||[]).find(m => m.user_id === session.user.id);
+            if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
+            Sidebar.showAdminNav(me?.role === 'admin');
+            return session;
+        }
+
+        // Wywołanie silnika wfp-engine (JWT sesji + apikey). Rzuca Error z .code/.status przy błędzie.
+        async function callEngine(body){
+            const { data:{ session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); throw new Error('Brak sesji'); }
+            const res = await fetch(WFP_ENGINE, {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token, 'apikey':SUPABASE_ANON_KEY },
+                body: JSON.stringify(body)
+            });
+            let json = null; try { json = await res.json(); } catch(_) {}
+            if (!res.ok){
+                const code = json && json.error;
+                const msg = ERR_PL[code] || (json && json.message) || ('Błąd '+res.status);
+                const e = new Error(msg); e.code = code; e.status = res.status; e.json = json; throw e;
+            }
+            return json || {};
+        }
+
+        // ═══════════ MODAL POTWIERDZENIA ═══════════
+        let _cmResolve = null;
+        function uiConfirm({ title, body, confirmLabel='Potwierdź', danger=false }){
+            return new Promise(res => {
+                _cmResolve = res;
+                document.getElementById('cm-title').textContent = title;
+                document.getElementById('cm-body').textContent = body || '';
+                const icon = document.getElementById('cm-icon');
+                icon.style.background = danger ? 'rgba(229,72,77,.12)' : 'rgba(0,112,243,.12)';
+                icon.style.border = danger ? '1px solid rgba(229,72,77,.4)' : '1px solid rgba(0,112,243,.4)';
+                icon.innerHTML = danger ? '<i class="ph ph-warning text-[20px] text-[#f26d78]"></i>' : '<i class="ph ph-question text-[20px] text-[#52a8ff]"></i>';
+                const ok = document.getElementById('cm-ok');
+                ok.textContent = confirmLabel; ok.className = 'btn ' + (danger ? 'btn-d' : 'btn-w');
+                document.getElementById('confirm-modal').classList.remove('hidden');
+            });
+        }
+        function cmClose(v){ document.getElementById('confirm-modal').classList.add('hidden'); if(_cmResolve){ const r=_cmResolve; _cmResolve=null; r(v); } }
+
+        // ═══════════ ZAKŁADKI ═══════════
+        function showTab(name){
+            document.querySelectorAll('.tabpanel').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
+            const panel = document.getElementById('tab-'+name); if (panel) panel.classList.remove('hidden');
+            if (name==='akceptacja') renderAkceptacja();
+            if (name==='wertykale') renderWertykale();
+            if (name==='ustawienia') renderSettings();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const cm = document.getElementById('confirm-modal');
+            if (cm && !cm.classList.contains('hidden')) { cmClose(false); return; }
+            const dr = document.getElementById('drawer');
+            if (dr && dr.classList.contains('open')) closeDrawer();
+        });
+
+        // ═══════════ ŁADOWANIE DANYCH ═══════════
+        // PostgREST tnie do 1000 wierszy — pełna paginacja (wzorzec fetchAllSteps).
+        async function fetchAllProspects(){
+            const all = []; const PAGE = 1000;
+            for (let from=0; ; from+=PAGE){
+                const { data, error } = await supabaseClient.from('wfp_prospects').select('*')
+                    .order('updated_at',{ ascending:false }).range(from, from+PAGE-1);
+                if (error){ console.error('wfp_prospects', from, error); showToast('Błąd listy prospektów: '+error.message,'error'); break; }
+                all.push(...(data||[]));
+                if (!data || data.length < PAGE) break;
+            }
+            return all;
+        }
+        async function fetchAllUsage(){
+            const map = {}; const PAGE = 1000;
+            for (let from=0; ; from+=PAGE){
+                const { data, error } = await supabaseClient.from('wfp_usage').select('prospect_id, cost_usd').range(from, from+PAGE-1);
+                if (error){ console.warn('wfp_usage', error); break; }
+                (data||[]).forEach(r => { if (r.prospect_id) map[r.prospect_id] = (map[r.prospect_id]||0) + (Number(r.cost_usd)||0); });
+                if (!data || data.length < PAGE) break;
+            }
+            return map;
+        }
+        function buildIdx(p){
+            p._idx = foldStr([p.company_name, p.email, p.city, p.contact_person, p.contact_role, p.nip, verticalName(p.vertical_id)].filter(Boolean).join(' '));
+        }
+        function recompute(){
+            statusCounts = {}; vCounts = {};
+            prospects.forEach(p => {
+                statusCounts[p.status] = (statusCounts[p.status]||0)+1;
+                const vid = p.vertical_id || '__none';
+                if (!vCounts[vid]) vCounts[vid] = { total:0, byStatus:{} };
+                vCounts[vid].total++;
+                vCounts[vid].byStatus[p.status] = (vCounts[vid].byStatus[p.status]||0)+1;
+            });
+        }
+        async function loadKpi(){
+            const { data, error } = await safeRpc('wfp_kpi');
+            if (error || !data){ kpiOk = false; kpi = null; if (error) console.warn('wfp_kpi', error); }
+            else { kpi = data; kpiOk = true; }
+            renderKpi();
+        }
+        async function loadAll(){
+            // kurs USD→PLN (settings) — cichy fallback 4.0 gdy RLS nie odda
+            try {
+                const { data:sr } = await supabaseClient.from('settings').select('value').eq('key','usd_pln_rate').maybeSingle();
+                if (sr && sr.value){ const n = parseFloat(sr.value); if (!isNaN(n) && n>0) usdPln = n; }
+            } catch(_) {}
+
+            const vq = await supabaseClient.from('wfp_verticals').select('*').order('name');
+            if (vq.error){ console.error('wfp_verticals', vq.error); showToast('Błąd wertykali: '+vq.error.message,'error'); }
+            verticals = vq.data || [];
+
+            const [pRows, uMap] = await Promise.all([ fetchAllProspects(), fetchAllUsage() ]);
+            prospects = pRows; usageByProspect = uMap;
+            prospects.forEach(buildIdx);
+            recompute();
+
+            const boot = document.getElementById('boot'); if (boot) boot.classList.add('hidden');
+            fillVerticalSelects();
+            renderStatusChips();
+            renderList();
+            updateAkTabBadge();
+            await loadKpi();
+            // podtrzymaj aktywną zakładkę (re-render list dynamicznych)
+            const active = document.querySelector('.tab-btn.active');
+            if (active && active.dataset.tab!=='pipeline') showTab(active.dataset.tab);
+        }
+
+        // Odśwież pojedynczy rekord + jego koszt AI po akcji silnika.
+        async function refetchProspect(id){
+            const { data, error } = await supabaseClient.from('wfp_prospects').select('*').eq('id', id).maybeSingle();
+            if (error){ console.warn('refetch prospect', error); return null; }
+            if (data){
+                const i = prospects.findIndex(x => x.id===id);
+                if (i>=0) prospects[i] = data; else prospects.unshift(data);
+                buildIdx(data);
+            }
+            try {
+                const { data:u } = await supabaseClient.from('wfp_usage').select('cost_usd').eq('prospect_id', id);
+                usageByProspect[id] = (u||[]).reduce((s,r)=>s+(Number(r.cost_usd)||0),0);
+            } catch(_) {}
+            recompute(); renderStatusChips(); renderList(); updateAkTabBadge();
+            return data;
+        }
+
+        function fillVerticalSelects(){
+            const opts = '<option value="">— brak —</option>' + verticals.map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('');
+            const pvAll = '<option value="">Wszystkie wertykale</option>' + verticals.map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('');
+            const pv = document.getElementById('pv-vert'); if (pv){ const cur=pv.value; pv.innerHTML=pvAll; pv.value=cur; }
+            ['imp-vert','sf-vert'].forEach(idv => { const el=document.getElementById(idv); if(el){ const cur=el.value; el.innerHTML=opts; el.value=cur; } });
+        }
+
+        (async () => {
+            const session = await checkAuth();
+            if (!session) return;
+            await loadAll();
+            openDeepLink();
+        })();
+
+        // ═══════════ KPI ═══════════
+        function cnt(status){
+            if (kpiOk && kpi && kpi.counts_per_status && kpi.counts_per_status[status]!==undefined) return kpi.counts_per_status[status]||0;
+            return statusCounts[status]||0;
+        }
+        function renderKpi(){
+            const wrap = document.getElementById('kpi-wrap'); if (!wrap) return;
+            const costUsd = (kpiOk && kpi && kpi.costs && kpi.costs.total_usd!==undefined)
+                ? kpi.costs.total_usd
+                : Object.values(usageByProspect).reduce((s,v)=>s+v,0);
+            // reply-rate = (odpowiedzial i dalej) / (wyslany i dalej)
+            const sum = arr => arr.reduce((s,x)=>s+cnt(x),0);
+            const sentPlus = sum(['wyslany','odpowiedzial','rozmowa','sparing','deal']);
+            const repliedPlus = sum(['odpowiedzial','rozmowa','sparing','deal']);
+            const replyRate = sentPlus>0 ? Math.round(repliedPlus/sentPlus*100) : 0;
+            // aging: mail_gotowy > 3 dni (z listy — pełna paginacja)
+            const now = Date.now();
+            const aging = prospects.filter(p => p.status==='mail_gotowy' && (now - new Date(p.updated_at||p.created_at).getTime()) > 3*86400000).length;
+
+            const tile = (n, label, dot) => `<div class="kpi-tile"><div class="kpi-n">${n}</div><div class="kpi-l">${dot?`<span class="kpi-dot" style="background:${dot}"></span>`:''}${esc(label)}</div></div>`;
+            const tiles = [
+                tile(cnt('nowy'),'Nowe', STATUS_META.nowy.dot),
+                tile(cnt('research'),'Zbadane', STATUS_META.research.dot),
+                tile(cnt('pomysl'),'Pomysły', STATUS_META.pomysl.dot),
+                tile(cnt('mail_gotowy'),'Do akceptacji', STATUS_META.mail_gotowy.dot),
+                tile(cnt('wyslany'),'Wysłane', STATUS_META.wyslany.dot),
+                tile(cnt('odpowiedzial'),'Odpowiedzi', STATUS_META.odpowiedzial.dot),
+                tile(cnt('rozmowa')+cnt('sparing'),'Rozmowy', STATUS_META.rozmowa.dot),
+                tile(cnt('deal'),'Deale', STATUS_META.deal.dot),
+                tile(replyRate+'%','Reply-rate', '#52a8ff'),
+                tile(fmtUsdToPln(costUsd),'Koszt AI', '#f5a623'),
+            ];
+            if (aging>0) tiles.push(tile(aging,'Zalega >3 dni', '#e5484d'));
+            let html = `<div class="grid gap-2.5" style="grid-template-columns:repeat(auto-fill,minmax(118px,1fr))">${tiles.join('')}</div>`;
+            if (!kpiOk) html += `<div class="text-[11px] text-zinc-600 mt-2"><i class="ph ph-warning-circle"></i> KPI z RPC niedostępne — liczniki z załadowanej listy (pełna paginacja).</div>`;
+            // reply-rate per wertykal (z listy — pełna paginacja, nie ucięte)
+            const vr = verticals.map(v => {
+                const bs = (vCounts[v.id]||{}).byStatus || {};
+                const sp = ['wyslany','odpowiedzial','rozmowa','sparing','deal'].reduce((s,x)=>s+(bs[x]||0),0);
+                const rp = ['odpowiedzial','rozmowa','sparing','deal'].reduce((s,x)=>s+(bs[x]||0),0);
+                return sp>0 ? { name:v.name, rate:Math.round(rp/sp*100), sp } : null;
+            }).filter(Boolean).sort((a,b)=>b.rate-a.rate);
+            if (vr.length){
+                html += `<div class="mt-2 flex flex-wrap gap-2 items-center text-[11px] text-zinc-500"><span class="text-zinc-600">Reply/wertykał:</span>`
+                    + vr.map(x => `<span class="minichip" style="margin:0">${esc(x.name)}: <b class="text-zinc-300">${x.rate}%</b> <span class="text-zinc-600">(${x.sp})</span></span>`).join('') + `</div>`;
+            }
+            wrap.innerHTML = html;
+        }
+
+        // ═══════════ FILTRY / CHIPY STATUSU ═══════════
+        function renderStatusChips(){
+            const wrap = document.getElementById('pv-status-chips'); if (!wrap) return;
+            wrap.innerHTML = STATUS_ORDER.filter(s=>s!=='opt_out').map(s => {
+                const m = STATUS_META[s]; const n = statusCounts[s]||0; const on = statusFilter.has(s);
+                return `<button class="chip ${on?'on':''}" onclick="toggleStatusFilter('${s}')"><span class="kpi-dot" style="background:${m.dot}"></span>${esc(m.label)}<span class="c-n">${n}</span></button>`;
+            }).join('') + (statusFilter.size ? `<button class="chip" onclick="clearStatusFilter()"><i class="ph ph-x"></i> Wyczyść</button>` : '');
+        }
+        function toggleStatusFilter(s){ if (statusFilter.has(s)) statusFilter.delete(s); else statusFilter.add(s); renderStatusChips(); renderList(); }
+        function clearStatusFilter(){ statusFilter.clear(); renderStatusChips(); renderList(); }
+
+        // ═══════════ LISTA PROSPEKTÓW ═══════════
+        function filteredProspects(){
+            let rows = prospects.slice();
+            const showOpt = document.getElementById('pv-optout')?.checked;
+            if (!showOpt) rows = rows.filter(p => !p.opted_out && p.status!=='opt_out');
+            if (statusFilter.size) rows = rows.filter(p => statusFilter.has(p.status));
+            const vf = document.getElementById('pv-vert')?.value;
+            if (vf) rows = rows.filter(p => p.vertical_id===vf);
+            const q = foldStr((document.getElementById('pv-search')?.value||'').trim());
+            if (q){ const toks=q.split(/\s+/).filter(Boolean); rows = rows.filter(p => toks.every(t => (p._idx||'').includes(t))); }
+            rows.sort((a,b)=> new Date(b.updated_at||b.created_at) - new Date(a.updated_at||a.created_at));
+            return rows;
+        }
+        function renderList(){
+            const tbody = document.getElementById('pv-rows'); if (!tbody) return;
+            const rows = filteredProspects();
+            document.getElementById('pv-count').textContent = rows.length + ' ' + (rows.length===1?'prospekt':(rows.length<5&&rows.length>1?'prospekty':'prospektów'));
+            if (!rows.length){ tbody.innerHTML = `<tr><td colspan="8" class="text-center text-zinc-600 py-10">Brak prospektów dla tych filtrów.</td></tr>`; }
+            else tbody.innerHTML = rows.map(rowHtml).join('');
+            // odśwież stan „zaznacz widoczne"
+            const visIds = rows.map(r=>r.id);
+            const allSel = visIds.length>0 && visIds.every(id => selected.has(id));
+            const selall = document.getElementById('pv-selall'); if (selall) selall.checked = allSel;
+            updateSelCount();
+        }
+        function rowHtml(p){
+            const vSt = verticalStatus(p.vertical_id);
+            const vBadge = vSt && (vSt==='zajety'||vSt==='odrzucony') ? ` <span class="badge ${VERT_STATUS[vSt].cls}" style="padding:1px 6px;font-size:9.5px">${esc(VERT_STATUS[vSt].label)}</span>` : '';
+            const cost = usageByProspect[p.id] ? fmtUsdToPln(usageByProspect[p.id]) : '<span class="text-zinc-700">—</span>';
+            const score = (p.score!==null && p.score!==undefined) ? `<span class="font-mono text-zinc-300">${p.score}</span>` : '<span class="text-zinc-700">—</span>';
+            const optFlag = p.opted_out ? ' <i class="ph ph-prohibit text-[#f26d78]" title="opt-out"></i>' : '';
+            const checked = selected.has(p.id) ? 'checked' : '';
+            return `<tr onclick="openDrawer('${p.id}')">
+                <td onclick="event.stopPropagation()"><input type="checkbox" ${checked} onchange="toggleRowSelect('${p.id}',this.checked)" class="accent-[#0070f3]"></td>
+                <td><div class="text-white font-medium truncate max-w-[240px]">${esc(p.company_name)}${optFlag}</div>
+                    <div class="text-zinc-600 text-[11px] truncate max-w-[240px]">${esc(p.email||p.www||'—')}</div></td>
+                <td class="text-zinc-400 text-[12.5px]">${esc(verticalName(p.vertical_id))}${vBadge}</td>
+                <td class="text-zinc-400 text-[12.5px]">${esc(p.city||'—')}</td>
+                <td>${statusBadge(p.status)}</td>
+                <td class="text-right">${score}</td>
+                <td class="text-right text-[12px] text-zinc-400 font-mono">${cost}</td>
+                <td class="text-zinc-500 text-[12px] whitespace-nowrap">${esc(relDate(p.updated_at||p.created_at))}</td>
+            </tr>`;
+        }
+
+        // ═══════════ ZAZNACZANIE / BATCH ═══════════
+        function toggleRowSelect(id, on){ if (on) selected.add(id); else selected.delete(id); updateSelCount(); }
+        function toggleSelectAll(on){ filteredProspects().forEach(p => { if (on) selected.add(p.id); else selected.delete(p.id); }); renderList(); }
+        function updateSelCount(){
+            const n = selected.size;
+            document.getElementById('pv-selcount').textContent = n ? (n+' zaznaczonych') : '';
+            const btn = document.getElementById('pv-batch-btn'); if (btn) btn.disabled = n===0 || batchRunning;
+        }
+        function setBatchText(txt, pct){ document.getElementById('batch-text').textContent = txt; document.getElementById('batch-bar').style.width = Math.max(0,Math.min(100,pct))+'%'; }
+        async function runBatch(){
+            const ids = filteredProspects().filter(p => selected.has(p.id)).map(p => p.id);
+            if (!ids.length){ showToast('Zaznacz prospekty do przetworzenia','error'); return; }
+            batchRunning = true; batchStop = false;
+            document.getElementById('pv-batch-btn').disabled = true;
+            document.getElementById('batch-progress-wrap').classList.remove('hidden');
+            const steps = ['research','idea','mail']; const total = ids.length;
+            for (let i=0; i<ids.length; i++){
+                if (batchStop) break;
+                const p = prospects.find(x => x.id===ids[i]); if (!p) continue;
+                if (p.opted_out || p.status==='opt_out' || p.status==='odpadl'){ setBatchText(`${i+1}/${total}: ${p.company_name} — pominięto`, (i+1)/total*100); continue; }
+                for (const st of steps){
+                    if (batchStop) break;
+                    setBatchText(`${i+1}/${total}: ${p.company_name} — ${STEP_PL[st]}…`, (i+ steps.indexOf(st)/steps.length)/total*100);
+                    try {
+                        await callEngine({ action:st, prospectId:p.id });
+                        await refetchProspect(p.id);
+                    } catch(e){
+                        if (e.code==='dzienny_limit'){ showToast(ERR_PL.dzienny_limit,'error'); batchStop=true; break; }
+                        if (e.code==='zbyt_szybko'){ await sleep(1300);
+                            try { await callEngine({ action:st, prospectId:p.id }); await refetchProspect(p.id); continue; } catch(_){ break; } }
+                        // brak_wertykalu / wertykal_zajety / odrzucony / opted_out → dalej ten prospekt się nie posunie
+                        showToast(`${p.company_name} (${STEP_PL[st]}): ${e.message}`,'error'); break;
+                    }
+                }
+                setBatchText(`${i+1}/${total} przetworzono`, (i+1)/total*100);
+            }
+            batchRunning = false;
+            document.getElementById('batch-progress-wrap').classList.add('hidden');
+            renderList(); loadKpi();
+            showToast(batchStop ? 'Przetwarzanie przerwane' : 'Przetwarzanie zakończone', batchStop ? 'info' : 'success');
+        }
+
+        // ═══════════ DRAWER ═══════════
+        function closeDrawer(){
+            curDrawerId = null;
+            document.getElementById('drawer').classList.remove('open');
+            document.getElementById('drawer-backdrop').classList.add('hidden');
+            if (location.search) history.replaceState(null,'',location.pathname);
+        }
+        function openDrawer(id){
+            const p = prospects.find(x => x.id===id); if (!p){ showToast('Nie znaleziono prospekta','error'); return; }
+            curDrawerId = id; activeVariant = 'A';
+            const m = p.mail || {};
+            mailBuf = {
+                temat:m.temat||'', tresc:m.tresc||'', temat_alt:m.temat_alt||'', tresc_alt:m.tresc_alt||'',
+                linkedin_invite:m.linkedin_invite||'', linkedin_message:m.linkedin_message||'',
+                dk_temat:(m.drugi_kontakt&&m.drugi_kontakt.temat)||'', dk_tresc:(m.drugi_kontakt&&m.drugi_kontakt.tresc)||''
+            };
+            document.getElementById('drawer').classList.add('open');
+            document.getElementById('drawer-backdrop').classList.remove('hidden');
+            renderDrawer(p);
+            loadHistory(id);
+        }
+        function renderDrawer(p){
+            document.getElementById('dw-title').textContent = p.company_name || 'Prospekt';
+            const parts = [
+                renderDataSection(p),
+                renderAiSection(p),
+                p.research ? renderResearch(p) : '',
+                p.idea ? renderIdea(p) : '',
+                (p.mail ? renderMailSection(p) : ''),
+                renderReviewSection(p),
+                renderReplySection(p),
+                renderStatusSection(p),
+                renderDangerSection(p),
+                `<div class="dw-sec"><div class="dw-sec-h"><i class="ph ph-clock-counter-clockwise"></i> Historia</div><div id="dw-history" class="text-[12px] text-zinc-500">Ładuję…</div></div>`
+            ];
+            document.getElementById('dw-body').innerHTML = parts.join('');
+        }
+
+        function fld(label, id, val, ph){
+            return `<div><label class="lbl">${esc(label)}</label><input id="${id}" class="inp" value="${esc(val||'')}" placeholder="${esc(ph||'')}"></div>`;
+        }
+        function renderDataSection(p){
+            const optBanner = p.opted_out
+                ? `<div class="mb-3 flex items-center gap-2 text-[12px] text-[#f26d78] bg-[#e5484d]/10 border border-[#e5484d]/30 rounded-lg px-3 py-2"><i class="ph ph-prohibit"></i> Prospekt na liście wykluczeń (opt-out ${esc(fmtDate(p.opted_out_at))}). Akcje AI i draft zablokowane.</div>`
+                : '';
+            const vOpts = '<option value="">— brak —</option>' + verticals.map(v => `<option value="${esc(v.id)}" ${p.vertical_id===v.id?'selected':''}>${esc(v.name)}</option>`).join('');
+            return `<div class="dw-sec">
+                ${optBanner}
+                <div class="dw-sec-h"><i class="ph ph-buildings"></i> Dane firmy ${statusBadge(p.status)}</div>
+                <div class="space-y-2.5">
+                    ${fld('Nazwa','dw-company_name',p.company_name)}
+                    <div class="grid grid-cols-2 gap-2.5">${fld('WWW','dw-www',p.www,'firma.pl')}${fld('E-mail','dw-email',p.email)}</div>
+                    <div class="grid grid-cols-2 gap-2.5">${fld('Telefon','dw-phone',p.phone)}${fld('NIP','dw-nip',p.nip)}</div>
+                    <div class="grid grid-cols-2 gap-2.5">${fld('Miasto','dw-city',p.city)}${fld('Region','dw-region',p.region)}</div>
+                    <div class="grid grid-cols-2 gap-2.5">${fld('Osoba','dw-contact_person',p.contact_person)}${fld('Rola','dw-contact_role',p.contact_role)}</div>
+                    ${fld('LinkedIn URL','dw-linkedin_url',p.linkedin_url,'https://linkedin.com/in/…')}
+                    <div><label class="lbl">Wertykał</label><select id="dw-vertical_id" class="inp">${vOpts}</select></div>
+                    <div><label class="lbl">Notatki</label><textarea id="dw-notes" class="inp" rows="2">${esc(p.notes||'')}</textarea></div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="saveProspect('${p.id}')" class="btn btn-w btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz dane</button>
+                        ${p.linkedin_url ? `<a href="${safeUrl(p.linkedin_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-g btn-sm"><i class="ph ph-linkedin-logo"></i> LinkedIn</a>` : ''}
+                        ${p.www ? `<a href="${safeUrl(/^https?:/i.test(p.www)?p.www:'https://'+normWww(p.www))}" target="_blank" rel="noopener noreferrer" class="btn btn-g btn-sm"><i class="ph ph-globe"></i> Strona</a>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderAiSection(p){
+            const blocked = p.opted_out || p.status==='opt_out' || p.status==='odpadl';
+            const dis = blocked ? 'disabled' : '';
+            const hasV = !!p.vertical_id;
+            const ideaHint = !hasV ? ' title="Wymaga wertykalu"' : '';
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-sparkle"></i> Akcje AI</div>
+                <div id="dw-aistate" class="hidden mb-3 text-[12.5px] text-[#52a8ff] bg-[#0070f3]/10 border border-[#0070f3]/30 rounded-lg px-3 py-2"></div>
+                <div class="flex flex-wrap gap-2">
+                    <button class="dw-aibtn btn btn-g btn-sm" ${dis} onclick="runAi('${p.id}','research')"><i class="ph ph-magnifying-glass"></i> Zbadaj firmę</button>
+                    <button class="dw-aibtn btn btn-g btn-sm" ${dis || (!hasV?'disabled':'')}${ideaHint} onclick="runAi('${p.id}','idea')"><i class="ph ph-lightbulb"></i> Pomysł na aplikację</button>
+                    <button class="dw-aibtn btn btn-g btn-sm" ${dis} onclick="runAi('${p.id}','mail')"><i class="ph ph-envelope"></i> Napisz wiadomości</button>
+                </div>
+                ${p.status==='odpadl' ? '<div class="text-[11px] text-zinc-600 mt-2">Prospekt odrzucony — akcje AI zablokowane. Przywróć status (sekcja „Status ręczny" niżej), aby wznowić.</div>' : (!hasV ? '<div class="text-[11px] text-zinc-600 mt-2">Pomysł wymaga przypisanego wertykalu (governance wyłączności).</div>' : '')}
+            </div>`;
+        }
+
+        function chips(arr){ return (Array.isArray(arr)&&arr.length) ? arr.map(x => `<span class="minichip">${esc(x)}</span>`).join('') : '<span class="text-zinc-700 text-[12px]">—</span>'; }
+        function kvline(k,v){ return `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`; }
+        function renderResearch(p){
+            const r = p.research || {}; const pr = r.profil||{}; const br = r.branza||{}; const os = r.osoby||{};
+            const nas = br.nasycenie ? { niskie:'#62c073', srednie:'#f5b955', wysokie:'#f26d78' }[br.nasycenie]||'#a1a1aa' : '#a1a1aa';
+            const zrodla = Array.isArray(r.zrodla) ? r.zrodla : [];
+            const score = (p.score!==null&&p.score!==undefined) ? p.score : (r.score!==undefined?r.score:null);
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-file-magnifying-glass"></i> Research
+                    ${score!==null?`<span class="badge bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40" style="margin-left:auto">Fit ${esc(score)}/100</span>`:''}</div>
+                ${(p.score_reason||r.score_reason)?`<div class="text-[12px] text-zinc-400 mb-3 italic">„${esc(p.score_reason||r.score_reason)}"</div>`:''}
+                <div class="mb-3">
+                    <div class="text-[11px] uppercase text-zinc-600 font-semibold mb-1.5">Profil</div>
+                    ${kvline('Czym się zajmuje', esc(pr.czym_sie_zajmuje||'—'))}
+                    ${kvline('Skala (szac.)', esc(pr.skala_szac||'—'))}
+                    ${kvline('Wyróżnik', esc(pr.wyroznik||'—'))}
+                    ${kvline('Usługi', chips(pr.uslugi))}
+                    ${kvline('Sygnały cyfr.', esc(pr.sygnaly_digitalizacji||'—'))}
+                </div>
+                <div class="mb-3">
+                    <div class="text-[11px] uppercase text-zinc-600 font-semibold mb-1.5">Branża</div>
+                    ${kvline('Ból operacyjny', chips(br.bol_operacyjny))}
+                    ${kvline('Istniejący software', chips(br.istniejacy_software))}
+                    ${kvline('Nasycenie', `<span style="color:${nas};font-weight:600">${esc(br.nasycenie||'—')}</span> ${br.uzasadnienie?`<span class="text-zinc-500">— ${esc(br.uzasadnienie)}</span>`:''}`)}
+                </div>
+                ${(os.decydent||os.rola||os.linkedin)?`<div class="mb-3"><div class="text-[11px] uppercase text-zinc-600 font-semibold mb-1.5">Osoby</div>
+                    ${kvline('Decydent', esc(os.decydent||'—')+(os.rola?` (${esc(os.rola)})`:''))}
+                    ${os.linkedin?kvline('LinkedIn', `<a href="${safeUrl(os.linkedin)}" target="_blank" rel="noopener noreferrer" class="link-a">${esc(os.linkedin)}</a>`):''}</div>`:''}
+                ${zrodla.length?`<div><div class="text-[11px] uppercase text-zinc-600 font-semibold mb-1.5">Źródła</div>
+                    <div class="space-y-1">${zrodla.map(u=>`<div><a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer" class="link-a text-[12px]">${esc(u)}</a></div>`).join('')}</div></div>`:''}
+            </div>`;
+        }
+
+        function renderIdea(p){
+            const idea = p.idea || {}; const sat = idea.saturacja || {}; const pot = idea.potencjal_50 || {};
+            const satMeta = { ok:{cls:'bg-[#45a557]/15 text-[#62c073] border-[#45a557]/50',ic:'ph-check-circle',t:'OK'},
+                ryzyko:{cls:'bg-[#f5a623]/15 text-[#f5b955] border-[#f5a623]/50',ic:'ph-warning',t:'Ryzyko'},
+                zablokowane:{cls:'bg-[#e5484d]/15 text-[#f26d78] border-[#e5484d]/50',ic:'ph-prohibit',t:'Zablokowane'} }[sat.werdykt] || {cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',ic:'ph-question',t:sat.werdykt||'—'};
+            const potMeta = { realny:'#62c073', trudny:'#f5b955', nierealny:'#f26d78' }[pot.ocena]||'#a1a1aa';
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-lightbulb"></i> Pomysł aplikacji</div>
+                <div class="text-white font-semibold text-[15px] mb-1">${esc(idea.nazwa_robocza||'—')}</div>
+                <div class="badge ${satMeta.cls} mb-3" style="font-size:12px;padding:5px 11px"><i class="ph ${satMeta.ic}"></i> Saturacja: ${esc(satMeta.t)}</div>
+                ${kvline('Problem', esc(idea.problem||'—'))}
+                ${kvline('Rozwiązanie (rdzeń)', esc(idea.rozwiazanie_rdzen||'—'))}
+                ${kvline('Dla kogo', esc(idea.dla_kogo||'—'))}
+                ${kvline('Płatnik', esc(idea.platnik||'—'))}
+                ${kvline('Model cenowy', esc(idea.model_cenowy_szac||'—'))}
+                ${kvline('Wedge', esc(idea.wedge_vs_konkurencja||'—'))}
+                ${sat.konkurenci&&sat.konkurenci.length?kvline('Konkurenci', chips(sat.konkurenci)):''}
+                ${sat.uzasadnienie?kvline('Uzasadnienie', esc(sat.uzasadnienie)):''}
+                ${kvline('Potencjał 50', `<span style="color:${potMeta};font-weight:600">${esc(pot.ocena||'—')}</span> ${pot.uzasadnienie?`<span class="text-zinc-500">— ${esc(pot.uzasadnienie)}</span>`:''}`)}
+                ${sat.werdykt==='zablokowane'?`<div class="mt-3 text-[12px] text-[#f26d78] bg-[#e5484d]/10 border border-[#e5484d]/30 rounded-lg px-3 py-2">Pomysł zablokowany saturacją — rozważ zmianę wertykalu przed pisaniem wiadomości.</div>`:''}
+            </div>`;
+        }
+
+        function renderMailSection(p){
+            const stopka = stopkaById[p.id];
+            const stopkaBox = stopka
+                ? `<div class="text-[11.5px] text-zinc-500 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 leading-relaxed">${esc(stopka)}</div>`
+                : `<div class="text-[11.5px] text-zinc-600 bg-[#080808] border border-[#1a1a1a] rounded-lg p-3">Stopka zostanie doklejona automatycznie przy tworzeniu draftu (pierwszy kontakt). Uruchom „Napisz wiadomości", aby zobaczyć podgląd.</div>`;
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-envelope-simple"></i> Wiadomości — pierwszy kontakt</div>
+                <div class="flex gap-1.5 mb-3">
+                    <button id="dw-varA-btn" onclick="switchVariant('A')" class="btn btn-sm ${activeVariant==='A'?'btn-p':'btn-g'}">Wariant A</button>
+                    <button id="dw-varB-btn" onclick="switchVariant('B')" class="btn btn-sm ${activeVariant==='B'?'btn-p':'btn-g'}">Wariant B (alt)</button>
+                </div>
+                <div id="dw-varA" class="${activeVariant==='A'?'':'hidden'} space-y-2.5 mb-3">
+                    <div><label class="lbl">Temat</label><input class="inp" value="${esc(mailBuf.temat)}" oninput="mailBuf.temat=this.value"></div>
+                    <div><label class="lbl">Treść (bez stopki — edytowalna)</label><textarea class="inp" rows="8" oninput="mailBuf.tresc=this.value">${esc(mailBuf.tresc)}</textarea></div>
+                </div>
+                <div id="dw-varB" class="${activeVariant==='B'?'':'hidden'} space-y-2.5 mb-3">
+                    <div><label class="lbl">Temat (alt)</label><input class="inp" value="${esc(mailBuf.temat_alt)}" oninput="mailBuf.temat_alt=this.value"></div>
+                    <div><label class="lbl">Treść (alt)</label><textarea class="inp" rows="8" oninput="mailBuf.tresc_alt=this.value">${esc(mailBuf.tresc_alt)}</textarea></div>
+                </div>
+                <label class="lbl">Podgląd stopki (read-only)</label>
+                ${stopkaBox}
+                <div class="mt-4">
+                    <div class="text-[11px] uppercase text-zinc-600 font-semibold mb-1.5">LinkedIn</div>
+                    <div class="mb-2"><div class="flex items-center justify-between mb-1"><label class="lbl" style="margin:0">Zaproszenie</label><button onclick="copyBuf('linkedin_invite')" class="text-[11px] text-[#52a8ff] hover:text-white"><i class="ph ph-copy"></i> Kopiuj</button></div>
+                        <div class="text-[12px] text-zinc-300 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5">${esc(mailBuf.linkedin_invite)||'<span class="text-zinc-700">—</span>'}</div></div>
+                    <div><div class="flex items-center justify-between mb-1"><label class="lbl" style="margin:0">Wiadomość po akceptacji</label><button onclick="copyBuf('linkedin_message')" class="text-[11px] text-[#52a8ff] hover:text-white"><i class="ph ph-copy"></i> Kopiuj</button></div>
+                        <div class="text-[12px] text-zinc-300 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5">${esc(mailBuf.linkedin_message)||'<span class="text-zinc-700">—</span>'}</div></div>
+                </div>
+                <details class="mt-4 group">
+                    <summary class="cursor-pointer text-[12.5px] text-zinc-400 hover:text-white flex items-center gap-2"><i class="ph ph-caret-right group-open:rotate-90 transition-transform"></i> Drugi kontakt (po odpowiedzi)</summary>
+                    <div class="mt-3 space-y-2.5">
+                        <div><label class="lbl">Temat</label><input class="inp" value="${esc(mailBuf.dk_temat)}" oninput="mailBuf.dk_temat=this.value"></div>
+                        <div><label class="lbl">Treść</label><textarea class="inp" rows="6" oninput="mailBuf.dk_tresc=this.value">${esc(mailBuf.dk_tresc)}</textarea></div>
+                        <div class="flex gap-2">
+                            <button onclick="copyBuf('dk_tresc')" class="btn btn-g btn-sm"><i class="ph ph-copy"></i> Kopiuj</button>
+                            <button onclick="draftSecond('${p.id}')" class="btn btn-g btn-sm" ${(p.opted_out||p.status==='odpadl')?'disabled':''}><i class="ph ph-envelope"></i> Draft odpowiedzi w Gmailu</button>
+                        </div>
+                    </div>
+                </details>
+            </div>`;
+        }
+
+        function renderReviewSection(p){
+            if (['nowy','research','pomysl','opt_out','odpadl'].includes(p.status)) return '';
+            const markBtns = `<div class="flex gap-2">
+                    <button onclick="markSent('${p.id}','mail')" class="btn btn-g btn-sm" ${p.opted_out?'disabled':''}><i class="ph ph-envelope"></i> Wysłany (mail)</button>
+                    <button onclick="markSent('${p.id}','linkedin')" class="btn btn-g btn-sm" ${p.opted_out?'disabled':''}><i class="ph ph-linkedin-logo"></i> Wysłany (LinkedIn)</button>
+                </div>`;
+            let inner = '';
+            if (p.status==='mail_gotowy'){
+                inner = `<div class="flex flex-wrap gap-2 mb-3">
+                        <button onclick="approveDraft('${p.id}')" class="btn btn-w btn-sm" ${p.email?'':'disabled'} title="${p.email?'':'Brak adresu e-mail'}"><i class="ph ph-check-fat"></i> Zatwierdź → draft w Gmailu</button>
+                        <button onclick="rejectProspect('${p.id}')" class="btn btn-d btn-sm"><i class="ph ph-x"></i> Odrzuć</button>
+                    </div>
+                    ${p.email?'':'<div class="text-[11px] text-[#f26d78] mb-2">Brak adresu e-mail — draft mailowy niemożliwy. Użyj toru LinkedIn.</div>'}
+                    <div class="text-[11px] text-zinc-600 mb-1.5 pt-2 border-t border-[#161616]">Wysłane poza systemem (np. LinkedIn)? Oznacz kanał:</div>${markBtns}`;
+            } else if (p.status==='zaakceptowany'){
+                inner = `<div class="text-[12px] text-teal-300 mb-2"><i class="ph ph-check-circle"></i> Draft utworzony ${esc(fmtDate(p.gmail_draft_at))} — wyślij ręcznie z Gmaila.</div>
+                    <div class="text-[11px] text-zinc-500 mb-2">Po ręcznej wysyłce oznacz kanał:</div>${markBtns}`;
+            } else {
+                const ch = p.sent_channel==='linkedin' ? 'LinkedIn' : (p.sent_channel==='mail' ? 'mail' : '—');
+                inner = `<div class="text-[12px] text-zinc-400"><i class="ph ph-check-circle text-[#62c073]"></i> Wysłany kanałem: <b class="text-zinc-200">${esc(ch)}</b></div>`;
+            }
+            return `<div class="dw-sec"><div class="dw-sec-h"><i class="ph ph-paper-plane-tilt"></i> Kolejka / wysyłka</div>${inner}</div>`;
+        }
+
+        function renderReplySection(p){
+            if (p.status==='opt_out') return '';
+            if (!(p.replied_at || (RANK[p.status]??0) >= RANK.wyslany)) return '';
+            const sentMeta = { pozytywna:'#62c073', neutralna:'#a1a1aa', negatywna:'#f26d78' }[p.reply_sentiment]||null;
+            const already = p.replied_at
+                ? `<div class="text-[12px] mb-2">Zarejestrowano ${esc(fmtDate(p.replied_at))}: <span style="color:${sentMeta||'#a1a1aa'};font-weight:600">${esc(p.reply_sentiment||'—')}</span>${p.reply_note?` — <span class="text-zinc-400">${esc(p.reply_note)}</span>`:''}</div>`
+            : '';
+            const leadBtn = (p.reply_sentiment==='pozytywna' && !p.lead_id)
+                ? `<button onclick="createLead('${p.id}')" class="btn btn-w btn-sm" ${p.email?'':'disabled'}><i class="ph ph-user-plus"></i> Utwórz leada w CRM</button>` : '';
+            const leadDone = p.lead_id ? `<span class="badge bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40"><i class="ph ph-check"></i> Lead w CRM</span>` : '';
+            return `<div class="dw-sec"><div class="dw-sec-h"><i class="ph ph-chat-circle-dots"></i> Odpowiedź</div>
+                ${already}
+                <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+                    <div><label class="lbl">Sentyment</label><select id="dw-sent" class="inp">
+                        <option value="pozytywna" ${p.reply_sentiment==='pozytywna'?'selected':''}>Pozytywna</option>
+                        <option value="neutralna" ${p.reply_sentiment==='neutralna'||!p.reply_sentiment?'selected':''}>Neutralna</option>
+                        <option value="negatywna" ${p.reply_sentiment==='negatywna'?'selected':''}>Negatywna</option>
+                    </select></div>
+                    <div class="flex items-end"><button onclick="registerReply('${p.id}')" class="btn btn-g btn-sm w-full"><i class="ph ph-check"></i> Zarejestruj odpowiedź</button></div>
+                </div>
+                <div class="mb-2"><label class="lbl">Notatka do odpowiedzi</label><textarea id="dw-replynote" class="inp" rows="2">${esc(p.reply_note||'')}</textarea></div>
+                <div class="flex items-center gap-2">${leadBtn}${leadDone}</div>
+            </div>`;
+        }
+
+        function renderStatusSection(p){
+            if (p.status==='opt_out') return '';
+            const opts = ['rozmowa','sparing','deal','odpadl'].map(s => `<option value="${s}">${esc(STATUS_META[s].label)}</option>`).join('');
+            return `<div class="dw-sec"><div class="dw-sec-h"><i class="ph ph-arrows-left-right"></i> Status ręczny</div>
+                <div class="flex items-end gap-2">
+                    <div class="flex-1"><label class="lbl">Ustaw status</label><select id="dw-status-sel" class="inp"><option value="">— wybierz —</option>${opts}</select></div>
+                    <button onclick="applyStatus('${p.id}')" class="btn btn-g btn-sm"><i class="ph ph-check"></i> Zastosuj</button>
+                </div>
+                <div class="text-[11px] text-zinc-600 mt-2">Deal ustawia wertykał jako „zajęty". Odpadł można przywrócić stąd (wybierz inny status).</div>
+            </div>`;
+        }
+
+        function renderDangerSection(p){
+            if (p.opted_out || p.status==='opt_out') return '';
+            return `<div class="dw-sec" style="border-color:rgba(229,72,77,.35)">
+                <div class="dw-sec-h" style="color:#f26d78"><i class="ph ph-prohibit"></i> STOP / opt-out</div>
+                <div class="text-[12px] text-zinc-500 mb-2.5">Wpis trafia na listę wykluczeń (suppression). Nieodwracalne z panelu — rekord nigdy nie wróci do pipeline'u.</div>
+                <button onclick="optOut('${p.id}')" class="btn btn-d btn-sm"><i class="ph ph-hand-palm"></i> Dodaj do wykluczeń (STOP)</button>
+            </div>`;
+        }
+
+        async function loadHistory(id){
+            const { data, error } = await supabaseClient.from('wfp_events').select('*').eq('prospect_id', id).order('created_at',{ascending:false}).limit(200);
+            const box = document.getElementById('dw-history'); if (!box) return;
+            if (error){ box.innerHTML = '<span class="text-[#f26d78]">Błąd historii: '+esc(error.message)+'</span>'; return; }
+            box.innerHTML = renderHistory(data||[]);
+        }
+        function renderHistory(ev){
+            if (!ev.length) return '<span class="text-zinc-700">Brak zdarzeń.</span>';
+            const actorIc = { admin:'ph-user', ai:'ph-sparkle', auto:'ph-robot' };
+            return `<div class="space-y-2">${ev.map(e => `<div class="flex gap-2.5">
+                <i class="ph ${actorIc[e.actor]||'ph-dot'} text-zinc-600 mt-0.5"></i>
+                <div class="min-w-0"><div class="text-zinc-300 text-[12px]"><span class="text-zinc-500">${esc(e.kind)}</span>${e.description?' — '+esc(e.description):''}</div>
+                <div class="text-zinc-600 text-[10.5px]">${esc(fmtDate(e.created_at))}</div></div></div>`).join('')}</div>`;
+        }
+
+        // ═══════════ AKCJE DRAWERA ═══════════
+        function switchVariant(v){
+            activeVariant = v;
+            document.getElementById('dw-varA').classList.toggle('hidden', v!=='A');
+            document.getElementById('dw-varB').classList.toggle('hidden', v!=='B');
+            document.getElementById('dw-varA-btn').className = 'btn btn-sm ' + (v==='A'?'btn-p':'btn-g');
+            document.getElementById('dw-varB-btn').className = 'btn btn-sm ' + (v==='B'?'btn-p':'btn-g');
+        }
+        function copyBuf(key){
+            const txt = mailBuf[key]||'';
+            if (!txt){ showToast('Nic do skopiowania','info'); return; }
+            navigator.clipboard.writeText(txt).then(()=>showToast('Skopiowano','success'), ()=>showToast('Nie udało się skopiować','error'));
+        }
+        async function insertEvent(prospect_id, kind, actor, description, payload){
+            try { await supabaseClient.from('wfp_events').insert({ prospect_id, kind, actor, description, payload: payload||{} }); }
+            catch(e){ console.warn('event insert', e); }
+        }
+
+        async function runAi(id, action){
+            if (busyIds.has(id)){ showToast('Akcja w toku — poczekaj','info'); return; }
+            busyIds.add(id);
+            const bar = document.getElementById('dw-aistate');
+            const label = { research:'Badam firmę', idea:'Tworzę pomysł', mail:'Piszę wiadomości' }[action];
+            let sec = 0;
+            document.querySelectorAll('.dw-aibtn').forEach(b => b.disabled = true);
+            if (bar){ bar.classList.remove('hidden'); bar.innerHTML = `<i class="ph ph-circle-notch animate-spin"></i> ${label}… <span id="dw-aisec">0</span> s`; }
+            const timer = setInterval(()=>{ sec++; const el=document.getElementById('dw-aisec'); if(el) el.textContent=sec; }, 1000);
+            try {
+                const j = await callEngine({ action, prospectId:id });
+                if (action==='mail' && j && j.stopka_preview!==undefined) stopkaById[id] = j.stopka_preview;
+                await refetchProspect(id);
+                if (action==='idea'){ const pp=prospects.find(x=>x.id===id); const w=pp&&pp.idea&&pp.idea.saturacja&&pp.idea.saturacja.werdykt;
+                    if (w==='zablokowane') showToast('Pomysł zablokowany saturacją — rozważ zmianę wertykalu','error'); else showToast('Pomysł gotowy','success'); }
+                else showToast(label+' — gotowe','success');
+                if (curDrawerId===id) openDrawer(id);
+                loadKpi();
+            } catch(e){
+                showToast(e.message||'Błąd akcji','error');
+                document.querySelectorAll('.dw-aibtn').forEach(b => b.disabled = false);
+                if (bar) bar.classList.add('hidden');
+            } finally {
+                clearInterval(timer); busyIds.delete(id);
+            }
+        }
+
+        async function saveProspect(id){
+            const g = k => (document.getElementById('dw-'+k)?.value ?? '').trim();
+            const upd = {
+                company_name: g('company_name') || prospects.find(x=>x.id===id)?.company_name,
+                www: normWww(g('www'))||null, email: g('email')? g('email').toLowerCase():null, phone: g('phone')||null,
+                nip: g('nip')||null, city: g('city')||null, region: g('region')||null,
+                contact_person: g('contact_person')||null, contact_role: g('contact_role')||null,
+                linkedin_url: g('linkedin_url')||null, vertical_id: document.getElementById('dw-vertical_id')?.value||null,
+                notes: g('notes')||null
+            };
+            if (!upd.company_name){ showToast('Nazwa firmy wymagana','error'); return; }
+            if (upd.email && !EMAIL_RE.test(upd.email)){ showToast('Nieprawidłowy e-mail','error'); return; }
+            const { error } = await supabaseClient.from('wfp_prospects').update(upd).eq('id', id);
+            if (error){ showToast('Błąd zapisu: '+error.message,'error'); return; }
+            await refetchProspect(id); showToast('Zapisano','success'); if (curDrawerId===id) openDrawer(id);
+        }
+
+        async function approveDraft(id){
+            const temat = activeVariant==='A' ? mailBuf.temat : mailBuf.temat_alt;
+            const tresc = activeVariant==='A' ? mailBuf.tresc : mailBuf.tresc_alt;
+            if (!temat.trim() || !tresc.trim()){ showToast('Uzupełnij temat i treść wybranego wariantu','error'); return; }
+            const doDraft = async (force) => {
+                await callEngine({ action:'gmail_draft', prospectId:id, variant:'first', temat, tresc, ...(force?{force:true}:{}) });
+                await refetchProspect(id); if (curDrawerId===id) openDrawer(id); renderAkceptacja(); loadKpi();
+                showToast('Draft czeka w Gmailu — wyślij ręcznie','success');
+            };
+            try { await doDraft(false); }
+            catch(e){
+                if (e.code==='juz_utworzony'){
+                    const again = await uiConfirm({ title:'Draft już istnieje', body:'Pierwszy draft dla tego prospekta już powstał. Utworzyć ponownie (nadpisać)?', confirmLabel:'Utwórz ponownie' });
+                    if (again){ try { await doDraft(true); } catch(e2){ showToast(e2.message,'error'); } }
+                    return;
+                }
+                showToast(e.message,'error');
+            }
+        }
+        async function draftSecond(id){
+            if (!mailBuf.dk_temat.trim() || !mailBuf.dk_tresc.trim()){ showToast('Uzupełnij temat i treść drugiego kontaktu','error'); return; }
+            try {
+                await callEngine({ action:'gmail_draft', prospectId:id, variant:'second', temat:mailBuf.dk_temat, tresc:mailBuf.dk_tresc });
+                await refetchProspect(id); showToast('Draft odpowiedzi czeka w Gmailu','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        async function markSent(id, channel){
+            try {
+                await callEngine({ action:'status_change', prospectId:id, status:'wyslany', channel });
+                await refetchProspect(id); if (curDrawerId===id) openDrawer(id); loadKpi();
+                showToast('Oznaczono jako wysłany ('+channel+')','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+        async function applyStatus(id){
+            const s = document.getElementById('dw-status-sel')?.value;
+            if (!s){ showToast('Wybierz status','error'); return; }
+            if (s==='odpadl'){ const ok = await uiConfirm({ title:'Oznaczyć jako odpadł?', body:'Prospekt zostanie oznaczony jako odpadł.', confirmLabel:'Tak, odpadł', danger:true }); if (!ok) return; }
+            try {
+                await callEngine({ action:'status_change', prospectId:id, status:s });
+                await refetchProspect(id); if (curDrawerId===id) openDrawer(id); loadKpi();
+                showToast('Status: '+STATUS_META[s].label,'success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+        async function rejectProspect(id){
+            const ok = await uiConfirm({ title:'Odrzucić prospekta?', body:'Status zostanie zmieniony na „odpadł".', confirmLabel:'Odrzuć', danger:true });
+            if (!ok) return;
+            try {
+                await callEngine({ action:'status_change', prospectId:id, status:'odpadl', note:'Odrzucony w kolejce akceptacji' });
+                await refetchProspect(id); if (curDrawerId===id) openDrawer(id); renderAkceptacja(); loadKpi();
+                showToast('Odrzucono','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        async function registerReply(id){
+            const p = prospects.find(x=>x.id===id); if (!p) return;
+            const sentiment = document.getElementById('dw-sent')?.value || 'neutralna';
+            const note = (document.getElementById('dw-replynote')?.value||'').trim();
+            const upd = { reply_sentiment:sentiment, reply_note:note||null, replied_at:new Date().toISOString() };
+            if ((RANK[p.status]??0) < RANK.odpowiedzial) upd.status = 'odpowiedzial';   // advance-only
+            const { error } = await supabaseClient.from('wfp_prospects').update(upd).eq('id', id);
+            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            await insertEvent(id, 'reply', 'admin', 'Odpowiedź: '+sentiment+(note?' — '+note:''), { sentiment });
+            await refetchProspect(id); if (curDrawerId===id) openDrawer(id); loadKpi();
+            showToast('Odpowiedź zarejestrowana','success');
+        }
+
+        async function createLead(id){
+            const p = prospects.find(x=>x.id===id); if (!p) return;
+            if (!p.email){ showToast('Brak adresu e-mail','error'); return; }
+            const idea = p.idea || {};
+            const ideaTxt = idea.nazwa_robocza ? `Pomysł: ${idea.nazwa_robocza}. ${idea.problem||''}` : (idea.problem||'');
+            const notes = `Prospekt z modułu Prospektor (id ${id}).${ideaTxt?' '+ideaTxt:''}`.trim();
+            try {
+                const res = await fetch(LEAD_UPSERT, { method:'POST', headers:{ 'Content-Type':'application/json' },
+                    body: JSON.stringify({ email:p.email, name:p.contact_person||p.company_name, company:p.company_name, lead_source:'prospektor', notes }) });
+                const j = await res.json().catch(()=>null);
+                if (!res.ok || !j || j.success===false) throw new Error((j&&j.error)||('Błąd '+res.status));
+                const upd = { lead_id: j.lead_id };
+                if ((RANK[p.status]??0) < RANK.rozmowa) upd.status = 'rozmowa';
+                const { error } = await supabaseClient.from('wfp_prospects').update(upd).eq('id', id);
+                if (error) throw new Error(error.message);
+                await insertEvent(id, 'lead', 'admin', 'Utworzono leada w CRM ('+j.lead_id+')', { lead_id:j.lead_id });
+                await refetchProspect(id); if (curDrawerId===id) openDrawer(id); loadKpi();
+                showToast('Lead utworzony w CRM','success');
+            } catch(e){ showToast('Błąd tworzenia leada: '+e.message,'error'); }
+        }
+
+        async function optOut(id){
+            const ok = await uiConfirm({ title:'Dodać do wykluczeń (STOP)?', body:'Nieodwracalne z panelu. Rekord trafi na suppression list i nigdy nie wróci do lejka.', confirmLabel:'Tak, STOP', danger:true });
+            if (!ok) return;
+            try {
+                await callEngine({ action:'status_change', prospectId:id, optOut:true });
+                await refetchProspect(id); if (curDrawerId===id) openDrawer(id); loadKpi();
+                showToast('Dodano do wykluczeń','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        function updateAkTabBadge(){
+            const n = prospects.filter(p => p.status==='mail_gotowy').length;
+            const el = document.getElementById('ak-tabn'); if (!el) return;
+            el.textContent = n; el.classList.toggle('hidden', n===0);
+        }
+
+        // ═══════════ AKCEPTACJA ═══════════
+        function renderAkceptacja(){
+            const wrap = document.getElementById('ak-list'); if (!wrap) return;
+            const rows = prospects.filter(p => p.status==='mail_gotowy' && !akSkipped.has(p.id));
+            const cnt = document.getElementById('ak-counter'); if (cnt) cnt.textContent = rows.length + ' czeka na Ciebie';
+            if (!rows.length){ wrap.innerHTML = `<div class="card p-10 text-center text-zinc-600"><i class="ph ph-check-circle text-3xl block mb-2 text-zinc-700"></i>Nic nie czeka w kolejce akceptacji.</div>`; return; }
+            wrap.innerHTML = rows.map(akCard).join('');
+        }
+        function akCard(p){
+            const m = p.mail || {}; const idea = p.idea || {};
+            const stopka = stopkaById[p.id];
+            const stopkaBox = stopka
+                ? `<div class="text-[11px] text-zinc-500 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5 leading-relaxed">${esc(stopka)}</div>`
+                : `<div class="text-[11px] text-zinc-600 bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5">Stopka zostanie doklejona automatycznie przy tworzeniu draftu.</div>`;
+            const ideaLine = idea.nazwa_robocza ? `<div class="text-[12px] text-zinc-500 mb-2"><i class="ph ph-lightbulb text-[#f5b955]"></i> ${esc(idea.nazwa_robocza)} — ${esc(idea.problem||'')}</div>` : '';
+            return `<div class="card p-4">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="min-w-0">
+                        <div class="text-white font-semibold truncate">${esc(p.company_name)}</div>
+                        <div class="text-zinc-600 text-[11px]">${esc(verticalName(p.vertical_id))} · ${esc(p.city||'—')} · ${esc(p.email||'brak e-mail')}</div>
+                    </div>
+                    <button onclick="openDrawer('${p.id}')" class="btn btn-g btn-sm flex-shrink-0"><i class="ph ph-arrow-square-out"></i> Szczegóły</button>
+                </div>
+                ${ideaLine}
+                <div class="space-y-2 mb-2.5">
+                    <div><label class="lbl">Temat</label><input id="ak-${p.id}-temat" class="inp" value="${esc(m.temat||'')}"></div>
+                    <div><label class="lbl">Treść (edytowalna — bez stopki)</label><textarea id="ak-${p.id}-tresc" class="inp" rows="7">${esc(m.tresc||'')}</textarea></div>
+                </div>
+                <label class="lbl">Stopka (read-only)</label>
+                ${stopkaBox}
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <button onclick="akApprove('${p.id}')" class="btn btn-w btn-sm" ${p.email?'':'disabled'} title="${p.email?'':'Brak adresu e-mail'}"><i class="ph ph-check-fat"></i> Zatwierdź → draft</button>
+                    <button onclick="rejectProspect('${p.id}')" class="btn btn-d btn-sm"><i class="ph ph-x"></i> Odrzuć</button>
+                    <button onclick="akSkip('${p.id}')" class="btn btn-g btn-sm"><i class="ph ph-skip-forward"></i> Pomiń</button>
+                </div>
+                ${p.email?'':'<div class="text-[11px] text-[#f26d78] mt-2">Brak adresu e-mail — użyj toru LinkedIn (szczegóły).</div>'}
+            </div>`;
+        }
+        function akSkip(id){ akSkipped.add(id); renderAkceptacja(); }
+        async function akApprove(id){
+            const temat = (document.getElementById('ak-'+id+'-temat')?.value||'').trim();
+            const tresc = (document.getElementById('ak-'+id+'-tresc')?.value||'').trim();
+            if (!temat || !tresc){ showToast('Uzupełnij temat i treść','error'); return; }
+            const doDraft = async (force) => {
+                await callEngine({ action:'gmail_draft', prospectId:id, variant:'first', temat, tresc, ...(force?{force:true}:{}) });
+                await refetchProspect(id); renderAkceptacja(); loadKpi();
+                showToast('Draft czeka w Gmailu — wyślij ręcznie','success');
+            };
+            try { await doDraft(false); }
+            catch(e){
+                if (e.code==='juz_utworzony'){
+                    const again = await uiConfirm({ title:'Draft już istnieje', body:'Utworzyć ponownie (nadpisać)?', confirmLabel:'Utwórz ponownie' });
+                    if (again){ try { await doDraft(true); } catch(e2){ showToast(e2.message,'error'); } }
+                    return;
+                }
+                showToast(e.message,'error');
+            }
+        }
+
+        // ═══════════ WERTYKALE ═══════════
+        function renderWertykale(){
+            const wrap = document.getElementById('wt-list'); if (!wrap) return;
+            if (!verticals.length){ wrap.innerHTML = '<div class="text-zinc-600 text-sm">Brak wertykali. Dodaj pierwszy powyżej.</div>'; return; }
+            wrap.innerHTML = verticals.map(wtCard).join('');
+        }
+        function wtCard(v){
+            const vc = vCounts[v.id] || { total:0, byStatus:{} };
+            const meta = VERT_STATUS[v.status] || VERT_STATUS.otwarty;
+            const statusSel = ['otwarty','w_grze','zajety','odrzucony'].map(s => `<option value="${s}" ${v.status===s?'selected':''}>${esc(VERT_STATUS[s].label)}</option>`).join('');
+            const byS = STATUS_ORDER.filter(s => (vc.byStatus[s]||0)>0).map(s => `<span class="minichip">${esc(STATUS_META[s].label)}: <b class="text-zinc-300">${vc.byStatus[s]}</b></span>`).join('') || '<span class="text-zinc-700 text-[11px]">brak prospektów</span>';
+            let warn = '';
+            if (v.status==='w_grze') warn = `<div class="text-[11px] text-[#f5b955] bg-[#f5a623]/10 border border-[#f5a623]/30 rounded-lg px-2.5 py-1.5 mb-2"><i class="ph ph-warning"></i> Aktywna rozmowa — ostrożnie z nowymi wysyłkami.</div>`;
+            if (v.status==='zajety') warn = `<div class="text-[11px] text-[#3fc5e0] bg-[#0891b2]/10 border border-[#0891b2]/30 rounded-lg px-2.5 py-1.5 mb-2"><i class="ph ph-lock"></i> Wertykał zajęty — generator pomysłów zablokowany (409).</div>`;
+            if (v.status==='odrzucony') warn = `<div class="text-[11px] text-[#f26d78] bg-[#e5484d]/10 border border-[#e5484d]/30 rounded-lg px-2.5 py-1.5 mb-2"><i class="ph ph-prohibit"></i> Odrzucony (saturacja) — nie prospectujemy.</div>`;
+            return `<div class="card p-4">
+                <div class="flex items-start justify-between gap-2 mb-2">
+                    <div class="min-w-0"><div class="text-white font-semibold truncate">${esc(v.name)}</div>
+                        <div class="text-zinc-600 text-[11px] font-mono">${esc(v.key)} · ${vc.total} prospektów</div></div>
+                    <span class="badge ${meta.cls}">${esc(meta.label)}</span>
+                </div>
+                ${warn}
+                <div class="flex flex-wrap gap-1.5 mb-2.5">${byS}</div>
+                <div class="space-y-2">
+                    <div><label class="lbl">Status</label><select id="wt-${v.id}-status" class="inp" onchange="saveVerticalStatus('${v.id}',this.value)">${statusSel}</select></div>
+                    <div><label class="lbl">Nota o saturacji / konkurencji</label><textarea id="wt-${v.id}-sat" class="inp" rows="2">${esc(v.saturation_note||'')}</textarea></div>
+                    <div><label class="lbl">Notatki</label><textarea id="wt-${v.id}-notes" class="inp" rows="2">${esc(v.notes||'')}</textarea></div>
+                    <button onclick="saveVerticalNotes('${v.id}')" class="btn btn-g btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz notatki</button>
+                </div>
+            </div>`;
+        }
+        async function addVertical(){
+            const name = (document.getElementById('wt-newname')?.value||'').trim();
+            if (!name){ showToast('Podaj nazwę wertykalu','error'); return; }
+            const key = slugify(name);
+            if (!key){ showToast('Nazwa nie daje poprawnego slug','error'); return; }
+            if (verticals.some(v => v.key===key)){ showToast('Wertykał o tym kluczu już istnieje','error'); return; }
+            const { data, error } = await supabaseClient.from('wfp_verticals').insert({ name, key, status:'otwarty' }).select('*').single();
+            if (error){ showToast('Błąd dodawania: '+error.message,'error'); return; }
+            verticals.push(data); verticals.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+            document.getElementById('wt-newname').value='';
+            fillVerticalSelects(); renderWertykale(); showToast('Wertykał dodany','success');
+        }
+        async function saveVerticalStatus(id, status){
+            const { error } = await supabaseClient.from('wfp_verticals').update({ status }).eq('id', id);
+            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            const v = verticals.find(x=>x.id===id); if (v) v.status = status;
+            renderWertykale(); renderList(); showToast('Status wertykalu: '+VERT_STATUS[status].label,'success');
+        }
+        async function saveVerticalNotes(id){
+            const saturation_note = (document.getElementById('wt-'+id+'-sat')?.value||'').trim()||null;
+            const notes = (document.getElementById('wt-'+id+'-notes')?.value||'').trim()||null;
+            const { error } = await supabaseClient.from('wfp_verticals').update({ saturation_note, notes }).eq('id', id);
+            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            const v = verticals.find(x=>x.id===id); if (v){ v.saturation_note=saturation_note; v.notes=notes; }
+            showToast('Zapisano notatki','success');
+        }
+
+        // ═══════════ IMPORT ═══════════
+        function resolveVerticalId(token){
+            if (!token) return null;
+            const t = foldStr(token.trim());
+            const byKey = verticals.find(v => foldStr(v.key)===t);
+            if (byKey) return byKey.id;
+            const byName = verticals.find(v => foldStr(v.name)===t);
+            if (byName) return byName.id;
+            const bySlug = verticals.find(v => v.key===slugify(token));
+            return bySlug ? bySlug.id : null;
+        }
+        function parseImpLine(line){
+            const cols = line.split(/\t|;/).map(c => c.trim());
+            const [nazwa, www, email, nip, miasto, wert] = [cols[0]||'', cols[1]||'', cols[2]||'', cols[3]||'', cols[4]||'', cols[5]||''];
+            const errors = [];
+            const emailN = email ? email.toLowerCase() : '';
+            if (emailN && !EMAIL_RE.test(emailN)) errors.push('e-mail');
+            const nipN = nip ? nip.replace(/\D/g,'') : '';
+            if (nip && nipN.length!==10) errors.push('NIP');
+            if (!nazwa) errors.push('nazwa');
+            return { company_name:nazwa, www:normWww(www), email:emailN, nip:nipN, city:miasto, vertToken:wert,
+                valid: errors.length===0, errors, dup:false, dupReason:'' };
+        }
+        async function analyzeImport(){
+            const raw = document.getElementById('imp-text').value;
+            const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            if (!lines.length){ showToast('Wklej dane do importu','error'); return; }
+            const looksHeader = /(nazwa|firma|email|e-mail|www|nip|miasto|wertykal)/i.test(lines[0]) && /;|\t/.test(lines[0]);
+            const dataLines = looksHeader ? lines.slice(1) : lines;
+            const rows = dataLines.map(parseImpLine);
+            const emails = [...new Set(rows.map(r=>r.email).filter(Boolean))];
+            const nips = [...new Set(rows.map(r=>r.nip).filter(Boolean))];
+            const wwws = [...new Set(rows.map(r=>r.www).filter(Boolean))];
+            const existing = { email:new Set(), nip:new Set(), www:new Set() };
+            // w pamięci (pełna lista)
+            prospects.forEach(p => { if(p.email) existing.email.add(p.email.toLowerCase()); if(p.nip) existing.nip.add(String(p.nip).replace(/\D/g,'')); if(p.www) existing.www.add(normWww(p.www)); });
+            // .in() do bazy (spec) — dedup też względem rekordów spoza widoku
+            try {
+                if (emails.length){ const { data } = await supabaseClient.from('wfp_prospects').select('email').in('email', emails); (data||[]).forEach(r => existing.email.add((r.email||'').toLowerCase())); }
+                if (nips.length){ const { data } = await supabaseClient.from('wfp_prospects').select('nip').in('nip', nips); (data||[]).forEach(r => existing.nip.add(String(r.nip||'').replace(/\D/g,''))); }
+                if (wwws.length){ const { data } = await supabaseClient.from('wfp_prospects').select('www').in('www', wwws); (data||[]).forEach(r => existing.www.add(normWww(r.www))); }
+            } catch(e){ console.warn('dedup query', e); }
+            const seen = { email:new Set(), nip:new Set(), www:new Set() };
+            rows.forEach(r => {
+                if (r.email){ if (existing.email.has(r.email)||seen.email.has(r.email)){ r.dup=true; r.dupReason='e-mail'; } seen.email.add(r.email); }
+                if (!r.dup && r.nip){ if (existing.nip.has(r.nip)||seen.nip.has(r.nip)){ r.dup=true; r.dupReason='NIP'; } seen.nip.add(r.nip); }
+                if (!r.dup && r.www){ if (existing.www.has(r.www)||seen.www.has(r.www)){ r.dup=true; r.dupReason='www'; } seen.www.add(r.www); }
+            });
+            importRows = rows;
+            renderImportPreview();
+        }
+        function renderImportPreview(){
+            const wrap = document.getElementById('imp-preview');
+            if (!importRows.length){ wrap.innerHTML = ''; return; }
+            const okN = importRows.filter(r => r.valid && !r.dup).length;
+            const dupN = importRows.filter(r => r.dup).length;
+            const badN = importRows.filter(r => !r.valid).length;
+            const rowsHtml = importRows.map(r => {
+                const st = !r.valid ? `<span class="badge bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40">błąd: ${esc(r.errors.join(', '))}</span>`
+                    : r.dup ? `<span class="badge bg-zinc-600/15 text-zinc-500 border-zinc-600/30">duplikat: ${esc(r.dupReason)}</span>`
+                    : `<span class="badge bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40">OK</span>`;
+                return `<tr class="${!r.valid||r.dup?'opacity-60':''}"><td class="text-white">${esc(r.company_name||'—')}</td><td class="text-zinc-400">${esc(r.www||'—')}</td><td class="text-zinc-400">${esc(r.email||'—')}</td><td class="text-zinc-400">${esc(r.nip||'—')}</td><td class="text-zinc-400">${esc(r.city||'—')}</td><td class="text-zinc-500">${esc(r.vertToken||'—')}</td><td>${st}</td></tr>`;
+            }).join('');
+            wrap.innerHTML = `<div class="flex items-center gap-3 mb-2 text-[12px]">
+                    <span class="text-[#62c073]">${okN} do dodania</span>
+                    <span class="text-zinc-500">${dupN} duplikatów</span>
+                    ${badN?`<span class="text-[#f26d78]">${badN} błędnych</span>`:''}
+                    <button onclick="saveImport()" class="btn btn-w btn-sm ml-auto" ${okN?'':'disabled'}><i class="ph ph-download-simple"></i> Zapisz ${okN} firm</button>
+                </div>
+                <div class="card overflow-x-auto"><table class="pv-tbl" style="min-width:640px"><thead><tr><th>Firma</th><th>www</th><th>E-mail</th><th>NIP</th><th>Miasto</th><th>Wertykał</th><th>Status</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+        }
+        async function saveImport(){
+            const defVert = document.getElementById('imp-vert')?.value || null;
+            const toInsert = importRows.filter(r => r.valid && !r.dup).map(r => ({
+                company_name:r.company_name, www:r.www||null, email:r.email||null, nip:r.nip||null, city:r.city||null,
+                vertical_id: resolveVerticalId(r.vertToken) || defVert || null, source:'csv'
+            }));
+            if (!toInsert.length){ showToast('Brak firm do zapisania','error'); return; }
+            const { error } = await supabaseClient.from('wfp_prospects').insert(toInsert);
+            if (error){ showToast('Błąd zapisu: '+error.message,'error'); return; }
+            document.getElementById('imp-text').value=''; importRows=[]; renderImportPreview();
+            showToast(toInsert.length+' firm dodanych','success');
+            await loadAll();
+        }
+        async function addSingle(){
+            const g = k => (document.getElementById('sf-'+k)?.value||'').trim();
+            const company_name = g('name');
+            if (!company_name){ showToast('Nazwa firmy wymagana','error'); return; }
+            const email = g('email') ? g('email').toLowerCase() : null;
+            if (email && !EMAIL_RE.test(email)){ showToast('Nieprawidłowy e-mail','error'); return; }
+            const nipRaw = g('nip'); const nip = nipRaw ? nipRaw.replace(/\D/g,'') : null;
+            if (nip && nip.length!==10){ showToast('NIP musi mieć 10 cyfr','error'); return; }
+            const www = normWww(g('www')) || null;
+            // dedup
+            const clash = prospects.find(p => (email&&p.email&&p.email.toLowerCase()===email) || (nip&&p.nip&&String(p.nip).replace(/\D/g,'')===nip) || (www&&p.www&&normWww(p.www)===www));
+            if (clash){ showToast('Firma już istnieje (dedup): '+clash.company_name,'error'); return; }
+            const payload = { company_name, www, email, nip, city:g('city')||null, vertical_id:document.getElementById('sf-vert')?.value||null, source:'manual' };
+            const { error } = await supabaseClient.from('wfp_prospects').insert(payload);
+            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            ['name','www','email','nip','city'].forEach(k => { const el=document.getElementById('sf-'+k); if(el) el.value=''; });
+            showToast('Firma dodana','success');
+            await loadAll();
+        }
+
+        // ═══════════ USTAWIENIA ═══════════
+        async function renderSettings(){
+            const wrap = document.getElementById('set-wrap'); if (!wrap) return;
+            // odczyt (przez supabaseClient; jeśli RLS nie odda — puste + nota)
+            try {
+                const { data, error } = await supabaseClient.from('settings').select('key,value').in('key', SETTING_KEYS.map(s=>s.key));
+                if (error) console.warn('settings read', error);
+                settingsCache = {}; (data||[]).forEach(r => { settingsCache[r.key] = r.value; });
+            } catch(e){ console.warn('settings', e); }
+            wrap.innerHTML = SETTING_KEYS.map(s => {
+                const val = settingsCache[s.key];
+                const missing = (val===undefined || val===null);
+                return `<div class="card p-4">
+                    <div class="flex items-center justify-between mb-1"><label class="lbl" style="margin:0">${esc(s.label)}</label>
+                        <span class="text-[10px] text-zinc-600 font-mono">${esc(s.key)}</span></div>
+                    <div class="text-[11px] text-zinc-600 mb-2">${esc(s.hint)}</div>
+                    <textarea id="set-${s.key}" class="inp" rows="${s.rows}">${esc(val||'')}</textarea>
+                    ${missing?'<div class="text-[11px] text-[#f5b955] mt-1"><i class="ph ph-warning"></i> Klucz nie odczytany (RLS/brak wpisu). Zapis utworzy/nadpisze wartość.</div>':''}
+                    <div class="mt-2"><button onclick="saveSetting('${s.key}')" class="btn btn-g btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz</button></div>
+                </div>`;
+            }).join('');
+        }
+        async function saveSetting(key){
+            const val = (document.getElementById('set-'+key)?.value||'');
+            // miękki guard klienta (serwer i tak waliduje) — mniej zbędnych round-tripów
+            if (key==='wfp_stopka_prawna'){
+                if (val.trim().length < 120){ showToast('Stopka musi mieć min. 120 znaków','error'); return; }
+                if (!/STOP/.test(val) || !/RODO/i.test(val)){ showToast('Stopka musi zawierać „STOP" i „RODO"','error'); return; }
+            } else if (val.trim().length < 200){ showToast('Prompt musi mieć min. 200 znaków','error'); return; }
+            try {
+                await callEngine({ action:'save_setting', key, value:val });
+                settingsCache[key] = val;
+                showToast('Zapisano (utworzono kopię zapasową poprzedniej wartości)','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        // Deep-link ?id=<prospect> — otwórz drawer jednorazowo po pierwszym załadowaniu.
+        function openDeepLink(){
+            const id = new URLSearchParams(location.search).get('id');
+            if (id && prospects.some(p => p.id===id)) openDrawer(id);
+        }
+    </script>
+</body>
+</html>
