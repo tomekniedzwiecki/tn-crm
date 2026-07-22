@@ -3424,6 +3424,26 @@
 
           <span class="zm-price" data-price>29,90 zł</span>
         </div>
+
+        <!-- PODSUMOWANIE ZAMÓWIENIA w karcie produktu (LL-050, feedback Tomka: rachunek
+             pod zdjęciem; karta sticky = rachunek zawsze na oku przy wypełnianiu) -->
+        <div class="zc-summary" aria-label="Podsumowanie zamówienia">
+          <button type="button" class="zc-sum-bar" aria-expanded="false" aria-controls="zc-sum-details">
+            <img class="zc-sum-thumb" data-zc-thumb src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="" width="52" height="52" loading="lazy">
+            <span class="zc-sum-info">
+              <span class="zc-sum-name" data-zc-name>Produkt</span>
+              <span class="zc-sum-qty">1 szt.</span>
+            </span>
+            <span class="zc-sum-price" data-zc-sum-price>—</span>
+            <svg class="zc-sum-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="zc-sum-details" id="zc-sum-details">
+            <div class="zc-sum-row"><span>Produkt</span><span data-zc-line-product>—</span></div>
+            <div class="zc-sum-row" data-zc-line-delivery-wrap><span>Dostawa</span><span data-zc-line-delivery>—</span></div>
+            <div class="zc-sum-row" data-zc-line-cod-wrap hidden><span>Pobranie</span><span data-zc-line-cod>—</span></div>
+            <div class="zc-sum-row zc-sum-total"><span>Razem</span><span data-zc-line-total>—</span></div>
+          </div>
+        </div>
       </article>
 
       <div class="zm-checkout-card reveal"><!-- SKORKA modulu checkout-inline@2 pod Odsaczka (aliasy tokenow; mechanika NIETYKALNA) -->
@@ -3443,10 +3463,24 @@
   }
   #zamow.zc-checkout .zc-eyebrow{font-family:var(--font-text)}
   #zamow.zc-checkout .zc-h2{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em}
-  /* osadzenie modulu w SZEROKIEJ karcie (~756px po LL-048b): modul uzywa natywnego
-     desktopowego gridu 1fr+314px (formularz + summary obok) — zadnego wymuszania
-     1 kolumny; summary sticky modulu zostaje (media-query 900px patrzy na viewport,
-     a karta jest dostatecznie szeroka) */
+  /* LL-050 (feedback Tomka): PODSUMOWANIE ZAMOWIENIA mieszka w KARCIE PRODUKTU (lewa
+     kolumna, pod zdjeciem; karta sticky = rachunek zawsze widoczny), a prawa karta =
+     czysty formularz na pelnej szerokosci (bez kolumny summary) */
+  @media (min-width:900px){
+    #zamow.zc-checkout .zm-checkout-card .zc-form{
+      grid-template-columns:minmax(0,1fr);
+      grid-template-areas:"main" "trust";
+    }
+  }
+  #zamow.zc-checkout .zm-product-card .zc-summary{
+    position:static;grid-area:auto;margin-top:var(--s2);
+    border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;overflow:visible;
+  }
+  #zamow.zc-checkout .zm-product-card .zc-sum-bar{display:none}
+  #zamow.zc-checkout .zm-product-card .zc-sum-details{display:block;padding:6px 0 0;border-top:0}
+  @media (max-width:760px){
+    #zamow.zc-checkout .zm-product-card .zc-summary{grid-column:1/-1;margin-top:var(--s1)}
+  }
   /* mobile (LL-043): karta zm DUSILA modul podwojnym paddingiem/ramka (390px minus
      wrap+karta+zc-wrap+zc-card ≈ 220px na pola) — na telefonie karta osadzenia znika,
      modul niesie wlasna karte zc-card na pelnej szerokosci */
@@ -3733,25 +3767,7 @@
       </div>
 
       <form class="zc-form" novalidate>
-        <!-- (1) PASEK PODSUMOWANIA -->
-        <div class="zc-summary" aria-label="Podsumowanie zamówienia">
-          <button type="button" class="zc-sum-bar" aria-expanded="false" aria-controls="zc-sum-details">
-            <img class="zc-sum-thumb" data-zc-thumb src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="" width="52" height="52" loading="lazy">
-            <span class="zc-sum-info">
-              <span class="zc-sum-name" data-zc-name>Produkt</span>
-              <span class="zc-sum-qty">1 szt.</span>
-            </span>
-            <span class="zc-sum-price" data-zc-sum-price>—</span>
-            <svg class="zc-sum-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="zc-sum-details" id="zc-sum-details">
-            <div class="zc-sum-row"><span>Produkt</span><span data-zc-line-product>—</span></div>
-            <div class="zc-sum-row" data-zc-line-delivery-wrap><span>Dostawa</span><span data-zc-line-delivery>—</span></div>
-            <div class="zc-sum-row" data-zc-line-cod-wrap hidden><span>Pobranie</span><span data-zc-line-cod>—</span></div>
-            <div class="zc-sum-row zc-sum-total"><span>Razem</span><span data-zc-line-total>—</span></div>
-          </div>
-        </div>
-
+        <!-- (1) PASEK PODSUMOWANIA — przeniesiony do .zm-product-card (LL-050) -->
         <div class="zc-main">
           <!-- (2) METODY PŁATNOŚCI -->
           <fieldset class="zc-block zc-pay" data-zc-step="4">
@@ -4881,10 +4897,9 @@
 
     .zm-grid {
       display: grid;
-      /* produkt WĄSKI / checkout SZEROKI (LL-048b, feedback Tomka: box danych był
-         ściśnięty w 473px) — szeroka karta pozwala modułowi użyć natywnego układu
-         formularz+summary zamiast wymuszonej 1 kolumny */
-      grid-template-columns: minmax(280px, .55fr) minmax(0, 1.45fr);
+      /* LL-050: lewa = produkt + PODSUMOWANIE (sticky), prawa = czysty formularz;
+         proporcje daja rachunkowi oddech, a polom formularza pelna wygode */
+      grid-template-columns: minmax(340px, .75fr) minmax(0, 1.25fr);
       gap: var(--s3);
       /* start, NIE stretch: karta produktu nie może dziedziczyć wysokości formularza
          (stretch + media 1fr = setki px pustki nad packshotem — feedback Tomka 22.07, LL-046) */

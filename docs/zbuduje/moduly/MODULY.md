@@ -37,6 +37,14 @@ nagłówkowym pliku `<moduł>@<wersja>.html`. Proporcje i JS = nietykalne; token
 - Źródłem wersji jest ZAWSZE konkretny commit dobrego landingu (nie „z głowy").
 
 ## CHANGELOG
+- **2026-07-22 — checkout-inline@2: WZORZEC OSADZENIA Z KARTĄ PRODUKTU (LL-050, feedback
+  Tomka):** gdy sekcja #zamow ma obok modułu kartę produktu (packshot+nazwa), `.zc-summary`
+  przenosi się DOM-owo DO tej karty (pod zdjęcie; karta `position:sticky` — rachunek zawsze
+  na oku), a `.zc-form` w prawej karcie idzie w 1 kolumnę (areas main/trust). Skórka w karcie:
+  `zc-sum-bar` hidden (kontekst daje karta), `zc-sum-details` zawsze widoczne; mobile: summary
+  `grid-column:1/-1` w kompaktowej karcie NAD formularzem. Moduł solo (bez karty) = natywny
+  układ 1fr+314px bez zmian. Wzorzec żywy: odsaczek. Mechanika/JS modułu nietknięte
+  (przenoszenie w obrębie #zamow bezpieczne — selektory po klasach na root).
 - **2026-07-22 — wideo-rail@1: FIX desktop `.vid__tile` width:100% (LL-045):** `width:auto`
   na grid-item z absolute-content (intrinsic 0) NIE rozciąga kafla do kolumny — kafel zapadał
   się do ~2px (Ugniatek). Remontaż żywych landingów z kanonu.
