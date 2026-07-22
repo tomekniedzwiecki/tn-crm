@@ -1,0 +1,182 @@
+# Baza wiedzy (spar_knowhow_items) — surowe pozycje
+
+Sesja: 637ef07e-883d-4e5a-9e2d-886837904550 · 164 pozycji · eksport 2026-07-22
+
+## wniosek (9)
+
+- Odbiorcami są osoby, które nie potrafią, nie mają czasu albo nie mają sprzętu do wykonania domowych napraw i prac.
+- Wykonawcami mogą być zarówno zawodowi fachowcy szukający zleceń na wolne terminy, jak i osoby chcące dorabiać po godzinach.
+- Usługa ma zapewniać łatwy dostęp do fachowców bez konieczności samodzielnego szukania numerów kontaktowych.
+- Platforma ma obsługiwać drobne lokalne prace, takie jak wymiana płytek, poprawa kostki, przykręcenie rynien, prace budowlane i elektryczne.
+- Kluczowym problemem klienta jest trudność w znalezieniu dostępnego fachowca znajdującego się dostatecznie blisko.
+- Aplikacja ma obsługiwać głównie drobne prace domowe, takie jak wymiana gniazdek lub bezpieczników oraz malowanie.
+- Klienci mogą zlecać prace także dlatego, że nie chcą lub nie potrafią samodzielnie kupować odpowiednich materiałów w marketach budowlanych.
+- Przy zleceniach dotyczących płytek brak zapasowego materiału może rozszerzyć zakres z wymiany jednej płytki do wymiany całej powierzchni.
+- Większe remonty pomieszczeń trwające kilka dni nie należą do segmentu drobnych prac.
+
+## wymaganie (97)
+
+- Fachowiec samodzielnie określa obszar, na którym pracuje i dojeżdża do klientów.
+- Dokładna data i czas realizacji są ustalane indywidualnie między fachowcem a klientem.
+- Aplikacja ma umożliwiać wybór miast i dzielnic.
+- Dokładny adres klienta ma być ujawniany fachowcowi dopiero po wyborze jego oferty.
+- Zlecenia powinny móc podejmować także osoby dorabiające z praktycznymi umiejętnościami, a nie tylko zawodowi fachowcy.
+- Fachowcy wykonujący prace ryzykowne muszą posiadać odpowiednie uprawnienia.
+- Aplikacja nie narzuca sposobu zakupu materiałów; klient i fachowiec ustalają indywidualnie, czy zakup zrobi fachowiec, czy klient po konsultacji.
+- Fachowiec może zadawać klientowi pytania dotyczące zlecenia przed złożeniem oferty.
+- Klient wybiera widoczność każdej swojej odpowiedzi.
+- Odpowiedzi fachowców na zlecenie mają być domyślnie publiczne.
+- Fachowiec oznacza pracę jako zakończoną, a klient następnie potwierdza jej wykonanie.
+- System ma automatycznie zamykać zlecenie.
+- Zlecenie ma zamykać się automatycznie po 4 dniach bez reakcji klienta.
+- Przy odrzuceniu zakończenia zlecenia klient podaje powód i może opcjonalnie dołączyć zdjęcie.
+- Po odrzuceniu zakończenia przez klienta zlecenie wraca do statusu realizacji.
+- Po drugim odrzuceniu sprawa ma trafiać do ręcznego rozpatrzenia.
+- Duże prace mają być wydzielone do osobnej kategorii.
+- Fachowiec musi mieć możliwość zaproponowania oględzin zamiast zdalnej wyceny.
+- Po zakończeniu zlecenia fachowiec może wystawić komentarz na temat klienta, aby opinie działały w obie strony.
+- Ocena za niepojawienie się może zostać dodana dopiero po weryfikacji zgłoszenia.
+- Nieobecność przy terminie zapisanym w aplikacji może zostać zgłoszona, druga strona odpowiada na zgłoszenie, a spór trafia do ręcznej obsługi.
+- Panel dla klientów ma być prosty i czytelny dla seniorów.
+- Wybór rodzaju zlecenia ma wykorzystywać przykłady i rozróżniać drobne prace od dużego remontu.
+- Klient musi posiadać konto zawierające dane lokalizacyjne: województwo, powiat i dzielnicę.
+- Pozostałe dane dokładnego adresu klient przekazuje bezpośrednio fachowcowi.
+- Aplikacja ma obsługiwać logowanie numerem telefonu z kodem SMS oraz e-mailem i hasłem.
+- Przed złożeniem oferty fachowiec widzi imię klienta, jego średnią ocen oraz liczbę zakończonych zleceń.
+- W aplikacji należy wyświetlać wyłącznie imię użytkownika, bez nazwiska.
+- Fachowiec nie musi prowadzić firmy, aby korzystać z aplikacji.
+- Wykonawca może działać jako firma albo osoba prywatna.
+- Przy każdej ofercie ma być widoczna informacja, czy wykonawca wystawi fakturę lub rachunek.
+- Klient może opcjonalnie zaznaczyć, że potrzebuje faktury lub rachunku.
+- Klient powinien widzieć wszystkie oferty, a przy wykonawcy niewystawiającym faktury ani rachunku należy wyświetlić ostrzeżenie.
+- Jeśli klient zaznaczył potrzebę faktury lub rachunku, wybór wykonawcy bez takiego dokumentu wymaga dodatkowego potwierdzenia.
+- Po wyborze wykonawcy wszystkie pozostałe oferty mają zostać automatycznie zamknięte ze statusem „wybrano innego wykonawcę”.
+- Gdy wybrany fachowiec zrezygnuje, klient może przywrócić wcześniejsze oferty.
+- Fachowiec musi ponownie potwierdzić dostępność, zanim jego wcześniejsza oferta wróci do aktywnych.
+- Nieuzasadnione rezygnacje fachowca mają obniżać pozycję jego kolejnych ofert.
+- Usprawiedliwione powody rezygnacji fachowca to zmiana zakresu pracy przez klienta, niebezpieczne warunki na miejscu oraz nagła choroba lub awaria.
+- Zgłoszenie spornego przypadku przez fachowca ma zawierać opis i opcjonalnie dołączony dowód.
+- Wskaźnik rzetelności i zasady usprawiedliwiania rezygnacji opisem oraz opcjonalnym dowodem mają obowiązywać jednakowo klientów i fachowców.
+- Fachowcy powinni widzieć ostrzeżenie o ryzyku rezygnacji ze strony klienta.
+- Ostrzeżenie o rezygnacjach klienta ma pojawiać się fachowcom dopiero po trzech rezygnacjach.
+- Ostrzeżenie użytkownika ma znikać po kilku poprawnie zakończonych realizacjach.
+- Ostrzeżenie klienta po nieuzasadnionej rezygnacji ma znikać po 3 poprawnie zakończonych zleceniach bez kolejnej takiej rezygnacji.
+- Wskaźnik fachowca wraca do neutralnego poziomu po 3 poprawnie zakończonych realizacjach bez kolejnej nieuzasadnionej rezygnacji.
+- Platforma ma obsługiwać drobne prace trwające od kilku godzin do maksymalnie około 2 dni.
+- Kategorie drobnych prac mają obejmować malowanie pomieszczeń, przykręcanie listew, drobną wymianę oświetlenia, składanie mebli i drobne prace ślusarskie.
+- Zlecenia ślusarskie dotyczące awaryjnego otwierania mogą być dostępne wyłącznie dla zweryfikowanych ślusarzy.
+- W wyborze kategorii zlecenia należy dodać opcję „Inna praca”.
+- Aplikacja ma obsługiwać powiadomienia w aplikacji, e-mail oraz SMS.
+- Fachowiec ma mieć dostęp do pełnych ustawień powiadomień.
+- Fachowiec samodzielnie ustala dni i godziny otrzymywania powiadomień, bez narzuconej przez aplikację ciszy nocnej.
+- Klient wybiera jeden z trzech wariantów terminu realizacji: „jak najszybciej”, konkretny dzień albo termin elastyczny.
+- Po akceptacji zlecenia przez fachowca klient nie może już edytować zlecenia, a ewentualne zmiany strony ustalają bezpośrednio.
+- Po uzgodnieniu szczegółów z klientem fachowiec musi zaakceptować zlecenie, co blokuje ogłoszenie dla innych fachowców.
+- Klient musi potwierdzić uzgodnione z fachowcem zlecenie, zanim ogłoszenie zostanie zablokowane.
+- Przed blokadą ogłoszenia musi powstać obowiązkowe podsumowanie ustaleń.
+- Aplikacja ma tworzyć podsumowanie ustaleń na podstawie rozmowy, które następnie potwierdzają obie strony.
+- Każda poprawka ustaleń wymaga akceptacji.
+- Komunikacja z klientem ma elastycznie obsługiwać tekst, zdjęcia, wiadomości głosowe i dokumenty.
+- Wiadomości głosowe mają być automatycznie transkrybowane na tekst.
+- Użytkownik może poprawić tekst transkrypcji.
+- Poprawiona transkrypcja ma być oznaczana etykietą „edytowano”.
+- Klient ma otrzymywać powiadomienia o nowym pytaniu lub wiadomości, prośbie o akceptację ustaleń, prośbie o ocenę, zmianie statusu zlecenia oraz nowej ofercie fachowca.
+- Użytkownik samodzielnie wybiera kanały otrzymywania powiadomień.
+- Domyślnie wszystkie kanały powiadomień mają być włączone.
+- SMS-y mają być wysyłane wyłącznie przy ważnych zdarzeniach, a nie do zwykłej komunikacji.
+- SMS ma być wysyłany wyłącznie dla wiadomości oznaczonej jako pilna.
+- Oznaczenie wiadomości jako pilnej i powiadomienie SMS są dostępne dopiero po wyborze fachowca i aktywacji zlecenia.
+- Zarówno klient, jak i fachowiec mogą wysłać pilną wiadomość SMS w aktywnym zleceniu.
+- Pilne wiadomości SMS muszą mieć limit wysyłki oraz możliwość zgłoszenia nadużycia.
+- Limit wysyłki SMS-ów wynosi 2 wiadomości w ciągu 24 godzin.
+- Blokada pilnych SMS-ów nadawcy po zgłoszeniu nadużycia ma trwać 2 dni.
+- Blokada pilnych SMS-ów może zostać nałożona dopiero po sprawdzeniu zgłoszenia i potwierdzeniu nadużycia.
+- Fachowiec bez abonamentu może przeglądać zlecenia, ale bez dostępu do danych kontaktowych klienta.
+- Fachowiec bez abonamentu ma widzieć jedynie skrócony podgląd zlecenia.
+- Abonament fachowca obejmuje 2 powiaty z możliwością dokupienia rozszerzeń na kolejne powiaty.
+- Fachowiec może zmieniać wybrane powiaty przy rozpoczęciu każdego okresu rozliczeniowego.
+- Dokupiony dodatkowy powiat ma być aktywowany natychmiast, a opłata naliczana proporcjonalnie do liczby dni pozostałych w bieżącym okresie rozliczeniowym.
+- Dodatkowo wykupione powiaty odnawiają się automatycznie wraz z abonamentem.
+- Po wyłączeniu dodatkowego powiatu dostęp do niego pozostaje aktywny do końca opłaconego okresu, a następnie nie odnawia się.
+- System ma obsługiwać konto firmowe oraz tańsze profile powiązane z firmą.
+- Firma ma mieć do wyboru dwa tryby obsługi zleceń: przydzielanie ich przez właściciela albo samodzielne odpowiadanie pracowników.
+- Właściciel firmy ma mieć pełne uprawnienia administracyjne na koncie firmowym.
+- Oceny pracownika mają znikać po jego odejściu.
+- Po odejściu pracownika jego oceny mają zniknąć z publicznego profilu firmy.
+- Historia realizacji byłego pracownika ma pozostać wewnętrznie dostępna na potrzeby rozstrzygania sporów.
+- Pracownik odchodzący z firmy zakłada własny profil od zera, bez przenoszenia dotychczasowych realizacji i ocen.
+- Przy zmianie pracownika przypisanego do zlecenia wystarczy powiadomić klienta.
+- System ma automatycznie sprawdzać aktualność wymaganych uprawnień pracownika przed przypisaniem go do zlecenia.
+- Firma bez uprawnionego zastępcy musi zrezygnować z realizacji zlecenia.
+- Abonament dla fachowców nie ma okresu próbnego.
+- Rabat roczny ma obejmować wyłącznie główny abonament, bez dodatków.
+- Dodatki w planie rocznym są opłacane z góry za cały rok.
+- Opłacony dodatek powinien mieć możliwość przeniesienia.
+- Po wygaśnięciu abonamentu konto fachowca przechodzi automatycznie na bezpłatny podgląd zleceń.
+
+## decyzja (16)
+
+- Trzeba wybrać sposób definiowania obszaru dojazdu: promień, lista miast i dzielnic albo zaznaczenie na mapie.
+- Trzeba ustalić, czy fachowiec może kupować materiały w imieniu klienta i jak będą one rozliczane.
+- Trzeba ustalić, czy pytania i odpowiedzi przed ofertą będą publiczne dla zainteresowanych fachowców, prywatne czy zależne od wyboru klienta.
+- Trzeba ustalić, czy profil klienta pokazuje tylko imię, imię z pierwszą literą nazwiska, czy pełne imię i nazwisko.
+- Należy ustalić, czy i kiedy profil ma pokazywać status wykonawcy jako firmy lub osoby prywatnej.
+- Należy ustalić, czy niewidoczny wskaźnik rezygnacji ma obniżać ocenę gwiazdkową, pozycję ofert czy jedynie uruchamiać ostrzeżenia i blokady.
+- Trzeba ustalić, czy i na jakich zasadach wskaźnik rzetelności fachowca ma się odbudowywać.
+- Trzeba zdecydować, czy v1 ma obsługiwać awaryjne otwieranie mieszkań i samochodów.
+- Zakres dokumentów i weryfikacji ślusarzy zostanie ustalony po analizie wymogów prawnych.
+- Trzeba ustalić, które kanały powiadomień będą domyślnie włączone na starcie.
+- Trzeba ustalić, jaki obszar geograficzny obejmuje jeden abonament fachowca.
+- Trzeba ustalić liczbę powiatów w abonamencie oraz znacznie niższą cenę rozszerzenia zasięgu o kolejne powiaty.
+- Trzeba zdecydować, czy firmy otrzymają zniżki lub odrębny model cenowy dla wielu fachowców.
+- Trzeba ustalić ceny i zakres abonamentów osobno dla prywatnych fachowców oraz firm.
+- Trzeba zdecydować, czy fachowcy otrzymają okres próbny lub inną formę bezpłatnego dostępu przed zakupem abonamentu.
+- Etap definiowania wizji projektu został zamknięty i można przejść do budowy pierwszej wersji aplikacji.
+
+## luka (40)
+
+- Kto wybiera miasta i dzielnice oraz jak ten wybór wpływa na widoczność i powiadomienia o zleceniach?
+- Czy zlecenia dotyczące prac ryzykownych lub wymagających uprawnień mają być dostępne wyłącznie dla zweryfikowanych wykonawców?
+- Jak będą weryfikowane uprawnienia fachowców przed dopuszczeniem ich do zleceń ryzykownych?
+- Które kategorie zleceń należy uznać za prace ryzykowne wymagające uprawnień?
+- Które kategorie i zakresy prac elektrycznych wymagają od fachowca uprawnień zgodnie z prawem?
+- Czy fachowiec powinien móc zadawać klientowi dodatkowe pytania w aplikacji przed złożeniem oferty?
+- Jakie opcje widoczności odpowiedzi mają być dostępne i która z nich ma być domyślna?
+- Co ma się stać, jeśli klient przez kilka dni nie potwierdzi zakończenia pracy ani nie zgłosi problemu?
+- Po ilu dniach i od jakiego zdarzenia system ma automatycznie zamknąć zlecenie?
+- Czy przy dużych pracach fachowiec ma podawać widełki ceny, proponować oględziny, czy mieć obie możliwości?
+- Jak dokładnie ma przebiegać weryfikacja zgłoszenia niepojawienia się i kto ma ją wykonywać?
+- Jaką metodą klient ma zakładać konto i się logować: numerem telefonu i kodem SMS, e-mailem i hasłem czy obiema metodami?
+- Co klient może zrobić, jeśli wybrany wykonawca zrezygnuje przed rozpoczęciem pracy: przywrócić wcześniejsze oferty, ponownie opublikować zlecenie czy wybrać jedną z obu opcji?
+- Czy przed przywróceniem wcześniejszej oferty fachowiec musi ponownie potwierdzić dostępność?
+- Po ilu nieuzasadnionych rezygnacjach klienta należy wyświetlać fachowcom ostrzeżenie?
+- Czy ostrzeżenie może zniknąć po poprawnie zakończonych zleceniach lub po określonym czasie, czy pozostaje na stałe?
+- Po ilu poprawnie zakończonych realizacjach ostrzeżenie ma być automatycznie usuwane?
+- Czy zlecenia awaryjnego otwierania mają być dostępne wyłącznie dla zweryfikowanych ślusarzy i wymagać sprawdzenia prawa klienta do lokalu lub pojazdu?
+- Jakie dokumenty lub procedury będą wymagane do weryfikacji ślusarza?
+- Jakie wymogi prawne określają dokumenty i sposób weryfikacji ślusarzy w aplikacji?
+- Czy ustawienia powiadomień mają obejmować własne godziny ciszy, ciszę nocną narzuconą odgórnie czy brak godzin ciszy?
+- Czy blokada edycji ma następować po pierwszej ofercie, wyborze fachowca czy rozpoczęciu realizacji?
+- Czy zablokowanie ogłoszenia po akceptacji fachowca wymaga dodatkowego potwierdzenia klienta?
+- Kto przygotowuje podsumowanie: fachowiec, klient czy aplikacja na podstawie rozmowy?
+- Czy i na jakich zasadach strony mogą poprawiać wygenerowane podsumowanie przed jego zatwierdzeniem?
+- Czy poprawkę muszą zaakceptować obie strony, czy tylko strona, której przedstawiono zmianę?
+- Czy użytkownik wybiera kanały powiadomień osobno dla każdego zdarzenia, ustawia je globalnie, czy wszystkie kanały są zawsze aktywne?
+- Które konkretne zdarzenia mają uruchamiać powiadomienie SMS?
+- Czy oznaczenie wiadomości jako pilnej ma być dostępne dopiero po wyborze fachowca, od pierwszej rozmowy czy z limitem użycia?
+- Czy pilną wiadomość mogą wysyłać obie strony, tylko klient czy tylko fachowiec?
+- Jaki ma być limit pilnych wiadomości SMS wysyłanych przez jedną stronę w ciągu 24 godzin?
+- Jak często fachowiec może zmieniać 2 powiaty objęte podstawowym abonamentem?
+- Czy dodatkowy powiat ma odnawiać się automatycznie razem z abonamentem, wymagać ponownego zakupu czy zależeć od wyboru fachowca?
+- Jaka ma być cena konta firmowego i każdego dodatkowego profilu?
+- Czy po odejściu pracownika oceny mają być tylko ukrywane publicznie, czy całkowicie usuwane wraz z historią wewnętrzną?
+- Czy pracownik zakładający później własne konto fachowca zaczyna od zera, przenosi liczbę realizacji bez ocen, czy przeniesienie zależy od decyzji firmy?
+- Co ma się stać ze zleceniem, jeśli firma nie ma innego pracownika z wymaganymi aktualnymi uprawnieniami?
+- Trzeba ustalić, od której dokładnie zasady nagłe zdarzenia mają stanowić wyjątek i jak system ma je obsługiwać.
+- Czy rabat roczny obejmuje również dodatkowych pracowników i dodatkowe powiaty?
+- Na jakich zasadach i z jaką częstotliwością można przenosić poszczególne typy dodatków?
+
+## intel_cenowy (2)
+
+- Przyjęto cennik brutto: klient zlecający 0 zł, samodzielny majster 99 zł/mies., firma 149 zł/mies., kolejny pracownik 39 zł/mies. i dodatkowy powiat 19 zł/mies.
+- Plan roczny ma kosztować równowartość 10 miesięcy abonamentu.
