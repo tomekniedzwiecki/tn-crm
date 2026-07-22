@@ -449,6 +449,14 @@ def check_cta(res, M, ctx):
             if norm(sid_k) in kontenery or (norms_of(sid_k) & kontenery):
                 excl_n += cnt_k
         total_thr = total - excl_n
+    # checkout-inline@2: submit .zc-cta w sekcji z modulem (class zc-checkout) = pelnoprawne
+    # CTA sekcji tresci (kanon 20.07) — dolicz do progu min_count.
+    ci_kl2 = (m.get("checkout_inline_klasa") or "").lower()
+    if ci_kl2:
+        for start, s_id, end in spans:
+            if s_id and ci_kl2 in markup[start:end].lower():
+                total_thr += 1
+                break
     ok_min = total_thr >= min_count
     res.add("cta", "liczba [%s] >= %d" % (attr, min_count),
             status_for(ok_min, m.get("min_count_severity", sev)),
@@ -514,6 +522,11 @@ def check_cta(res, M, ctx):
             if s_id == present_id:
                 slice_txt = markup[start:end]; break
         low = slice_txt.lower()
+        # checkout-inline@2 (kanon 20.07, MODULY.md): sekcja zamow z osadzonym modulem
+        # (class zc-checkout) MA CTA — submit .zc-cta "Zamawiam i place" zastepuje <a .btn.cta>.
+        ci_kl = (m.get("checkout_inline_klasa") or "").lower()
+        if ci_kl and ci_kl in low:
+            continue
         if ("btn cta" not in low) and ("btn.cta" not in low):
             psev = "FAIL" if dn in fail_secs else psev_warn
             res.add("cta", "designed CTA: %s" % present_id, status_for(False, psev),
@@ -1709,6 +1722,14 @@ def check_cena_panel(res, M, ctx):
     for attr in m.get("attr", ["data-price", "data-price-raw"]):
         rx = re.compile(re.escape(attr) + r'(?![-\w])\s*=\s*"([^"]*)"', re.I)
         for raw in rx.findall(markup):
+            v = _parse_price_pl(raw)
+            if v is not None:
+                prices.append((attr, raw.strip(), v))
+        # FIX 22.07: kontrakt runtime-snippet = atrybut GOLY, cena zapieczona w TRESCI elementu
+        # (<span data-price>189,00 zl</span>, runtime nadpisuje textContent) — czytaj tez tresc.
+        rx2 = re.compile(r"<[a-z0-9]+\b[^>]*\b" + re.escape(attr) +
+                         r"(?![-\w])(?!\s*=)[^>]*>\s*([^<]{1,40})", re.I)
+        for raw in rx2.findall(markup):
             v = _parse_price_pl(raw)
             if v is not None:
                 prices.append((attr, raw.strip(), v))

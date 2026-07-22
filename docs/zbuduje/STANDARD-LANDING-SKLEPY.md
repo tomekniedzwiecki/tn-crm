@@ -1584,6 +1584,12 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 
 ---
 
+- **Pliki-dowody = struktura to kontrakt (Ugniatek 22.07, LL-036/037):** dopisujesz wiersz do
+  WIERNOSC/DOPASOWANIE → przepisz CAŁĄ tabelę (anchor-replace pęka po transformacjach; wiersz
+  przed nagłówkiem zostaje headerem parsera), uwagi bez stemów innych assetów (row-match po
+  substringu), po zapisie sanity-parse parserem gate. Cena zapieczona = TREŚĆ elementu
+  `[data-price]` (kontrakt runtime-snippet) — gate-check czyta obie formy.
+
 ## 8. ŹRÓDŁA (research 15.07)
 
 Baymard · KlientBoost/Leadpages (message match +34…66%) · CWV studies (0,1s ⇒ +8,4% CR) ·
@@ -1591,6 +1597,14 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-22 (PIERWSZY PRZEBIEG PRODUKCYJNY — Ugniatek, klient Hoffa):** pełny cykl F0→F8
+  na kliencie produkcyjnym zamknięty z gate 0 FAIL (PASS=122). Do fabryki weszły w trakcie:
+  LL-032 (callout-collapse 3 warstwy), LL-033 (height:auto przy aspect-ratio + zakaz transformu
+  na .reveal do centrowania), LL-034 (sekcja-diff --manifest w mobile), LL-035 (montaż markerowy
+  — incydent nadpisanej ceny), LL-036 (struktura plików-dowodów = kontrakt gate), LL-037
+  (cena_panel czyta treść elementu [data-price]). Gate rozszerzony: checkout_inline_klasa w CTA,
+  klasa wag .mp4 przed hero, cena_panel dwie formy zapieczenia.
 
 - **2026-07-20 (KANON vs PARTYTURA + GATE CROSS-LANDING — decyzja Tomka po audycie 4 gotowych
   landingów na żywo)**: **FAKTY Z AUDYTU:** (1) para **masażer ↔ Drapek = 9/10** w skali „jak

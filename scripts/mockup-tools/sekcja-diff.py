@@ -381,10 +381,16 @@ def merge_mobile_md(md_path, target, rows, dpr):
         "> Incydent Loczek 17.07: mobile nie bylo sprawdzane wcale — dowod jest DWUKROTNY (1280 I 390)."]
     io.open(md_path, "w", encoding="utf-8").write("\n".join(block))
 
-def run_mobile(target, makiety_dir, out_dir, width):
+def run_mobile(target, makiety_dir, out_dir, width, manifest=None):
     img, rects, dpr, _struct, _measure = render_full(target, width, mobile=True)
     print("Render MOBILE: %dx%d px (dpr~%.2f), sekcji: %d" % (img.size[0], img.size[1], dpr, len(rects)))
     mk_mob = load_makieta_mobile_map(makiety_dir)
+    # F2.4 (18.07): mobile makiety dla WSZYSTKICH sekcji — manifest id=plik.png nadpisuje
+    # stara mape tokenow hero/wideo (zostaje jako fallback dla starych landingow).
+    if manifest:
+        for k, v in manifest.items():
+            cand = os.path.join(makiety_dir, v)
+            if os.path.isfile(cand): mk_mob[k] = cand
     rects=[r for r in rects if r["h"]>=40]
     rects_sorted=sorted(rects,key=lambda r:r["y"])
     rows=[]
@@ -864,18 +870,19 @@ def main():
     if "--width" in sys.argv: width=int(sys.argv[sys.argv.index("--width")+1])
     os.makedirs(out_dir,exist_ok=True)
 
-    # MOBILE tryb: --viewport 390 (crop per sekcja z renderu 390; makieta tylko hero/wideo)
-    if "--viewport" in sys.argv:
-        vw=int(sys.argv[sys.argv.index("--viewport")+1])
-        run_mobile(target, makiety_dir, out_dir, vw)
-        return
-
     manifest={}
     if "--manifest" in sys.argv:
         raw=sys.argv[sys.argv.index("--manifest")+1]
         for pair in raw.split(","):
             if "=" in pair:
                 k,v=pair.split("=",1); manifest[k.strip()]=v.strip()
+
+    # MOBILE tryb: --viewport 390 (crop per sekcja z renderu 390; F2.4: makiety WSZYSTKICH
+    # sekcji przez --manifest; bez manifestu fallback = stara mapa tokenow hero/wideo)
+    if "--viewport" in sys.argv:
+        vw=int(sys.argv[sys.argv.index("--viewport")+1])
+        run_mobile(target, makiety_dir, out_dir, vw, manifest)
+        return
 
     img, rects, _dpr, struct, measure = render_full(target, width)
     print("Render: %dx%d px, sekcji: %d"%(img.size[0],img.size[1],len(rects)))

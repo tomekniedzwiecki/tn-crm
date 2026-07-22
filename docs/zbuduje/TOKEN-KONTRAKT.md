@@ -92,6 +92,25 @@ Skeleton/sekcja może założyć, że te tokeny **istnieją** w `:root` każdego
 _(zasiew: mata / masażer / Drapek — do uzupełnienia przy najbliższym depozycie; nowe landingi
 dopisują automatycznie w kroku flywheel `KAPITALIZACJA-OPS §4.3`)_
 
+### ugniatek (rafal-hoffa · 2026-07-22 · F8)
+
+```css
+:root{
+  --font-display:"Space Grotesk",system-ui,sans-serif; --font-text:"Work Sans",system-ui,sans-serif;
+  --paper:#EEF1F2; --paper-2:#E6EBEC; --paper-3:#DCE2E4; --card:#FBFCFC;
+  --ink:#14211F; --body:#26312F; --line:#CBD5D8;
+  --cta:#0B6B64; --cta-hover:#07554F; --cta-ink:#FFFFFF;
+  --radius-lg:10px; --radius-sm:6px;
+  --shadow-sm:0 1px 2px rgba(20,40,45,.05);
+  --shadow-md:0 1px 2px rgba(20,40,45,.05),0 8px 24px rgba(20,40,45,.09);
+  --shadow-lg:0 2px 4px rgba(20,40,45,.06),0 18px 40px rgba(20,40,45,.11);
+  --s1:8px;--s2:16px;--s3:24px;--s4:32px;--s5:48px;--s6:64px;--s7:96px;
+  --sect-pad-d:112px;--sect-pad-m:72px;--content-w:1180px;
+  --h1-d:clamp(24px,2.4vw,30px);--h1-m:clamp(22px,6vw,26px);--h2-d:clamp(22px,2.2vw,28px);
+  --body-fs:17px;--body-lh:1.55;
+}
+```
+
 ---
 
 ### Powiązane

@@ -140,6 +140,27 @@ FAIL Odpalak (wideo+zamów+hero+final), PASS Drapek (0/13) + Loczek (0/12). Self
   słownik klas z prefiksem sekcji · kontrakt hooków JS (nazwa+zakres+jednostka!) ·
   format odpowiedzi: `<section>` + scoped `<style>`, marker `<!--PAYBADGES-->` BEZ
   własnego wrappera · zakazy + dane twarde · „NAJPIERW siatka, POTEM kod"}.
+- **Klasy globalne szkieletu w briefie = TYLKO te bez pułapek bazowych stylów (LL-032,
+  Ugniatek F4).** Jeśli szkielet definiuje klasę „nazwaną ogólnie" z agresywną bazą
+  (np. `.callout{position:absolute;height:1px}` = hairline), a brief wymienia ją jako
+  „globalną do użycia", koder wiesza na niej CHIPY/etykiety → collapse do kreski 1px,
+  absolute wypada z siatek (3 defekty mobile w jednym przebiegu). Zasada: w briefie
+  wymieniaj tylko klasy „bezpieczne" (.wrap/.h2/.btn.cta/.reveal); klasy z bazą
+  pozycjonującą LUB rozmiarową dawaj z JEDNOZDANIOWYM kontraktem („.callout = hairline
+  ze spanem — do chipów NIE używać / resetuj position+height+width"). Smoke-test
+  wizualny mobile PRZED done kroku wyłapuje tę klasę błędów.
+- **`<img>` z atrybutami wymiarów + CSS `aspect-ratio` = OBOWIĄZKOWE `height:auto` (LL-033).**
+  Atrybut `height` to prezentacyjny hint UA: autorski `width:100%` nadpisuje szerokość, ale
+  wysokość z atrybutu zostaje i `aspect-ratio` jest martwe (Ugniatek: kwadraty 1/1 → paski
+  144×800). Self-check: porównaj computed AR z zadeklarowanym na każdym img.
+- **Centrowanie NIGDY transformem na elementach `.reveal` (LL-033).** `.reveal.in{transform:none}`
+  kasuje `translateX(-50%)` po animacji — karta „ucieka" z osi. Centrowanie = marginesy/inset.
+- **Wstawki montażowe = markery jednoznaczne, nigdy replace pierwszego `</body>` (LL-035).**
+  Pierwsze wystąpienie bywa w KOMENTARZU dokumentacyjnym (runtime-snippet); treść wnoszona
+  obok komentarzy sprawdzaj na `-->` (przedwczesne domknięcie = wyciek dokumentacji do DOM —
+  u Ugniatka przykładowy `data-price-raw` nadpisał cenę na całej stronie). Ekstrakcję bloków
+  z out-*.md kotwicz od ` ```html `, nie od tekstu nagłówka. Po montażu: smoke koniec strony
+  + assert ceny w renderze.
 - Ceny psychologiczne — przykłady: 84,90 / 99,90 / 129,90 / 149 (płaska OK przy „ładnej"
   kwocie pod barierą) / 249 (≥150 → pełne lub 9,00).
 - ~~„Przy grafika-first pętla często zamyka się na v1 (SSIM 0.69-0.90 z werdyktem TAK =

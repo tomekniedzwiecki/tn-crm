@@ -1,508 +1,1107 @@
 {
-  "_opis": "DANE dla gate-check.py — zbiorczy gate kompletnosci artefaktow landingu. Rozszerzasz TU, nie w kodzie.",
-  "_wersja": "1.0 (R11a + R11b)",
-
-  "sciezki": {
-    "archiwum_glob": "C:/Users/tomek/Desktop/TN-Sklepy-grafiki/FABRYKA-*/{slug}",
-    "kod": "c:/repos_tn/tn-crm/sklepy/tomek-niedzwiecki/{slug}/index.html",
-    "env": "c:/repos_tn/tn-crm/.env"
+ "_opis": "DANE dla gate-check.py — zbiorczy gate kompletnosci artefaktow landingu. Rozszerzasz TU, nie w kodzie.",
+ "_wersja": "1.0 (R11a + R11b)",
+ "sciezki": {
+  "archiwum_glob": "C:/Users/tomek/Desktop/TN-Sklepy-grafiki/FABRYKA-*/{slug}",
+  "kod": "c:/repos_tn/tn-crm/sklepy/tomek-niedzwiecki/{slug}/index.html",
+  "env": "c:/repos_tn/tn-crm/.env"
+ },
+ "supabase": {
+  "url_env": "SUPABASE_URL",
+  "key_env": "SUPABASE_SERVICE_KEY",
+  "host_fallback": "https://yxmavwkwnfuphjqbelws.supabase.co"
+ },
+ "http_timeout_s": 10,
+ "files": {
+  "severity": "FAIL",
+  "wymagane": [
+   "KARTA-PRAWDY.md",
+   "PASZPORT.md",
+   "LEDGER.md",
+   "MAPA-ASSETOW.md",
+   "galeria-kuracja/GALERIA.md",
+   "RETRO.md",
+   "PRZEWODNIK-GRAFICZNY.md",
+   "TOKENS-MAKIETY.md",
+   "dopasowanie/SEMANTYKA.md",
+   "dopasowanie/WIERNOSC.md"
+  ],
+  "globy": [
+   {
+    "glob": "makiety/*.png",
+    "min": 1,
+    "label": "makiety/*.png"
+   },
+   {
+    "glob": "brand/*.png",
+    "min": 3,
+    "label": "brand/ (favicon+wordmark+lockup)"
+   }
+  ],
+  "brand_wzorce": [
+   {
+    "wzor": "favicon*32",
+    "label": "favicon 32px"
+   },
+   {
+    "wzor": "wordmark",
+    "label": "wordmark"
+   },
+   {
+    "wzor": "*logo*combo*|*lockup*",
+    "label": "lockup/logo-combo"
+   }
+  ]
+ },
+ "dopasowanie": {
+  "severity": "FAIL",
+  "kompozyt_glob": "dopasowanie/*.png",
+  "_kompozyt_marker_MARTWY": "kompozyt (task#5d: nieczytany przez gate-check ani sekcja-diff)",
+  "md": "dopasowanie/DOPASOWANIE.md",
+  "md_ssim_regex": "0[.,][0-9]{2}",
+  "mobile": {
+   "severity": "FAIL",
+   "kompozyt_glob": "dopasowanie/*-m.png",
+   "md_marker": "<!-- MOBILE-390 -->",
+   "verdict_regex": "\\|\\s*\\*{0,2}(TAK|NIE)\\b"
   },
-
-  "supabase": {
-    "url_env": "SUPABASE_URL",
-    "key_env": "SUPABASE_SERVICE_KEY",
-    "host_fallback": "https://yxmavwkwnfuphjqbelws.supabase.co"
-  },
-
-  "http_timeout_s": 10,
-
-  "files": {
-    "severity": "FAIL",
-    "wymagane": [
-      "KARTA-PRAWDY.md",
-      "PASZPORT.md",
-      "LEDGER.md",
-      "MAPA-ASSETOW.md",
-      "galeria-kuracja/GALERIA.md",
-      "RETRO.md",
-      "PRZEWODNIK-GRAFICZNY.md",
-      "TOKENS-MAKIETY.md",
-      "dopasowanie/SEMANTYKA.md",
-      "dopasowanie/WIERNOSC.md"
-    ],
-    "globy": [
-      { "glob": "makiety/*.png", "min": 1, "label": "makiety/*.png" },
-      { "glob": "brand/*.png", "min": 3, "label": "brand/ (favicon+wordmark+lockup)" }
-    ],
-    "brand_wzorce": [
-      { "wzor": "favicon*32", "label": "favicon 32px" },
-      { "wzor": "wordmark", "label": "wordmark" },
-      { "wzor": "*logo*combo*|*lockup*", "label": "lockup/logo-combo" }
-    ]
-  },
-
-  "dopasowanie": {
-    "severity": "FAIL",
-    "kompozyt_glob": "dopasowanie/*.png",
-    "_kompozyt_marker_MARTWY": "kompozyt (task#5d: nieczytany przez gate-check ani sekcja-diff)",
-    "md": "dopasowanie/DOPASOWANIE.md",
-    "md_ssim_regex": "0[.,][0-9]{2}",
-    "mobile": {
-      "severity": "FAIL",
-      "kompozyt_glob": "dopasowanie/*-m.png",
-      "md_marker": "<!-- MOBILE-390 -->",
-      "verdict_regex": "\\|\\s*\\*{0,2}(TAK|NIE)\\b"
-    },
-    "aliasy_sekcji": {
-      "hero": ["hero", "01"],
-      "trust": ["trust", "zaufanie", "02"],
-      "problem": ["problem", "03"],
-      "demo": ["demo", "04"],
-      "wideo": ["wideo", "video", "05"],
-      "benefits": ["benefit", "korzysci", "06"],
-      "porownanie": ["porownanie", "07"],
-      "opinie": ["opinie", "reviews", "08", "09"],
-      "galeria": ["galeria", "gallery", "08", "09"],
-      "zamow": ["zamow", "oferta", "10"],
-      "faq": ["faq", "11"],
-      "final": ["final", "finalcta", "12"],
-      "mid-cta": ["mid-cta", "midcta", "cta", "recta", "re-cta"],
-      "interakcja": ["interakcja", "05"]
-    }
-  },
-
-  "interakcje": {
-    "severity": "FAIL",
-    "always_ids": ["demo"],
-    "tor_i_attr": "data-tor-i",
-    "wymagane_na_sekcje": ["{id}-SPEC-I.md", "{id}-sandbox.html"],
-    "wymagany_katalog": "{id}-test",
-    "downgrade_regex": "downgrade\\s+{id}"
-  },
-
-  "grep_forbidden": {
-    "_ssot_zakazow": "JEDYNE zrodlo zakazow TEKSTOWYCH gate-check (task#6 konsolidacja). detail-lint.py trzyma wlasna kopie listy 'bad' w kodzie (render-time) — DUPLIKAT do przepiecia na ten SSOT przez wlasciciela detail-lint (SPEC F7). Zakazy scarcity/own-stock/przekreslenia dolozone z copy-gate (task#2c). COD 'za pobraniem' DOZWOLONE (Etap5) — celowo brak go w regulach.",
-    "statyczne": [
-      { "regex": ">\\s*0?\\d\\s*/\\s*1[0-9]\\s*<", "severity": "FAIL", "label": "numeracja sekcji NN/NN w tresci" },
-      { "text": "wysyłka w 24h", "severity": "FAIL", "label": "obietnica wysylki 24h" },
-      { "text": "wysylka w 24h", "severity": "FAIL", "label": "obietnica wysylki 24h" },
-      { "text": "magazyn w PL", "severity": "FAIL", "label": "magazyn w PL" },
-      { "text": "dropship", "severity": "FAIL", "label": "dropshipping" },
-      { "text": "aliexpress", "severity": "FAIL", "label": "leak marketplace 'AliExpress'" },
-      { "regex": "\\blorem\\b", "severity": "FAIL", "label": "placeholder 'lorem'" },
-      { "regex": "(?:nr|numer)\\s*1\\s+w\\s+(?:polsce|pl)\\b", "severity": "FAIL", "label": "nieweryfikowalne 'nr 1 w Polsce'" },
-      { "regex": "darmowa\\s+dostawa", "severity": "WARN", "label": "claim 'darmowa dostawa' (weryfikuj — parytet z detail-lint)" },
-      { "regex": "\\bgratis\\b", "severity": "WARN", "label": "claim 'gratis' (parytet z detail-lint)" },
-      { "regex": "\\bnajtaniej\\b", "severity": "WARN", "label": "superlatyw 'najtaniej' (parytet z detail-lint)" },
-      { "regex": "ostatnie\\s+sztuki", "severity": "FAIL", "label": "fake-scarcity: ostatnie sztuki" },
-      { "regex": "tylko\\s+dzi(?:s|ś|siaj)\\b", "severity": "FAIL", "label": "fake-scarcity/urgency: tylko dzis" },
-      { "regex": "zosta[lł][oy]?\\s+(?:ju[zż]\\s+|tylko\\s+|jeszcze\\s+)*\\d+\\s*(?:szt|sztuk|egzempl)", "severity": "FAIL", "label": "fake-scarcity: zostalo N sztuk" },
-      { "regex": "w\\s+naszym\\s+(?:magazynie|sklepie|centrum|stanie)", "severity": "FAIL", "label": "own-stock: 'w naszym magazynie/sklepie'" },
-      { "regex": "mamy\\s+na\\s+(?:stanie|magazynie)", "severity": "FAIL", "label": "own-stock: 'mamy na stanie'" },
-      { "regex": "(?:sprzedano|sold)\\b[^<]{0,40}?(?:u\\s+nas|w\\s+naszym)", "severity": "WARN", "label": "own-stock: 'sprzedano u nas' (mozliwy FP)" },
-      { "regex": "data-price-old|class=\"[^\"]*(?:price-old|old-price|price--old|stara-cena|cena-stara)", "severity": "FAIL", "label": "przekreslona cena (fake-discount anchor)" },
-      { "regex": "<del[\\s>]|<s[\\s>]|text-decoration\\s*:\\s*line-through", "severity": "WARN", "label": "przekreslenie (sprawdz czy nie fake-cena)" },
-      { "text": "pobranie", "severity": "WARN", "label": "wzmianka 'pobranie'" },
-      { "regex": "\\braty\\b", "severity": "WARN", "label": "wzmianka 'raty'" }
-    ],
-    "per_landing": {
-      "_opis": "Zakazy PRODUKTOWE (nie globalne; task#6). Klucz=slug. TYMO = marka z UGC wideo lokowki (loczek) — pilnujemy leaku do HTML na loczek/odpalak (tam wystepuje w materialach). Poza tymi slugami 'TYMO' to szum -> NIE w globalnej liscie.",
-      "loczek": [ { "text": "TYMO", "severity": "FAIL", "label": "marka TYMO (UGC lokowka) w HTML" } ],
-      "odpalak": [ { "text": "TYMO", "severity": "FAIL", "label": "marka TYMO (UGC) w HTML" } ]
-    },
-    "dynamiczne_shop": {
-      "severity": "FAIL",
-      "linie_zawieraja": ["shop", "sklep źródłowy", "sklep zrodlowy"],
-      "ignoruj_kandydatow": ["shop", "sklep", "name", "url", "shop{name,url}", "shop{name", "name,url}", "nigdy", "white", "label"],
-      "min_dlugosc": 4
-    }
-  },
-
-  "_opis_CROSS_LANDING": "ANTY-RODZENSTWO (20.07). Powod: audyt 4 gotowych landingow dal werdykt masazer <-> Drapek = 9/10 w skali 'ta sama strona z podmienionym produktem' — oba PO doktrynie TOKENS-MAKIETY z 19.07. Fabryka miala pelny aparat wykrywajacy ZA MALO spojnosci (SSOT + STYLE-DNA w kazdym prompcie + checklista krytyka + 'rozjazd tokenu = regeneracja') i ZERO mechanizmu wykrywajacego ZA MALO ROZNICY: gate-check byl w calosci zakotwiczony w JEDNYM slugu, phash near-dup dziala tylko WEWNATRZ landingu. Ten blok to jedyny check patrzacy POZA slug. Doktryna: STANDARD Z6 + TOKENS-MAKIETY.md 'KANON vs PARTYTURA' + PRZEWODNIK-GRAFICZNY §2b.",
-
-  "cross_landing": {
-    "severity": "FAIL",
-    "_opis": "Porownuje budowany landing z N poprzednio ZBUDOWANYMI (kolejnosc = mtime kod_glob/<slug>/index.html; nowszy = pozniejszy). Font display i akcent czytane z ZYWEGO HTML (:root + link do webfontow) — nie wymagaja archiwum. Archetyp hero z PLAN.md w archiwum (linia 'archetyp-hero: X'). Brak poprzednikow / brak danych = SKIP (nie crash, nie FAIL) — check musi dzialac na pierwszym landingu i na landingach sprzed doktryny.",
-    "n_poprzednich": 3,
-    "delta_e_min": 15,
-    "sekwencja_pct_warn": 80,
-    "sekwencja_severity": "WARN",
-    "font_severity": "FAIL",
-    "akcent_severity": "FAIL",
-    "archetyp_severity": "FAIL",
-    "kod_glob": "c:/repos_tn/tn-crm/sklepy/tomek-niedzwiecki/*/index.html",
-    "wyklucz_slugi": [],
-    "_opis_font": "Kolejnosc zrodel fontu display: (1) token --font-display z :root, (2) font-family z reguly CSS obejmujacej h1/h2, (3) pierwsza rodzina z linku Google Fonts. Porownanie po znormalizowanej nazwie rodziny (lowercase, bez separatorow).",
-    "font_display_tokeny": ["--font-display", "--font-disp", "--font-title", "--font-h"],
-    "font_naglowek_selektory": ["h1", "h2", ".h1", ".hero h1"],
-    "_opis_akcent": "Token akcentu = JEDYNY kolor akcentu landingu (historyczna nazwa --cta). Warianty -d/-ink/-soft/-2 pomijane (hover/tekst-na-przycisku/tint). Delta E = CIE76 na Lab (sRGB->XYZ D65->Lab); <15 = kolory z tego samego pasma = brak roznicy tozsamosciowej.",
-    "akcent_tokeny": ["--cta", "--accent", "--amber", "--brand", "--akcent"],
-    "akcent_wyklucz_sufiksy": ["-d", "-ink", "-soft", "-2", "-3", "-dark", "-hover", "-light"],
-    "_opis_archetyp": "Zrodlo = PLAN.md w archiwum landingu (glob jak sciezki.archiwum_glob). Brak linii w ktorymkolwiek z pary = SKIP (landingi sprzed 20.07 nie maja archetypu).",
-    "archetyp_plik": "PLAN.md",
-    "archetyp_regex": "archetyp[-_ ]?hero\\s*\\*{0,2}\\s*[:=]\\s*[*\\s_]{0,6}([A-Za-z])\\b",
-    "_opis_sekwencja": "Podobienstwo sekwencji <section id> = LCS-Dice (2*LCS/(len_a+len_b)) po normalizacji aliasami sekcja_typy.aliasy — order-aware, wiec zmiana KOLEJNOSCI sekcji obniza wynik (o to chodzi). Jaccard na zbiorze raportowany informacyjnie. WARN (nie FAIL), bo rdzen sekcji bywa wymuszony produktem.",
-    "sekwencja_wyklucz_id": ["footer", "topbar", "sticky"]
-  },
-
-  "sieroty": {
-    "severity": "FAIL",
-    "assets_glob": "assets/*",
-    "rozszerzenia": [".png", ".webp", ".jpg", ".jpeg", ".avif"],
-    "_skip_markery_MARTWY": ["task#5d: nieczytane przez check_sieroty — logika 'udokumentowany' idzie po ndocs, nie po tych markerach"],
-    "dokumentacja": ["MAPA-ASSETOW.md", "F3-ASSETY-MAPA.md"],
-    "http_200": true,
-    "http_transient_codes": [408, 425, 429, 500, 502, 503, 504]
-  },
-
-  "wagi": {
-    "severity": "FAIL",
-    "klasy": [
-      { "match": ["hero"], "label": "hero", "max_kb": 230 },
-      { "match": ["/scenes/"], "label": "scena", "max_kb": 180 },
-      { "match": ["poster"], "label": "poster", "max_kb": 60 },
-      { "match": ["/gallery/", "/ugc/"], "label": "kafel", "max_kb": 100 },
-      { "match": [".mp4"], "label": "wideo mp4", "max_kb": 2560 }
-    ],
-    "domyslny_max_kb": 120
-  },
-
-  "phash": {
-    "severity": "FAIL",
-    "_nota_demo": "'demo' dodane 19.07 (masazer): stany crossfade TOR-I (demo-a/b/c) sa CELOWO near-identyczne (single-stage crossfade, scena ta sama, zmienia sie WARSTWA UI — SPEC-I/F5, baza obrazow SSIM 0.978). Anty-monotonia celuje w LENIWY reuse tego samego ujecia miedzy SEKCJAMI, nie w zaprojektowane stany demo tej samej sceny.",
-    "klasy_path": ["/scenes/", "/gallery/"],
-    "hamming_max": 10,
-    "wyjatek_tokeny": ["packshot", "demo"]
-  },
-
-  "baza": {
-    "severity": "FAIL",
-    "_host_nota": "Host WYMUSZONY na projekcie CRM (task#5c) — pg_get IGNORUJE env SUPABASE_URL (moze wskazywac sparing) i uzywa tego host. Klucz niepasujacy do CRM -> 401 -> SKIP (lepsze niz dane z ZLEGO projektu).",
-    "host": "https://yxmavwkwnfuphjqbelws.supabase.co",
-    "tabela_produkty": "bud_tt_products",
-    "kolumny_kuracji": { "gallery": "gallery_curated", "videos": "videos_curated" },
-    "tabela_nazw": "bud_brand_names",
-    "kolumna_nazwy": "name",
-    "kolumna_slug": "slug"
-  },
-
-  "wideo_kafle": {
-    "severity": "FAIL",
-    "video_tag": "<video",
-    "licz_mp4_z_url": true,
-    "downgrade_regex": "downgrade\\s+wideo"
-  },
-
-  "makiety_mobile": {
-    "severity": "FAIL",
-    "_nota": "F2.4 rozszerzenie (Tomek 18.07): mobile-makieta dla WSZYSTKICH sekcji, nie tylko hero/TOR-I/wideo. komplet_wg_sekcji=true egzekwuje komplet mobile == liczba sekcji (== liczba makiet desktop poza styl-master). Swiadomy wyjatek pojedynczej sekcji = jawna nota w LEDGER wg komplet_nota_regex (nota_regex ogolne jest za luzne na komplet — matchuje kazda wzmianke 'makiety mobile').",
-    "komplet_wg_sekcji": true,
-    "komplet_wyklucz": ["styl-master", "00-"],
-    "komplet_nota_regex": "mobile-makiet[ay]-(wyjatek|skip|desktop-only)",
-    "wymagane": [
-      { "gdy": "zawsze", "wzory": ["makiety/*hero*mobile*"], "label": "hero mobile" },
-      { "gdy": "tor_i", "wzory": ["makiety/*demo*mobile*", "makiety/*interakcja*mobile*"], "label": "demo/interakcja mobile" },
-      { "gdy": "wideo", "wzory": ["makiety/*wideo*mobile*", "makiety/*video*mobile*"], "label": "wideo mobile" }
-    ],
-    "nota_regex": "makiet[ay][ ]*mobile|mobile[ ]*desktop-only|tylko desktop"
-  },
-
-  "og_image": {
-    "severity": "WARN",
-    "meta_regex": "og:image[^>]*content=\"([^\"]+)\"",
-    "zakazane_tokeny": ["hero-d", "hero-desk", "hero-mobile", "hero-m."],
-    "oczekiwany_token": "og"
-  },
-
-  "ledger_fazy": {
-    "severity": "WARN",
-    "reguly": [
-      { "gdy_plik": "CHOREOGRAFIA.md", "ledger_zawiera": ["choreograf", "F5"], "label": "faza choreografii (F5)" },
-      { "gdy_katalog": "interakcje", "ledger_zawiera": ["TOR-I", "tor-i"], "label": "faza TOR-I" }
-    ]
-  },
-
-  "_opis_TASK_18_07": "Domkniecia audytu meta-szczelnosci + skryptow (18.07). Ostatnie miejsca, gdzie gate ufal DEKLARACJI agenta: (1) finalny_pass = detail-lint spiety maszynowo (caly PASS 0 dot. render), (2) copy = kotwiczenie liczb w KARCIE + jedna cena, (3) published = tryb go-live (placeholdery preview nie moga zostac na LIVE), (4) f1_marza = ekonomia polki. DANE tu; funkcje analogiczne do check_wiernosc/check_panel_sync.",
-
-  "copy": {
-    "severity": "FAIL",
-    "_opis": "F7 COPY-GATE (task#2). (a) liczba-z-jednostka (spec) w prozie MUSI miec kotwice w KARTA-PRAWDY.md na linii z tagiem [KONKRET-SKU]/[KONKRET]/[SPEC]; liczba spoza karty = FAIL 'liczba bez kotwicy' (fabrykowane specy). W karcie ale poza tagiem = WARN. Jednostki CZASU/% CELOWO poza lista (14 dni zwrotu/gwarancja = polityka, nie spec -> unik FP). (b) >1 distinct data-price = FAIL (jedna cena PL). data-price bywa BOOLEAN (cena w textContent) -> lapiemy tez text_regex. COD 'za pobraniem' DOZWOLONE (nie zakaz).",
-    "anchor": {
-      "karta_tagi": ["[KONKRET-SKU]", "[KONKRET]", "[SPEC]"],
-      "jednostki_spec": ["mAh", "Wh", "cali", "mm", "cm", "kg", "ml", "szt", "g", "W", "V"],
-      "ignoruj_liczby": ["2023", "2024", "2025", "2026", "2027"]
-    },
-    "data_price": {
-      "severity": "FAIL",
-      "max_distinct": 1,
-      "attr_regex": "data-price(?![-\\w])\\s*=\\s*\"([^\"]*)\"",
-      "text_regex": "data-price(?![-\\w])[^>]*>\\s*([^<]{1,40})"
-    }
-  },
-
-  "_usuniete_f1_marza_20_07": "USUNIETE (dyrektywa Tomka 20.07): blok f1_marza — ekonomia polki, marza, landed/COD. Fabryka landingow NIE ocenia oplacalnosci produktu ani nie wydaje werdyktow GO/NO-GO: gdy produkt wchodzi do budowy, decyzja zakupowa juz zapadla (Etap 1 / radar). Funkcja check_f1_marza usunieta z gate-check.py. Patrz STANDARD-LANDING-SKLEPY.md 'F-1 — INWENTARZ MATERIALU'.",
-
-  "published": {
-    "severity": "FAIL",
-    "_opis": "Tryb GO-LIVE (--published <url|sciezka>; task#3). Pobiera LIVE html i FAIL gdy zostaly artefakty preview: {{}} placeholder, noindex (niewidoczne dla Google), nierozwiazane URL-e prawne / pixel / product-id. Preview (bez --published) NIE sprawdza — placeholdery OCZEKIWANE. file://sciezka / lokalna sciezka dozwolone (test go-live bez realnego URL). Blad pobrania / 5xx / 429 = WARN (blip), 404 = FAIL (strona nie zyje).",
-    "http_transient_codes": [408, 425, 429, 500, 502, 503, 504],
-    "fail_regex": [
-      { "regex": "\\{\\{", "label": "nierozwiazany placeholder {{...}}" },
-      { "regex": "noindex", "label": "noindex na produkcji (niewidoczne dla Google)" },
-      { "regex": "REGULAMIN_URL|POLITYKA_URL|PRYWATNOSC_URL|ZWROTY_URL|DOSTAWA_URL|KONTAKT_URL|COOKIES_URL|ODSTAPIENIE_URL|CANONICAL_URL", "label": "nierozwiazany URL prawny/legal (bez klamer)" },
-      { "regex": "href=[\"']https?://ec\\.europa\\.eu/consumers/odr", "label": "martwy link do platformy ODR (wygaszona 20.07.2025 — SSOT PRAWNE.md)" },
-      { "regex": "PIXEL_ID|WF2_PRODUCT_ID|PRODUCT_ID", "label": "nierozwiazany pixel / product-id" },
-      { "regex": "fbq\\(\\s*['\"]init['\"]\\s*,\\s*['\"]\\s*['\"]\\s*\\)", "label": "pusty Pixel init fbq('init','')" }
-    ]
-  },
-
-  "finalny_pass": {
-    "severity": "FAIL",
-    "_opis": "F7.3 FINALNY PASS spiety maszynowo (task#1) — CALY PASS 0 detail-lint byl dotad niespiety z gate. Odpala detail-lint.py <index.html> --out <json> (venv), parsuje findings, mapuje severity_map. Domyka jednym ruchem: WCAG kontrast, touch>=44, crop cover/upscaling, martwa-interakcja (suwak min==max), pay-badges-imitacje (klaster POZA SSOT), dup-asset cross-sekcja, typografia, scrim=plateau (desktop, przeswit pod tekstem §F3.1b), fade_line (pasy scenowe mobile — martwy pas kremu / zla linia fade §2 KADR=BOHATER+LINIA FADE = P1 blokujacy). Findings placeholder/zakaz-tekstowy ODFILTROWANE (ignoruj_problem_wzorce) — nalezą do published/grep_forbidden (SSOT; unikamy podw. FAIL + FALSZYWEGO FAIL na preview {{). Uwaga: detail-lint NIE emituje h-scroll — dziura do domkniecia u wlasciciela detail-lint (SPEC F7).",
-    "skrypt": "detail-lint.py",
-    "timeout_s": 300,
-    "max_detail": 12,
-    "severity_map": { "P0": "FAIL", "P1": "FAIL", "P2": "WARN" },
-    "ignoruj_problem_wzorce": ["zakazana/placeholder fraza", "{{"]
-  },
-
-  "_opis_R13": "Domkniecia audytu R13 (17.07): typy sekcji + rubryka werdyktu + layout-diff strukturalny. Powod: werdykty vision odpuszczaly defekty mechaniki ('Kafle mniejsze niz makieta - bez wplywu na charakter'), IR nie istnial dla 4 zepsutych sekcji, SSIM po resize do wspolnej szerokosci niszczyl informacje o skali.",
-
-  "sekcja_typy": {
-    "_opis": "KODOWA = mechanika 1:1 z makiety, SSIM twardy. SCENOWA = generowana scena, SSIM dwuskladnikowy (maska sceny cap ~0.7, reszta 0.85). Aliasy normalizuja id z DOM do typu.",
-    "kodowa": ["wideo", "porownanie", "faq", "opinie", "zamow", "zaufanie", "galeria"],
-    "scenowa": ["hero", "problem", "demo", "final", "korzysci", "mid-cta"],
-    "aliasy": {
-      "trust": "zaufanie", "benefits": "korzysci", "video": "wideo",
-      "reviews": "opinie", "gallery": "galeria", "oferta": "zamow",
-      "finalcta": "final", "final-cta": "final",
-      "midcta": "mid-cta", "cta": "mid-cta", "recta": "mid-cta", "re-cta": "mid-cta"
-    },
-    "_override_per_landing_MARTWY": "task#5d: nieczytane przez resolve_sectype (gate-check) ani resolve_type (sekcja-diff)"
-  },
-
-  "werdykt_rubryka": {
-    "severity": "FAIL",
-    "_opis": "Werdykt per sekcja MUSI miec 5 pol T/N + WERDYKT. WERDYKT=TAK bez kompletu 5xT = FAIL. Dla sekcji KODOWYCH: fraza-wytrych w wierszu werdyktu = FAIL.",
-    "pola": ["skala_elem", "AR_proporcje", "guttery", "tresc_od_krawedzi", "wys_vs_makieta"],
-    "pole_regex": "\\b(?:skala|ar|gut|kraw|wys)[a-z_]*\\s*[:=]\\s*\\*{0,2}([TN])\\b",
-    "min_pol": 5,
-    "werdykt_regex": "\\bWERDYKT\\s*[:=\\u2192-]{0,2}\\s*\\*{0,2}(TAK|NIE)\\b",
-    "tak_bez_werdykt_regex": "(?:\\||^)\\s*\\*{0,2}(TAK|NIE)\\b",
-    "fraza_wytrych_regex": "bez wp[lł]ywu|reflow|sufit|cap ~?0|[sś]wiadom|pomijaln|do decyzji"
-  },
-
-  "layout_diff": {
-    "severity": "FAIL",
-    "_opis": "TWARDE LAYOUT-FAIL = DOM self-checki mierzone w SAMYM renderze (sliver-guard + pustka-pod-obrazem + gutter-asymetria/scena-zla-strona), odporne na szum makiet AI. Checki wywodzone z IR-makiety (wysokosc/guttery-IR/obraz) oraz raw-SSIM = INFORMACYJNE (kolumna LAYOUT: 'info:'), bo detekcja mockup-ir/OCR na pastelowych full-bleed kanwach AI jest zbyt szumna (R13 domkniecie + test Drapek 18.07). Rubryka vision 5xT/N = trzecia, niezalezna siatka. IR komplet == liczba sekcji (wymuszane).",
-    "_kolumna_MARTWY": "LAYOUT (task#5d: gate-check uzywa hardcoded col_idx('layout'), nie tego klucza)",
-    "fail_token": "LAYOUT-FAIL",
-    "_checks_MARTWY": ["kafle", "pustka", "gutter"],
-    "_checks_info_MARTWY": ["wysokosc", "guttery", "obraz"],
-    "ir_dir": "ir",
-    "ir_glob": "*-IR.json",
-    "progi": {
-      "_kafle_MARTWE_task5d": "kafle_dwidth_pct/kafle_dar_pct/kafle_dcols zdemotowane do 'info' w sekcja-diff (Delta-cols szumny na kanwach AI) — nieczytane przez zaden skrypt",
-      "_kafle_dwidth_pct": 30,
-      "_kafle_dar_pct": 20,
-      "_kafle_dcols": 1,
-      "sliver_medwpct_max": 0.12,
-      "sliver_cols_min": 5,
-      "sliver_ar_max": 0.8,
-      "wysokosc_tol_pct": 40,
-      "wysokosc_tylko_kodowa": true,
-      "gutter_asym_delta": 0.35,
-      "gutter_sekcje": ["hero", "final"],
-      "obraz_center_delta": 0.30,
-      "obraz_imgslot_min_area": 0.08,
-      "obraz_area_pct": 30,
-      "obraz_offset_slot_pct": 20,
-      "_opis_dom_selfchecki": "Progi TWARDYCH DOM self-checkow (mierzone w renderze, bez makiety). Kalibracja 18.07: Odpalak FAIL / Drapek+Loczek PASS. pustka: obraz in-flow contain w za wysokim boksie (emptyV=pustka pionowa box-vs-intrinsic; boxAR=H/W). gutter: scena full-bleed jednostronna (wpct<wmax i |cx-0.5|>offcx) LUB tresc przyklejona do boku z pustym przeciwnym gutterem.",
-      "pustka_img_min_area": 0.18,
-      "pustka_emptyv_min": 0.30,
-      "pustka_boxar_min": 1.40,
-      "pustka_section_bottom_max": 0.70,
-      "gutter_scene_wmax": 0.85,
-      "gutter_scene_offcx_min": 0.12,
-      "gutter_hug_ratio_max": 0.40,
-      "gutter_hug_biggut_min": 0.25
-    },
-    "ssim_progi": {
-      "kodowa_desktop": 0.85,
-      "kodowa_mobile": 0.80,
-      "scenowa_reszta": 0.85,
-      "_scena_cap_MARTWY": 0.70,
-      "_scena_cap_nota": "task#5d: sekcja-diff czyta z ssim_progi tylko kodowa_desktop/scenowa_reszta (linie 723/732); scena_cap nieczytany"
-    },
-    "_scena_selektory_MARTWY": [
-      "task#5d: nieczytane przez gate-check ani sekcja-diff (selekcja sceny idzie po klasach w JS analizatora)",
-      ".hero-media", "[data-mo='hero-scene']", ".prob-scene", "img[data-scene]"
-    ]
-  },
-
-  "_opis_F3A": "GATE WIERNOŚCI DO SKUTKU (proces F3A; 18.07). Powod: grafika produktowa niezgodna z faktycznym produktem (Latarek: grinder-pen zamiast gilotyny; klient dostalby INNY produkt) przechodzila, bo werdykt wiernosci mial JEDNA pare oczu (generator) i furtke 'dryf produktu = cecha metody'. F3A: trojkat (grafika + tabela cech dyskryminujacych z PASZPORT + realny kadr Ali), DWIE niezalezne pary oczu (pass-1 generator + pass-2 swiezy Sonnet bez promptu i bez werdyktu-1), petla regen do skutku (max 3 rundy -> eskalacja), twardy artefakt dopasowanie/WIERNOSC.md egzekwowany TU. FAIL cechy PRODUKTU = NIGDY waivable; dryf rekwizytu-nie-produktu tylko z nota LEDGER + zgoda obu par. Stare landingi bez WIERNOSC.md = retro przy najblizszym dotknieciu (mechanizm nowy).",
-
-  "wiernosc": {
-    "severity": "FAIL",
-    "_opis": "Kazda GRAFIKA PRODUKTOWA uzyta w kodzie (klasa S/P; sceny AI z produktem) MUSI miec wiersz w dopasowanie/WIERNOSC.md z werdyktem WIERNOSC in {ZGODNA, REAL, ESKALACJA}. ZGODNA wymaga: 0 FAIL cech + PASS >= K (K = liczba wierszy tabeli 'Cechy dyskryminujace' w PASZPORT.md) + pass-2 (drugie oczy, swiezy Sonnet) = TAK. NIEZGODNA = FAIL (petla regen/eskalacja niedomknieta). ESKALACJA wymaga noty w LEDGER (ref/crop-first/scena-bez-produktu/nota Tomek). rundy > max_rundy bez ESKALACJA = FAIL. REAL = realny kadr (crop galerii Ali) = PASS bez cech. Grafiki wykluczone: wideo mp4, postery tt, UGC, D-art dekoracja, brand, pay-badges.",
-    "md": "dopasowanie/WIERNOSC.md",
-    "paszport": "PASZPORT.md",
-    "cechy_marker": "Cechy dyskryminuj",
-    "klasy_produktowe": ["S", "P"],
-    "real_token": "REAL",
-    "prod_path_tokens": ["/scenes/", "hero", "packshot", "benefit", "demo", "problem", "final"],
-    "wyklucz_tokeny": [".mp4", "/ugc/", "/tt/", "d-art", "dart", "pay-badges", "/brand/", "og."],
-    "cechy_header_tokeny": ["cecha", "cechy"],
-    "werdykt_regex": "WIERNO\\S{0,3}\\s*[:=\\u2192\\-]{0,3}\\s*\\*{0,2}(NIEZGODNA|ZGODNA|ESKALACJA|REAL)\\b",
-    "pass2_regex": "(?:pass\\s*-?2|p2|drugie oczy)\\s*[:=]?\\s*\\*{0,2}(TAK|NIE|OK|ZGOD)",
-    "pass2_lead_regex": "^\\s*\\*{0,2}(TAK|OK|ZGOD)\\b",
-    "cecha_fail_regex": "\\bFAIL\\b",
-    "cecha_pass_regex": "\\bPASS\\b",
-    "rundy_regex": "rund[ay]?\\D{0,4}(\\d+)",
-    "max_rundy": 3,
-    "eskalacja_ledger_tokeny": ["eskalacja", "crop-first", "crop first", "scena bez produktu", "realny <img>", "realny img", "nota tomek", "nota do tomka", "referencyjn", "ref produktu"]
-  },
-
-  "_opis_PANEL_SYNC": "MOST FABRYKA->PANEL EGZEKWOWALNY (18.07). Powod: sync panelu 'tn-sklepy' (wf2_*) byl OBOWIAZKOWY per faza tylko w STANDARDZIE, bez kontroli maszynowej — ta sama klasa luki co samo-deklaracja gate'u ('PASS 10/10'). Panel = jedyne okno Tomka na postep; faza bez syncu = niewidoczna. Ten blok czyni sync CZESCIA definicji DONE, egzekwowana tu. Kontrakt+katalog mapowan: docs/zbuduje/MOST-PANEL.md; skrot: STANDARD-LANDING-SKLEPY.md §1-sync. Mapowanie: landing slug -> wf2_products.slug; brak wiersza = SKIP (nie kazdy preview ma projekt, np. loczek/odpalak). Host WYMUSZONY na projekcie CRM (NIE env SUPABASE_URL — .env wskazuje projekt sparingu). Progi tolerancji + severity = DANE (tuning tu, nie w kodzie).",
-
-  "panel_sync": {
-    "severity": "FAIL",
-    "host": "https://yxmavwkwnfuphjqbelws.supabase.co",
-    "tabela_produkty": "wf2_products",
-    "tabela_kroki": "wf2_steps",
-    "tabela_artefakty": "wf2_artifacts",
-    "slug_kolumna": "slug",
-    "karta_kolumny_wymagane": ["price", "cost_purchase", "repo_path", "status"],
-    "puste_done_severity": "WARN",
-
-    "_opis_kroki": "Deliverable w archiwum/kodzie => panel status='done'. Mapowanie krok->deliverable (co DOWODZI, ze faza zamknieta). gdy_plik/gdy_glob wzgledem archiwum, gdy_kod = index.html (ctx code). opcjonalny=true => WARN zamiast FAIL (faza moze byc downgradowana, np. zycie).",
-    "kroki_done": [
-      { "step": "lp_dane",        "label": "F0 dane/karta",        "gdy_plik": ["KARTA-PRAWDY.md"] },
-      { "step": "lp_plan",        "label": "F1 plan+przewodnik",   "gdy_plik": ["PRZEWODNIK-GRAFICZNY.md"] },
-      { "step": "lp_styl_marka",  "label": "F2.5 branding",        "gdy_glob": ["brand/favicon*.png"] },
-      { "step": "lp_makiety",     "label": "F2 makiety",           "gdy_glob": ["makiety/*.png"] },
-      { "step": "lp_grafiki",     "label": "F3 grafiki+wiernosc",  "gdy_plik": ["MAPA-ASSETOW.md"] },
-      { "step": "lp_kod",         "label": "F4 kod",               "gdy_kod": true },
-      { "step": "lp_dopasowanie", "label": "F7.1 dopasowanie",     "gdy_glob": ["dopasowanie/*.png"] },
-      { "step": "lp_zycie",       "label": "F5 zycie",             "gdy_glob": ["interakcje/*-SPEC-I.md", "CHOREOGRAFIA.md"], "opcjonalny": true }
-    ],
-
-    "_opis_artefakty": "Artefakty panelu == pliki archiwum. tryb 'stem': dopasowanie po rdzeniu nazwy pliku (URL panelu vs plik archiwum), missing = archiwum-nie-w-panelu; FAIL gdy missing > tolerancja (lista brakow w detalu). tryb 'obecnosc': kontrakt to kontakt-arkusze/agregaty (np. dowod = contact-sheety, NIE 1:1 na kompozyt) => wystarczy >=1 artefakt gdy sa pliki. kind[] = dozwolone rodzaje (dedup po URL-stem).",
-    "artefakty_liczba": [
-      { "label": "makiety desktop", "tryb": "stem", "kind": ["makieta"],
-        "zrodla": [{ "glob": "makiety/*.png", "wyklucz": ["mobile", "00-", "styl-master"] }], "tolerancja": 2 },
-      { "label": "makiety mobile", "tryb": "stem", "kind": ["makieta_mobile"],
-        "zrodla": [{ "glob": "makiety/*mobile*.png" }], "tolerancja": 2 },
-      { "label": "grafiki produktowe (sceny + galeria HIGH)", "tryb": "stem", "kind": ["scena", "image", "gallery"],
-        "zrodla": [{ "glob": "assets/scenes/*.webp", "wyklucz": ["og."] }, { "glob": "assets/gallery/*-hq.webp" }],
-        "tolerancja": 2 },
-      { "label": "kompozyty dopasowania (dowod/proof)", "tryb": "obecnosc", "kind": ["dowod", "proof"],
-        "zrodla": [{ "glob": "dopasowanie/*.png" }] }
-    ],
-
-    "_opis_doc": "Dokument fabryki, ktory MUSI byc widoczny jako chip w panelu (kind=doc). WIERNOSC.md = dowod gate'u wiernosci F3A -> lp_grafiki. token = fragment url/label ktory potwierdza obecnosc.",
-    "doc_wymagane": [
-      { "label": "WIERNOSC.md (F3A) w lp_grafiki", "plik": "dopasowanie/WIERNOSC.md", "kind": "doc", "token": "wiernosc" }
-    ],
-
-    "_opis_kod_wzmianki": "Element obecny w KODZIE (footer/logo/wideo) musi miec odbicie w panelu — wzmianka w data.fields kroku LUB artefakt kind_alt. gdy_kod_regex kwalifikuje regule (element w kodzie). footer=FAIL (modul footer@1 to standard KAZDEGO landingu; brak w moduly_uzyte = realny defekt syncu). logo/brand=WARN (branding bywa juz na lp_styl_marka; wzmianka w lp_kod = nicosc do domkniecia, nie blokada). wideo: satysfakcja gdy fields wzmiankuja video LUB istnieje artefakt kind=video (lp_zycie).",
-    "kod_wzmianki": [
-      { "label": "footer w lp_kod (modul footer@1)", "severity": "FAIL", "step": "lp_kod",
-        "gdy_kod_regex": "<footer", "tokeny": ["footer", "stopk"] },
-      { "label": "brand/logo w lp_kod (favicon+wordmark zywy)", "severity": "WARN", "step": "lp_kod",
-        "gdy_kod_regex": "favicon|wordmark", "tokeny": ["logo", "favicon", "wordmark", "brand", "lockup"] },
-      { "label": "wideo w panelu (lp_kod video_count / lp_zycie video)", "severity": "FAIL", "step": "lp_kod",
-        "gdy_kod_regex": "<video|\\.mp4", "tokeny": ["video", "wideo"], "kind_alt": "video" }
-    ]
-  },
-
-  "_opis_SEKCJE_PLAN": "F1a MANIFEST SEKCJI = kontrakt kompletnosci (Tomek 20.07: 'pilnowac czy WSZYSTKIE sekcje ktore musza byc zostaly wygenerowane; zeby do takich sytuacji nie dochodzilo'). Powod: gate-check liczyl sekcje Z GOTOWEGO HTML -> sekcja porzucona PRZED buildem (koder pominal / plan zapomnial) byla NIEWIDZIALNA. Ten check rekoncyliuje PLAN <-> makieta <-> kod <-> kompozyt. Brak bloku w PLAN.md = SKIP (landingi sprzed reguly, retro przy dotknieciu).",
-
-  "sekcje_plan": {
-    "severity": "FAIL",
-    "plan_plik": "PLAN.md",
-    "manifest_marker": "## MANIFEST SEKCJI",
-    "wymagany_od_data": "2026-07-20",
-    "brak_manifestu_nowy_severity": "FAIL",
-    "_opis_wymuszenie": "LUKA1 (adwersarz 20.07): brak manifestu = SKIP czynil cala gwarancje OPCJONALNA. Dyskryminator po mtime kodu (index.html): kod dotkniety >= wymagany_od_data BEZ manifestu = FAIL (nowy landing MUSI miec F1a); kod starszy = SKIP (landing sprzed reguly, retro przy dotknieciu). mtime dzisiejszy = 'retro przy dotknieciu' wlacza sie sam.",
-    "rdzen_wymagany": ["hero", "zamow", "final", "mid-cta"],
-    "rdzen_severity": "FAIL",
-    "_opis_rdzen": "LUKA7: manifest sprawdzal 'czy zbudowano co zaplanowano', nie 'czy zaplanowano komplet'. rdzen_wymagany = sekcje ktore MUSZA byc w manifescie jako build (nie skip); brak rdzeniowej = FAIL. Gwarantuje ze plan nie pominie hero/oferty/mid-cta/final.",
-    "linia_regex": "^\\s*\\d+[.)]?\\s*([a-z0-9][a-z0-9-]*)\\s*\\|\\s*(scenowa|kodowa)\\s*\\|\\s*(build|skip)\\b(.*)$",
-    "linia_case_insensitive": true,
-    "status_build": "build",
-    "status_skip": "skip",
-    "skip_powod_min_len": 6,
-    "_opis_powod": "Po tokenie 'skip' MUSI byc powod (>= skip_powod_min_len znakow niebialych po odcieciu separatora -/—/:). Powod bez kotwicy tresciowej = i tak przechodzi tu (kotwica KARTA/LEDGER weryfikowana przez agenta), ale PUSTY skip = FAIL.",
-    "makieta_glob": "makiety/*{id}*",
-    "makieta_wyklucz": ["mobile", "00-", "styl-master"],
-    "makieta_mobile_glob": "makiety/*{id}*mobile*",
-    "uzyj_aliasy_sekcji": "dopasowanie.aliasy_sekcji",
-    "nieplanowana_severity": "WARN",
-    "wyklucz_id_kod": ["footer", "topbar", "sticky", "sticky-buy"]
-  },
-
-  "_opis_CTA": "F6 BRAMKA CTA (Tomek 20.07 na macie: 'za malo CTA; tej dedykowanej sekcji z CTA tez nie ma'). Reguly CTA byly OPISOWE w STANDARD (mid-CTA=pelna sekcja z makieta §F4 pkt4, desktop re-CTA, FINAL CTA) i NIEEGZEKWOWANE -> mata je zgubila. (a) liczba [data-checkout] w kodzie >= min_count; (b) obecna DEDYKOWANA sekcja CTA (id in dedykowana_aliasy) ORAZ final (id in final_aliasy); (c) >=1 [data-checkout] w <section> POZA hero/sticky/zamow (re-CTA widoczny na desktopie, bo sticky-buy jest mobile-only). Landing bez szkieletu = FAIL (retro przy dotknieciu). designed_cta_sekcje = sekcje ktorych MAKIETA musi miec zaprojektowany przycisk CTA — egzekwuje KRYTYK makiet/agent (informacyjnie tutaj; skrypt moze policzyc obecnosc .btn.cta w kodzie tych sekcji jako proxy WARN).",
-
-  "cta": {
-    "severity": "FAIL",
-    "checkout_attr": "data-checkout",
-    "min_count": 4,
-    "min_count_severity": "FAIL",
-    "min_count_wyklucz_kontenery": true,
-    "_opis_min_count": "LUKA6: sticky-buy jest mobile-only. min_count_wyklucz_kontenery=true => total do progu liczony BEZ kontenerow poza-sekcja (sticky/topbar/footer) => min_count=4 = 4 realne CTA w sekcjach TRESCI widoczne na desktopie (hero+oferta+mid-cta+final).",
-    "dedykowana_ma_checkout": true,
-    "_opis_dedykowana_checkout": "LUKA2: sama obecnosc <section id=mid-cta> nie wystarcza — dedykowana sekcja CTA MUSI zawierac >=1 [data-checkout], inaczej 'sekcja ktorej sensem jest CTA' nie ma przycisku a bramka zielona.",
-    "dedykowana_aliasy": ["mid-cta", "midcta", "cta", "recta", "re-cta"],
-    "dedykowana_severity": "FAIL",
-    "wymagana_final": true,
-    "final_aliasy": ["final", "finalcta", "final-cta"],
-    "final_severity": "FAIL",
-    "recta_wyklucz_sekcje": ["hero", "zamow", "oferta", "zamów", "final", "finalcta", "final-cta"],
-    "_opis_recta": "re-CTA MUSI byc genuine MID-page CTA (dedykowana sekcja mid-cta po klastrze dowodu), wiec wykluczamy tez final — final to domkniecie na dole, nie lata martwej strefy srodka na desktopie (sticky-buy jest mobile-only).",
-    "recta_kontenery_wyklucz": ["sticky", "sticky-buy", "topbar", "footer"],
-    "recta_severity": "FAIL",
-    "designed_cta_sekcje": ["hero", "zamow", "mid-cta", "final"],
-    "designed_cta_proxy_severity": "WARN",
-    "designed_cta_proxy_fail_sekcje": ["hero", "zamow", "final"],
-    "_opis_designed_proxy": "LUKA3 (proxy kodowy): sekcje zawsze-obecne (hero/zamow/final) BEZ .btn.cta w kodzie = realny defekt => FAIL. mid-cta zostaje WARN (brak samej sekcji lapie dedykowana_severity/dedykowana_ma_checkout). PRAWDZIWA egzekucja 'CTA zaprojektowane w MAKIECIE' = krytyk makiet (+9) + brief F2 — patrz STANDARD."
-  },
-
-  "_opis_KAPITALIZACJA_DEPOSIT": "System kapitalizacji = MIŁY DODATEK, nie sposob dzialania (dyrektywa Tomka 21.07: 'nie agresywnie, traktujmy jako mily dodatek a nie sposob dzialania'). check_kapitalizacja_deposit = MIEKKIE PRZYPOMNIENIE (wszystko WARN, NIC nie blokuje DONE) zeby flywheel rosl gdy sie oplaca (KAPITALIZACJA-OPS §4 depozyt): (WARN) wiersz w EXEMPLARY-INDEX; (WARN) lekcja w LEKCJE-LANDINGI kolumna 'Źródło'; (WARN) blok :root w TOKEN-KONTRAKT (paleta dla cross_landing ΔE). 12 istniejacych landingow SA juz w indexie -> PASS; WARN zapali sie dla nowego (13.+) sluga bez depozytu jako przypomnienie, nie kara. Sciezki wzgledem SCRIPT_DIR (scripts/mockup-tools; '../../' = tn-crm) lub absolutne (tak testy podmieniaja fixture). Brak pliku indexu/lekcji/tokenow = SKIP. Zarejestrowany w CHECK_ORDER blisko panel_sync.",
-
-  "kapitalizacja_deposit": {
-    "severity": "WARN",
-    "index_plik": "../../docs/zbuduje/EXEMPLARY-INDEX.md",
-    "index_slug_regex": "/{slug}/|\\[{slug}\\]",
-    "index_brak_msg": "przypomnienie: rozważ depozyt wzorca — dopisz wiersz landinga do EXEMPLARY-INDEX (miły dodatek, KAPITALIZACJA-OPS §4.1)",
-    "lekcje_plik": "../../docs/zbuduje/LEKCJE-LANDINGI.md",
-    "lekcje_kolumna_naglowek": "źródło",
-    "lekcje_severity": "WARN",
-    "lekcje_brak_msg": "rozważ depozyt lekcji (KAPITALIZACJA-OPS §4.4)",
-    "tokens_plik": "../../docs/zbuduje/TOKEN-KONTRAKT.md",
-    "tokens_root_window": 240,
-    "tokens_severity": "WARN",
-    "tokens_brak_msg": "brak bloku :root sluga w TOKEN-KONTRAKT (paleta dla cross_landing ΔE, KAPITALIZACJA-OPS §4.3)"
-  },
-
-  "_opis_CENA_PANEL": "ZGODNOSC CENY landing<->panel (21.07). Powod: krok 'kalkulacja' (Etap 1) ustala cene sprzedazy w wf2_products.price, a landing pieczetuje ja w atrybutach data-price/data-price-raw. Zmiana kalkulacji (nowa cena w panelu) bez re-deployu landingu = klient widzi INNA cene niz kasa/panel. Ten check laczy dwa zrodla: cena zapieczona w HTML MUSI == wf2_products.price po slug (tolerancja groszowa). KAZDA cena w kodzie != panel = FAIL; produkt w panelu BEZ ceny (price NULL/0) = FAIL (kalkulacja niewykonana); brak data-price w HTML = WARN; brak wiersza panelu dla sluga = SKIP (landing bez projektu, jak panel_sync — loczek/odpalak). Host CRM WYMUSZONY (panel_sync.host w _pg_crm) — NIE env SUPABASE_URL (moze wskazywac sparing).",
-
-  "cena_panel": {
-    "severity": "FAIL",
-    "attr": ["data-price", "data-price-raw"],
-    "tabela": "wf2_products",
-    "slug_kolumna": "slug",
-    "kolumna_ceny": "price",
-    "tolerancja": 0.01,
-    "brak_html_severity": "WARN"
-  },
-
-  "_opis_REUSE_PREFLIGHT": "F1 PREFLIGHT RETRIEVALU (21.07). Miekki nudge PRZED F1: PLAN.md landinga powinien deklarowac wzorce dobrane z EXEMPLARY-INDEX pod markerem '## WZORCE' (retrieval, KAPITALIZACJA-OPS §1). WARN, NIE FAIL — bo istniejace PLAN-y markera nie maja i FAIL zlamalby baseline. Brak PLAN.md = SKIP (landing sprzed reguly).",
-
-  "reuse_preflight": {
-    "severity": "WARN",
-    "plan_plik": "PLAN.md",
-    "wzorce_marker": "## WZORCE",
-    "brak_msg": "PLAN nie deklaruje wzorców z EXEMPLARY-INDEX (retrieval, KAPITALIZACJA-OPS §1)"
+  "aliasy_sekcji": {
+   "hero": [
+    "hero",
+    "01"
+   ],
+   "trust": [
+    "trust",
+    "zaufanie",
+    "02"
+   ],
+   "problem": [
+    "problem",
+    "03"
+   ],
+   "demo": [
+    "demo",
+    "04"
+   ],
+   "wideo": [
+    "wideo",
+    "video",
+    "05"
+   ],
+   "benefits": [
+    "benefit",
+    "korzysci",
+    "06"
+   ],
+   "porownanie": [
+    "porownanie",
+    "07"
+   ],
+   "opinie": [
+    "opinie",
+    "reviews",
+    "08",
+    "09"
+   ],
+   "galeria": [
+    "galeria",
+    "gallery",
+    "08",
+    "09"
+   ],
+   "zamow": [
+    "zamow",
+    "oferta",
+    "10"
+   ],
+   "faq": [
+    "faq",
+    "11"
+   ],
+   "final": [
+    "final",
+    "finalcta",
+    "12"
+   ],
+   "mid-cta": [
+    "mid-cta",
+    "midcta",
+    "cta",
+    "recta",
+    "re-cta"
+   ],
+   "interakcja": [
+    "interakcja",
+    "05"
+   ]
   }
+ },
+ "interakcje": {
+  "severity": "FAIL",
+  "always_ids": [
+   "demo"
+  ],
+  "tor_i_attr": "data-tor-i",
+  "wymagane_na_sekcje": [
+   "{id}-SPEC-I.md",
+   "{id}-sandbox.html"
+  ],
+  "wymagany_katalog": "{id}-test",
+  "downgrade_regex": "downgrade\\s+{id}"
+ },
+ "grep_forbidden": {
+  "_ssot_zakazow": "JEDYNE zrodlo zakazow TEKSTOWYCH gate-check (task#6 konsolidacja). detail-lint.py trzyma wlasna kopie listy 'bad' w kodzie (render-time) — DUPLIKAT do przepiecia na ten SSOT przez wlasciciela detail-lint (SPEC F7). Zakazy scarcity/own-stock/przekreslenia dolozone z copy-gate (task#2c). COD 'za pobraniem' DOZWOLONE (Etap5) — celowo brak go w regulach.",
+  "statyczne": [
+   {
+    "regex": ">\\s*0?\\d\\s*/\\s*1[0-9]\\s*<",
+    "severity": "FAIL",
+    "label": "numeracja sekcji NN/NN w tresci"
+   },
+   {
+    "text": "wysyłka w 24h",
+    "severity": "FAIL",
+    "label": "obietnica wysylki 24h"
+   },
+   {
+    "text": "wysylka w 24h",
+    "severity": "FAIL",
+    "label": "obietnica wysylki 24h"
+   },
+   {
+    "text": "magazyn w PL",
+    "severity": "FAIL",
+    "label": "magazyn w PL"
+   },
+   {
+    "text": "dropship",
+    "severity": "FAIL",
+    "label": "dropshipping"
+   },
+   {
+    "text": "aliexpress",
+    "severity": "FAIL",
+    "label": "leak marketplace 'AliExpress'"
+   },
+   {
+    "regex": "\\blorem\\b",
+    "severity": "FAIL",
+    "label": "placeholder 'lorem'"
+   },
+   {
+    "regex": "(?:nr|numer)\\s*1\\s+w\\s+(?:polsce|pl)\\b",
+    "severity": "FAIL",
+    "label": "nieweryfikowalne 'nr 1 w Polsce'"
+   },
+   {
+    "regex": "darmowa\\s+dostawa",
+    "severity": "WARN",
+    "label": "claim 'darmowa dostawa' (weryfikuj — parytet z detail-lint)"
+   },
+   {
+    "regex": "\\bgratis\\b",
+    "severity": "WARN",
+    "label": "claim 'gratis' (parytet z detail-lint)"
+   },
+   {
+    "regex": "\\bnajtaniej\\b",
+    "severity": "WARN",
+    "label": "superlatyw 'najtaniej' (parytet z detail-lint)"
+   },
+   {
+    "regex": "ostatnie\\s+sztuki",
+    "severity": "FAIL",
+    "label": "fake-scarcity: ostatnie sztuki"
+   },
+   {
+    "regex": "tylko\\s+dzi(?:s|ś|siaj)\\b",
+    "severity": "FAIL",
+    "label": "fake-scarcity/urgency: tylko dzis"
+   },
+   {
+    "regex": "zosta[lł][oy]?\\s+(?:ju[zż]\\s+|tylko\\s+|jeszcze\\s+)*\\d+\\s*(?:szt|sztuk|egzempl)",
+    "severity": "FAIL",
+    "label": "fake-scarcity: zostalo N sztuk"
+   },
+   {
+    "regex": "w\\s+naszym\\s+(?:magazynie|sklepie|centrum|stanie)",
+    "severity": "FAIL",
+    "label": "own-stock: 'w naszym magazynie/sklepie'"
+   },
+   {
+    "regex": "mamy\\s+na\\s+(?:stanie|magazynie)",
+    "severity": "FAIL",
+    "label": "own-stock: 'mamy na stanie'"
+   },
+   {
+    "regex": "(?:sprzedano|sold)\\b[^<]{0,40}?(?:u\\s+nas|w\\s+naszym)",
+    "severity": "WARN",
+    "label": "own-stock: 'sprzedano u nas' (mozliwy FP)"
+   },
+   {
+    "regex": "data-price-old|class=\"[^\"]*(?:price-old|old-price|price--old|stara-cena|cena-stara)",
+    "severity": "FAIL",
+    "label": "przekreslona cena (fake-discount anchor)"
+   },
+   {
+    "regex": "<del[\\s>]|<s[\\s>]|text-decoration\\s*:\\s*line-through",
+    "severity": "WARN",
+    "label": "przekreslenie (sprawdz czy nie fake-cena)"
+   },
+   {
+    "text": "pobranie",
+    "severity": "WARN",
+    "label": "wzmianka 'pobranie'"
+   },
+   {
+    "regex": "\\braty\\b",
+    "severity": "WARN",
+    "label": "wzmianka 'raty'"
+   }
+  ],
+  "per_landing": {
+   "_opis": "Zakazy PRODUKTOWE (nie globalne; task#6). Klucz=slug. TYMO = marka z UGC wideo lokowki (loczek) — pilnujemy leaku do HTML na loczek/odpalak (tam wystepuje w materialach). Poza tymi slugami 'TYMO' to szum -> NIE w globalnej liscie.",
+   "loczek": [
+    {
+     "text": "TYMO",
+     "severity": "FAIL",
+     "label": "marka TYMO (UGC lokowka) w HTML"
+    }
+   ],
+   "odpalak": [
+    {
+     "text": "TYMO",
+     "severity": "FAIL",
+     "label": "marka TYMO (UGC) w HTML"
+    }
+   ]
+  },
+  "dynamiczne_shop": {
+   "severity": "FAIL",
+   "linie_zawieraja": [
+    "shop",
+    "sklep źródłowy",
+    "sklep zrodlowy"
+   ],
+   "ignoruj_kandydatow": [
+    "shop",
+    "sklep",
+    "name",
+    "url",
+    "shop{name,url}",
+    "shop{name",
+    "name,url}",
+    "nigdy",
+    "white",
+    "label"
+   ],
+   "min_dlugosc": 4
+  }
+ },
+ "_opis_CROSS_LANDING": "ANTY-RODZENSTWO (20.07). Powod: audyt 4 gotowych landingow dal werdykt masazer <-> Drapek = 9/10 w skali 'ta sama strona z podmienionym produktem' — oba PO doktrynie TOKENS-MAKIETY z 19.07. Fabryka miala pelny aparat wykrywajacy ZA MALO spojnosci (SSOT + STYLE-DNA w kazdym prompcie + checklista krytyka + 'rozjazd tokenu = regeneracja') i ZERO mechanizmu wykrywajacego ZA MALO ROZNICY: gate-check byl w calosci zakotwiczony w JEDNYM slugu, phash near-dup dziala tylko WEWNATRZ landingu. Ten blok to jedyny check patrzacy POZA slug. Doktryna: STANDARD Z6 + TOKENS-MAKIETY.md 'KANON vs PARTYTURA' + PRZEWODNIK-GRAFICZNY §2b.",
+ "cross_landing": {
+  "severity": "FAIL",
+  "_opis": "Porownuje budowany landing z N poprzednio ZBUDOWANYMI (kolejnosc = mtime kod_glob/<slug>/index.html; nowszy = pozniejszy). Font display i akcent czytane z ZYWEGO HTML (:root + link do webfontow) — nie wymagaja archiwum. Archetyp hero z PLAN.md w archiwum (linia 'archetyp-hero: X'). Brak poprzednikow / brak danych = SKIP (nie crash, nie FAIL) — check musi dzialac na pierwszym landingu i na landingach sprzed doktryny.",
+  "n_poprzednich": 3,
+  "delta_e_min": 15,
+  "sekwencja_pct_warn": 80,
+  "sekwencja_severity": "WARN",
+  "font_severity": "FAIL",
+  "akcent_severity": "FAIL",
+  "archetyp_severity": "FAIL",
+  "kod_glob": "c:/repos_tn/tn-crm/sklepy/tomek-niedzwiecki/*/index.html",
+  "wyklucz_slugi": [],
+  "_opis_font": "Kolejnosc zrodel fontu display: (1) token --font-display z :root, (2) font-family z reguly CSS obejmujacej h1/h2, (3) pierwsza rodzina z linku Google Fonts. Porownanie po znormalizowanej nazwie rodziny (lowercase, bez separatorow).",
+  "font_display_tokeny": [
+   "--font-display",
+   "--font-disp",
+   "--font-title",
+   "--font-h"
+  ],
+  "font_naglowek_selektory": [
+   "h1",
+   "h2",
+   ".h1",
+   ".hero h1"
+  ],
+  "_opis_akcent": "Token akcentu = JEDYNY kolor akcentu landingu (historyczna nazwa --cta). Warianty -d/-ink/-soft/-2 pomijane (hover/tekst-na-przycisku/tint). Delta E = CIE76 na Lab (sRGB->XYZ D65->Lab); <15 = kolory z tego samego pasma = brak roznicy tozsamosciowej.",
+  "akcent_tokeny": [
+   "--cta",
+   "--accent",
+   "--amber",
+   "--brand",
+   "--akcent"
+  ],
+  "akcent_wyklucz_sufiksy": [
+   "-d",
+   "-ink",
+   "-soft",
+   "-2",
+   "-3",
+   "-dark",
+   "-hover",
+   "-light"
+  ],
+  "_opis_archetyp": "Zrodlo = PLAN.md w archiwum landingu (glob jak sciezki.archiwum_glob). Brak linii w ktorymkolwiek z pary = SKIP (landingi sprzed 20.07 nie maja archetypu).",
+  "archetyp_plik": "PLAN.md",
+  "archetyp_regex": "archetyp[-_ ]?hero\\s*\\*{0,2}\\s*[:=]\\s*[*\\s_]{0,6}([A-Za-z])\\b",
+  "_opis_sekwencja": "Podobienstwo sekwencji <section id> = LCS-Dice (2*LCS/(len_a+len_b)) po normalizacji aliasami sekcja_typy.aliasy — order-aware, wiec zmiana KOLEJNOSCI sekcji obniza wynik (o to chodzi). Jaccard na zbiorze raportowany informacyjnie. WARN (nie FAIL), bo rdzen sekcji bywa wymuszony produktem.",
+  "sekwencja_wyklucz_id": [
+   "footer",
+   "topbar",
+   "sticky"
+  ]
+ },
+ "sieroty": {
+  "severity": "FAIL",
+  "assets_glob": "assets/*",
+  "rozszerzenia": [
+   ".png",
+   ".webp",
+   ".jpg",
+   ".jpeg",
+   ".avif"
+  ],
+  "_skip_markery_MARTWY": [
+   "task#5d: nieczytane przez check_sieroty — logika 'udokumentowany' idzie po ndocs, nie po tych markerach"
+  ],
+  "dokumentacja": [
+   "MAPA-ASSETOW.md",
+   "F3-ASSETY-MAPA.md"
+  ],
+  "http_200": true,
+  "http_transient_codes": [
+   408,
+   425,
+   429,
+   500,
+   502,
+   503,
+   504
+  ]
+ },
+ "wagi": {
+  "severity": "FAIL",
+  "klasy": [
+   {
+    "match": [
+     ".mp4"
+    ],
+    "label": "wideo mp4",
+    "max_kb": 2560,
+    "_nota": "PRZED hero: hero-video.mp4 ma limit wideo (2560), nie hero-obrazka (230) — Ugniatek F7"
+   },
+   {
+    "match": [
+     "hero"
+    ],
+    "label": "hero",
+    "max_kb": 230
+   },
+   {
+    "match": [
+     "/scenes/"
+    ],
+    "label": "scena",
+    "max_kb": 180
+   },
+   {
+    "match": [
+     "poster"
+    ],
+    "label": "poster",
+    "max_kb": 60
+   },
+   {
+    "match": [
+     "/gallery/",
+     "/ugc/"
+    ],
+    "label": "kafel",
+    "max_kb": 100
+   }
+  ],
+  "domyslny_max_kb": 120
+ },
+ "phash": {
+  "severity": "FAIL",
+  "_nota_demo": "'demo' dodane 19.07 (masazer): stany crossfade TOR-I (demo-a/b/c) sa CELOWO near-identyczne (single-stage crossfade, scena ta sama, zmienia sie WARSTWA UI — SPEC-I/F5, baza obrazow SSIM 0.978). Anty-monotonia celuje w LENIWY reuse tego samego ujecia miedzy SEKCJAMI, nie w zaprojektowane stany demo tej samej sceny.",
+  "klasy_path": [
+   "/scenes/",
+   "/gallery/"
+  ],
+  "hamming_max": 10,
+  "wyjatek_tokeny": [
+   "packshot",
+   "demo"
+  ]
+ },
+ "baza": {
+  "severity": "FAIL",
+  "_host_nota": "Host WYMUSZONY na projekcie CRM (task#5c) — pg_get IGNORUJE env SUPABASE_URL (moze wskazywac sparing) i uzywa tego host. Klucz niepasujacy do CRM -> 401 -> SKIP (lepsze niz dane z ZLEGO projektu).",
+  "host": "https://yxmavwkwnfuphjqbelws.supabase.co",
+  "tabela_produkty": "bud_tt_products",
+  "kolumny_kuracji": {
+   "gallery": "gallery_curated",
+   "videos": "videos_curated"
+  },
+  "tabela_nazw": "bud_brand_names",
+  "kolumna_nazwy": "name",
+  "kolumna_slug": "slug"
+ },
+ "wideo_kafle": {
+  "severity": "FAIL",
+  "video_tag": "<video",
+  "licz_mp4_z_url": true,
+  "downgrade_regex": "downgrade\\s+wideo"
+ },
+ "makiety_mobile": {
+  "severity": "FAIL",
+  "_nota": "F2.4 rozszerzenie (Tomek 18.07): mobile-makieta dla WSZYSTKICH sekcji, nie tylko hero/TOR-I/wideo. komplet_wg_sekcji=true egzekwuje komplet mobile == liczba sekcji (== liczba makiet desktop poza styl-master). Swiadomy wyjatek pojedynczej sekcji = jawna nota w LEDGER wg komplet_nota_regex (nota_regex ogolne jest za luzne na komplet — matchuje kazda wzmianke 'makiety mobile').",
+  "komplet_wg_sekcji": true,
+  "komplet_wyklucz": [
+   "styl-master",
+   "00-"
+  ],
+  "komplet_nota_regex": "mobile-makiet[ay]-(wyjatek|skip|desktop-only)",
+  "wymagane": [
+   {
+    "gdy": "zawsze",
+    "wzory": [
+     "makiety/*hero*mobile*"
+    ],
+    "label": "hero mobile"
+   },
+   {
+    "gdy": "tor_i",
+    "wzory": [
+     "makiety/*demo*mobile*",
+     "makiety/*interakcja*mobile*"
+    ],
+    "label": "demo/interakcja mobile"
+   },
+   {
+    "gdy": "wideo",
+    "wzory": [
+     "makiety/*wideo*mobile*",
+     "makiety/*video*mobile*"
+    ],
+    "label": "wideo mobile"
+   }
+  ],
+  "nota_regex": "makiet[ay][ ]*mobile|mobile[ ]*desktop-only|tylko desktop"
+ },
+ "og_image": {
+  "severity": "WARN",
+  "meta_regex": "og:image[^>]*content=\"([^\"]+)\"",
+  "zakazane_tokeny": [
+   "hero-d",
+   "hero-desk",
+   "hero-mobile",
+   "hero-m."
+  ],
+  "oczekiwany_token": "og"
+ },
+ "ledger_fazy": {
+  "severity": "WARN",
+  "reguly": [
+   {
+    "gdy_plik": "CHOREOGRAFIA.md",
+    "ledger_zawiera": [
+     "choreograf",
+     "F5"
+    ],
+    "label": "faza choreografii (F5)"
+   },
+   {
+    "gdy_katalog": "interakcje",
+    "ledger_zawiera": [
+     "TOR-I",
+     "tor-i"
+    ],
+    "label": "faza TOR-I"
+   }
+  ]
+ },
+ "_opis_TASK_18_07": "Domkniecia audytu meta-szczelnosci + skryptow (18.07). Ostatnie miejsca, gdzie gate ufal DEKLARACJI agenta: (1) finalny_pass = detail-lint spiety maszynowo (caly PASS 0 dot. render), (2) copy = kotwiczenie liczb w KARCIE + jedna cena, (3) published = tryb go-live (placeholdery preview nie moga zostac na LIVE), (4) f1_marza = ekonomia polki. DANE tu; funkcje analogiczne do check_wiernosc/check_panel_sync.",
+ "copy": {
+  "severity": "FAIL",
+  "_opis": "F7 COPY-GATE (task#2). (a) liczba-z-jednostka (spec) w prozie MUSI miec kotwice w KARTA-PRAWDY.md na linii z tagiem [KONKRET-SKU]/[KONKRET]/[SPEC]; liczba spoza karty = FAIL 'liczba bez kotwicy' (fabrykowane specy). W karcie ale poza tagiem = WARN. Jednostki CZASU/% CELOWO poza lista (14 dni zwrotu/gwarancja = polityka, nie spec -> unik FP). (b) >1 distinct data-price = FAIL (jedna cena PL). data-price bywa BOOLEAN (cena w textContent) -> lapiemy tez text_regex. COD 'za pobraniem' DOZWOLONE (nie zakaz).",
+  "anchor": {
+   "karta_tagi": [
+    "[KONKRET-SKU]",
+    "[KONKRET]",
+    "[SPEC]"
+   ],
+   "jednostki_spec": [
+    "mAh",
+    "Wh",
+    "cali",
+    "mm",
+    "cm",
+    "kg",
+    "ml",
+    "szt",
+    "g",
+    "W",
+    "V"
+   ],
+   "ignoruj_liczby": [
+    "2023",
+    "2024",
+    "2025",
+    "2026",
+    "2027"
+   ]
+  },
+  "data_price": {
+   "severity": "FAIL",
+   "max_distinct": 1,
+   "attr_regex": "data-price(?![-\\w])\\s*=\\s*\"([^\"]*)\"",
+   "text_regex": "data-price(?![-\\w])[^>]*>\\s*([^<]{1,40})"
+  }
+ },
+ "_usuniete_f1_marza_20_07": "USUNIETE (dyrektywa Tomka 20.07): blok f1_marza — ekonomia polki, marza, landed/COD. Fabryka landingow NIE ocenia oplacalnosci produktu ani nie wydaje werdyktow GO/NO-GO: gdy produkt wchodzi do budowy, decyzja zakupowa juz zapadla (Etap 1 / radar). Funkcja check_f1_marza usunieta z gate-check.py. Patrz STANDARD-LANDING-SKLEPY.md 'F-1 — INWENTARZ MATERIALU'.",
+ "published": {
+  "severity": "FAIL",
+  "_opis": "Tryb GO-LIVE (--published <url|sciezka>; task#3). Pobiera LIVE html i FAIL gdy zostaly artefakty preview: {{}} placeholder, noindex (niewidoczne dla Google), nierozwiazane URL-e prawne / pixel / product-id. Preview (bez --published) NIE sprawdza — placeholdery OCZEKIWANE. file://sciezka / lokalna sciezka dozwolone (test go-live bez realnego URL). Blad pobrania / 5xx / 429 = WARN (blip), 404 = FAIL (strona nie zyje).",
+  "http_transient_codes": [
+   408,
+   425,
+   429,
+   500,
+   502,
+   503,
+   504
+  ],
+  "fail_regex": [
+   {
+    "regex": "\\{\\{",
+    "label": "nierozwiazany placeholder {{...}}"
+   },
+   {
+    "regex": "noindex",
+    "label": "noindex na produkcji (niewidoczne dla Google)"
+   },
+   {
+    "regex": "REGULAMIN_URL|POLITYKA_URL|PRYWATNOSC_URL|ZWROTY_URL|DOSTAWA_URL|KONTAKT_URL|COOKIES_URL|ODSTAPIENIE_URL|CANONICAL_URL",
+    "label": "nierozwiazany URL prawny/legal (bez klamer)"
+   },
+   {
+    "regex": "href=[\"']https?://ec\\.europa\\.eu/consumers/odr",
+    "label": "martwy link do platformy ODR (wygaszona 20.07.2025 — SSOT PRAWNE.md)"
+   },
+   {
+    "regex": "PIXEL_ID|WF2_PRODUCT_ID|PRODUCT_ID",
+    "label": "nierozwiazany pixel / product-id"
+   },
+   {
+    "regex": "fbq\\(\\s*['\"]init['\"]\\s*,\\s*['\"]\\s*['\"]\\s*\\)",
+    "label": "pusty Pixel init fbq('init','')"
+   }
+  ]
+ },
+ "finalny_pass": {
+  "severity": "FAIL",
+  "_opis": "F7.3 FINALNY PASS spiety maszynowo (task#1) — CALY PASS 0 detail-lint byl dotad niespiety z gate. Odpala detail-lint.py <index.html> --out <json> (venv), parsuje findings, mapuje severity_map. Domyka jednym ruchem: WCAG kontrast, touch>=44, crop cover/upscaling, martwa-interakcja (suwak min==max), pay-badges-imitacje (klaster POZA SSOT), dup-asset cross-sekcja, typografia, scrim=plateau (desktop, przeswit pod tekstem §F3.1b), fade_line (pasy scenowe mobile — martwy pas kremu / zla linia fade §2 KADR=BOHATER+LINIA FADE = P1 blokujacy). Findings placeholder/zakaz-tekstowy ODFILTROWANE (ignoruj_problem_wzorce) — nalezą do published/grep_forbidden (SSOT; unikamy podw. FAIL + FALSZYWEGO FAIL na preview {{). Uwaga: detail-lint NIE emituje h-scroll — dziura do domkniecia u wlasciciela detail-lint (SPEC F7).",
+  "skrypt": "detail-lint.py",
+  "timeout_s": 300,
+  "max_detail": 12,
+  "severity_map": {
+   "P0": "FAIL",
+   "P1": "FAIL",
+   "P2": "WARN"
+  },
+  "ignoruj_problem_wzorce": [
+   "zakazana/placeholder fraza",
+   "{{"
+  ]
+ },
+ "_opis_R13": "Domkniecia audytu R13 (17.07): typy sekcji + rubryka werdyktu + layout-diff strukturalny. Powod: werdykty vision odpuszczaly defekty mechaniki ('Kafle mniejsze niz makieta - bez wplywu na charakter'), IR nie istnial dla 4 zepsutych sekcji, SSIM po resize do wspolnej szerokosci niszczyl informacje o skali.",
+ "sekcja_typy": {
+  "_opis": "KODOWA = mechanika 1:1 z makiety, SSIM twardy. SCENOWA = generowana scena, SSIM dwuskladnikowy (maska sceny cap ~0.7, reszta 0.85). Aliasy normalizuja id z DOM do typu.",
+  "kodowa": [
+   "wideo",
+   "porownanie",
+   "faq",
+   "opinie",
+   "zamow",
+   "zaufanie",
+   "galeria"
+  ],
+  "scenowa": [
+   "hero",
+   "problem",
+   "demo",
+   "final",
+   "korzysci",
+   "mid-cta"
+  ],
+  "aliasy": {
+   "trust": "zaufanie",
+   "benefits": "korzysci",
+   "video": "wideo",
+   "reviews": "opinie",
+   "gallery": "galeria",
+   "oferta": "zamow",
+   "finalcta": "final",
+   "final-cta": "final",
+   "midcta": "mid-cta",
+   "cta": "mid-cta",
+   "recta": "mid-cta",
+   "re-cta": "mid-cta"
+  },
+  "_override_per_landing_MARTWY": "task#5d: nieczytane przez resolve_sectype (gate-check) ani resolve_type (sekcja-diff)"
+ },
+ "werdykt_rubryka": {
+  "severity": "FAIL",
+  "_opis": "Werdykt per sekcja MUSI miec 5 pol T/N + WERDYKT. WERDYKT=TAK bez kompletu 5xT = FAIL. Dla sekcji KODOWYCH: fraza-wytrych w wierszu werdyktu = FAIL.",
+  "pola": [
+   "skala_elem",
+   "AR_proporcje",
+   "guttery",
+   "tresc_od_krawedzi",
+   "wys_vs_makieta"
+  ],
+  "pole_regex": "\\b(?:skala|ar|gut|kraw|wys)[a-z_]*\\s*[:=]\\s*\\*{0,2}([TN])\\b",
+  "min_pol": 5,
+  "werdykt_regex": "\\bWERDYKT\\s*[:=\\u2192-]{0,2}\\s*\\*{0,2}(TAK|NIE)\\b",
+  "tak_bez_werdykt_regex": "(?:\\||^)\\s*\\*{0,2}(TAK|NIE)\\b",
+  "fraza_wytrych_regex": "bez wp[lł]ywu|reflow|sufit|cap ~?0|[sś]wiadom|pomijaln|do decyzji"
+ },
+ "layout_diff": {
+  "severity": "FAIL",
+  "_opis": "TWARDE LAYOUT-FAIL = DOM self-checki mierzone w SAMYM renderze (sliver-guard + pustka-pod-obrazem + gutter-asymetria/scena-zla-strona), odporne na szum makiet AI. Checki wywodzone z IR-makiety (wysokosc/guttery-IR/obraz) oraz raw-SSIM = INFORMACYJNE (kolumna LAYOUT: 'info:'), bo detekcja mockup-ir/OCR na pastelowych full-bleed kanwach AI jest zbyt szumna (R13 domkniecie + test Drapek 18.07). Rubryka vision 5xT/N = trzecia, niezalezna siatka. IR komplet == liczba sekcji (wymuszane).",
+  "_kolumna_MARTWY": "LAYOUT (task#5d: gate-check uzywa hardcoded col_idx('layout'), nie tego klucza)",
+  "fail_token": "LAYOUT-FAIL",
+  "_checks_MARTWY": [
+   "kafle",
+   "pustka",
+   "gutter"
+  ],
+  "_checks_info_MARTWY": [
+   "wysokosc",
+   "guttery",
+   "obraz"
+  ],
+  "ir_dir": "ir",
+  "ir_glob": "*-IR.json",
+  "progi": {
+   "_kafle_MARTWE_task5d": "kafle_dwidth_pct/kafle_dar_pct/kafle_dcols zdemotowane do 'info' w sekcja-diff (Delta-cols szumny na kanwach AI) — nieczytane przez zaden skrypt",
+   "_kafle_dwidth_pct": 30,
+   "_kafle_dar_pct": 20,
+   "_kafle_dcols": 1,
+   "sliver_medwpct_max": 0.12,
+   "sliver_cols_min": 5,
+   "sliver_ar_max": 0.8,
+   "wysokosc_tol_pct": 40,
+   "wysokosc_tylko_kodowa": true,
+   "gutter_asym_delta": 0.35,
+   "gutter_sekcje": [
+    "hero",
+    "final"
+   ],
+   "obraz_center_delta": 0.3,
+   "obraz_imgslot_min_area": 0.08,
+   "obraz_area_pct": 30,
+   "obraz_offset_slot_pct": 20,
+   "_opis_dom_selfchecki": "Progi TWARDYCH DOM self-checkow (mierzone w renderze, bez makiety). Kalibracja 18.07: Odpalak FAIL / Drapek+Loczek PASS. pustka: obraz in-flow contain w za wysokim boksie (emptyV=pustka pionowa box-vs-intrinsic; boxAR=H/W). gutter: scena full-bleed jednostronna (wpct<wmax i |cx-0.5|>offcx) LUB tresc przyklejona do boku z pustym przeciwnym gutterem.",
+   "pustka_img_min_area": 0.18,
+   "pustka_emptyv_min": 0.3,
+   "pustka_boxar_min": 1.4,
+   "pustka_section_bottom_max": 0.7,
+   "gutter_scene_wmax": 0.85,
+   "gutter_scene_offcx_min": 0.12,
+   "gutter_hug_ratio_max": 0.4,
+   "gutter_hug_biggut_min": 0.25
+  },
+  "ssim_progi": {
+   "kodowa_desktop": 0.85,
+   "kodowa_mobile": 0.8,
+   "scenowa_reszta": 0.85,
+   "_scena_cap_MARTWY": 0.7,
+   "_scena_cap_nota": "task#5d: sekcja-diff czyta z ssim_progi tylko kodowa_desktop/scenowa_reszta (linie 723/732); scena_cap nieczytany"
+  },
+  "_scena_selektory_MARTWY": [
+   "task#5d: nieczytane przez gate-check ani sekcja-diff (selekcja sceny idzie po klasach w JS analizatora)",
+   ".hero-media",
+   "[data-mo='hero-scene']",
+   ".prob-scene",
+   "img[data-scene]"
+  ]
+ },
+ "_opis_F3A": "GATE WIERNOŚCI DO SKUTKU (proces F3A; 18.07). Powod: grafika produktowa niezgodna z faktycznym produktem (Latarek: grinder-pen zamiast gilotyny; klient dostalby INNY produkt) przechodzila, bo werdykt wiernosci mial JEDNA pare oczu (generator) i furtke 'dryf produktu = cecha metody'. F3A: trojkat (grafika + tabela cech dyskryminujacych z PASZPORT + realny kadr Ali), DWIE niezalezne pary oczu (pass-1 generator + pass-2 swiezy Sonnet bez promptu i bez werdyktu-1), petla regen do skutku (max 3 rundy -> eskalacja), twardy artefakt dopasowanie/WIERNOSC.md egzekwowany TU. FAIL cechy PRODUKTU = NIGDY waivable; dryf rekwizytu-nie-produktu tylko z nota LEDGER + zgoda obu par. Stare landingi bez WIERNOSC.md = retro przy najblizszym dotknieciu (mechanizm nowy).",
+ "wiernosc": {
+  "severity": "FAIL",
+  "_opis": "Kazda GRAFIKA PRODUKTOWA uzyta w kodzie (klasa S/P; sceny AI z produktem) MUSI miec wiersz w dopasowanie/WIERNOSC.md z werdyktem WIERNOSC in {ZGODNA, REAL, ESKALACJA}. ZGODNA wymaga: 0 FAIL cech + PASS >= K (K = liczba wierszy tabeli 'Cechy dyskryminujace' w PASZPORT.md) + pass-2 (drugie oczy, swiezy Sonnet) = TAK. NIEZGODNA = FAIL (petla regen/eskalacja niedomknieta). ESKALACJA wymaga noty w LEDGER (ref/crop-first/scena-bez-produktu/nota Tomek). rundy > max_rundy bez ESKALACJA = FAIL. REAL = realny kadr (crop galerii Ali) = PASS bez cech. Grafiki wykluczone: wideo mp4, postery tt, UGC, D-art dekoracja, brand, pay-badges.",
+  "md": "dopasowanie/WIERNOSC.md",
+  "paszport": "PASZPORT.md",
+  "cechy_marker": "Cechy dyskryminuj",
+  "klasy_produktowe": [
+   "S",
+   "P"
+  ],
+  "real_token": "REAL",
+  "prod_path_tokens": [
+   "/scenes/",
+   "hero",
+   "packshot",
+   "benefit",
+   "demo",
+   "problem",
+   "final"
+  ],
+  "wyklucz_tokeny": [
+   ".mp4",
+   "/ugc/",
+   "/tt/",
+   "d-art",
+   "dart",
+   "pay-badges",
+   "/brand/",
+   "og."
+  ],
+  "cechy_header_tokeny": [
+   "cecha",
+   "cechy"
+  ],
+  "werdykt_regex": "WIERNO\\S{0,3}\\s*[:=\\u2192\\-]{0,3}\\s*\\*{0,2}(NIEZGODNA|ZGODNA|ESKALACJA|REAL)\\b",
+  "pass2_regex": "(?:pass\\s*-?2|p2|drugie oczy)\\s*[:=]?\\s*\\*{0,2}(TAK|NIE|OK|ZGOD)",
+  "pass2_lead_regex": "^\\s*\\*{0,2}(TAK|OK|ZGOD)\\b",
+  "cecha_fail_regex": "\\bFAIL\\b",
+  "cecha_pass_regex": "\\bPASS\\b",
+  "rundy_regex": "rund[ay]?\\D{0,4}(\\d+)",
+  "max_rundy": 3,
+  "eskalacja_ledger_tokeny": [
+   "eskalacja",
+   "crop-first",
+   "crop first",
+   "scena bez produktu",
+   "realny <img>",
+   "realny img",
+   "nota tomek",
+   "nota do tomka",
+   "referencyjn",
+   "ref produktu"
+  ]
+ },
+ "_opis_PANEL_SYNC": "MOST FABRYKA->PANEL EGZEKWOWALNY (18.07). Powod: sync panelu 'tn-sklepy' (wf2_*) byl OBOWIAZKOWY per faza tylko w STANDARDZIE, bez kontroli maszynowej — ta sama klasa luki co samo-deklaracja gate'u ('PASS 10/10'). Panel = jedyne okno Tomka na postep; faza bez syncu = niewidoczna. Ten blok czyni sync CZESCIA definicji DONE, egzekwowana tu. Kontrakt+katalog mapowan: docs/zbuduje/MOST-PANEL.md; skrot: STANDARD-LANDING-SKLEPY.md §1-sync. Mapowanie: landing slug -> wf2_products.slug; brak wiersza = SKIP (nie kazdy preview ma projekt, np. loczek/odpalak). Host WYMUSZONY na projekcie CRM (NIE env SUPABASE_URL — .env wskazuje projekt sparingu). Progi tolerancji + severity = DANE (tuning tu, nie w kodzie).",
+ "panel_sync": {
+  "severity": "FAIL",
+  "host": "https://yxmavwkwnfuphjqbelws.supabase.co",
+  "tabela_produkty": "wf2_products",
+  "tabela_kroki": "wf2_steps",
+  "tabela_artefakty": "wf2_artifacts",
+  "slug_kolumna": "slug",
+  "karta_kolumny_wymagane": [
+   "price",
+   "cost_purchase",
+   "repo_path",
+   "status"
+  ],
+  "puste_done_severity": "WARN",
+  "_opis_kroki": "Deliverable w archiwum/kodzie => panel status='done'. Mapowanie krok->deliverable (co DOWODZI, ze faza zamknieta). gdy_plik/gdy_glob wzgledem archiwum, gdy_kod = index.html (ctx code). opcjonalny=true => WARN zamiast FAIL (faza moze byc downgradowana, np. zycie).",
+  "kroki_done": [
+   {
+    "step": "lp_dane",
+    "label": "F0 dane/karta",
+    "gdy_plik": [
+     "KARTA-PRAWDY.md"
+    ]
+   },
+   {
+    "step": "lp_plan",
+    "label": "F1 plan+przewodnik",
+    "gdy_plik": [
+     "PRZEWODNIK-GRAFICZNY.md"
+    ]
+   },
+   {
+    "step": "lp_styl_marka",
+    "label": "F2.5 branding",
+    "gdy_glob": [
+     "brand/favicon*.png"
+    ]
+   },
+   {
+    "step": "lp_makiety",
+    "label": "F2 makiety",
+    "gdy_glob": [
+     "makiety/*.png"
+    ]
+   },
+   {
+    "step": "lp_grafiki",
+    "label": "F3 grafiki+wiernosc",
+    "gdy_plik": [
+     "MAPA-ASSETOW.md"
+    ]
+   },
+   {
+    "step": "lp_kod",
+    "label": "F4 kod",
+    "gdy_kod": true
+   },
+   {
+    "step": "lp_dopasowanie",
+    "label": "F7.1 dopasowanie",
+    "gdy_glob": [
+     "dopasowanie/*.png"
+    ]
+   },
+   {
+    "step": "lp_zycie",
+    "label": "F5 zycie",
+    "gdy_glob": [
+     "interakcje/*-SPEC-I.md",
+     "CHOREOGRAFIA.md"
+    ],
+    "opcjonalny": true
+   }
+  ],
+  "_opis_artefakty": "Artefakty panelu == pliki archiwum. tryb 'stem': dopasowanie po rdzeniu nazwy pliku (URL panelu vs plik archiwum), missing = archiwum-nie-w-panelu; FAIL gdy missing > tolerancja (lista brakow w detalu). tryb 'obecnosc': kontrakt to kontakt-arkusze/agregaty (np. dowod = contact-sheety, NIE 1:1 na kompozyt) => wystarczy >=1 artefakt gdy sa pliki. kind[] = dozwolone rodzaje (dedup po URL-stem).",
+  "artefakty_liczba": [
+   {
+    "label": "makiety desktop",
+    "tryb": "stem",
+    "kind": [
+     "makieta"
+    ],
+    "zrodla": [
+     {
+      "glob": "makiety/*.png",
+      "wyklucz": [
+       "mobile",
+       "00-",
+       "styl-master"
+      ]
+     }
+    ],
+    "tolerancja": 2
+   },
+   {
+    "label": "makiety mobile",
+    "tryb": "stem",
+    "kind": [
+     "makieta_mobile"
+    ],
+    "zrodla": [
+     {
+      "glob": "makiety/*mobile*.png"
+     }
+    ],
+    "tolerancja": 2
+   },
+   {
+    "label": "grafiki produktowe (sceny + galeria HIGH)",
+    "tryb": "stem",
+    "kind": [
+     "scena",
+     "image",
+     "gallery"
+    ],
+    "zrodla": [
+     {
+      "glob": "assets/scenes/*.webp",
+      "wyklucz": [
+       "og."
+      ]
+     },
+     {
+      "glob": "assets/gallery/*-hq.webp"
+     }
+    ],
+    "tolerancja": 2
+   },
+   {
+    "label": "kompozyty dopasowania (dowod/proof)",
+    "tryb": "obecnosc",
+    "kind": [
+     "dowod",
+     "proof"
+    ],
+    "zrodla": [
+     {
+      "glob": "dopasowanie/*.png"
+     }
+    ]
+   }
+  ],
+  "_opis_doc": "Dokument fabryki, ktory MUSI byc widoczny jako chip w panelu (kind=doc). WIERNOSC.md = dowod gate'u wiernosci F3A -> lp_grafiki. token = fragment url/label ktory potwierdza obecnosc.",
+  "doc_wymagane": [
+   {
+    "label": "WIERNOSC.md (F3A) w lp_grafiki",
+    "plik": "dopasowanie/WIERNOSC.md",
+    "kind": "doc",
+    "token": "wiernosc"
+   }
+  ],
+  "_opis_kod_wzmianki": "Element obecny w KODZIE (footer/logo/wideo) musi miec odbicie w panelu — wzmianka w data.fields kroku LUB artefakt kind_alt. gdy_kod_regex kwalifikuje regule (element w kodzie). footer=FAIL (modul footer@1 to standard KAZDEGO landingu; brak w moduly_uzyte = realny defekt syncu). logo/brand=WARN (branding bywa juz na lp_styl_marka; wzmianka w lp_kod = nicosc do domkniecia, nie blokada). wideo: satysfakcja gdy fields wzmiankuja video LUB istnieje artefakt kind=video (lp_zycie).",
+  "kod_wzmianki": [
+   {
+    "label": "footer w lp_kod (modul footer@1)",
+    "severity": "FAIL",
+    "step": "lp_kod",
+    "gdy_kod_regex": "<footer",
+    "tokeny": [
+     "footer",
+     "stopk"
+    ]
+   },
+   {
+    "label": "brand/logo w lp_kod (favicon+wordmark zywy)",
+    "severity": "WARN",
+    "step": "lp_kod",
+    "gdy_kod_regex": "favicon|wordmark",
+    "tokeny": [
+     "logo",
+     "favicon",
+     "wordmark",
+     "brand",
+     "lockup"
+    ]
+   },
+   {
+    "label": "wideo w panelu (lp_kod video_count / lp_zycie video)",
+    "severity": "FAIL",
+    "step": "lp_kod",
+    "gdy_kod_regex": "<video|\\.mp4",
+    "tokeny": [
+     "video",
+     "wideo"
+    ],
+    "kind_alt": "video"
+   }
+  ]
+ },
+ "_opis_SEKCJE_PLAN": "F1a MANIFEST SEKCJI = kontrakt kompletnosci (Tomek 20.07: 'pilnowac czy WSZYSTKIE sekcje ktore musza byc zostaly wygenerowane; zeby do takich sytuacji nie dochodzilo'). Powod: gate-check liczyl sekcje Z GOTOWEGO HTML -> sekcja porzucona PRZED buildem (koder pominal / plan zapomnial) byla NIEWIDZIALNA. Ten check rekoncyliuje PLAN <-> makieta <-> kod <-> kompozyt. Brak bloku w PLAN.md = SKIP (landingi sprzed reguly, retro przy dotknieciu).",
+ "sekcje_plan": {
+  "severity": "FAIL",
+  "plan_plik": "PLAN.md",
+  "manifest_marker": "## MANIFEST SEKCJI",
+  "wymagany_od_data": "2026-07-20",
+  "brak_manifestu_nowy_severity": "FAIL",
+  "_opis_wymuszenie": "LUKA1 (adwersarz 20.07): brak manifestu = SKIP czynil cala gwarancje OPCJONALNA. Dyskryminator po mtime kodu (index.html): kod dotkniety >= wymagany_od_data BEZ manifestu = FAIL (nowy landing MUSI miec F1a); kod starszy = SKIP (landing sprzed reguly, retro przy dotknieciu). mtime dzisiejszy = 'retro przy dotknieciu' wlacza sie sam.",
+  "rdzen_wymagany": [
+   "hero",
+   "zamow",
+   "final",
+   "mid-cta"
+  ],
+  "rdzen_severity": "FAIL",
+  "_opis_rdzen": "LUKA7: manifest sprawdzal 'czy zbudowano co zaplanowano', nie 'czy zaplanowano komplet'. rdzen_wymagany = sekcje ktore MUSZA byc w manifescie jako build (nie skip); brak rdzeniowej = FAIL. Gwarantuje ze plan nie pominie hero/oferty/mid-cta/final.",
+  "linia_regex": "^\\s*\\d+[.)]?\\s*([a-z0-9][a-z0-9-]*)\\s*\\|\\s*(scenowa|kodowa)\\s*\\|\\s*(build|skip)\\b(.*)$",
+  "linia_case_insensitive": true,
+  "status_build": "build",
+  "status_skip": "skip",
+  "skip_powod_min_len": 6,
+  "_opis_powod": "Po tokenie 'skip' MUSI byc powod (>= skip_powod_min_len znakow niebialych po odcieciu separatora -/—/:). Powod bez kotwicy tresciowej = i tak przechodzi tu (kotwica KARTA/LEDGER weryfikowana przez agenta), ale PUSTY skip = FAIL.",
+  "makieta_glob": "makiety/*{id}*",
+  "makieta_wyklucz": [
+   "mobile",
+   "00-",
+   "styl-master"
+  ],
+  "makieta_mobile_glob": "makiety/*{id}*mobile*",
+  "uzyj_aliasy_sekcji": "dopasowanie.aliasy_sekcji",
+  "nieplanowana_severity": "WARN",
+  "wyklucz_id_kod": [
+   "footer",
+   "topbar",
+   "sticky",
+   "sticky-buy"
+  ]
+ },
+ "_opis_CTA": "F6 BRAMKA CTA (Tomek 20.07 na macie: 'za malo CTA; tej dedykowanej sekcji z CTA tez nie ma'). Reguly CTA byly OPISOWE w STANDARD (mid-CTA=pelna sekcja z makieta §F4 pkt4, desktop re-CTA, FINAL CTA) i NIEEGZEKWOWANE -> mata je zgubila. (a) liczba [data-checkout] w kodzie >= min_count; (b) obecna DEDYKOWANA sekcja CTA (id in dedykowana_aliasy) ORAZ final (id in final_aliasy); (c) >=1 [data-checkout] w <section> POZA hero/sticky/zamow (re-CTA widoczny na desktopie, bo sticky-buy jest mobile-only). Landing bez szkieletu = FAIL (retro przy dotknieciu). designed_cta_sekcje = sekcje ktorych MAKIETA musi miec zaprojektowany przycisk CTA — egzekwuje KRYTYK makiet/agent (informacyjnie tutaj; skrypt moze policzyc obecnosc .btn.cta w kodzie tych sekcji jako proxy WARN).",
+ "cta": {
+  "severity": "FAIL",
+  "checkout_attr": "data-checkout",
+  "min_count": 4,
+  "min_count_severity": "FAIL",
+  "min_count_wyklucz_kontenery": true,
+  "_opis_min_count": "LUKA6: sticky-buy jest mobile-only. min_count_wyklucz_kontenery=true => total do progu liczony BEZ kontenerow poza-sekcja (sticky/topbar/footer) => min_count=4 = 4 realne CTA w sekcjach TRESCI widoczne na desktopie (hero+oferta+mid-cta+final).",
+  "dedykowana_ma_checkout": true,
+  "_opis_dedykowana_checkout": "LUKA2: sama obecnosc <section id=mid-cta> nie wystarcza — dedykowana sekcja CTA MUSI zawierac >=1 [data-checkout], inaczej 'sekcja ktorej sensem jest CTA' nie ma przycisku a bramka zielona.",
+  "dedykowana_aliasy": [
+   "mid-cta",
+   "midcta",
+   "cta",
+   "recta",
+   "re-cta"
+  ],
+  "dedykowana_severity": "FAIL",
+  "wymagana_final": true,
+  "final_aliasy": [
+   "final",
+   "finalcta",
+   "final-cta"
+  ],
+  "final_severity": "FAIL",
+  "recta_wyklucz_sekcje": [
+   "hero",
+   "zamow",
+   "oferta",
+   "zamów",
+   "final",
+   "finalcta",
+   "final-cta"
+  ],
+  "_opis_recta": "re-CTA MUSI byc genuine MID-page CTA (dedykowana sekcja mid-cta po klastrze dowodu), wiec wykluczamy tez final — final to domkniecie na dole, nie lata martwej strefy srodka na desktopie (sticky-buy jest mobile-only).",
+  "recta_kontenery_wyklucz": [
+   "sticky",
+   "sticky-buy",
+   "topbar",
+   "footer"
+  ],
+  "recta_severity": "FAIL",
+  "designed_cta_sekcje": [
+   "hero",
+   "zamow",
+   "mid-cta",
+   "final"
+  ],
+  "designed_cta_proxy_severity": "WARN",
+  "designed_cta_proxy_fail_sekcje": [
+   "hero",
+   "zamow",
+   "final"
+  ],
+  "_opis_designed_proxy": "LUKA3 (proxy kodowy): sekcje zawsze-obecne (hero/zamow/final) BEZ .btn.cta w kodzie = realny defekt => FAIL. mid-cta zostaje WARN (brak samej sekcji lapie dedykowana_severity/dedykowana_ma_checkout). PRAWDZIWA egzekucja 'CTA zaprojektowane w MAKIECIE' = krytyk makiet (+9) + brief F2 — patrz STANDARD.",
+  "checkout_inline_klasa": "zc-checkout",
+  "_opis_checkout_inline": "Sekcja zamow z osadzonym modulem checkout-inline@2 (class zc-checkout) MA CTA (submit .zc-cta \"Zamawiam i place\") — liczy sie do min_count i spelnia designed CTA; kanon od 20.07 (MODULY.md), doprecyzowane przy Ugniatku F7."
+ },
+ "_opis_KAPITALIZACJA_DEPOSIT": "System kapitalizacji = MIŁY DODATEK, nie sposob dzialania (dyrektywa Tomka 21.07: 'nie agresywnie, traktujmy jako mily dodatek a nie sposob dzialania'). check_kapitalizacja_deposit = MIEKKIE PRZYPOMNIENIE (wszystko WARN, NIC nie blokuje DONE) zeby flywheel rosl gdy sie oplaca (KAPITALIZACJA-OPS §4 depozyt): (WARN) wiersz w EXEMPLARY-INDEX; (WARN) lekcja w LEKCJE-LANDINGI kolumna 'Źródło'; (WARN) blok :root w TOKEN-KONTRAKT (paleta dla cross_landing ΔE). 12 istniejacych landingow SA juz w indexie -> PASS; WARN zapali sie dla nowego (13.+) sluga bez depozytu jako przypomnienie, nie kara. Sciezki wzgledem SCRIPT_DIR (scripts/mockup-tools; '../../' = tn-crm) lub absolutne (tak testy podmieniaja fixture). Brak pliku indexu/lekcji/tokenow = SKIP. Zarejestrowany w CHECK_ORDER blisko panel_sync.",
+ "kapitalizacja_deposit": {
+  "severity": "WARN",
+  "index_plik": "../../docs/zbuduje/EXEMPLARY-INDEX.md",
+  "index_slug_regex": "/{slug}/|\\[{slug}\\]",
+  "index_brak_msg": "przypomnienie: rozważ depozyt wzorca — dopisz wiersz landinga do EXEMPLARY-INDEX (miły dodatek, KAPITALIZACJA-OPS §4.1)",
+  "lekcje_plik": "../../docs/zbuduje/LEKCJE-LANDINGI.md",
+  "lekcje_kolumna_naglowek": "źródło",
+  "lekcje_severity": "WARN",
+  "lekcje_brak_msg": "rozważ depozyt lekcji (KAPITALIZACJA-OPS §4.4)",
+  "tokens_plik": "../../docs/zbuduje/TOKEN-KONTRAKT.md",
+  "tokens_root_window": 240,
+  "tokens_severity": "WARN",
+  "tokens_brak_msg": "brak bloku :root sluga w TOKEN-KONTRAKT (paleta dla cross_landing ΔE, KAPITALIZACJA-OPS §4.3)"
+ },
+ "_opis_CENA_PANEL": "ZGODNOSC CENY landing<->panel (21.07). Powod: krok 'kalkulacja' (Etap 1) ustala cene sprzedazy w wf2_products.price, a landing pieczetuje ja w atrybutach data-price/data-price-raw. Zmiana kalkulacji (nowa cena w panelu) bez re-deployu landingu = klient widzi INNA cene niz kasa/panel. Ten check laczy dwa zrodla: cena zapieczona w HTML MUSI == wf2_products.price po slug (tolerancja groszowa). KAZDA cena w kodzie != panel = FAIL; produkt w panelu BEZ ceny (price NULL/0) = FAIL (kalkulacja niewykonana); brak data-price w HTML = WARN; brak wiersza panelu dla sluga = SKIP (landing bez projektu, jak panel_sync — loczek/odpalak). Host CRM WYMUSZONY (panel_sync.host w _pg_crm) — NIE env SUPABASE_URL (moze wskazywac sparing).",
+ "cena_panel": {
+  "severity": "FAIL",
+  "attr": [
+   "data-price",
+   "data-price-raw"
+  ],
+  "tabela": "wf2_products",
+  "slug_kolumna": "slug",
+  "kolumna_ceny": "price",
+  "tolerancja": 0.01,
+  "brak_html_severity": "WARN"
+ },
+ "_opis_REUSE_PREFLIGHT": "F1 PREFLIGHT RETRIEVALU (21.07). Miekki nudge PRZED F1: PLAN.md landinga powinien deklarowac wzorce dobrane z EXEMPLARY-INDEX pod markerem '## WZORCE' (retrieval, KAPITALIZACJA-OPS §1). WARN, NIE FAIL — bo istniejace PLAN-y markera nie maja i FAIL zlamalby baseline. Brak PLAN.md = SKIP (landing sprzed reguly).",
+ "reuse_preflight": {
+  "severity": "WARN",
+  "plan_plik": "PLAN.md",
+  "wzorce_marker": "## WZORCE",
+  "brak_msg": "PLAN nie deklaruje wzorców z EXEMPLARY-INDEX (retrieval, KAPITALIZACJA-OPS §1)"
+ }
 }
