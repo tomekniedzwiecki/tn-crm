@@ -75,13 +75,13 @@ UGN_DATA = [
 ]
 ODS_DATA = [
     (AO + 'tt1.mp4', AO + 'tt1-poster.webp', '@kitchen_in_china', 'Ociekanie prosto nad wokiem',
-     'Nagranie z TikToka: koszyk z krążkami cebulowymi ocieka z oleju nad wokiem'),
-    (AO + 'ali1.mp4', AO + 'ali1-poster.webp', None, 'Od frytek po podanie na stół',
-     'Wideo producenta: rozłożony koszyk z frytkami podany na talerzu'),
-    (AO + 'tt2.mp4', AO + 'tt2-poster.webp', '@goodthingsfindsa', 'Przekąski bez tłuszczu',
-     'Nagranie z TikToka: rozłożony koszyk przy talerzach przekąsek'),
-    (AO + 'tt3.mp4', AO + 'tt3-poster.webp', '@rozzdelite', 'Efekt: chrupiące i suche',
-     'Nagranie z TikToka: miska chrupiących przekąsek odsączonych z tłuszczu'),
+     'Nagranie z TikToka: koszyk ze smażonymi kąskami ocieka z oleju nad wokiem'),
+    (AO + 'ali1.mp4', AO + 'ali1-poster.webp', None, 'Od smażenia po podanie na stół',
+     'Wideo producenta: składany koszyk podczas smażenia i podania'),
+    (AO + 'tt2.mp4', AO + 'tt2-poster.webp', '@goodthingsfindsa', 'Przekąski prosto z koszyka',
+     'Nagranie z TikToka: rozłożony koszyk z przekąskami przy talerzach'),
+    (AO + 'tt3.mp4', AO + 'tt3-poster.webp', '@rozzdelite', 'Gotowe danie z koszyka',
+     'Nagranie z TikToka: gotowe danie przygotowane z pomocą koszyka'),
     (AO + 'tt4.mp4', AO + 'tt4-poster.webp', '@reasuretrove', 'Koszyk w woku — start',
      'Nagranie z TikToka: koszyk rozłożony w woku na kuchence'),
 ]
