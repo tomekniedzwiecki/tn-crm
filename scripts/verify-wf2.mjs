@@ -234,7 +234,7 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   // KONTRAKT DEDUP: 3 stałe VERBATIM (partner access, konto, strona) identyczne w webhooku,
   // WS panelu i CHECKLIST_MAP. Rozjazd = „duch" checklisty (odhaczenie nie trafia w stan bazy).
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
-  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', '_shared', 'checklist-map.ts'), 'utf8');
   for (const cst of ['CHECK_PARTNER_ACCESS', 'CHECK_KONTO', 'CHECK_STRONA']) {
     const m = ac.match(new RegExp(`const ${cst} = "([^"]+)"`));
     const verbatim = m ? m[1] : null;
@@ -376,7 +376,7 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
 
   // VERBATIM auto-odhaczeń: stałe verify == WS panelu == CHECKLIST_MAP (rozjazd = „duch" checklisty)
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
-  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', '_shared', 'checklist-map.ts'), 'utf8');
   for (const cst of ['CHECK_ADS_KONTO_WALUTA', 'CHECK_ADS_BUDZET_SRODKI', 'CHECK_ADS_BUDZET_LIMIT', 'CHECK_ADS_STRONA_PRZYPISANA']) {
     const m = v.match(new RegExp(`const ${cst} = "([^"]+)"`));
     const verbatim = m ? m[1] : null;
@@ -400,7 +400,7 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
 // ── 14. Nowe teksty checklist E5/E6 (backlog audytów v1) — WS panelu + spójność WS↔CHECKLIST_MAP ──
 {
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
-  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', '_shared', 'checklist-map.ts'), 'utf8');
 
   // nowe pozycje muszą istnieć VERBATIM w WS (klucz deduplikacji ze stanem)
   const newChecks = [
@@ -453,7 +453,7 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   const portalSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
   const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
-  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', '_shared', 'checklist-map.ts'), 'utf8');
   const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
 
   // (poz.2) ATOMOWY MERGE: migracja z funkcją SQL + oba edge wołają rpc('wf2_step_merge')
@@ -614,7 +614,7 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
 {
   const v = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-verify', 'index.ts'), 'utf8');
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
-  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', '_shared', 'checklist-map.ts'), 'utf8');
 
   // (a) settings key istnieje (odczyt service-role); anon NIE widzi; migracja obecna
   const kr = await rest('settings?select=key&key=eq.wf2_meta_assign_users', SK);
@@ -707,6 +707,12 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   const fnPath = join(ROOT, 'supabase', 'functions', 'wf2-ads-guide', 'index.ts');
   const src = existsSync(fnPath) ? readFileSync(fnPath, 'utf8') : '';
   src ? ok('wf2-ads-guide/index.ts istnieje (przewodnik AI)') : bad('wf2-ads-guide', 'brak supabase/functions/wf2-ads-guide/index.ts');
+  // Po konsolidacji (22.07) wspólny szkielet czatów portalowych żyje w _shared/portal-chat.ts.
+  // Asercje na mechanizmy przeniesione tam (kill-switch, rate-limit, vision, gate readonly) grepują
+  // TEN plik; asercje na konfigurację tej funkcji (klucze/model/marker/nota/prompt) grepują wf2-ads-guide src.
+  const sharedPath = join(ROOT, 'supabase', 'functions', '_shared', 'portal-chat.ts');
+  const shared = existsSync(sharedPath) ? readFileSync(sharedPath, 'utf8') : '';
+  shared ? ok('_shared/portal-chat.ts istnieje (wspólny handler czatów portalowych)') : bad('portal-chat.ts', 'brak supabase/functions/_shared/portal-chat.ts');
 
   // gate: POST bez auth (token 32-hex bez hasła) → 401/403, NIGDY 200
   const st = await edge('wf2-ads-guide', { action: 'history', token: 'x' });
@@ -721,18 +727,18 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   // nota „blokada" z dedup po otwartej nocie „⚠️ PRZEWODNIK:%"
   (src.includes('⚠️ PRZEWODNIK:') && src.includes('tag: "blokada"') && src.includes('.like("body", "⚠️ PRZEWODNIK:%")'))
     ? ok('wf2-ads-guide: nota blokada „⚠️ PRZEWODNIK" z dedup po otwartej nocie') : bad('wf2-ads-guide nota', 'brak noty blokada / dedup „⚠️ PRZEWODNIK:%"');
-  // rate limit 60 wiadomości/h per projekt (licznik z tabeli po role=user)
-  (src.includes('MAX_USER_MSGS_PER_HOUR = 60') && src.includes('.eq("role", "user")') && src.includes('count: "exact"'))
-    ? ok('wf2-ads-guide: rate-limit 60 wiadomości/h per projekt (licznik role=user)') : bad('wf2-ads-guide rate-limit', 'brak MAX_USER_MSGS_PER_HOUR = 60 / licznika role=user');
-  // kill-switch FAIL-OPEN na settings.wf2_ads_guide_enabled
-  (src.includes('wf2_ads_guide_enabled') && src.includes('isKilled'))
-    ? ok('wf2-ads-guide: kill-switch wf2_ads_guide_enabled (FAIL-OPEN)') : bad('wf2-ads-guide kill-switch', 'brak wf2_ads_guide_enabled/isKilled');
-  // model konfigurowalny (WF2_GUIDE_OPENAI_MODEL default gpt-4o) + vision (image_url)
-  (src.includes('WF2_GUIDE_OPENAI_MODEL') && src.includes('image_url'))
-    ? ok('wf2-ads-guide: model WF2_GUIDE_OPENAI_MODEL + vision (image_url)') : bad('wf2-ads-guide model/vision', 'brak WF2_GUIDE_OPENAI_MODEL/image_url');
-  // podgląd admina = readonly (message/upload → 403)
-  (src.includes('podgląd — tylko odczyt') && src.includes('verifyTeamMember'))
-    ? ok('wf2-ads-guide: podgląd admina readonly (403) + verifyTeamMember') : bad('wf2-ads-guide readonly', 'brak gate readonly/verifyTeamMember');
+  // rate limit 60 wiadomości/h per projekt: wf2 config deklaruje 60; licznik role=user exact = portal-chat.ts
+  (src.includes('MAX_USER_MSGS_PER_HOUR = 60') && shared.includes('.eq("role", "user")') && shared.includes('count: "exact"'))
+    ? ok('wf2-ads-guide: rate-limit 60/h (config) + licznik role=user exact w portal-chat.ts') : bad('wf2-ads-guide rate-limit', 'brak MAX_USER_MSGS_PER_HOUR = 60 (wf2) lub licznika role=user/count exact (portal-chat.ts)');
+  // kill-switch FAIL-OPEN: wf2 config deklaruje klucz settings.wf2_ads_guide_enabled; isKilled = portal-chat.ts
+  (src.includes('wf2_ads_guide_enabled') && shared.includes('isKilled'))
+    ? ok('wf2-ads-guide: kill-switch wf2_ads_guide_enabled (config) + isKilled FAIL-OPEN w portal-chat.ts') : bad('wf2-ads-guide kill-switch', 'brak wf2_ads_guide_enabled (wf2) lub isKilled (portal-chat.ts)');
+  // model konfigurowalny (WF2_GUIDE_OPENAI_MODEL default gpt-4o) w wf2 config; vision (image_url) = portal-chat.ts
+  (src.includes('WF2_GUIDE_OPENAI_MODEL') && shared.includes('image_url'))
+    ? ok('wf2-ads-guide: model WF2_GUIDE_OPENAI_MODEL (config) + vision (image_url) w portal-chat.ts') : bad('wf2-ads-guide model/vision', 'brak WF2_GUIDE_OPENAI_MODEL (wf2) lub image_url (portal-chat.ts)');
+  // podgląd admina = readonly (message/upload → 403 „podgląd — tylko odczyt") + verifyTeamMember — mechanizm w portal-chat.ts
+  (shared.includes('podgląd — tylko odczyt') && shared.includes('verifyTeamMember'))
+    ? ok('wf2-ads-guide: podgląd admina readonly (403) + verifyTeamMember w portal-chat.ts') : bad('wf2-ads-guide readonly', 'brak gate readonly „podgląd — tylko odczyt"/verifyTeamMember w portal-chat.ts');
   // BM ID Tomka w promptcie (kroki ręczne) + menu „Partnerzy" (nie „Dodaj osoby")
   (src.includes('737839566050751') && src.includes('Nadaj partnerowi dostęp do zasobów'))
     ? ok('wf2-ads-guide: prompt zawiera BM ID 737839566050751 + menu „Partnerzy"') : bad('wf2-ads-guide prompt', 'brak BM ID / menu partnerów w promptcie');
@@ -764,15 +770,61 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     ? ok('migracja 20260722r_wf2_ads_guide: tabela + RLS team + bucket + kill-switch + storage select-policy')
     : bad('migracja 20260722r_wf2_ads_guide', 'brak tabeli/RLS/bucketu/kill-switcha/select-policy');
 
-  // portal.html: karta przewodnika + drawer czatu + wywołania upload_init/done
+  // ── CHAT-FIRST (22.07): asystent = komponent TNChat na całym widoku zadań ─────────
+  // Stary drawer gd-*/guide-card/GUIDE_STEPS ZASTĄPIONY montażem TNChat (components/tn-chat.js).
+  // Upload/rate/vision/gate = _shared/portal-chat.ts + tn-chat.js (repath asercji z portal.html).
   const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
-  (portalHtml.includes('Przewodnik konfiguracji — zapytaj AI') && portalHtml.includes('openGuide(') && portalHtml.includes('guide-wrap'))
-    ? ok('portal.html: karta przewodnika + drawer czatu (openGuide/guide-wrap)') : bad('portal.html przewodnik', 'brak karty/ drawera przewodnika');
-  (portalHtml.includes("action: 'upload_init'") && portalHtml.includes("action: 'upload_done'") && portalHtml.includes('wf2-ads-guide'))
-    ? ok('portal.html: upload zrzutu przez upload_init/done → wf2-ads-guide') : bad('portal.html upload', 'brak upload_init/done / GUIDE_FN');
-  // karta znika przy kill-switch OFF (guideEnabled)
-  (portalHtml.includes('guideEnabled !== false') && portalHtml.includes('loadGuideState'))
-    ? ok('portal.html: karta znika przy kill-switch OFF (guideEnabled/loadGuideState)') : bad('portal.html kill-switch', 'brak obsługi guideEnabled/loadGuideState');
+  const portalTs = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
+  const chatJs = existsSync(join(ROOT, 'components', 'tn-chat.js')) ? readFileSync(join(ROOT, 'components', 'tn-chat.js'), 'utf8') : '';
+
+  // (d) portal montuje TNChat (drawer asystenta) + ładuje komponent z ?v= + BRAK reliktów starego drawera
+  (portalHtml.includes('components/tn-chat.js?v=') && portalHtml.includes('TNChat.mount(') && portalHtml.includes('mountAsystent')
+    && !portalHtml.includes('gd-chat') && !portalHtml.includes('guide-card') && !portalHtml.includes('GUIDE_STEPS'))
+    ? ok('portal.html: mount TNChat (drawer asystenta) + tn-chat.js?v= + BRAK gd-chat/guide-card/GUIDE_STEPS')
+    : bad('portal.html mount asystenta', 'brak TNChat.mount/tn-chat.js?v=/mountAsystent albo pozostały relikty gd-chat/guide-card/GUIDE_STEPS');
+  // upload zrzutów przeniesiony do komponentu (tn-chat.js) — endpoint wf2-ads-guide nadal w portalu
+  (chatJs.includes("action: 'upload_init'") && chatJs.includes("action: 'upload_done'") && portalHtml.includes('/functions/v1/wf2-ads-guide'))
+    ? ok('portal.html: upload zrzutu przez komponent TNChat (upload_init/done) → endpoint wf2-ads-guide')
+    : bad('portal.html upload', 'brak upload_init/done w tn-chat.js lub endpointu wf2-ads-guide w portalu');
+  // (d) wejścia asystenta chowane przy kill-switch OFF (asystentEnabled) — topbar + FAB + inline
+  (portalHtml.includes('asystentEnabled !== false') && portalHtml.includes('updateAsystentEntries') && portalHtml.includes('asystent-fab'))
+    ? ok('portal.html: wejścia asystenta znikają przy kill-switch OFF (asystentEnabled/updateAsystentEntries/FAB)')
+    : bad('portal.html kill-switch', 'brak asystentEnabled/updateAsystentEntries/asystent-fab');
+  // trzy wejścia UX: przycisk w topbarze + FAB + inline-link (wszystkie wołają openAsystent)
+  (portalHtml.includes("openAsystent('topbar')") && portalHtml.includes("openAsystent('fab')") && portalHtml.includes("openAsystent('inline')"))
+    ? ok('portal.html: 3 wejścia asystenta (topbar + FAB + inline) → openAsystent')
+    : bad('portal.html wejścia asystenta', 'brak któregoś z wejść openAsystent(topbar/fab/inline)');
+
+  // (e) akordeon „Pełna instrukcja krok po kroku" zwija ściany tekstu guide'ów
+  (portalHtml.includes('instr-acc') && portalHtml.includes('Pełna instrukcja') && portalHtml.includes('ACCORDION_STEPS'))
+    ? ok('portal.html: akordeon „Pełna instrukcja krok po kroku" (instr-acc/ACCORDION_STEPS)')
+    : bad('portal.html akordeon', 'brak akordeonu „Pełna instrukcja"/instr-acc/ACCORDION_STEPS');
+
+  // (a) prompt zawiera kotwice bloku firma (WIEDZA-FIRMA-DG wklejona do §4)
+  (src.includes('10 813,50') && src.includes('infakt.pl/polecam/tomekniedzwiecki') && src.includes('nierejestrowana'))
+    ? ok('wf2-ads-guide: prompt zawiera blok firma (10 813,50 / infakt.pl/polecam/tomekniedzwiecki / nierejestrowana)')
+    : bad('wf2-ads-guide prompt firma', 'brak kotwic bloku firma w promptcie');
+
+  // (b) SYNC-GUARD: HIDDEN_FOR_CLIENT (wf2-ads-guide) ⟷ PREVIEW_ONLY_STEPS (wf2-portal) — oba = {"firma"}
+  (/HIDDEN_FOR_CLIENT = new Set\(\["firma"\]\)/.test(src) && /PREVIEW_ONLY_STEPS = new Set\(\["firma"\]\)/.test(portalTs))
+    ? ok('sync-guard: HIDDEN_FOR_CLIENT (guide) == PREVIEW_ONLY_STEPS (portal) == {"firma"}')
+    : bad('sync-guard firma', 'HIDDEN_FOR_CLIENT / PREVIEW_ONLY_STEPS rozjechane (oba muszą zawierać "firma")');
+
+  // (c) TRACK_ACTIONS (wf2-portal) zawiera 'open_guide' (event trackingu asystenta ożywiony)
+  /TRACK_ACTIONS = new Set\(\[[^\]]*"open_guide"[^\]]*\]\)/.test(portalTs)
+    ? ok('wf2-portal: TRACK_ACTIONS zawiera "open_guide"')
+    : bad('wf2-portal TRACK_ACTIONS', 'brak "open_guide" w TRACK_ACTIONS');
+
+  // (f) buildContextBlock maskuje NRB/NIP do ostatnich 4 znaków (funkcja maskująca)
+  (src.includes('function maskTail') && src.includes('slice(-4)') && src.includes('MASKED_FIELDS'))
+    ? ok('wf2-ads-guide buildContextBlock: maskowanie NRB/NIP (maskTail → slice(-4), MASKED_FIELDS)')
+    : bad('wf2-ads-guide maskowanie', 'brak maskTail/slice(-4)/MASKED_FIELDS w buildContextBlock');
+
+  // (g) import CHECKLIST_MAP z modułu danych _shared/checklist-map.ts (NIE z wf2-portal/index.ts)
+  (/import\s*\{\s*CHECKLIST_MAP\s*\}\s*from\s*["']\.\.\/_shared\/checklist-map\.ts["']/.test(src)
+    && src.includes('buildContextBlock') && src.includes('[STAN PROJEKTU]'))
+    ? ok('wf2-ads-guide: import CHECKLIST_MAP z checklist-map.ts + buildContextBlock buduje [STAN PROJEKTU]')
+    : bad('wf2-ads-guide checklist-map', 'brak importu CHECKLIST_MAP z checklist-map.ts lub buildContextBlock/[STAN PROJEKTU]');
 
   // projekt.html: podgląd rozmów w warsztacie ads_konto (read-only, wf2_guide_messages)
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');

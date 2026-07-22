@@ -9,6 +9,8 @@
     <link rel="icon" type="image/svg+xml" href="/tn-app/favicon.svg?v=2">
     <!-- Ikony Phosphor 2.1.2 REHOSTED lokalnie (SEC-R3-CDN): powierzchnia klienta (portal z hasłem) BEZ CDN. -->
     <link rel="stylesheet" href="/tn-app/vendor/phosphor/regular.css">
+    <!-- Wspólny komponent czatu portali klienta (czat „Testy aplikacji") -->
+    <link rel="stylesheet" href="/components/tn-chat.css?v=2026072201">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         /* Jedna wąska kolumna czytana z góry na dół — portal ma dwa zadania:
@@ -192,7 +194,7 @@
         .vision-item:hover { border-color:rgba(0,112,243,.5); }
         .vision-item img { width:100%; height:104px; object-fit:cover; object-position:top; display:block; }
         .vision-item .vcap { font-size:10.5px; color:#71717a; padding:6px 9px; text-transform:capitalize; }
-        #vlb { position:fixed; inset:0; z-index:120; background:rgba(0,0,0,.92); display:none; align-items:center;
+        #vlb { position:fixed; inset:0; z-index:2100; background:rgba(0,0,0,.92); display:none; align-items:center;
             justify-content:center; padding:24px; }
         #vlb.show { display:flex; }
         #vlb img { max-width:100%; max-height:100%; border-radius:8px; object-fit:contain; }
@@ -231,52 +233,26 @@
            nie od DOM (P3/CLS). Panele pojawiają się natychmiast; skeletony trzymają wymiary do czasu danych. */
         @media (prefers-reduced-motion: reduce) {
             .bar { transition:none; }
-            .life::before, .trow.cur .tglyph::before, .tk-typing span { animation:none; }
+            .life::before, .trow.cur .tglyph::before { animation:none; }
             .skeleton { animation:none; }
             .toast { transition:none; }
             .navlink, .tile, .move-cta, .appcard, .appcard-arrow, .empty-state .es-cta { transition:none; }
         }
 
-        /* Testy aplikacji — czat „spowiednika testów" */
-        .tk-chat { padding:16px; height:64vh; max-height:660px; min-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
-        @media (max-width:600px){ .tk-chat { height:66vh; min-height:300px; } }
-        .tk-b { max-width:84%; padding:10px 13px; border-radius:13px; font-size:13.5px; line-height:1.55; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:anywhere; }
-        .tk-b.ai { align-self:flex-start; background:#151517; border:1px solid #232327; color:#dcdce0; border-bottom-left-radius:4px; }
-        .tk-b.me { align-self:flex-end; background:#0d3a6b; border:1px solid #14538f; color:#eaf3ff; border-bottom-right-radius:4px; }
-        .tk-b img { display:block; margin-top:8px; max-width:200px; max-height:150px; border-radius:8px; border:1px solid rgba(255,255,255,.14); cursor:pointer; }
-        .tk-typing { align-self:flex-start; display:flex; gap:4px; padding:13px 15px; }
-        .tk-typing span { width:6px; height:6px; border-radius:50%; background:#52525b; animation:tkdot 1.1s infinite ease-in-out; }
-        .tk-typing span:nth-child(2){ animation-delay:.18s; } .tk-typing span:nth-child(3){ animation-delay:.36s; }
-        @keyframes tkdot { 0%,60%,100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:1; } }
-        .tk-shots { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-        .tk-shots:empty { display:none; }
-        .tk-shots .ts { position:relative; width:56px; height:56px; border-radius:8px; overflow:hidden; border:1px solid #26262b; background:#0a0a0b; }
-        .tk-shots .ts img { width:100%; height:100%; object-fit:cover; }
-        .tk-shots .ts .rm { position:absolute; top:1px; right:1px; background:rgba(0,0,0,.7); color:#fff; border-radius:5px; width:18px; height:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; }
-        .tk-shots .ts .up { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5); color:#fff; font-size:11px; }
-        .tk-compose { display:flex; align-items:flex-end; gap:8px; margin-top:12px; background:#0a0a0b; border:1px solid #26262b; border-radius:11px; padding:7px 8px; transition:border-color .15s; }
-        .tk-compose.drag { border-color:#0070f3; background:#0a1626; }
-        .tk-compose:focus-within { border-color:rgba(0,112,243,.5); }
-        .tk-compose textarea { flex:1; background:transparent; border:none; outline:none; color:#fff; font-size:14px; resize:none; line-height:1.45; max-height:120px; padding:7px 4px; font-family:inherit; }
-        .tk-ic { flex-shrink:0; width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; border:none; }
-        .tk-ic.att { background:#1a1a1d; color:#a1a1aa; } .tk-ic.att:hover { color:#52a8ff; }
-        .tk-ic.snd { background:#0070f3; color:#fff; } .tk-ic.snd:hover { background:#0a84ff; } .tk-ic.snd:disabled { opacity:.4; cursor:default; }
-        .tk-ic.cap { background:#1a1a1d; color:#a1a1aa; } .tk-ic.cap:hover { color:#52a8ff; } .tk-ic.cap:disabled { opacity:.4; cursor:default; }
-        /* Rozwiń na cały ekran (#3) */
-        .tk-head-r { display:flex; align-items:center; gap:9px; flex-shrink:0; }
-        .tk-expand { display:flex; align-items:center; gap:6px; background:#12233d; color:#8fc0ff; border:1px solid #1c4176; border-radius:8px; height:33px; padding:0 12px; cursor:pointer; font-size:12.5px; font-weight:600; line-height:1; transition:background .15s, color .15s; }
-        .tk-expand:hover { background:#173254; color:#bcdcff; }
-        .tk-expand i { font-size:15px; }
-        body.tk-fs-open { overflow:hidden; }
-        #c-testy.fs { position:fixed; inset:0; z-index:2000; margin:0; background:#050506; padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 12px); display:flex; flex-direction:column; overflow:hidden; }
-        #c-testy.fs .sdesc, #c-testy.fs .tk-issues { display:none; }
-        #c-testy.fs .shead { flex-shrink:0; margin-bottom:12px; }
-        #c-testy.fs .tk-chat { flex:1 1 auto; height:auto; max-height:none; min-height:0; }
-        #c-testy.fs .tk-shots, #c-testy.fs .tk-compose, #c-testy.fs .tk-hint, #c-testy.fs .tk-endrow { flex-shrink:0; }
-        .tk-endrow { margin-top:10px; text-align:center; }
+        /* Testy aplikacji — czat = WSPÓLNY komponent TNChat (markup/logika w components/tn-chat.*).
+           Tu tylko: (1) tokeny --tnc-* pod design-system tn-app, (2) „karta" wokół osadzonego panelu,
+           (3) reset globalnego button{padding} (portal ma własny), (4) host-owe „Twoje zgłoszenia". */
+        #c-testy .tnc-wrap {
+            --tnc-bg:#0a0a0b; --tnc-panel-bg:#0e0e10; --tnc-surface:#151517; --tnc-compose-bg:#0a0a0b;
+            --tnc-border:#1e1e21; --tnc-border-3:#26262b; --tnc-accent:#0070f3; --tnc-accent-hover:#0a84ff;
+            --tnc-me-bg:#0d3a6b; --tnc-me-border:#14538f; --tnc-me-text:#eaf3ff; --tnc-ai-text:#dcdce0; --tnc-text:#fff;
+        }
+        /* Rama „karty" (jak dawny #ct-chat.card) w trybie osadzonym; pełny ekran = własne tło komponentu. */
+        #c-testy .tnc-embedded:not(.tnc-fs) .tnc-panel { background:#0e0e10; border:1px solid #1e1e21; border-radius:12px; overflow:hidden; }
+        #c-testy .tnc-wrap button { padding:0; }   /* neutralizuj globalne button{padding:12px} */
+        .tk-endrow { margin-top:14px; text-align:center; }
         .tk-end { background:none; border:none; color:#6b6b74; font-size:12.5px; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
         .tk-end:hover { color:#93939c; }
-        .tk-hint { color:#5b5b63; font-size:11.5px; margin-top:8px; text-align:center; }
         .tk-issues { margin-top:22px; }
         .tk-issues .tih { color:#8b8b93; font-size:12.5px; margin-bottom:6px; font-weight:600; }
         .tk-iss { display:flex; align-items:flex-start; gap:10px; padding:11px 13px; background:#0e0e10; border:1px solid #1e1e21; border-radius:9px; margin-top:7px; }
@@ -291,9 +267,6 @@
         .tk-pill.done { background:#16351f; color:#5cd07f; }
         .tk-pill.later { background:#22304a; color:#8fb3ff; }
         .tk-rsum { color:#6a6a72; font-weight:400; text-transform:none; letter-spacing:0; font-size:10.5px; }
-        /* Timestamp wiadomości (dyskretny, w dymku) */
-        .tk-ts { font-size:10.5px; opacity:.5; margin-top:5px; letter-spacing:.2px; }
-        .tk-b.me .tk-ts { text-align:right; }
         /* Serie poprawek (rundy) */
         .tk-notice { display:flex; align-items:flex-start; gap:9px; background:#12281a; border:1px solid #24532f; color:#a8e0ba; border-radius:10px; padding:11px 14px; margin:12px 0 4px; font-size:13px; line-height:1.5; }
         .tk-notice i { color:#5cd07f; font-size:17px; flex-shrink:0; margin-top:1px; }
@@ -385,7 +358,7 @@
         .sk-lines { flex:1; display:flex; flex-direction:column; gap:7px; }
         .sk-l1 { height:11px; width:42%; }
         .sk-l2 { height:9px; width:68%; }
-        /* Skeleton czatu (Testy) — mirror .tk-chat */
+        /* Skeleton czatu (Testy) — mirror okna czatu (komponent TNChat) do czasu montażu */
         .sk-chat { min-height:200px; display:flex; flex-direction:column; gap:12px; }
         .sk-bubble { height:46px; border-radius:13px; }
         .sk-bubble.ai { align-self:flex-start; width:74%; background:var(--surface); }
@@ -429,10 +402,10 @@
 
         /* Mobile: pola ≥16px (bez zoomu iOS przy focusie) + touch ≥44px na akcjach */
         @media (max-width:600px){
-            input.ci, textarea.ci, input[type=password], .tk-compose textarea { font-size:16px; }
+            input.ci, textarea.ci, input[type=password], #c-testy .tnc-input { font-size:16px; }
             .cbtn, .cbtn-sec, .ic-save, .badd, #login button, #setpw button, #resetpw button { min-height:44px; }
-            .brm, .tk-ic { width:44px; height:44px; }
-            .tk-expand { height:40px; }
+            .brm { width:44px; height:44px; }
+            #c-testy .tnc-ic { width:44px; height:44px; }
         }
     </style>
 </head>
@@ -574,21 +547,13 @@
                 </div>
             </div>
             <section class="hidden" id="c-testy" style="margin-top:0">
-                <div class="shead"><h2>Testy aplikacji</h2><span class="tk-head-r"><span class="scount" id="ct-count"></span><button class="tk-expand" id="ct-expand" type="button" title="Powiększ czat na cały ekran" aria-label="Powiększ czat na cały ekran"><i class="ph ph-arrows-out"></i><span class="tk-expand-lbl" id="ct-expand-lbl">Powiększ</span></button></span></div>
+                <div class="shead"><h2>Testy aplikacji</h2><span class="scount" id="ct-count"></span></div>
                 <p class="sdesc">Przetestuj swoją aplikację i powiedz mi o wszystkim, co Ci nie gra — nawet drobiazgi. Zrzut ekranu bardzo pomaga.</p>
                 <div class="tk-notice hidden" id="ct-notice"></div>
-                <div class="tk-chat card" id="ct-chat"></div>
-                <div class="tk-shots" id="ct-shots"></div>
-                <div class="tk-compose" id="ct-compose">
-                    <button class="tk-ic att" id="ct-attach" type="button" title="Dodaj zrzut ekranu z pliku" aria-label="Dodaj zrzut ekranu z pliku"><i class="ph ph-image"></i></button>
-                    <button class="tk-ic cap" id="ct-capture" type="button" title="Zrób zrzut ekranu teraz" aria-label="Zrób zrzut ekranu teraz"><i class="ph ph-monitor"></i></button>
-                    <textarea id="ct-input" rows="1" aria-label="Napisz, co zauważyłeś w aplikacji" placeholder="Napisz, co zauważyłeś… (możesz wkleić zrzut: Ctrl+V)"></textarea>
-                    <button class="tk-ic snd" id="ct-send" type="button" title="Wyślij" aria-label="Wyślij wiadomość"><i class="ph ph-paper-plane-tilt"></i></button>
-                </div>
-                <p class="tk-hint">Zrzut ekranu: zrób go teraz ikoną monitora, dodaj z pliku ikoną obrazka, wklej ze schowka (Ctrl+V) lub przeciągnij tutaj.</p>
+                <!-- Czat = wspólny komponent TNChat (montaż w JS: loadTesty → mountTestChat) -->
+                <div id="ct-mount"></div>
                 <div class="tk-endrow"><button class="tk-end" id="ct-end" type="button">To wszystko — zakończ testy</button></div>
                 <div class="tk-issues hidden" id="ct-issues"></div>
-                <input type="file" id="ct-file" accept="image/png,image/jpeg,image/webp" class="hidden">
             </section>
         </div>
 
@@ -651,6 +616,8 @@
 <nav id="mnav" class="bot-nav" aria-label="Sekcje portalu"></nav>
 <div id="nav-more-sheet" aria-label="Więcej sekcji" hidden></div>
 
+<!-- Wspólny komponent czatu (window.TNChat) — ładowany przed skryptem portalu; montaż w loadTesty(). -->
+<script src="/components/tn-chat.js?v=2026072201"></script>
 <script>
     const FN_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-portal';
     const qs = new URLSearchParams(location.search);
@@ -695,19 +662,6 @@
     // relatywne, gdyby app_url był kiedyś zmanipulowany w bazie). Zwraca '' = ukryj przycisk.
     const safeHttpsUrl = u => { const s = (u === null || u === undefined) ? '' : String(u).trim(); return /^https:\/\//i.test(s) ? s : ''; };
     const urlHost = u => { try { return new URL(u).host; } catch (e) { return String(u).replace(/^https?:\/\//i, '').replace(/\/.*$/, ''); } };
-    // Timestamp wiadomości czatu — strefa Europe/Warsaw, „dziś HH:MM" / „wczoraj HH:MM" / „DD.MM, HH:MM".
-    function fmtChatTime(iso) {
-        if (!iso) return '';
-        const d = new Date(iso); if (isNaN(d)) return '';
-        const TZ = 'Europe/Warsaw';
-        const time = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
-        const dayKey = x => x.toLocaleDateString('en-CA', { timeZone: TZ }); // YYYY-MM-DD do porównania dnia
-        const now = new Date(), yest = new Date(now.getTime() - 86400000);
-        const k = dayKey(d);
-        if (k === dayKey(now)) return 'dziś ' + time;
-        if (k === dayKey(yest)) return 'wczoraj ' + time;
-        return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', timeZone: TZ }) + ', ' + time;
-    }
     const PW_KEY = 'wfa_portal_pw_' + token;
     let currentPw = '';
     let contractMeta = null;
@@ -1612,15 +1566,14 @@
         } catch (e) { toast('Błąd połączenia', 'err'); } finally { if (btn) btn.disabled = false; }
     }
 
-    // Upload sekwencyjny: init → PUT (signed url, progres) → done
+    // Upload sekwencyjny: init → PUT (signed url, progres) → done. Używane przez intake „Materiały"
+    // (czat „Testy aplikacji" wgrywa zrzuty własnym uploadem komponentu TNChat).
     function putFile(url, file, onProgress, contentType) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('PUT', url);
-            // SEC-CHECK: bucket wfa-test-shots dopuszcza WYŁĄCZNIE image/png|jpeg|webp (SEC-R3-UPLOAD).
-            // Gdy przeglądarka nie ustawi file.type (drag z aplikacji, część źródeł schowka), fallback
-            // 'application/octet-stream' był ODRZUCANY przez bucket → upload padał. Dlatego przyjmujemy
-            // jawny contentType od wywołującego (uploadShot normalizuje do realnego image/*).
+            // Opcjonalny jawny contentType od wywołującego (gdy przeglądarka nie ustawi file.type —
+            // np. drag z aplikacji lub część źródeł schowka — fallback 'application/octet-stream').
             xhr.setRequestHeader('Content-Type', contentType || file.type || 'application/octet-stream');
             xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100)); };
             xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('PUT ' + xhr.status));
@@ -1672,7 +1625,10 @@
     const _ciInput = $('ci-file-input');
     if (_ciInput) _ciInput.onchange = e => { intakeUpload(e.target.files); e.target.value = ''; };
 
-    // ============ Testy aplikacji — czat „spowiednika testów" ============
+    // ============ Testy aplikacji — WSPÓLNY komponent czatu TNChat ============
+    // Markup + cała logika czatu (bąble, wysyłka, upload, paste/dnd, zrzut ekranu, pełny ekran,
+    // timestampy, lock w podglądzie) = components/tn-chat.*. Host trzyma TYLKO to, co poza czatem:
+    // „Twoje zgłoszenia" (rundy/statusy), komunikat serii poprawek i przycisk „Zakończ rozmowę".
     const TEST_FN = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-test-chat';
     function callTest(extra) {
         const payload = previewMode
@@ -1680,26 +1636,62 @@
             : Object.assign({ token, password: currentPw }, extra);
         return fetch(TEST_FN, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
     }
-    let testPending = [];   // [{path,url,uploading}] zrzuty dołączane do NASTĘPNEJ wiadomości
-    let testBusy = false;
     const INTRO_MSG = 'Cześć! Tu asystent testów. Poklikaj swoją aplikację i opowiedz mi o wszystkim, co Ci nie gra — nawet o drobiazgach. Napisz, na którym ekranie to zauważyłeś i co się stało. Zrzut ekranu bardzo pomaga — możesz go wkleić (Ctrl+V).';
+    let testChat = null;   // instancja TNChat (montaż raz; kolejne wejścia = refresh)
 
-    async function loadTesty() {
-        try {
-            const res = await callTest({ action: 'history' });
-            if (!res.ok) { hideSkel('ct-skeleton'); $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); return; }
-            const d = await res.json();
-            if (!d.active) { hideSkel('ct-skeleton'); $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); return; }
-            hideSkel('ct-skeleton');
-            $('c-testy').classList.remove('hidden');
-            renderTestChat(d.messages || []);
-            renderTestIssues(d.issues || [], d.rounds || []);
-            renderRoundNotice(d.round_notice || null);
-            if (previewMode) lockTestCompose();
-            navData.testy_active = true;                       // predykat when() zakładki Testy
-            navData._testyBadge = d.round_notice ? 1 : 0;      // badge = nowa runda
-            syncNav();
-        } catch (e) { hideSkel('ct-skeleton'); $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); }
+    // Hook onHistory komponentu: decyduje o aktywności zakładki Testy i renderuje host-owe
+    // „Twoje zgłoszenia" + komunikat serii poprawek. `active===false` (krok testów nieaktywny) = ukryj.
+    function applyTestHistory(d) {
+        if (!d || d.active === false) {
+            hideSkel('ct-skeleton'); $('c-testy').classList.add('hidden');
+            navData.testy_active = false; navData._testyBadge = 0; syncNav();
+            return;
+        }
+        hideSkel('ct-skeleton');
+        $('c-testy').classList.remove('hidden');
+        renderTestIssues(d.issues || [], d.rounds || []);
+        renderRoundNotice(d.round_notice || null);
+        navData.testy_active = true;                       // predykat when() zakładki Testy
+        navData._testyBadge = d.round_notice ? 1 : 0;      // badge = nowa runda
+        syncNav();
+        // Sekcja odsłania się dopiero teraz (mount renderuje do ukrytej karty) — dojedź na dół rozmowy.
+        if (testChat && testChat.el) { const box = testChat.el.querySelector('.tnc-chat'); if (box) box.scrollTop = box.scrollHeight; }
+    }
+
+    function mountTestChat() {
+        const root = $('ct-mount');
+        if (!root || !window.TNChat) { hideSkel('ct-skeleton'); return null; }
+        return TNChat.mount(root, {
+            endpoint: TEST_FN,
+            layout: 'embedded',
+            icon: null,
+            title: '',                                     // tytuł sekcji daje host (.shead h2) — bez duplikatu
+            intro: INTRO_MSG,
+            placeholder: 'Napisz, co zauważyłeś… (możesz wkleić zrzut: Ctrl+V)',
+            auth: () => (previewMode ? { token, preview: true } : { token, password: currentPw }),
+            authHeaders: authHeaders,                      // w podglądzie dokłada Bearer JWT panelu
+            readonly: previewMode,                         // podgląd admina = lock kompozytora, zero wysyłek
+            accept: ['png', 'jpg', 'jpeg', 'webp'],
+            maxMB: 15,
+            maxPerMsg: 4,                                   // = MAX_ATTACH_PER_MSG edge
+            features: { paste: true, dnd: true, capture: true, fullscreen: true, timestamps: true },
+            imageField: 'attachments',                     // edge: action 'message' czyta `attachments`
+            lightbox: (url) => openVlb(encodeURIComponent(url)),  // współdzielony lightbox #vlb (jak makiety)
+            lockMessage: 'Podgląd — tu pisze klient.',
+            onHistory: applyTestHistory,
+            onResponse: (d) => {
+                renderRoundNotice(null); navData._testyBadge = 0; syncNav();  // klient odpowiedział w nowej rundzie
+                if (d.issues) renderTestIssues(d.issues, d.rounds || []);
+            },
+        });
+    }
+
+    // Wejście do zakładki Testy: montaż komponentu (raz) albo odświeżenie historii.
+    // Preview = podgląd admina: komponent read-only (lock) + wyłączony przycisk „Zakończ".
+    function loadTesty() {
+        if (previewMode) { const b = $('ct-end'); if (b) { b.disabled = true; b.style.opacity = '.5'; } }
+        if (!testChat) testChat = mountTestChat();
+        else testChat.refresh();
     }
     // Komunikat serii poprawek („Runda N gotowa — przetestuj ponownie"). Znika, gdy klient
     // dorzuci nowe zgłoszenie w bieżącej rundzie (edge przestaje go zwracać / hide przy wysyłce).
@@ -1708,23 +1700,6 @@
         if (txt) { el.innerHTML = '<i class="ph ph-check-circle"></i><span>' + esc(txt) + '</span>'; el.classList.remove('hidden'); }
         else { el.innerHTML = ''; el.classList.add('hidden'); }
     }
-    function tkBubble(role, text, imgs, ts) {
-        const b = document.createElement('div');
-        b.className = 'tk-b ' + (role === 'user' ? 'me' : 'ai');
-        b.textContent = text || '';
-        (imgs || []).forEach(u => { if (!u) return; const im = document.createElement('img'); im.src = u; im.onclick = () => openVlb(encodeURIComponent(u)); b.appendChild(im); });
-        if (ts) { const t = document.createElement('div'); t.className = 'tk-ts'; t.textContent = fmtChatTime(ts); b.appendChild(t); }
-        return b;
-    }
-    function renderTestChat(messages) {
-        const box = $('ct-chat'); box.innerHTML = '';
-        if (!messages.length) box.appendChild(tkBubble('assistant', INTRO_MSG, [], null));
-        messages.forEach(m => box.appendChild(tkBubble(m.role, m.content, (m.attachments || []).map(a => a.url), m.created_at)));
-        box.scrollTop = box.scrollHeight;
-    }
-    function tkAppend(role, text, imgs) { const box = $('ct-chat'); box.appendChild(tkBubble(role, text, imgs, new Date().toISOString())); box.scrollTop = box.scrollHeight; }
-    function tkTyping() { const box = $('ct-chat'); const t = document.createElement('div'); t.className = 'tk-typing'; t.id = 'ct-typing'; t.innerHTML = '<span></span><span></span><span></span>'; box.appendChild(t); box.scrollTop = box.scrollHeight; }
-    function tkHideTyping() { const t = $('ct-typing'); if (t) t.remove(); }
 
     // Data w formacie PL (DD.MM.RRRR) — spójnie z „Co nowego".
     function fmtDatePl(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (_) { return ''; } }
@@ -1782,151 +1757,30 @@
         });
         box.innerHTML = h;
     }
-    function renderPending() {
-        const box = $('ct-shots'); box.innerHTML = '';
-        testPending.forEach((s, i) => {
-            const d = document.createElement('div'); d.className = 'ts';
-            d.innerHTML = '<img src="' + esc(s.url) + '">' + (s.uploading ? '<div class="up">…</div>' : '<div class="rm" data-i="' + i + '">✕</div>');
-            box.appendChild(d);
-        });
-        box.querySelectorAll('.rm').forEach(el => el.onclick = () => { testPending.splice(+el.dataset.i, 1); renderPending(); });
-    }
-    // Dozwolone typy zrzutu = allowed_mime_types bucketu wfa-test-shots (png/jpeg/webp).
-    const SHOT_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
-    async function uploadShot(file) {
-        if (previewMode || !file) return;
-        const ext = (file.name.split('.').pop() || '').toLowerCase();
-        const ftype = (file.type || '').toLowerCase();
-        // Ustal DOCELOWY Content-Type = realny image/* (NIGDY octet-stream). Priorytet: rozszerzenie,
-        // potem file.type (jeśli już dozwolony), a jako ostateczność image/png (np. paste/getDisplayMedia
-        // bez nazwy). Inny obraz niż png/jpg/webp (np. gif/bmp) → odrzucamy z jasnym komunikatem.
-        let ctype = SHOT_MIME[ext] || (['image/png','image/jpeg','image/webp'].includes(ftype) ? ftype : '');
-        if (!ctype && /^image\//.test(ftype)) ctype = ''; // gif/bmp/svg — świadomie odrzucane (bezpieczeństwo)
-        if (!ctype && !ext && !ftype) ctype = 'image/png'; // surowy blob bez metadanych (np. zrzut ekranu)
-        if (!ctype) { tkAppend('assistant', 'Mogę przyjąć tylko obraz w formacie PNG, JPG lub WEBP.', []); return; }
-        if (file.size > 15 * 1024 * 1024) { tkAppend('assistant', 'Ten zrzut jest za duży (max 15 MB).', []); return; }
-        const extForType = ctype === 'image/jpeg' ? 'jpg' : ctype === 'image/webp' ? 'webp' : 'png';
-        let fname = /\.(png|jpe?g|webp)$/i.test(file.name || '') ? file.name : ('zrzut.' + extForType);
-        const ph = { url: URL.createObjectURL(file), uploading: true, path: null };
-        testPending.push(ph); renderPending();
-        try {
-            const initRes = await callTest({ action: 'upload_init', filename: fname, size_bytes: file.size, mime: ctype });
-            const init = await initRes.json().catch(() => ({}));
-            if (!initRes.ok) throw new Error(init.message || 'init');
-            await putFile(init.upload_url, file, () => {}, ctype);
-            const doneRes = await callTest({ action: 'upload_done', path: init.path, filename: fname, size_bytes: file.size, mime: ctype });
-            const done = await doneRes.json().catch(() => ({}));
-            if (!doneRes.ok) throw new Error('done');
-            ph.uploading = false; ph.path = done.path; if (done.url) ph.url = done.url; renderPending();
-        } catch (e) {
-            const idx = testPending.indexOf(ph); if (idx >= 0) testPending.splice(idx, 1); renderPending();
-            tkAppend('assistant', 'Nie udało się wgrać zrzutu — spróbuj jeszcze raz.', []);
-        }
-    }
-    async function sendTest() {
-        if (previewMode || testBusy) return;
-        const inp = $('ct-input'), text = inp.value.trim();
-        if (testPending.some(s => s.uploading)) return;   // poczekaj aż zrzut się wgra
-        const ready = testPending.filter(s => s.path);
-        if (!text && !ready.length) return;
-        testBusy = true; $('ct-send').disabled = true;
-        renderRoundNotice(null); // klient wraca do testów w nowej rundzie — komunikat już zbędny
-        tkAppend('user', text, ready.map(s => s.url));
-        inp.value = ''; inp.style.height = 'auto';
-        const attachments = ready.map(s => s.path);
-        testPending = []; renderPending();
-        tkTyping();
-        try {
-            const res = await callTest({ action: 'message', message: text, attachments });
-            const d = await res.json().catch(() => ({}));
-            tkHideTyping();
-            if (!res.ok && !d.reply) { tkAppend('assistant', 'Coś się przycięło — spróbuj jeszcze raz za chwilę.', []); return; }
-            tkAppend('assistant', d.reply || '…', []);
-            if (d.issues) renderTestIssues(d.issues, d.rounds || []);
-        } catch (e) { tkHideTyping(); tkAppend('assistant', 'Błąd połączenia — spróbuj ponownie.', []); }
-        finally { testBusy = false; $('ct-send').disabled = false; inp.focus(); }
-    }
+    // „Zakończ rozmowę" = akcja hosta (spoza komponentu). Edge `end` zamyka sesję i sweepuje ostatnie
+    // uwagi → odśwież „Twoje zgłoszenia", pokaż toast i pożegnanie asystenta w oknie rozmowy.
+    // ⚠️ NIE robimy chat.refresh() po `end`: sesja jest już zamknięta, więc kolejne `history` utworzyłoby
+    //    PUSTĄ nową sesję i skasowałoby widoczną rozmowę. Zamiast tego dopisujemy pożegnalny bąbel.
     async function endTest() {
-        if (previewMode || testBusy) return;
-        testBusy = true; tkTyping();
+        if (previewMode || !testChat) return;
+        const btn = $('ct-end'); if (btn) btn.disabled = true;
         try {
             const res = await callTest({ action: 'end' });
             const d = await res.json().catch(() => ({}));
-            tkHideTyping();
-            tkAppend('assistant', d.reply || 'Dziękuję za testy!', []);
             if (d.issues) renderTestIssues(d.issues, d.rounds || []);
-            if (res.ok) toast('Testy zakończone — dziękujemy ✓', 'ok');
-        } catch (e) { tkHideTyping(); } finally { testBusy = false; }
+            if (res.ok) { toast('Testy zakończone — dziękujemy ✓', 'ok'); appendAssistantBubble(d.reply || 'Dziękuję za testy!'); }
+        } catch (e) { /* brak twardego błędu do pokazania — statusy i tak zostają */ }
+        finally { if (btn) btn.disabled = false; }
     }
-    // ── Zrzut ekranu „od razu" (#4): getDisplayMedia → klatka na canvas → PNG → ta sama ścieżka co plik.
-    async function captureScreen() {
-        if (previewMode) return;
-        const md = navigator.mediaDevices;
-        if (!md || !md.getDisplayMedia) {
-            tkAppend('assistant', 'Twoja przeglądarka nie wspiera robienia zrzutu — dodaj plik ikoną obrazka albo wklej zrzut przez Ctrl+V.', []);
-            return;
-        }
-        let stream;
-        try {
-            stream = await md.getDisplayMedia({ video: true, audio: false });
-        } catch (e) {
-            // Brak zgody / anulowanie / brak wsparcia — graceful fallback.
-            tkAppend('assistant', 'Nie zrobiłem zrzutu (brak zgody albo anulowano). Możesz dodać plik ikoną obrazka lub wkleić zrzut przez Ctrl+V.', []);
-            return;
-        }
-        try {
-            const video = document.createElement('video');
-            video.srcObject = stream; video.muted = true; video.playsInline = true;
-            await video.play().catch(() => {});
-            await new Promise(r => setTimeout(r, 250)); // ustabilizuj klatkę
-            const w = video.videoWidth || 1280, h = video.videoHeight || 720;
-            const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(video, 0, 0, w, h);
-            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-            stream.getTracks().forEach(t => t.stop());
-            if (!blob) { tkAppend('assistant', 'Nie udało się zapisać zrzutu — spróbuj ponownie.', []); return; }
-            uploadShot(new File([blob], 'zrzut-ekranu.png', { type: 'image/png' }));
-        } catch (e) {
-            try { stream.getTracks().forEach(t => t.stop()); } catch (_) {}
-            tkAppend('assistant', 'Nie udało się zrobić zrzutu — spróbuj ponownie albo dodaj plik ikoną obrazka.', []);
-        }
+    // Dopisz bąbel asystenta do okna komponentu (publiczny namespace .tnc-*; guard na wypadek zmian struktury).
+    function appendAssistantBubble(text) {
+        if (!testChat || !testChat.el) return;
+        const box = testChat.el.querySelector('.tnc-chat'); if (!box) return;
+        const b = document.createElement('div'); b.className = 'tnc-b ai'; b.textContent = text || '';
+        box.appendChild(b); box.scrollTop = box.scrollHeight;
     }
-    // ── Tryb pełnoekranowy czatu (#3): overlay bez utraty stanu rozmowy (tylko toggle klasy).
-    function toggleTestFullscreen(on) {
-        const sec = $('c-testy'); if (!sec) return;
-        const fs = (on === undefined) ? !sec.classList.contains('fs') : on;
-        sec.classList.toggle('fs', fs);
-        document.body.classList.toggle('tk-fs-open', fs);
-        const btn = $('ct-expand'), ic = btn && btn.querySelector('i'), lbl = $('ct-expand-lbl');
-        if (ic) ic.className = fs ? 'ph ph-arrows-in' : 'ph ph-arrows-out';
-        if (lbl) lbl.textContent = fs ? 'Zwiń' : 'Powiększ';
-        if (btn) { btn.title = btn.ariaLabel = fs ? 'Zwiń czat do sekcji' : 'Powiększ czat na cały ekran'; }
-        const box = $('ct-chat'); if (box) box.scrollTop = box.scrollHeight;
-    }
-    function lockTestCompose() {
-        ['ct-attach','ct-capture','ct-send','ct-end','ct-input'].forEach(id => { const el = $(id); if (el) { el.disabled = true; el.style.opacity = '.5'; } });
-        const inp = $('ct-input'); if (inp) inp.placeholder = 'Podgląd — tu pisze klient';
-    }
-    (function bindTesty() {
-        const inp = $('ct-input'); if (!inp) return;
-        $('ct-attach').onclick = () => { if (!previewMode) $('ct-file').click(); };
-        $('ct-file').onchange = e => { Array.from(e.target.files || []).forEach(uploadShot); e.target.value = ''; };
-        const capBtn = $('ct-capture'); if (capBtn) capBtn.onclick = () => { if (!previewMode) captureScreen(); };
-        const expBtn = $('ct-expand'); if (expBtn) expBtn.onclick = () => toggleTestFullscreen();
-        $('ct-send').onclick = sendTest;
-        $('ct-end').onclick = endTest;
-        inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 120) + 'px'; });
-        inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTest(); } });
-        inp.addEventListener('paste', e => {
-            const items = (e.clipboardData && e.clipboardData.items) || [];
-            for (const it of items) { if (it.type && it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) { e.preventDefault(); uploadShot(f); } } }
-        });
-        const comp = $('ct-compose'), testy = $('c-testy');
-        testy.addEventListener('dragover', e => { e.preventDefault(); comp.classList.add('drag'); });
-        testy.addEventListener('dragleave', e => { if (e.target === testy) comp.classList.remove('drag'); });
-        testy.addEventListener('drop', e => { e.preventDefault(); comp.classList.remove('drag'); Array.from((e.dataTransfer && e.dataTransfer.files) || []).forEach(f => { if ((f.type || '').startsWith('image/')) uploadShot(f); }); });
-        document.addEventListener('keydown', e => { if (e.key === 'Escape' && testy.classList.contains('fs')) toggleTestFullscreen(false); });
-    })();
+    // Podpięcie przycisku „Zakończ rozmowę" (element hosta, statyczny w markpie — wiąże się od razu).
+    (function bindEndTest() { const b = $('ct-end'); if (b) b.onclick = endTest; })();
 
     if (!token || !/^[0-9a-f]{32}$/i.test(token)) { show('notoken'); }
     else if (previewMode) {

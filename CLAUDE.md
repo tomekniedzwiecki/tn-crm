@@ -136,17 +136,19 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   rozjazd waluty/strefy = nota „konto DO WYMIANY". ⛔ GUARD `EXCLUDED_ACCOUNTS=['act_1537659320657091']`
   (marka Tomka); bez `WF2_META_TOKEN` → `{skipped:'no_token'}`; przycisk „Weryfikuj środowisko (API)" w
   warsztacie `ads_konto`.
-- **Etap 4 → PRZEWODNIK AI (asystent konfiguracji w portalu; decyzja Tomka 22.07; SSOT
-  `docs/zbuduje/ADS-ONBOARDING-LEADSIE.md` §14):** na krokach `ads_konto`/`ads_strona`/`ads_budzet`
-  klient klika „🤝 Przewodnik konfiguracji — zapytaj AI", pisze pytanie i **wgrywa zrzut ekranu, który
-  model OGLĄDA (vision)** — edge **`wf2-ads-guide`** (`--no-verify-jwt`; gate = token+hasło portalu jak
-  wf2-portal; akcje history/message/upload_init/_done; model `WF2_GUIDE_OPENAI_MODEL` default `gpt-4o`;
-  kill-switch `settings.wf2_ads_guide_enabled` FAIL-OPEN; rate-limit 60 wiad./h per projekt). Prompt PL
-  zaszyty (5 kroków ścieżki ręcznej §13 + pułapki RC2137/PLN-Warsaw/„Partnerzy"/dedykowane konto —
-  **aktualizując CLIENT_WS ads_* aktualizuj też prompt**); utknięcie → marker `<utkniecie>` → nota
-  `wf2_notes` „blokada" + `wf2_activities(ads_guide_stuck)`. Tabela `wf2_guide_messages` + bucket prywatny
-  `wf2-guide-shots` (RLS team_members), migracja `20260722r_wf2_ads_guide.sql`; panel `ads_konto` =
-  zwijany podgląd rozmów. Deploy `npm run deploy:wf2-ads-guide`.
+- **ASYSTENT PORTALU chat-first (22.07 wieczór; SSOT `docs/zbuduje/PORTAL-ASYSTENT.md` — CZYTAĆ
+  przed pracą przy czatach portali):** portal klienta prowadzi CZATEM. Wspólny komponent
+  `components/tn-chat.{js,css}` (`TNChat.mount`, drawer|embedded) + wspólny handler edge
+  `_shared/portal-chat.ts` (`servePortalChat` — gate token+hasło+throttle, preview team JWT
+  read-only, upload/vision, rate-limit, kill-switch, markery). Konsumenci: **`wf2-ads-guide`**
+  (asystent CAŁEGO portalu tn-sklepy: zadania+zakładki+doradca firmy DG/nierejestrowana, kontekst
+  `[STAN PROJEKTU]` z maskowaniem NRB/NIP, `HIDDEN_FOR_CLIENT` sync z `PREVIEW_ONLY_STEPS` —
+  asercja pilnuje) i **`wfa-test-chat`** (testy klienta tn-app). Widok zadań portalu wf2: 3 wejścia
+  (topbar/FAB/inline) + akordeon „Pełna instrukcja" zamiast ściany tekstu. Marker `<utkniecie>` →
+  nota `wf2_notes`; kill-switch `settings.wf2_ads_guide_enabled` FAIL-OPEN; rate 60/h. **Aktualizując
+  CLIENT_WS ads_* aktualizuj też prompt** (sekcja ŚRODOWISKO REKLAMOWE 1:1). Deploy
+  `npm run deploy:wf2-ads-guide` / `deploy:wfa-test-chat`; zmiana tn-chat.* = bump `?v=` w OBU
+  portalach. bud-chat/spar-chat (lejki tn.pl) POZA konsolidacją.
 - Auto-create projektu: tpay-webhook przy PEŁNEJ płatności za budowę (amt ≥ 1000; decyzja
   Tomka 21.07.2026 — sama rezerwacja 500 zł NIE tworzy projektu; blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).

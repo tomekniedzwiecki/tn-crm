@@ -24,7 +24,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { verifyTeamMember } from "../_shared/admin-files.ts";
 import { throttleClear, throttleFail, throttleGate } from "../_shared/portal-throttle.ts";
-import { CHECKLIST_MAP } from "./checklist-map.ts";
+import { CHECKLIST_MAP } from "../_shared/checklist-map.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -114,7 +114,7 @@ const CLIENT_FIELD_WHITELIST: Record<string, string[]> = {
 // Udostępnienie klientom = usunięcie klucza z tego seta + deploy.
 const PREVIEW_ONLY_STEPS = new Set(["firma"]);
 
-const TRACK_ACTIONS = new Set(["portal_visit", "open_step", "media_view", "link_click", "open_ceny"]);
+const TRACK_ACTIONS = new Set(["portal_visit", "open_step", "media_view", "link_click", "open_ceny", "open_guide"]);
 
 // ── AUTO-ODŚWIEŻENIE DOKUMENTÓW PRAWNYCH po zmianie danych klienta (pl_dane) ──
 // Zasada (SSOT docs/zbuduje/PRAWNE.md): dane sprzedawcy w dokumentach sklepu pochodzą
