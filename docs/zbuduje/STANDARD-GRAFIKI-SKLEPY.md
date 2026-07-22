@@ -104,6 +104,15 @@ zostały USUNIĘTE z modułu. Odporność/koszt/pętla poprawek żyją teraz w a
   restarcie sesji; awaria generatora = brak grafik, nie gorsze grafiki.
 NB: workflow v1 i lejek /sklep (`bud-ads`) nadal używają Manusa — to ich osobny tor, nietknięty.
 
+**ZG10 — ⛔ ZAKAZ CEN NA KREACJACH (Tomek 22.07: „W banerach reklamowych nie podawaj cen
+NIGDY").** Żadna kwota (cena produktu, przekreślenia, „od X zł") nie ma prawa pojawić się na
+banerze ANI w primary/headline zestawu reklam — ceny prowadzi silnik cen (`wf2-price-engine`,
+fazy 1–6) i zmieniają się w czasie życia kampanii; baner z ceną = kłamstwo po pierwszej zmianie
+i przymus przegenerowania. Cena żyje WYŁĄCZNIE na landingu (runtime `wf2-landing-api`).
+Dozwolone: „PŁATNOŚĆ PRZY ODBIORZE" / „za pobraniem" (metoda płatności, nie kwota).
+Egzekwowanie: builder full-design nie emituje bloku ceny (kąt problem = trust pill zamiast
+ceny); bramka G4 czyta każdy blok tekstu — wykryta kwota = twardy FAIL.
+
 ---
 
 ## 1. FAZY FABRYKI (G0→G8; wykonawca = agent-operator; silnik = ad-forge/fal)

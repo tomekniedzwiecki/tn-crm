@@ -2297,7 +2297,7 @@ FD_ART = {
         "WITHOUT the product anywhere in frame. RIGHT (PO): a bright, warm photo of the RELIEF / RESULT "
         "described in SOLUTION-SCENE, WITH the product in natural real use. A crisp thin divider between the "
         "halves. A big transformation headline across the top. A muted 'PRZED' tag on the left, an accent 'PO' "
-        "tag on the right. At the bottom: the real price block and a short CTA. Strong visual contrast between "
+        "tag on the right. At the bottom: a cash-on-delivery trust pill and a short CTA (NEVER any price). Strong visual contrast between "
         "the two sides.\nPROBLEM-SCENE (LEFT half, NO product): {PAIN}\nSOLUTION-SCENE (RIGHT half, WITH product in use): {SCENE}"
     ),
     "lifestyle": (
@@ -2379,7 +2379,7 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
             "\n\nHEADLINE ZONE EMPTY (variant base): leave the top ~22% headline band as CLEAN, EMPTY "
             "negative space with ABSOLUTELY NO headline text or sticker note there — a headline will be "
             "composited on top later." + logo_line + " Keep ALL OTHER elements exactly as described "
-            "(callouts, trust pill, CTA button, price, PRZED/PO tags, connector lines, product and photography).")
+            "(callouts, trust pill, CTA button, PRZED/PO tags, connector lines, product and photography). NEVER any price on the banner.")
 
     logo_ref = ("The reference image right after the %d product photos" % n_product) if n_product > 1 else "The SECOND reference image"
     brand_line = "\n\nBRAND: %s." % (brand or "(no name — neutral, consistent branding; do NOT invent a name)")
@@ -2434,9 +2434,8 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
             add("Big transformation headline (top)", hook)
         add("Left tag (muted)", "PRZED")
         add("Right tag (accent)", "PO")
-        if cena:
-            add("Price (bottom-left, large)", cena)
-            add("Under price (small)", "za pobraniem")
+        # ZG10 (Tomek 22.07): ZAKAZ CEN na banerach — ceny zmienia silnik cen, baner by kłamał.
+        add("Trust pill (bottom-left)", "PŁATNOŚĆ PRZY ODBIORZE")
         add("CTA button (bottom-right)", "ZAMÓW")
     else:  # lifestyle
         if not no_hook:
