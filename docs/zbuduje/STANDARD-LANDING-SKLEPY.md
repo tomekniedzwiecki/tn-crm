@@ -438,9 +438,31 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    ⚠️ gpt-image-2 NIE wspiera `background:transparent` — generacja na czystej bieli); fallback
    edge wf2-gen medium. **Favicon NIE dostaje referencji styl-mastera** (styl-master = referencja
    MAKIET; `/edits` ze sceną bleeduje tło i psuje alfę) — paleta idzie hexami w prompcie.
-   Prompt-recepta: jeden prosty geometryczny znak z 2-3 prymitywów, **„bold solid filled mark"
-   nie outline** (masażer 19.07: hairline-łuk = odrzut), czytelny @32px, 1-2 kolory z palety,
-   pure-white tło, margines ~20%, zero tekstu/gradientu/3D. **ALFA: natywna gdy jest; inaczej
+   **Prompt-recepta (R4 22.07 — VISION-LED, po feedbacku Tomka „loga dość niskiej jakości"):
+   prompt = WIZJA I CHARAKTER marki, NIE spis detali kształtu.** Prowadź charakterem marki
+   (`--charakter`) + kierunkiem („evoke it, do NOT illustrate literally"); metafora = idea do
+   INTERPRETACJI, nie przedmiot do narysowania; prosimy o „single professional brand mark, jaki
+   wypuściłoby studio" — image 2.0 dostaje SWOBODĘ formy. **Mikro-spec („2-3 prymitywy circle/arc/
+   line; bold solid filled; thick even strokes") = clipart** — to zepsuło znak Zaradka v1 (dosłowny
+   „węzeł+strzałka" muli się @32px, granat ginie na ciemnym UI). **Zostają TYLKO twarde wymogi
+   techniczne, których pilnuje pipeline+selektor:** flat 1-2 kolory z palety (pewny kolor czytelny
+   na jasnym I ciemnym UI — nie sam prawie-czarny), czytelny @32px i w mono, jedno jednolite jasne
+   (near-white) tło, margines, zero tekstu/gradientu/3D/cienia.
+   **Esencja researchu** (gpt-image-2 / „image 2.0", 2025-26; źródła: OpenAI cookbook, fal.ai,
+   DesignRush; pełny komentarz w `brand-forge.py` nad `favicon_prompt`):
+   - **ZASADA NADRZĘDNA: prompt = wizja i charakter, nie spis detali; image 2.0 dostaje swobodę.**
+   - model rozumie INTENCJĘ — brief jak dla dyrektora artystycznego bije stackowanie słów-kluczy;
+     „modern minimalist logo" uśrednia wszystkie loga świata → generyczny clipart.
+   - prowadź CHARAKTEREM marki + zastosowaniem, nie geometrią; mikro-spec kształtu odbiera modelowi
+     swobodę i daje sztywną, clipartową ikonę.
+   - metafora = KIERUNEK do interpretacji, nie przedmiot do dosłownego narysowania.
+   - ograniczaj DOSYĆ, by nie dryfować w generyk, ale formułuj POZYTYWNIE (co MA być) — sama
+     litania zakazów to szum.
+   - „minimal/flat/modern" ląduje w „bezpiecznej strefie" modelu → kotwicz KONKRETNYM charakterem
+     marki, nie pustymi przymiotnikami; kolor pewny i czytelny na jasnym I ciemnym UI.
+   - twarde wymogi techniczne (jedno jasne tło→defringe, brak tekstu, @32px, mono, flat) ZOSTAJĄ —
+     trzyma je pipeline i selektor, więc swoboda formy nie psuje eksportu.
+   **ALFA: natywna gdy jest; inaczej
    tło→alpha z PRÓBKI ROGÓW (nie zakładanej bieli — kremowe tła robiły halo/dziury) + DEFRINGE
    (bez niego jasna obwódka na ciemnym tle checkoutu); tło niejednolite = twardy odrzut (bleed).**
    **Selektor skryptowy @32px** (n_kolorów ≤3, gęstość krawędzi, kontrast, BRAK TEKSTU/OCR —
@@ -1720,6 +1742,20 @@ Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/rep
   fontu** (znak spoza cmap = STOP, brak latin-ext = WARN); (9) lockup: skala znaku do wysokości
   glifów (~1.18×), nie pudełka z paddingiem; (10) parasol: claim wf2_projects.name PRZED
   generacją (reserve-before-generate; UNIQUE INDEX w migracji 20260719k — do zaaplikowania).
+
+- **2026-07-22 (BRANDING R4 — VISION-LED PROMPTING; feedback Tomka: logo/favicon Zaradka „dość
+  niskiej jakości")**: `favicon_prompt` w `brand-forge.py` przepisany z mikro-specu kształtu na
+  **brief WIZJI I CHARAKTERU** (research: OpenAI cookbook / fal.ai / DesignRush — gpt-image-2
+  rozumie intencję, mikro-spec „2-3 prymitywy/bold solid filled" = clipart). Metafora = kierunek
+  do interpretacji („evoke, don't illustrate literally"), prowadzenie charakterem marki (nowy
+  opcjonalny `--charakter`), model dostaje SWOBODĘ formy; twarde wymogi techniczne (jedno jasne
+  tło→defringe, brak tekstu, @32px, mono, flat 1-2 kolory czytelne na jasnym I ciemnym UI) ZOSTAJĄ
+  — trzyma je pipeline+selektor (CLI/eksport/wordmark NIETYKALNE). **Walidacja na żywo (parasol
+  Zaradek):** nowy znak = pierścień + zielony checkmark + resourceful-swirl (2 kolory z palety,
+  6×T/N PASS), wdrożony (wf2_projects logo/favicon + wf2_artifacts rebrand + platform Trevio);
+  v1 „węzeł+strzałka" zachowany w `bud-assets/parasol-zaradek/brand-v1/`. Esencja = sekcja F2.5
+  „Esencja researchu" + komentarz nad `favicon_prompt`. **ZASADA: prompt = wizja i charakter, nie
+  spis detali; image 2.0 dostaje swobodę.**
 
 - **2026-07-19 (DOKI FABRYKI → PRYWATNY BUCKET wf2-docs; dyrektywa Tomka „to musi być dostępne
   z każdego miejsca, nie tylko na moim dysku")**: KAŻDY dokument fazy (.md/.json) jest uploadowany

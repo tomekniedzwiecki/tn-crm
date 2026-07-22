@@ -117,23 +117,55 @@ def parasol_claim(project_id, name, service_key):
     return bool(rows)
 
 # =============================================================================
-# (b) GENERACJA FAVICONOW
+# (b) GENERACJA FAVICONOW — PROMPT = WIZJA I CHARAKTER, NIE SPIS DETALI
+# -----------------------------------------------------------------------------
+# ESENCJA RESEARCHU (gpt-image-2 / „image 2.0", 2025-2026) — czytaj PRZED zmiana promptu.
+# Zrodla: OpenAI cookbook „GPT Image prompting guide" (developers.openai.com), fal.ai
+# „Prompting GPT Image 2", DesignRush „Logo design prompts 2026", image2.ing brand guide.
+#  1. gpt-image-2 rozumie INTENCJE — brief jak dla dyrektora artystycznego bije stackowanie
+#     slow-kluczy. „modern minimalist logo" usrednia wszystkie loga swiata => clipart.
+#  2. Prowadz CHARAKTEREM marki i zastosowaniem, NIE wyliczaniem ksztaltow. Mikro-spec
+#     („2-3 prymitywy: kolo/luk/linia; grube rowne kreski; BOLD SOLID FILLED") ODBIERA
+#     modelowi swobode i produkuje sztywna, clipartowa ikone — dokladnie to zepsulo
+#     pierwszy znak Zaradka (doslowny „splatany wezel + strzalka", muli sie @32px,
+#     granatowy element ginie na ciemnym UI).
+#  3. Metafora = KIERUNEK do INTERPRETACJI, nie przedmiot do narysowania doslownie
+#     („a single rope knot" => model rysuje splatany wezel). Podajemy idee i prosimy
+#     o designerska interpretacje („brand mark, jaki wypusciloby prawdziwe studio").
+#  4. Ograniczaj DOSC, by nie dryfowac w generyk, ale formuluj POZYTYWNIE (co MA byc) —
+#     litania zakazow to sam szum. Twarde wymogi TECHNICZNE zostaja, bo trzyma je pipeline:
+#     jedno jednolite jasne tlo (alfa z probki rogow + defringe), brak tekstu (OCR-guard +
+#     rubryka #5), plaskie kolory bez gradientu/3D (mono-test #6, rubryka #4), czytelnosc
+#     @32px, srodek + margines (guard fill 0.30-0.92).
+#  5. „minimal/flat/modern" latwo laduje w „bezpiecznej strefie" modelu — kotwiczymy
+#     KONKRETNYM charakterem marki zamiast pustych przymiotnikow; kolor pewny, czytelny
+#     na jasnym I ciemnym UI (guard, ktory stary znak oblal).
+# ZASADA NADRZEDNA: prompt = wizja i charakter, nie spis detali; image 2.0 dostaje swobode.
 # =============================================================================
-def favicon_prompt(nazwa, metafora, palette):
-    cols = ", ".join(palette[:2]) if palette else "brand colors"
+def favicon_prompt(nazwa, metafora, palette, charakter=None):
+    """Vision-led brief (patrz ESENCJA RESEARCHU wyzej): prowadzimy charakterem marki i
+    kierunkiem, oddajemy modelowi swobode FORMY; twarde wymogi techniczne zostaja, bo
+    trzyma je pipeline (alfa z jednolitego tla + defringe, mono-test, favicon @16/32).
+    `charakter` = krotki opis osobowosci marki (opcjonalny --charakter); gdy brak,
+    brief i tak prowadzi kierunkiem, nie mikro-specem."""
+    cols = ", ".join(palette[:3]) if palette else "the brand's palette"
+    charakter = (charakter or "").strip()
+    charakter_zd = (" Brand character: %s." % charakter) if charakter else ""
     return (
-        "Flat vector app-icon / favicon symbol for %s — a single %s. "
-        "ONE simple geometric mark built from 2-3 primitive shapes (circle/arc/line), "
-        "a BOLD, SOLID, FILLED mark (not an outline, not a hairline ring, no stroke-only "
-        "shapes), thick even strokes, high contrast, readable at 32px. Colors: %s — "
-        "prefer a SINGLE mid-tone brand color for the whole mark; if two colors, BOTH must "
-        "stay readable on light AND dark backgrounds (no near-black elements that vanish "
-        "on dark UI). "
-        "Centered on PLAIN PURE WHITE background, generous even margin ~20%%, "
-        "strong silhouette, balanced negative space. "
-        "Wykluczenia: no text, no letters, no wordmark, no gradient, no 3D, no shadow, "
-        "no bevel, no photo, no watermark, no fine detail, no thin lines, "
-        "no multiple objects, no mockup frame." % (nazwa, metafora, cols)
+        "Design a single, original, professional brand symbol (app icon / favicon) for "
+        "the brand \"%s\".%s "
+        "Creative direction — evoke it, do NOT illustrate it literally: %s. "
+        "Interpret it the way a senior identity designer would: one clear, memorable idea, "
+        "a confident geometric mark with a strong silhouette and smart negative space — "
+        "the kind of mark a real studio would ship, not a stock clip-art icon. "
+        "Flat vector look, solid flat fills, one or two colours drawn from %s; choose a "
+        "confident colour that stays legible on BOTH light and dark UI (avoid an "
+        "all-near-black mark that disappears on dark backgrounds). "
+        "It must read cleanly at 32px and still hold up in one flat colour. "
+        "Centred, with a generous even margin, on one plain, uniform, near-white background "
+        "(no scene, no backdrop, no texture). "
+        "No lettering, no words, no gradient, no 3D, no shadow, no photo, no mockup frame."
+        % (nazwa, charakter_zd, metafora, cols)
     )
 
 def _save_candidates(items, outdir, tag):
@@ -511,6 +543,9 @@ def build_args():
     ap.add_argument("--metafory", help="2-3 ROZNE metafory znaku po ';' (diversity-first). "
                     "Np. 'tarcza z rzutka;otwarte pudelko z iskra;kompas'")
     ap.add_argument("--metafora", help="[kompatybilnosc] jedna metafora — lepiej podac --metafory")
+    ap.add_argument("--charakter", help="krotki opis OSOBOWOSCI/charakteru marki (vision-led: "
+                    "prowadzi brief zamiast mikro-specu ksztaltu). Np. 'resourceful, friendly, "
+                    "practical, warm — everyday cleverness, not cold high-tech'")
     ap.add_argument("--font", help="sciezka do fontu .ttf/.otf wordmarka (wymagany poza --dry-run)")
     ap.add_argument("--outdir", help="katalog FABRYKA na kandydatow/wyniki (domyslnie ./FABRYKA-<slug>/brand)")
     ap.add_argument("--count", type=int, default=6, help="LACZNA liczba kandydatow (rozlozona po metaforach)")
@@ -559,7 +594,7 @@ def main():
         print("[dry-run] metafory (%d):" % len(metafory))
         for m in metafory:
             print("   -", m)
-            print("     prompt:", favicon_prompt(args.nazwa, m, palette)[:120] + "…")
+            print("     prompt:", favicon_prompt(args.nazwa, m, palette, args.charakter)[:140] + "…")
         if args.font:
             print("[dry-run] font %s: %s" % (args.font, "OK" if os.path.isfile(args.font) else "BRAK PLIKU!"))
         else:
@@ -648,7 +683,7 @@ def main():
     per = max(1, math.ceil(args.count / len(metafory)))
     cands = []
     for mi, met in enumerate(metafory):
-        prompt = favicon_prompt(args.nazwa, met, palette)
+        prompt = favicon_prompt(args.nazwa, met, palette, args.charakter)
         tag = "m%d-" % mi
         if channel == "local":
             batch = gen_favicons_local(prompt, per, openai_key, outdir, tag=tag)
