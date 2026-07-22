@@ -700,5 +700,89 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   }
 }
 
+// ── 18. Przewodnik AI konfiguracji reklam Meta (wf2-ads-guide) — Etap 4 ────
+// Klient pyta o konfigurację środowiska reklamowego, wgrywa zrzuty (vision), utknięcie → nota.
+// Gate = token+hasło portalu (jak wf2-portal). SSOT: docs/zbuduje/ADS-ONBOARDING-LEADSIE.md §14.
+{
+  const fnPath = join(ROOT, 'supabase', 'functions', 'wf2-ads-guide', 'index.ts');
+  const src = existsSync(fnPath) ? readFileSync(fnPath, 'utf8') : '';
+  src ? ok('wf2-ads-guide/index.ts istnieje (przewodnik AI)') : bad('wf2-ads-guide', 'brak supabase/functions/wf2-ads-guide/index.ts');
+
+  // gate: POST bez auth (token 32-hex bez hasła) → 401/403, NIGDY 200
+  const st = await edge('wf2-ads-guide', { action: 'history', token: 'x' });
+  (st === 401 || st === 403) ? ok(`wf2-ads-guide bez auth → ${st}`) : bad('wf2-ads-guide gate', `status ${st} (oczekiwane 401/403)`);
+  // token o poprawnym formacie, ale bez hasła → 401 (nie przecieka istnienia projektu)
+  const st2 = await edge('wf2-ads-guide', { action: 'message', token: '0'.repeat(32), message: 'hej' });
+  (st2 === 401 || st2 === 403) ? ok(`wf2-ads-guide token bez hasła → ${st2}`) : bad('wf2-ads-guide gate hasło', `status ${st2} (oczekiwane 401/403)`);
+
+  // marker utknięcia + nota „blokada" + aktywność ads_guide_stuck
+  (src.includes('<utkniecie>') && src.includes('parseStuck') && src.includes("action: \"ads_guide_stuck\""))
+    ? ok('wf2-ads-guide: marker <utkniecie> → nota + aktywność ads_guide_stuck') : bad('wf2-ads-guide marker', 'brak <utkniecie>/parseStuck/ads_guide_stuck');
+  // nota „blokada" z dedup po otwartej nocie „⚠️ PRZEWODNIK:%"
+  (src.includes('⚠️ PRZEWODNIK:') && src.includes('tag: "blokada"') && src.includes('.like("body", "⚠️ PRZEWODNIK:%")'))
+    ? ok('wf2-ads-guide: nota blokada „⚠️ PRZEWODNIK" z dedup po otwartej nocie') : bad('wf2-ads-guide nota', 'brak noty blokada / dedup „⚠️ PRZEWODNIK:%"');
+  // rate limit 60 wiadomości/h per projekt (licznik z tabeli po role=user)
+  (src.includes('MAX_USER_MSGS_PER_HOUR = 60') && src.includes('.eq("role", "user")') && src.includes('count: "exact"'))
+    ? ok('wf2-ads-guide: rate-limit 60 wiadomości/h per projekt (licznik role=user)') : bad('wf2-ads-guide rate-limit', 'brak MAX_USER_MSGS_PER_HOUR = 60 / licznika role=user');
+  // kill-switch FAIL-OPEN na settings.wf2_ads_guide_enabled
+  (src.includes('wf2_ads_guide_enabled') && src.includes('isKilled'))
+    ? ok('wf2-ads-guide: kill-switch wf2_ads_guide_enabled (FAIL-OPEN)') : bad('wf2-ads-guide kill-switch', 'brak wf2_ads_guide_enabled/isKilled');
+  // model konfigurowalny (WF2_GUIDE_OPENAI_MODEL default gpt-4o) + vision (image_url)
+  (src.includes('WF2_GUIDE_OPENAI_MODEL') && src.includes('image_url'))
+    ? ok('wf2-ads-guide: model WF2_GUIDE_OPENAI_MODEL + vision (image_url)') : bad('wf2-ads-guide model/vision', 'brak WF2_GUIDE_OPENAI_MODEL/image_url');
+  // podgląd admina = readonly (message/upload → 403)
+  (src.includes('podgląd — tylko odczyt') && src.includes('verifyTeamMember'))
+    ? ok('wf2-ads-guide: podgląd admina readonly (403) + verifyTeamMember') : bad('wf2-ads-guide readonly', 'brak gate readonly/verifyTeamMember');
+  // BM ID Tomka w promptcie (kroki ręczne) + menu „Partnerzy" (nie „Dodaj osoby")
+  (src.includes('737839566050751') && src.includes('Nadaj partnerowi dostęp do zasobów'))
+    ? ok('wf2-ads-guide: prompt zawiera BM ID 737839566050751 + menu „Partnerzy"') : bad('wf2-ads-guide prompt', 'brak BM ID / menu partnerów w promptcie');
+  // jawna lista kolumn (bez .select('*') na service-role)
+  (!src.includes(".select('*')") && !src.includes('.select("*")')) ? ok('wf2-ads-guide: jawna lista kolumn (bez .select(*))') : bad('wf2-ads-guide', '.select(*) na service-role');
+
+  // RLS: anon NIE czyta wf2_guide_messages (ZERO polityk anon)
+  const r = await rest('wf2_guide_messages?select=id&limit=1', ANON);
+  const leak = r.status < 300 && Array.isArray(r.data) && r.data.length > 0;
+  leak ? bad('RLS anon wf2_guide_messages', 'anon widzi wiersze!') : ok('RLS: anon nie widzi wf2_guide_messages');
+
+  // kill-switch key istnieje (service-role) + anon go NIE widzi (nie na whiteliście)
+  const kr = await rest('settings?select=key&key=eq.wf2_ads_guide_enabled', SK);
+  (kr.status < 300 && Array.isArray(kr.data) && kr.data.length === 1) ? ok('settings.wf2_ads_guide_enabled istnieje') : bad('settings wf2_ads_guide_enabled', `status ${kr.status}, rows ${Array.isArray(kr.data) ? kr.data.length : '?'}`);
+  const anonKr = await rest('settings?select=key&key=eq.wf2_ads_guide_enabled', ANON);
+  (!(anonKr.status < 300 && Array.isArray(anonKr.data) && anonKr.data.length > 0)) ? ok('RLS: anon NIE widzi wf2_ads_guide_enabled') : bad('RLS anon guide key', 'anon czyta kill-switch!');
+
+  // bucket wf2-guide-shots = PRYWATNY (storage API, service-role)
+  try {
+    const br = await fetch(`${SUPA}/storage/v1/bucket/wf2-guide-shots`, { headers: { apikey: SK, Authorization: `Bearer ${SK}` } });
+    const bj = br.status < 300 ? await br.json() : {};
+    (br.status < 300 && bj && bj.public === false) ? ok('bucket wf2-guide-shots istnieje i jest PRYWATNY') : bad('bucket wf2-guide-shots', `status ${br.status}, public=${bj && bj.public}`);
+  } catch (e) { bad('bucket wf2-guide-shots', 'błąd storage API: ' + (e && e.message || e)); }
+
+  // migracja obecna (reprodukowalność): tabela + RLS team + bucket private + settings + storage select-policy
+  const migPath = join(ROOT, 'supabase', 'migrations', '20260722r_wf2_ads_guide.sql');
+  const mig = existsSync(migPath) ? readFileSync(migPath, 'utf8') : '';
+  (mig.includes('wf2_guide_messages') && mig.includes('team_members') && mig.includes("'wf2-guide-shots'") && mig.includes('wf2_ads_guide_enabled') && mig.includes('wf2_guide_shots_team_select'))
+    ? ok('migracja 20260722r_wf2_ads_guide: tabela + RLS team + bucket + kill-switch + storage select-policy')
+    : bad('migracja 20260722r_wf2_ads_guide', 'brak tabeli/RLS/bucketu/kill-switcha/select-policy');
+
+  // portal.html: karta przewodnika + drawer czatu + wywołania upload_init/done
+  const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
+  (portalHtml.includes('Przewodnik konfiguracji — zapytaj AI') && portalHtml.includes('openGuide(') && portalHtml.includes('guide-wrap'))
+    ? ok('portal.html: karta przewodnika + drawer czatu (openGuide/guide-wrap)') : bad('portal.html przewodnik', 'brak karty/ drawera przewodnika');
+  (portalHtml.includes("action: 'upload_init'") && portalHtml.includes("action: 'upload_done'") && portalHtml.includes('wf2-ads-guide'))
+    ? ok('portal.html: upload zrzutu przez upload_init/done → wf2-ads-guide') : bad('portal.html upload', 'brak upload_init/done / GUIDE_FN');
+  // karta znika przy kill-switch OFF (guideEnabled)
+  (portalHtml.includes('guideEnabled !== false') && portalHtml.includes('loadGuideState'))
+    ? ok('portal.html: karta znika przy kill-switch OFF (guideEnabled/loadGuideState)') : bad('portal.html kill-switch', 'brak obsługi guideEnabled/loadGuideState');
+
+  // projekt.html: podgląd rozmów w warsztacie ads_konto (read-only, wf2_guide_messages)
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  (panelSrc.includes('adsGuideBlock') && panelSrc.includes('wf2_guide_messages') && panelSrc.includes('Przewodnik AI — ostatnie rozmowy'))
+    ? ok('projekt.html: sekcja „Przewodnik AI — ostatnie rozmowy" (adsGuideBlock, wf2_guide_messages)') : bad('projekt.html przewodnik', 'brak adsGuideBlock / odczytu wf2_guide_messages');
+
+  // deploy skonfigurowany (--no-verify-jwt)
+  const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
+  /"deploy:wf2-ads-guide":\s*"[^"]*--no-verify-jwt/.test(pkg) ? ok('package.json ma deploy:wf2-ads-guide (--no-verify-jwt)') : bad('package.json', 'brak deploy:wf2-ads-guide z --no-verify-jwt');
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);
