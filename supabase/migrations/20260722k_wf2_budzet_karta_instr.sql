@@ -1,3 +1,7 @@
+-- ⚠️ HISTORYCZNE (22.07.2026 wieczór): WYCOFANE decyzją Tomka. NADPISANE przez 20260722m_wf2_budzet_prepaid_instr.sql
+-- (prepaid / PŁATNOŚCI RĘCZNE). Migracja zostaje w repo TYLKO dla porządku apply (k<m: k aplikuje się PRZED m,
+-- m nadpisuje treść na prepaid). NIE stosować samodzielnie — treść „ZALECAMY KARTĘ" niżej jest już nieaktualna.
+-- ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 -- Etap 4 „Środowisko reklamowe" — instructions_md kroku ads_budzet: PRZEBUDOWA pod KARTĘ (22.07.2026).
 -- PROBLEM (runda 3, werdykt krytyka P1): commitowana migracja 20260722h opisywała budżet jako
 -- „prepaid (BLIK/przelew/PayU)", a żywa baza dostała PATCH-em treść „ZALECAMY KARTĘ" (rozjazd repo↔prod;

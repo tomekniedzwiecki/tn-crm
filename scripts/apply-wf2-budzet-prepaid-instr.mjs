@@ -1,14 +1,11 @@
 #!/usr/bin/env node
-// ⚠️ HISTORYCZNE (22.07.2026 wieczór): WYCOFANE decyzją Tomka. Zastąpione przez
-// apply-wf2-budzet-prepaid-instr.mjs (migracja 20260722m, prepaid / PŁATNOŚCI RĘCZNE). NIE uruchamiać —
-// aplikuje nieaktualną treść „ZALECAMY KARTĘ" i jego weryfikacja odczytem będzie FAIL po zastosowaniu m.
-// ─────────────────────────────────────────────────────────────────────────────────────────────────────
-// apply-wf2-budzet-karta-instr.mjs — aplikuje 20260722k_wf2_budzet_karta_instr.sql (instructions_md kroku
-// ads_budzet = KARTA-first, lustro portalu) przez Supabase Management API (POST /database/query).
-// Wzorzec 1:1: apply-wf2-step-merge.mjs. Token: --token > env SUPABASE_MGMT_TOKEN > Windows Credential
-// Manager (target „Supabase CLI:supabase"). Sekret NIGDY w output.
+// apply-wf2-budzet-prepaid-instr.mjs — aplikuje 20260722m_wf2_budzet_prepaid_instr.sql (instructions_md
+// kroku ads_budzet = PREPAID / PŁATNOŚCI RĘCZNE, lustro portalu) przez Supabase Management API
+// (POST /database/query). Decyzja Tomka 22.07: prepaid domyślnie, karta = wyjątek. Migracja m nadpisuje k.
+// Wzorzec 1:1: apply-wf2-budzet-karta-instr.mjs. Token: --token > env SUPABASE_MGMT_TOKEN > Windows
+// Credential Manager (target „Supabase CLI:supabase"). Sekret NIGDY w output.
 //
-// Uruchom: node scripts/apply-wf2-budzet-karta-instr.mjs
+// Uruchom: node scripts/apply-wf2-budzet-prepaid-instr.mjs
 
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -19,8 +16,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PROJECT_REF = 'yxmavwkwnfuphjqbelws';
 const MGMT_URL = `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
 
-const die = (m) => { console.error(`[apply-wf2-budzet-karta-instr] BŁĄD: ${m}`); process.exit(1); };
-const log = (m) => console.log(`[apply-wf2-budzet-karta-instr] ${m}`);
+const die = (m) => { console.error(`[apply-wf2-budzet-prepaid-instr] BŁĄD: ${m}`); process.exit(1); };
+const log = (m) => console.log(`[apply-wf2-budzet-prepaid-instr] ${m}`);
 
 function readTokenFromCredMan() {
   const ps = `
@@ -72,19 +69,22 @@ async function sql(query) {
   catch { die(`odpowiedź nie-JSON: ${text.slice(0, 300)}`); }
 }
 
+const norm = (s) => s.normalize('NFC');
+
 (async () => {
-  const mig = readFileSync(join(ROOT, 'supabase', 'migrations', '20260722k_wf2_budzet_karta_instr.sql'), 'utf8');
-  log('Aplikuję 20260722k_wf2_budzet_karta_instr.sql …');
+  const mig = readFileSync(join(ROOT, 'supabase', 'migrations', '20260722m_wf2_budzet_prepaid_instr.sql'), 'utf8');
+  log('Aplikuję 20260722m_wf2_budzet_prepaid_instr.sql …');
   await sql(mig);
   log('  ✓ zastosowana');
 
-  // weryfikacja odczytem: żywa baza = treść migracji (KARTA-first, fraza „ZALECAMY KARTĘ")
+  // weryfikacja odczytem: żywa baza = treść migracji (PREPAID, fraza „PŁATNOŚCI RĘCZNE")
   const rows = await sql(`SELECT instructions_md FROM wf2_step_defs WHERE key='ads_budzet'`);
   const im = Array.isArray(rows) && rows[0] ? String(rows[0].instructions_md || '') : '';
   console.log('\n=== WERYFIKACJA ODCZYTEM (ads_budzet.instructions_md) ===');
   console.log(im);
-  if (!/ZALECAMY KART/i.test(im)) die('żywa baza NIE zawiera „ZALECAMY KART" — migracja nie zaskoczyła?');
+  if (!norm(im).includes(norm('PŁATNOŚCI RĘCZNE'))) die('żywa baza NIE zawiera „PŁATNOŚCI RĘCZNE" — migracja nie zaskoczyła?');
+  if (/ZALECAMY KART/i.test(im)) die('żywa baza WCIĄŻ zawiera „ZALECAMY KART" — m nie nadpisała k?');
   if (!/przelew/i.test(im)) die('brak ostrzeżenia o przelewie w żywej bazie');
   if (!/1000 zł/.test(im)) die('brak kwoty 1000 zł w żywej bazie');
-  log('gotowe — żywa baza spójna z migracją (KARTA-first + przelew + 1000 zł).');
+  log('gotowe — żywa baza spójna z migracją (PŁATNOŚCI RĘCZNE + przelew + 1000 zł, bez „ZALECAMY KART").');
 })();

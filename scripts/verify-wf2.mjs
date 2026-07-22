@@ -404,17 +404,20 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   }
   orphans.length ? bad('WS↔CHECKLIST_MAP (E5/E6)', 'klucze mapy bez odpowiednika w WS: ' + orphans.join(' | ')) : ok('WS↔CHECKLIST_MAP: klucze map ads_kampanie/preflight/start/opieka spójne z WS');
 
-  // ads_budzet: instructions_md rekomenduje KARTĘ jako pierwszą metodę (audyt płatności) — ŻYWA BAZA
+  // ads_budzet: instructions_md zaleca PŁATNOŚCI RĘCZNE (prepaid) — decyzja Tomka 22.07 (karta = wyjątek).
+  // Sprawdzamy ŻYWĄ BAZĘ, z normalizacją NFC (polskie Ś/Ę/Ł — DB może zwrócić NFD, plik jest NFC).
+  const norm = (s) => s.normalize('NFC');
+  const WANT_RECZNE = norm('PŁATNOŚCI RĘCZNE');
   const kr = await rest("wf2_step_defs?select=instructions_md&key=eq.ads_budzet", SK);
   const im = Array.isArray(kr.data) && kr.data[0] ? String(kr.data[0].instructions_md || '') : '';
-  /ZALECAMY KART/i.test(im) ? ok('wf2_step_defs.ads_budzet.instructions_md: rekomendacja KARTY (klient)') : bad('ads_budzet instructions_md', 'brak rekomendacji KARTY (migracja zaaplikowana?)');
+  norm(im).includes(WANT_RECZNE) ? ok('wf2_step_defs.ads_budzet.instructions_md: PŁATNOŚCI RĘCZNE (prepaid, klient)') : bad('ads_budzet instructions_md', 'brak „PŁATNOŚCI RĘCZNE" (migracja m zaaplikowana?)');
 
-  // REPRODUKOWALNOŚĆ (P1): fraza „ZALECAMY KART" MUSI żyć w JAKIEJŚ migracji (nie tylko jako patch na
-  // żywej bazie) — inaczej powyższa asercja przechodzi dzięki prod, a repo NIE odtwarza stanu (§14 był
-  // taką dziurą do rundy 3: 20260722h mówił „prepaid", a KARTA żyła tylko patchem na bazie).
+  // REPRODUKOWALNOŚĆ (P1): fraza „PŁATNOŚCI RĘCZNE" MUSI żyć w JAKIEJŚ migracji (migracja m) — nie tylko
+  // jako patch na żywej bazie, inaczej repo NIE odtwarza stanu prod. Stara migracja k („ZALECAMY KARTĘ")
+  // zostaje w repo, ale m (kolejność k<m) aplikuje się PO niej i nadpisuje treść na prepaid.
   const migDir = join(ROOT, 'supabase', 'migrations');
-  const hasKarta = readdirSync(migDir).some((f) => f.endsWith('.sql') && /ZALECAMY KART/i.test(readFileSync(join(migDir, f), 'utf8')));
-  hasKarta ? ok('reprodukowalność: „ZALECAMY KART" obecne w migracji (nie tylko patch na prod)') : bad('reprodukowalność ads_budzet', 'żadna migracja nie zawiera „ZALECAMY KART" — patch tylko na żywej bazie?');
+  const hasReczne = readdirSync(migDir).some((f) => f.endsWith('.sql') && norm(readFileSync(join(migDir, f), 'utf8')).includes(WANT_RECZNE));
+  hasReczne ? ok('reprodukowalność: „PŁATNOŚCI RĘCZNE" obecne w migracji (nie tylko patch na prod)') : bad('reprodukowalność ads_budzet', 'żadna migracja nie zawiera „PŁATNOŚCI RĘCZNE" — patch tylko na żywej bazie?');
 }
 
 // ── 15. Etap 4 RUNDA 2 poprawek (atomowy merge, XSS, spend_cap LIFETIME, Leadsie-first portal) ──
@@ -498,13 +501,13 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     (kBlock.includes('Połącz konta reklamowe') && detailsIdx >= 0 && idIdx > detailsIdx)
       ? ok('portal CLIENT_WS.ads_konto: Leadsie-first, 737839566050751 tylko w fallbacku <details>')
       : bad('portal CLIENT_WS.ads_konto', 'ID BM poza zwijanym fallbackiem albo brak „Połącz konta"');
-    // ads_budzet KARTA-first + ostrzeżenie o przelewie; kwoty bez zmian (1000 zł)
+    // ads_budzet PREPAID-first (płatności ręczne) + ostrzeżenie o przelewie; kwoty bez zmian (1000 zł)
     const bStart = portalHtml.indexOf('ads_budzet: {');
     const bEnd = portalHtml.indexOf('pl_domena: {', bStart);
     const bBlock = bStart >= 0 && bEnd > bStart ? portalHtml.slice(bStart, bEnd) : '';
-    (/kart/i.test(bBlock) && /przelew/i.test(bBlock) && bBlock.includes('1000 zł'))
-      ? ok('portal CLIENT_WS.ads_budzet: KARTA-first + ostrzeżenie o przelewie (1000 zł bez zmian)')
-      : bad('portal CLIENT_WS.ads_budzet', 'brak KARTA-first / ostrzeżenia o przelewie / kwoty 1000 zł');
+    (/ręczn/i.test(bBlock) && /przelew/i.test(bBlock) && bBlock.includes('1000 zł'))
+      ? ok('portal CLIENT_WS.ads_budzet: prepaid-first (płatności ręczne) + ostrzeżenie o przelewie (1000 zł)')
+      : bad('portal CLIENT_WS.ads_budzet', 'brak płatności ręcznych / ostrzeżenia o przelewie / kwoty 1000 zł');
   }
   // zadanie ads_strona: „Załatwione w tym samym kreatorze" zamiast dublowania CTA (poz.14)
   portalHtml.includes('Załatwione w tym samym kreatorze') ? ok('portal: ads_strona przy connected_page → „Załatwione w tym samym kreatorze" (bez drugiego CTA)') : bad('portal ads_strona CTA', 'brak komunikatu „Załatwione w tym samym kreatorze"');

@@ -147,12 +147,21 @@ generujemy **MY** w Events Managerze (wąski, per-pixel), limit wydatków ustawi
 |---|---|---|---|
 | `ads_konto` | Leadsie tworzy BM + konto reklamowe (gdy brak) i nadaje partner access do BM Tomka; webhook odhacza „konto" + „partner access" i zapisuje `meta_ad_account_id` (gdy pusty) | metoda płatności (Leadsie promptuje), telefon/2FA | weryfikacja **PLN + Europe/Warsaw** w Business Settings (kreator Leadsie tego nie gwarantuje; docelowo automat po `WF2_META_TOKEN`) |
 | `ads_strona` | Leadsie tworzy stronę FB w kreatorze (stron NIE DA SIĘ przez API) i udostępnia do BM; webhook odhacza „strona" gdy Connected | publikuje posty, IG opcjonalnie na start | dostarcza logo / cover / propozycje postów z brandingu parasola |
-| `ads_budzet` | **limit wydatków konta** = fabryka przez API po `WF2_META_TOKEN` | zasila SWOJE konto (BLIK / przelew / PayU; przy karcie + zapasowa) | — |
+| `ads_budzet` | **limit wydatków konta** = fabryka przez API po `WF2_META_TOKEN` | zasila SWOJE konto — **prepaid / płatności ręczne** (BLIK/przelew/PayU); karta = wyjątek (wtedy główna + zapasowa) | — |
 | `ads_pixel` 🏁 | pixel na koncie klienta (`POST /act_*/adspixels`), weryfikacja domen (TXT `wfa-domain`), `set_integration` na platformie | — | **RĘCZNE 30 s**: token CAPI w Events Managerze (wąski per-pixel) |
 | `ads_preflight` 🏁 | mikro-wydatek, Account Quality, limit konta (po `WF2_META_TOKEN`) | — | blocklista PL, naming/UTM, plan struktury |
 
 Automat NIE potwierdza: waluty/strefy, telefonu/2FA, metody płatności, środków, dokumentów —
 to `ads_pixel`/`ads_preflight` lub ręczna weryfikacja, nigdy na podstawie webhooka.
+
+> **Budżet — metoda płatności (decyzja Tomka 22.07, WIĄŻĄCA): PREPAID / płatności ręczne.** Domyślnie
+> klient zasila konto płatnościami ręcznymi (BLIK/przelew/PayU), **nie kartą**. **Dlaczego:** pełna
+> kontrola nad wydatkiem z góry, doładowanie z góry zamiast niekontrolowanego obciążenia karty.
+> **Jak wpłacać poprawnie (L1):** doładowanie ZAWSZE z Ustawień płatności KONKRETNEGO konta reklamowego
+> (`billing_hub/payment_settings/?asset_id=<ID konta>`) — ogólny przelew na Facebooka ląduje na
+> domyślnym koncie rozliczeniowym profilu i utyka (incydent: 1000 zł stało tydzień poza kampanią).
+> **L5:** płatności ręczne wybiera się przy PIERWSZEJ konfiguracji płatności konta — później nie da się
+> przełączyć z automatycznych na ręczne. Karta pozostaje jako wyjątek (wtedy główna + zapasowa).
 
 ### Sekwencja `ads_pixel` (CAPI przez platformę Trevio)
 
@@ -192,7 +201,7 @@ wymaga odczytu przez **Graph API** (partner access do BM klientów). Robi to edg
   nie istnieje w Supabase).
 - **Co czyta i USTAWIA (per konto = `wf2_projects.meta_ad_account_id`):**
   1. `GET /{act}?fields=currency,timezone_name,account_status,funding_source_details,spend_cap,amount_spent` →
-     waluta==PLN + strefa==Europe/Warsaw? metoda płatności (KARTA?) jest? `account_status==1`?
+     waluta==PLN + strefa==Europe/Warsaw? metoda płatności (karta vs prepaid?) jest? `account_status==1`?
   2. `GET /{act}/promote_pages` → strona przypięta. **Puste `[]` (nie tylko rzucony błąd) też odpala
      fallback `assigned_pages`** zanim uznamy brak strony.
   3. `GET /{act}/adspixels` → pixel istnieje (zapis `pixel_id` na projekt gdy kolumna pusta).

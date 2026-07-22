@@ -146,8 +146,11 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
   const tzOk = tz === "Europe/Warsaw";
   const active = accountStatus === 1;
   const paymentMethod = !!funding && !!(funding.id || funding.type || funding.display_string);
-  // „Środki WIDOCZNE" odhaczamy TYLKO gdy metoda = KARTA (prepaid = saldo 0 nieczytelne przez Graph
-  // → zielony ptaszek wbrew treści pozycji). Rozpoznanie po type/display_string; brak pewności = NIE.
+  // MODEL PŁATNOŚCI (decyzja Tomka 22.07): DOMYŚLNIE prepaid / płatności ręczne (BLIK/przelew/PayU) —
+  // karta = WYJĄTEK. Konsekwencja: salda prepaid nie widać przez Graph API (0/nieczytelne), więc
+  // „Środki WIDOCZNE" odhaczamy TYLKO gdy metoda = KARTA (inaczej zielony ptaszek kłamałby). Przy
+  // prepaid (model domyślny) dajemy neutralną notę info „potwierdź saldo w Ads Managerze" — NIE
+  // sugerujemy dodania karty. Rozpoznanie po type/display_string; brak pewności = NIE.
   const fundBlob = `${String(funding?.type ?? "")} ${String(funding?.display_string ?? "")}`.toLowerCase();
   // KARTA uznawana TYLKO gdy display_string/type zawiera nazwę brandu/typu karty. Samo „…1234"
   // (ostatnie 4 cyfry lub maska bez brandu) NIE wystarcza — prepaid/inne źródła też bywają pokazane
