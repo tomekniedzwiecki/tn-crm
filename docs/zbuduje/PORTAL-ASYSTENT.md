@@ -81,8 +81,21 @@ FIRMA_AFTER w portal.html). Przy starcie usunąć też `firma` z HIDDEN_FOR_CLIE
 - Deploy: `npm run deploy:wf2-ads-guide` i odpowiednik dla wfa-test-chat; po KAŻDYM deployu
   `npm run test:webhooks`. verify-wf2.mjs 0 FAIL przed commitem.
 
-## 6. Historia
+## 6. Jakość — symulacje rozmów (metoda)
+
+Przy każdej większej zmianie promptu: symuluj rozmowy agentami-personami bezpośrednio na edge
+(skrypty wzorcowe w scratchpadzie sesji 22.07: `sim-msg.mjs` = tura z hasłem portalu + task_key,
+`sim-reset.mjs` = czyszczenie historii/not — TYLKO projekty „TEST Asystent"). Projekty testowe
+„TEST Asystent 1–5" (hasło portalu SimTest#2026; nr 1 ma zadania klienta done). Rubryka: jeden krok
+naraz, zgodność faktów z CLIENT_WS, kierowanie do pól, ton, halucynacje ścieżek Meta, higiena danych,
+markery utknięcia, granice (terminy/RODO/prepaid/injection). 22.07: 2 rundy × (15+10) rozmów →
+10 poprawek promptu + fix kontekstu (przejecie_* ukryte). ⚠️ Zarzut symulanta ≠ prawda — weryfikuj
+z CLIENT_WS (przykład: „halucynacja billing_hub" była poprawnym linkiem z instrukcji).
+
+## 7. Historia
 
 - 22.07.2026 — powstanie modułu: konsolidacja wfa-test-chat + wf2-ads-guide na portal-chat.ts,
   komponent tn-chat, chat-first widok zadań wf2, doradca firmy. (Poprzednik: przewodnik ads
   per-zadanie z 22.07 rano, commit 73a4f794 — patrz ADS-ONBOARDING-LEADSIE.md §14.)
+  Commity: 56287ef3 (rdzeń), 3974c779 (poprawki po 25 symulacjach), 0b189bb8 (checklist-map),
+  1cbdca74 (fix crash drawera + fab-dodge; pełny PASS weryfikacji wizualnej obu portali).
