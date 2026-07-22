@@ -568,5 +568,49 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   }
 }
 
+// ── 17. Widoczność MCP (kampanie przez Meta MCP na osobistym userze Tomka) ──
+// Partner access Leadsie daje dostęp FIRMIE (BM); MCP widzi konto TYLKO gdy zasób jest przypisany
+// do OSOBY Tomka. Check mcp_visibility w wf2-ads-verify auto-przypisuje wg settings.wf2_meta_assign_users.
+// SSOT: docs/zbuduje/ADS-ONBOARDING-LEADSIE.md §11.
+{
+  const v = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-verify', 'index.ts'), 'utf8');
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  const mapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'checklist-map.ts'), 'utf8');
+
+  // (a) settings key istnieje (odczyt service-role); anon NIE widzi; migracja obecna
+  const kr = await rest('settings?select=key&key=eq.wf2_meta_assign_users', SK);
+  (kr.status < 300 && Array.isArray(kr.data) && kr.data.length === 1) ? ok('settings.wf2_meta_assign_users istnieje') : bad('settings wf2_meta_assign_users', `status ${kr.status}, rows ${Array.isArray(kr.data) ? kr.data.length : '?'}`);
+  const anonKr = await rest('settings?select=key&key=eq.wf2_meta_assign_users', ANON);
+  (!(anonKr.status < 300 && Array.isArray(anonKr.data) && anonKr.data.length > 0)) ? ok('RLS: anon NIE widzi wf2_meta_assign_users') : bad('RLS anon meta-assign key', 'anon czyta listę userów MCP!');
+  existsSync(join(ROOT, 'supabase', 'migrations', '20260722n_wf2_meta_assign_users.sql')) ? ok('migracja 20260722n_wf2_meta_assign_users.sql obecna') : bad('migracja meta-assign', 'brak pliku migracji');
+
+  // (b) wf2-ads-verify zawiera check assigned_users: odczyt settings, GET assigned_users z business=BM,
+  //     auto-assign POST (tasks MANAGE), fallback business_users przy pustym settings
+  v.includes('wf2_meta_assign_users') ? ok('wf2-ads-verify: czyta settings.wf2_meta_assign_users') : bad('wf2-ads-verify settings', 'brak odczytu wf2_meta_assign_users');
+  (v.includes('/assigned_users?fields=id,name,tasks') && v.includes('business=${BM_TOMKA}'))
+    ? ok('wf2-ads-verify: GET /{act}/assigned_users z parametrem business (BM Tomka)')
+    : bad('wf2-ads-verify assigned_users', 'brak GET assigned_users z parametrem business');
+  (v.includes('mcpVisibility') && /tasks:\s*JSON\.stringify\(\["MANAGE"\]\)/.test(v))
+    ? ok('wf2-ads-verify: mcpVisibility + auto-assign POST (tasks MANAGE)')
+    : bad('wf2-ads-verify auto-assign', 'brak mcpVisibility / POST assigned_users tasks MANAGE');
+  v.includes('business_users?fields=id,name,role') ? ok('wf2-ads-verify: fallback business_users (settings puste → nota z listą)') : bad('wf2-ads-verify business_users', 'brak GET business_users przy pustym settings');
+  v.includes("BM_TOMKA = \"737839566050751\"") ? ok('wf2-ads-verify: BM_TOMKA = 737839566050751') : bad('wf2-ads-verify BM', 'brak stałej BM_TOMKA');
+
+  // (c) panel: wiersz „Widoczność MCP" w adsVerifyBlock (czyta v.mcp)
+  (panelSrc.includes('Widoczność MCP') && /const mcp = v\.mcp/.test(panelSrc))
+    ? ok('projekt.html adsVerifyBlock: wiersz „Widoczność MCP" (v.mcp)')
+    : bad('projekt.html Widoczność MCP', 'brak wiersza „Widoczność MCP" / odczytu v.mcp');
+
+  // (d) nowa pozycja WS ads_kampanie obecna VERBATIM + NIEobecna w CHECKLIST_MAP (admin-only)
+  const MCP_CHECK = 'Konto widoczne w Meta MCP (ads_get_ad_accounts zawiera act_ projektu)';
+  panelSrc.includes(MCP_CHECK) ? ok('WS.ads_kampanie: pozycja „Konto widoczne w Meta MCP …" obecna') : bad('WS.ads_kampanie MCP', 'brak nowej pozycji checklisty');
+  !mapSrc.includes(MCP_CHECK) ? ok('CHECKLIST_MAP: pozycja MCP POZA mapą (admin-only, nie do klienta)') : bad('CHECKLIST_MAP MCP', 'pozycja MCP trafiła do mapy klienta — powinna być admin-only');
+
+  // (e) desc kroku ads_kampanie wspomina restart sesji connectora + osobisty user Tomka
+  (panelSrc.includes('MCP działa na OSOBISTYM userze Tomka') && panelSrc.includes('wymaga RESTARTU sesji'))
+    ? ok('WS.ads_kampanie.desc: MCP osobisty user + restart sesji connectora')
+    : bad('WS.ads_kampanie.desc', 'brak dopiski o osobistym userze / restarcie sesji');
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

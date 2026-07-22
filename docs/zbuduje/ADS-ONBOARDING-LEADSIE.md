@@ -264,3 +264,49 @@ konto notą „konto DO WYMIANY", nota **nie jest ślepym zaułkiem** — jest p
    dotyczy tylko konta marki Tomka — cudze konta nie kolidują; byle nie było `meta_ad_account_id` projektu).
 4. **Domknięcie** — webhook (`ads_konto`/`ads_strona`) i verify (waluta/strefa/środki/strona/spend_cap)
    **same odhaczą** checklisty na nowym koncie przy najbliższym connect/sweep. Ręcznie tylko podmiana `act_`.
+
+---
+
+## 11. WIDOCZNOŚĆ MCP (osoba ≠ firma — konto musi być przypisane do OSOBY Tomka)
+
+Kampanie zakładamy przez **Meta MCP** (connector podpięty na **OSOBISTYM** profilu Tomka, nie na
+koncie firmowym). To rodzi lukę, której Leadsie **nie domyka**:
+
+- **Osoba ≠ firma.** Partner access z Leadsie nadaje dostęp **FIRMIE** (Meta Business Portfolio
+  `737839566050751`). Connector MCP autoryzuje się jako **osoba** — a `ads_get_ad_accounts` zwróci
+  konto klienta **tylko wtedy, gdy zasób jest PRZYPISANY do business-scoped usera Tomka** (i do
+  system-usera automatów). Bez tego przypisania konto istnieje w BM, ale MCP go „nie widzi".
+- W v1 była ręczna flaga `meta_mcp_enabled` odhaczana z palca. W wf2 zastępuje ją **automat**.
+
+**Pierwsza linia = onboarding Leadsie.** Partner access do BM to warunek konieczny — bez niego nie ma
+czego przypisywać. Domknięcie person-level robi **weryfikator**.
+
+**Konfiguracja — `settings.wf2_meta_assign_users`** (migracja `20260722n_wf2_meta_assign_users.sql`;
+default `''`, odczyt **wyłącznie service_role**, **NIE** anon): JSON lista business-scoped user IDs:
+
+```json
+{"users":[{"id":"<business-scoped id Tomka>","label":"Tomek"},
+          {"id":"<system user id automatów>","label":"system user"}]}
+```
+
+Puste = fabryka **NIE zgaduje**: weryfikator pobiera `GET /737839566050751/business_users?fields=id,name,role`
+i wypisuje dostępnych userów w nocie **„⚙️ AUTOMAT: uzupełnij settings.wf2_meta_assign_users …"** (dedup po
+otwartej nocie), żeby Tomek/sesja przekleili ID **1:1** do settings.
+
+**Check `mcp_visibility` w `wf2-ads-verify`** (w ramach istniejącego verify/sweep, po pozostałych checkach;
+Graph v23.0, token `WF2_META_TOKEN`, guard `EXCLUDED_ACCOUNTS` bez zmian):
+
+1. `GET /{act}/assigned_users?fields=id,name,tasks&business=737839566050751` — **parametr `business`
+   OBOWIĄZKOWY** dla edge'a `assigned_users` na koncie reklamowym (potwierdzone w docs Graph).
+2. Porównanie z listą z settings: wszyscy przypisani → **OK**; ktoś brakuje → **AUTO-PRZYPISANIE**
+   `POST /{act}/assigned_users {user:<id>, tasks:["MANAGE"], business:737839566050751}` → re-check.
+   Błąd POST (brak uprawnień) = **nota informacyjna, NIE blokada** (sweep leci dalej).
+3. Wynik → `wf2_steps(ads_konto).data.ads_verify.mcp = {ok, configured, assigned[], missing[], auto_assigned[], auto_failed[]}`
+   → panel `adsVerifyBlock` (wiersz **„Widoczność MCP"**: chip OK/braki + lista przypisanych).
+
+**Restart sesji po podpięciu connectora.** Connector MCP dodany/przełączony **w trakcie** trwającej sesji
+Claude Code **nie jest widoczny** aż do **RESTARTU sesji** (pamięć: `mcp-connector-needs-session-restart`).
+Podpięcie connectora → zamknij i otwórz sesję na nowo, zanim liczysz na `ads_get_ad_accounts`.
+
+> Pozycja checklisty kroku `ads_kampanie` **„Konto widoczne w Meta MCP (ads_get_ad_accounts zawiera act_
+> projektu)"** = **admin-only** (świadomie **poza** `CHECKLIST_MAP` portalu — nie trafia do klienta).

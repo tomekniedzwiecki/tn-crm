@@ -1,0 +1,22 @@
+-- 2026-07-22 — Etap 4 „Środowisko reklamowe": WIDOCZNOŚĆ MCP (kampanie robimy przez Meta MCP).
+-- Kampanie tworzymy connectorem Meta MCP podpiętym na OSOBISTYM profilu Tomka. Partner access
+-- z Leadsie nadaje dostęp FIRMIE (Meta Business Portfolio 737839566050751) — ale MCP „widzi"
+-- konto reklamowe klienta TYLKO wtedy, gdy zasób jest PRZYPISANY do OSOBY Tomka (business-scoped
+-- user) oraz do system-usera automatów. W v1 była ręczna flaga meta_mcp_enabled; w wf2 zastępuje
+-- ją check mcp_visibility w wf2-ads-verify: porównuje /{act}/assigned_users (business context)
+-- z listą z tego klucza i AUTO-PRZYPISUJE brakujących (POST assigned_users, tasks ["MANAGE"]).
+--
+-- WARTOŚĆ = JSON: lista business-scoped user IDs do przypisywania. PUSTA na starcie — fabryka
+-- NIE zgaduje: przy pustym kluczu weryfikator pobiera GET /737839566050751/business_users i wypisuje
+-- dostępnych userów w nocie „⚙️ AUTOMAT: uzupełnij settings.wf2_meta_assign_users …" do przeklejenia.
+-- ┌─ CO WPISAĆ (banner): weź ID z tej noty (albo z GET /737839566050751/business_users
+-- │  ?fields=id,name,role) i wklej 1:1 osobę Tomka + system-usera automatów:
+-- │    {"users":[{"id":"<business-scoped id Tomka>","label":"Tomek"},
+-- │              {"id":"<system user id automatów>","label":"system user"}]}
+-- └─ Po wpisaniu: przy najbliższym sweepie/„Weryfikuj środowisko (API)" braki auto-przypiszą się
+--    (tasks MANAGE); brak uprawnień do POST = nota, nie blokada.
+--
+-- ⚠️ BEZ polityki anon: to NIE jest klucz z whitelisty czytelnej dla publishable key. Odczyt
+-- WYŁĄCZNIE service_role (edge wf2-ads-verify) i team_member (RLS settings). Nie dodawać do anon-read.
+INSERT INTO public.settings (key, value) VALUES ('wf2_meta_assign_users', '')
+ON CONFLICT (key) DO NOTHING;

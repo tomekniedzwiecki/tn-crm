@@ -29,6 +29,9 @@ const GRAPH = "https://graph.facebook.com/v23.0";
 // Konto marki osobistej Tomka — NIGDY nie odpytywać/modyfikować (pamięć: wyklucz i loguj).
 const EXCLUDED_ACCOUNTS = ["act_1537659320657091"];
 const DEADLINE_MS = 300_000; // sweep kończy z zapasem pod edge wall-clock
+// Meta Business Portfolio Tomka — partner access z Leadsie ląduje na TEJ firmie. Widoczność MCP
+// wymaga PONADTO przypisania zasobu do OSOBY (business-scoped user) w kontekście tego BM.
+const BM_TOMKA = "737839566050751";
 
 // VERBATIM z WS (tn-sklepy/projekt.html) i CHECKLIST_MAP (wf2-portal) — klucz deduplikacji
 // stanu checklisty. NIE parafrazować — rozjazd zostawi „ducha" (odhaczenie nie trafi w bazę).
@@ -118,6 +121,89 @@ async function updateStepUnion(sb: SbClient, projectId: string, stepKey: string,
   return true;
 }
 
+// ── WIDOCZNOŚĆ MCP (kampanie robimy przez Meta MCP na OSOBISTYM userze Tomka) ──────────────────
+// Konfiguracja: settings.wf2_meta_assign_users (TEXT JSON) = {"users":[{id,label}]} — lista
+// business-scoped user IDs, które MUSZĄ być przypisane do konta klienta, żeby connector MCP je
+// zobaczył (partner access z Leadsie daje dostęp FIRMIE, nie OSOBIE). Odczyt WYŁĄCZNIE service_role.
+type AssignUser = { id: string; label?: string };
+async function readAssignUsers(sb: SbClient): Promise<AssignUser[]> {
+  const { data } = await sb.from("settings").select("value").eq("key", "wf2_meta_assign_users").maybeSingle();
+  const raw = (data as { value?: unknown } | null)?.value;
+  if (!raw) return [];
+  let parsed: unknown;
+  try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { return []; } // pusty/zły JSON = brak konfiguracji
+  const users = (parsed as { users?: unknown } | null)?.users;
+  if (!Array.isArray(users)) return [];
+  return users
+    .filter((u): u is Record<string, unknown> => !!u && typeof u === "object" && !!(u as Record<string, unknown>).id)
+    .map((u) => ({ id: String(u.id), label: u.label ? String(u.label) : undefined }));
+}
+
+type McpResult = {
+  ok: boolean;
+  configured: boolean; // settings.wf2_meta_assign_users niepuste
+  assigned: Array<{ id: string; name?: string; tasks?: string[] }>;
+  missing: AssignUser[];
+  auto_assigned: string[];
+  auto_failed: Array<{ id: string; error: string }>;
+  available_users?: Array<{ id: string; name?: string; role?: string }>; // gdy settings puste (do noty)
+  error?: string;
+};
+
+// Porównuje /{act}/assigned_users (business context) z listą z settings i AUTO-PRZYPISUJE brakujących.
+// assigned_users na ad account WYMAGA parametru `business` (potwierdzone w docs Graph — Page/IG/asset).
+// Błąd POST (brak uprawnień) NIE wywala sweepa — ląduje w auto_failed → nota informacyjna wyżej.
+// [ŻYWO: potwierdzić na 1. realnym koncie, że ID z business_users == ID z assigned_users; gdyby
+//  namespace się rozjechał, porównanie robić po innym polu — dziś zakładamy 1:1 wg guidance Tomka].
+async function mcpVisibility(token: string, act: string, wantUsers: AssignUser[]): Promise<McpResult> {
+  const res: McpResult = { ok: false, configured: wantUsers.length > 0, assigned: [], missing: [], auto_assigned: [], auto_failed: [] };
+  const fetchAssigned = async (): Promise<Array<{ id: string; name?: string; tasks?: string[] }>> => {
+    const au = await graphGet(`${GRAPH}/${act}/assigned_users?fields=id,name,tasks&business=${BM_TOMKA}&limit=100&access_token=${token}`);
+    return (Array.isArray(au.data) ? au.data as Array<Record<string, unknown>> : [])
+      .map((u) => ({ id: String(u.id ?? ""), name: u.name ? String(u.name) : undefined, tasks: Array.isArray(u.tasks) ? (u.tasks as unknown[]).map(String) : [] }))
+      .filter((u) => u.id);
+  };
+
+  // 1. kto już przypisany do konta
+  try { res.assigned = await fetchAssigned(); }
+  catch (e) { res.error = `assigned_users: ${String(e).slice(0, 160)}`; return res; } // stan nieznany → ok=false, sweep leci dalej
+  const assignedIds = new Set(res.assigned.map((u) => u.id));
+
+  // 2. settings puste → NIE zgadujemy kogo przypisać; pobierz dostępnych userów z BM do noty (przekleisz 1:1)
+  if (wantUsers.length === 0) {
+    try {
+      const bu = await graphGet(`${GRAPH}/${BM_TOMKA}/business_users?fields=id,name,role&limit=100&access_token=${token}`);
+      res.available_users = (Array.isArray(bu.data) ? bu.data as Array<Record<string, unknown>> : [])
+        .map((u) => ({ id: String(u.id ?? ""), name: u.name ? String(u.name) : undefined, role: u.role ? String(u.role) : undefined }))
+        .filter((u) => u.id);
+    } catch (e) { res.error = `business_users: ${String(e).slice(0, 160)}`; }
+    return res; // configured=false → ok=false świadomie (brak konfiguracji, nie brak przypisań)
+  }
+
+  // 3. auto-przypisz brakujących (POST assigned_users, tasks MANAGE = pełne prawo do konta)
+  const missing = wantUsers.filter((w) => !assignedIds.has(w.id));
+  for (const w of missing) {
+    try {
+      const r = await fetch(`${GRAPH}/${act}/assigned_users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ user: w.id, tasks: JSON.stringify(["MANAGE"]), business: BM_TOMKA, access_token: token }),
+      });
+      if (r.ok) res.auto_assigned.push(w.id);
+      else { const t = await r.text(); res.auto_failed.push({ id: w.id, error: t.slice(0, 160) }); }
+    } catch (e) { res.auto_failed.push({ id: w.id, error: String(e).slice(0, 160) }); }
+  }
+
+  // 4. re-check po auto-assign (potwierdzenie, że przypisania weszły)
+  if (res.auto_assigned.length) {
+    try { res.assigned = await fetchAssigned(); for (const u of res.assigned) assignedIds.add(u.id); }
+    catch { /* re-check nieudany — zostaje stan sprzed POST */ }
+  }
+  res.missing = wantUsers.filter((w) => !assignedIds.has(w.id));
+  res.ok = res.missing.length === 0;
+  return res;
+}
+
 type VerifyResult = {
   project_id: string;
   act: string;
@@ -126,7 +212,7 @@ type VerifyResult = {
   checks?: Record<string, unknown>;
 };
 
-async function verifyProject(sb: SbClient, token: string, proj: Record<string, unknown>): Promise<VerifyResult> {
+async function verifyProject(sb: SbClient, token: string, proj: Record<string, unknown>, assignCfg: AssignUser[]): Promise<VerifyResult> {
   const projectId = String(proj.id);
   const act = normAct(proj.meta_ad_account_id);
   if (!act) return { project_id: projectId, act: "", skipped: "no_ad_account", note: "projekt bez meta_ad_account_id" };
@@ -207,12 +293,18 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
   // istniejący cap zbyt blisko wydanego (bufor < 1000 zł) → nota do podbicia (dedup niżej)
   const spendCapNearLimit = spendCap > 0 && (spendCap - amountSpent) < 100000;
 
+  // 5. WIDOCZNOŚĆ MCP — konto musi być przypisane do OSOBY Tomka (business-scoped user), inaczej
+  //    connector Meta MCP go nie zobaczy (ads_get_ad_accounts nie zwróci act_). Auto-przypisuje
+  //    brakujących wg settings.wf2_meta_assign_users; puste settings = nota z listą userów BM.
+  const mcp = await mcpVisibility(token, act, assignCfg);
+
   const checks = {
     currency, timezone_name: tz, account_status: accountStatus,
     currency_ok: currencyOk, tz_ok: tzOk, active,
     payment_method: paymentMethod, payment_is_card: paymentIsCard, page_attached: pageAttached, pages_edge: pagesEdge,
     pixel_id: pixelId, amount_spent: amountSpent, spend_cap: spendCapValue, spend_cap_action: spendCapAction,
     spend_cap_near_limit: spendCapNearLimit,
+    mcp_ok: mcp.ok, mcp_configured: mcp.configured, mcp_missing: mcp.missing.length, mcp_auto_assigned: mcp.auto_assigned.length,
   };
 
   // ── auto-odhaczenie (unia; VERBATIM) ─────────────────────────────────────────
@@ -222,7 +314,9 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
   // niepewne) — zapis tylko do data.ads_verify; blokadę zgłasza nota niżej.
   // ads_konto: waluta+strefa TYLKO gdy oba OK i konto aktywne. Rozjazd = nota blokada + BEZ odhaczenia.
   const kontoChecks = active && currencyOk && tzOk ? [CHECK_ADS_KONTO_WALUTA] : [];
-  await updateStepUnion(sb, projectId, "ads_konto", kontoChecks, "ads_verify", { at: new Date().toISOString(), wyniki: checks }, mergeErrors);
+  // blok mcp do panelu (adsVerifyBlock → wiersz „Widoczność MCP"): stan przypisań + auto-assign.
+  const mcpBlock = { ok: mcp.ok, configured: mcp.configured, assigned: mcp.assigned, missing: mcp.missing, auto_assigned: mcp.auto_assigned, auto_failed: mcp.auto_failed, error: mcp.error };
+  await updateStepUnion(sb, projectId, "ads_konto", kontoChecks, "ads_verify", { at: new Date().toISOString(), wyniki: checks, mcp: mcpBlock }, mergeErrors);
 
   // ads_budzet: „środki" odhaczamy WYŁĄCZNIE gdy metoda = KARTA (prepaid = saldo nieczytelne przez
   //   Graph → nota informacyjna niżej); limit = po ustawieniu/potwierdzeniu spend_cap. Oba tylko aktywne.
@@ -262,11 +356,24 @@ async function verifyProject(sb: SbClient, token: string, proj: Record<string, u
     await noteOnce("⚠️ AUTOMAT: konto zbliża się do limitu%",
       `⚠️ AUTOMAT: konto zbliża się do limitu wydatków — podbij spend_cap konta ${act} (spend ${(amountSpent / 100).toFixed(0)} zł / cap ${(spendCap / 100).toFixed(0)} zł, LIFETIME).`, "info");
   }
+  // WIDOCZNOŚĆ MCP: settings puste → nota z listą userów BM (Tomek/sesja przekleja 1:1 do settings).
+  if (!mcp.configured) {
+    const lista = (mcp.available_users ?? []).map((u) => `${u.name ?? "?"} (${u.id}${u.role ? ", " + u.role : ""})`).join("; ");
+    await noteOnce("⚙️ AUTOMAT: uzupełnij settings.wf2_meta_assign_users%",
+      `⚙️ AUTOMAT: uzupełnij settings.wf2_meta_assign_users — żeby Meta MCP widział konto ${act}, wklej 1:1 ID osoby Tomka + system-usera automatów.${lista ? ` Dostępni userzy BM: ${lista}.` : ""}`, "info");
+  } else if (mcp.auto_failed.length) {
+    // metoda była, ale POST assigned_users padł (brak uprawnień) — nie blokada, ręczne przypisanie
+    await noteOnce("⚠️ AUTOMAT: MCP — nie udało się przypisać%",
+      `⚠️ AUTOMAT: MCP — nie udało się przypisać do konta ${act} userów: ${mcp.auto_failed.map((f) => f.id).join(", ")} (brak uprawnień?). Przypisz ręcznie w Business Settings, inaczej connector MCP nie zobaczy konta.`, "info");
+  }
 
+  const mcpNote = mcp.configured
+    ? `, MCP ${mcp.ok ? "OK" : `braki ${mcp.missing.length}`}${mcp.auto_assigned.length ? ` (+${mcp.auto_assigned.length} auto)` : ""}`
+    : ", MCP settings-puste";
   const mergeNote = mergeErrors.length ? ` ⚠️ merge NIEUDANY: ${mergeErrors.join("; ")}` : "";
   await sb.from("wf2_activities").insert({
     project_id: projectId, actor: "wf2-ads-verify", action: "ads_verify",
-    description: `Weryfikacja środowiska ${act}: waluta ${currency}/${currencyOk ? "OK" : "ZŁA"}, strefa ${tz}/${tzOk ? "OK" : "ZŁA"}, status ${accountStatus}, metoda płatności ${paymentIsCard ? "karta" : paymentMethod ? "inna/prepaid" : "brak"}, strona ${pageAttached ? "przypięta" : "brak"}, spend_cap ${spendCapAction}${pixelId ? `, pixel ${pixelId}` : ""}${mergeNote}`.slice(0, 2000),
+    description: `Weryfikacja środowiska ${act}: waluta ${currency}/${currencyOk ? "OK" : "ZŁA"}, strefa ${tz}/${tzOk ? "OK" : "ZŁA"}, status ${accountStatus}, metoda płatności ${paymentIsCard ? "karta" : paymentMethod ? "inna/prepaid" : "brak"}, strona ${pageAttached ? "przypięta" : "brak"}, spend_cap ${spendCapAction}${pixelId ? `, pixel ${pixelId}` : ""}${mcpNote}${mergeNote}`.slice(0, 2000),
   });
 
   return { project_id: projectId, act, checks };
@@ -301,11 +408,13 @@ Deno.serve(async (req) => {
       const { data: proj } = await supabase.from("wf2_projects")
         .select("id, name, meta_ad_account_id, pixel_id").eq("id", projectId).maybeSingle();
       if (!proj) return J({ error: "unknown_project" }, 404);
-      const result = await verifyProject(supabase, token, proj as Record<string, unknown>);
+      const assignCfg = await readAssignUsers(supabase); // lista userów do przypisania (widoczność MCP)
+      const result = await verifyProject(supabase, token, proj as Record<string, unknown>, assignCfg);
       return J({ ok: true, verify: result });
     }
 
     if (action === "sweep") {
+      const assignCfg = await readAssignUsers(supabase); // raz na sweep (settings globalne) — widoczność MCP
       const { data: projects } = await supabase.from("wf2_projects")
         .select("id, name, meta_ad_account_id, pixel_id").not("meta_ad_account_id", "is", null).neq("meta_ad_account_id", "");
       const projList = (projects ?? []) as Array<Record<string, unknown>>;
@@ -333,7 +442,7 @@ Deno.serve(async (req) => {
       for (const proj of projList) {
         if (Date.now() - t0 > DEADLINE_MS) { out.errors.push("deadline — reszta w kolejnym biegu"); break; }
         try {
-          const r = await verifyProject(supabase, token, proj as Record<string, unknown>);
+          const r = await verifyProject(supabase, token, proj as Record<string, unknown>, assignCfg);
           out.results.push(r);
           if (r.skipped === "excluded") out.skipped_excluded++;
           else if (r.skipped) out.skipped_other++;
