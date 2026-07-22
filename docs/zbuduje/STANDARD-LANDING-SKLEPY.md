@@ -1229,7 +1229,13 @@ wyglądu żadnego kadru.**
 - sticky przycisk zamówienia (mobile, po hero, IO) + KAŻDE CTA `data-checkout` → **#zamow
   (checkout inline na stronie; LL-047, feedback Tomka 22.07: CTA NIE wywozi klienta do kasy
   platformy — runtime snippet podmienia href na checkout_url TYLKO gdy strona nie ma
-  `#zamow.zc-checkout`)**;
+  `#zamow.zc-checkout`)**. **NA MOBILE cel scrolla = FORMULARZ DANYCH, nie góra sekcji
+  (LL-052, feedback Tomka 22.07: „CTA zamawiam na mobile powinno kierować do wysokości
+  formularza podawania danych, a nie do pierwszego boxa z prezentacją produktu"):**
+  obowiązkowy JS interceptor w skórce osadzenia — delegacja click na `a[href="#zamow"]`,
+  guard `matchMedia(max-width:899px)`, scroll do `#zamow .zc-form` z offsetem sticky
+  `.topbar`+10, `history.replaceState('#zamow')`; brak `.zc-form` = nawigacja domyślna;
+  desktop bez zmian (wzorzec: MODULY.md osadzenie checkoutu, montaz-cta-mobile.py);
 - prawdziwe opinie z aukcji ZE ZDJĘCIAMI (kafle + lightbox z pełną treścią; wzorzec:
   drukarka-3d ~l.1324; ae-pic rehost do `bud-assets/<slug>/` przed użyciem);
 - **galeria „zobacz produkt" = WYŁĄCZNIE realne kadry z kuracji (`gallery_curated`, klasa R)**
@@ -1471,6 +1477,10 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   w reasoning i tekst wraca pusty) · `high` TYLKO krótkie calle tekstowe bez obrazów
   (creative technologist, koncepcje) z capem ~4k · KOD sekcji = `medium` · drobne poprawki /
   przycinanie copy = `low`.
+  **AKTUALIZACJA LL-051 (Skrolik 22.07): `high` dla PLANU/KRYTYKA znów dozwolony** —
+  wf2gpt-call.py przy 502/503/504 z edge robi AUTOMATYCZNY fallback na bezpośredni
+  `api.openai.com/v1/responses` (OPENAI_API_KEY z .env, timeout 900 s, bez wall-clocka
+  edge); modele kimi bez fallbacku (klucz tylko w env edge).
 - **⚡ RÓWNOLEGŁOŚĆ GENERACJI (17.07 — wąskie gardło to API ~2 min/obraz):** styl-master
   i hero sekwencyjnie (są referencją), ale makiety RÓŻNYCH sekcji po akceptacji hero =
   NIEZALEŻNE → batch 4-6 równoległych POST-ów do wf2-gen (python futures), oglądanie

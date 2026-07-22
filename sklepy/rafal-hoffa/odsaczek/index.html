@@ -6044,6 +6044,25 @@
   })();
 </script>
 
+<script>
+  (() => {
+    // LL-052: na mobile CTA -> #zamow laduje na FORMULARZU danych (.zc-form),
+    // nie na karcie produktu u gory sekcji. Desktop: karta+formularz obok siebie, bez zmian.
+    const mq = matchMedia("(max-width: 899px)");
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest('a[href="#zamow"]');
+      if (!a || !mq.matches) return;
+      const form = document.querySelector("#zamow .zc-form");
+      if (!form) return;
+      e.preventDefault();
+      const tb = document.querySelector(".topbar");
+      const off = (tb && getComputedStyle(tb).position === "sticky" ? tb.offsetHeight : 0) + 10;
+      window.scrollTo({ top: form.getBoundingClientRect().top + window.scrollY - off, behavior: "smooth" });
+      history.replaceState(null, "", "#zamow");
+    });
+  })();
+</script>
+
 <!--
   LANDING RUNTIME (workflow v2 / fabryka landingów) — WKLEJANY PRZED </body> każdego landinga.
   Kontrakt DOM:

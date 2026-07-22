@@ -37,6 +37,13 @@ nagłówkowym pliku `<moduł>@<wersja>.html`. Proporcje i JS = nietykalne; token
 - Źródłem wersji jest ZAWSZE konkretny commit dobrego landingu (nie „z głowy").
 
 ## CHANGELOG
+- **2026-07-22 — checkout-inline@2: CTA MOBILE → FORMULARZ (LL-052, feedback Tomka: „CTA
+  zamawiam na mobile powinno kierować do wysokości formularza podawania danych, nie do
+  pierwszego boxa z prezentacją produktu"):** obowiązkowy element KAŻDEGO osadzenia —
+  JS interceptor (delegacja click `a[href="#zamow"]`, guard `matchMedia(max-width:899px)`,
+  scroll do `#zamow .zc-form` z offsetem sticky `.topbar`+10, `history.replaceState`);
+  brak `.zc-form` = nawigacja domyślna; desktop bez zmian (góra sekcji — karta+formularz
+  obok siebie). Wzorzec żywy: oba landingi Zaradka; montaż: FABRYKA-koszyk/montaz-cta-mobile.py.
 - **2026-07-22 — checkout-inline@2: WZORZEC OSADZENIA Z KARTĄ PRODUKTU (LL-050, feedback
   Tomka):** gdy sekcja #zamow ma obok modułu kartę produktu (packshot+nazwa), `.zc-summary`
   przenosi się DOM-owo DO tej karty (pod zdjęcie; karta `position:sticky` — rachunek zawsze
