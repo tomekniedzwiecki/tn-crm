@@ -251,7 +251,7 @@ Sub-kroki wideo = natywne `wf2_step_defs` z `sub_of='ads_wideo'` (timeline w war
 
 | Po KROKU | Sub-krok | Emisja (panel-sync) |
 |---|---|---|
-| 0 (start) | — | `product_meta`: `video_status='planning'`, `video_pattern_tiktok_url`; `artifact_add(avi_wzorzec, kind='link', url=<tiktok>)` — **NIGDY mp4 wzorca** (cudzy content: lokalnie/PRIVATE); `activity_add('video_start', ...)` |
+| 0 (start) | — | `product_meta`: `video_status='planning'`, `video_pattern_tiktok_url`; `artifact_add(avi_wzorzec, kind='link', url=<tiktok>)` + **OBOWIĄZKOWO oryginał do porównania (lekcja Zaradek 22.07 — Tomek nie miał z czym porównać kreacji):** mp4 wzorca → **PRIVATE** `wf2-video/<slug>/wzorzec.mp4` + siatka klatek `wzorzec_strip.jpg`, potem `artifact_add(kind='wzorzec_ref', url='wf2-video/<slug>/wzorzec.mp4')` i `artifact_add(kind='wzorzec_strip', ...)` — panel renderuje je signed-URL-em (konwencja z przebiegu masazer). ⛔ mp4 wzorca NIGDY do PUBLIC bud-assets (cudzy content). Wzorzec ODRZUCONY (np. obca marka) też wgraj — z labelem „ODRZUCONY + powód"; `activity_add('video_start', ...)` |
 | 2 (KARTA) | `avi_wzorzec` → done | note: „archetyp X · N scen · cuts/min"; `artifact_add(kind='doc', KARTA — storage='repo')`; `video_status='rendering'` |
 | 3 (blueprint, samoakcept #1) | `avi_blueprint` → done | note z uzasadnieniem samoakceptu; `artifact_add(kind='doc', BLUEPRINT — storage='repo')` |
 | 5 (klatki, samoakcept #2) | `avi_klatki` → done | **PUBLIC** arkusz klatek-kluczy jpg → `bud-assets/<slug>/video/frames/` (`storage_upload` + `artifact_add(kind='proof')`); koszt klatek `cost_add(note='<slug> klatki')` |
