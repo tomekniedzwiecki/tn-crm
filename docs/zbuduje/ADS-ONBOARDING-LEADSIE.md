@@ -310,3 +310,52 @@ Podpięcie connectora → zamknij i otwórz sesję na nowo, zanim liczysz na `ad
 
 > Pozycja checklisty kroku `ads_kampanie` **„Konto widoczne w Meta MCP (ads_get_ad_accounts zawiera act_
 > projektu)"** = **admin-only** (świadomie **poza** `CHECKLIST_MAP` portalu — nie trafia do klienta).
+
+---
+
+## 12. ISTNIEJĄCE KONTO KLIENTA — POLITYKA DEDYKOWANEGO KONTA
+
+**Decyzja Tomka (22.07, WIĄŻĄCA).** Klient z **już istniejącym** kontem reklamowym Meta **i tak
+zakłada NOWE, DEDYKOWANE** konto pod wspólny biznes (ten sklep). W kroku `ads_konto` kreator Leadsie
+ma opcję **„Create new Meta asset"** (oraz wariant linku `/create`) — klient tworzy nowe konto **mimo**
+posiadania starego. **NIE** podpinamy istniejącego konta klienta jako konta projektu.
+
+### Dlaczego (powody do treści)
+
+1. **Prepaid / płatności ręczne.** Płatności ręczne (BLIK/przelew/PayU — model domyślny, §8) wybiera
+   się **TYLKO przy PIERWSZEJ konfiguracji płatności konta**. Istniejącego konta z podpiętą kartą **nie
+   da się przełączyć** na ręczne. Dedykowane, świeże konto = prepaid od startu.
+2. **Czystość pomiaru / P&L.** `wf2-ads-sync`, strażnik kampanii i limity (`spend_cap`) działają **na
+   poziomie konta**. Mieszanie z prywatnymi kampaniami klienta = śmieci w metrykach + **nasz `spend_cap`
+   blokowałby jego** kampanie (lifetime cap konta, §9).
+3. **Obca historia.** Istniejące konto niesie własną historię: odrzuty, poziom trust, restrykcje,
+   zaległości płatnicze — ryzyko, którego nie chcemy dziedziczyć na starcie.
+4. **Izolacja naszych automatów.** Fabryka pisze po koncie (pixel, spend_cap, przypisania userów MCP,
+   naming/UTM). Dedykowane konto trzyma te operacje z dala od prywatnych zasobów klienta.
+
+### WYJĄTEK — konto „dziewicze"
+
+Konto **nigdy nieużywane** (waluta **PLN** + strefa **Europe/Warsaw**, **BEZ** metody płatności, **zero
+historii/wydatków**) — **można przyjąć** zamiast tworzyć kolejne. To jedyny sensowny przypadek użycia
+istniejącego konta.
+
+### EDGE CASE — limit kont świeżego BM
+
+Świeży Business Manager ma **limit ~1-2 kont reklamowych** (rośnie ze spendem/historią). Gdy limit
+wyczerpany, a trzeba nowe konto — to **jedyna sytuacja, w której czekamy** (limit podniesie się z
+czasem) **albo** wyjątkowo używamy **dziewiczego istniejącego** (kryteria wyżej).
+
+### Multi-account w przebiegu Leadsie → nota (bez zgadywania)
+
+`wf2-ads-connect` liczy zasoby `kind='ad_account'` w stanie **Connected**:
+
+- **dokładnie 1** → zachowanie bez zmian: zapis `meta_ad_account_id` (gdy kolumna pusta).
+- **>1** → **NIE** zapisuje `act_` (nie zgadujemy, które dedykowane) + nota (dedup po otwartej
+  `⚠️ AUTOMAT: Leadsie — klient podłączył%`): *„klient podłączył N kont reklamowych ({nazwy}) —
+  potwierdź dedykowane i wpisz act_ ręcznie w kroku Konto reklamowe (polityka: NOWE dedykowane konto)"*.
+
+**Odhaczanie checklisty** (`konto` + `partner access`) **bez zmian** — dostęp JEST, niejednoznaczny
+jest tylko **wybór** konta (act_ wpisujemy ręcznie w panelu).
+
+> **[ŻYWO]** Potwierdzić na **1. realnym przebiegu**, że kreator Leadsie pozwala utworzyć **nowe** konto
+> reklamowe, gdy klient **już ma** istniejące (opcja „Create new Meta asset" / wariant linku `/create`).

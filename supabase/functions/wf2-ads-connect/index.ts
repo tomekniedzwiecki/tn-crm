@@ -134,6 +134,14 @@ Deno.serve(async (req) => {
     const pageOk = metaAssets.some((a) => assetKind(a) === "page" && isConnected(a));
     const problems = metaAssets.filter((a) => !isConnected(a));
 
+    // POLITYKA „NOWE dedykowane konto per sklep" (Tomek 22.07): klient bywa podłącza WIĘCEJ NIŻ
+    // jedno konto reklamowe (stare prywatne + nowe dedykowane). Nie zgadujemy, które jest dedykowane —
+    // przy >1 koncie Connected NIE zapisujemy meta_ad_account_id automatem i zostawiamy notę do ręcznego
+    // wpisania act_. Checklista (konto + partner access) odhacza się normalnie: DOSTĘP jest,
+    // niejednoznaczny jest tylko WYBÓR konta.
+    const connectedAdAccounts = metaAssets.filter((a) => assetKind(a) === "ad_account" && isConnected(a));
+    const multiAccount = connectedAdAccounts.length > 1;
+
     // blok zapisu per krok — ads_konto dostaje pełny stan, ads_strona lustro części „strona/IG"
     const leadsieBlock = {
       at: nowIso,
@@ -182,7 +190,7 @@ Deno.serve(async (req) => {
     // ustaleń). Normalizacja: same cyfry → 'act_'+id; już z prefiksem 'act_' → as-is; inaczej pomiń
     // (nie zgadujemy formatu). Źródło = pierwszy Connected+Manage asset typu ad_account.
     const curActId = String((proj as Record<string, unknown>).meta_ad_account_id || "").trim();
-    if (adAccountOk && !curActId) {
+    if (adAccountOk && !curActId && !multiAccount) {
       const acctAsset = metaAssets.find((a) => assetKind(a) === "ad_account" && isConnected(a) && isManage(a));
       const rawId = String(acctAsset?.id || "").trim();
       let actId: string | null = null;
@@ -216,7 +224,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ ok: true, project: projectId, steps: stepsTouched, ad_account: adAccountOk, page: pageOk });
+    // Nota multi-account (polityka: NOWE dedykowane konto) — osobny dedup po WŁASNYM prefiksie noty,
+    // żeby nie kolidować z notą „połączenie niepełne". Odhaczenie checklisty zostaje bez zmian.
+    if (multiAccount) {
+      const { data: dupMulti } = await supabase
+        .from("wf2_notes").select("id").eq("project_id", projectId).eq("status", "open")
+        .like("body", "⚠️ AUTOMAT: Leadsie — klient podłączył%").limit(1);
+      if (!dupMulti || dupMulti.length === 0) {
+        const nazwy = connectedAdAccounts.map((a) => (a.name || "?").slice(0, 60)).join(", ");
+        await supabase.from("wf2_notes").insert({
+          project_id: projectId,
+          tag: "blokada",
+          status: "open",
+          author: "auto",
+          body: `⚠️ AUTOMAT: Leadsie — klient podłączył ${connectedAdAccounts.length} kont reklamowych (${nazwy}) — potwierdź dedykowane i wpisz act_ ręcznie w kroku Konto reklamowe (polityka: NOWE dedykowane konto).`.slice(0, 1000),
+        });
+      }
+    }
+
+    return json({ ok: true, project: projectId, steps: stepsTouched, ad_account: adAccountOk, page: pageOk, multi_account: multiAccount });
   } catch (e) {
     console.error("[wf2-ads-connect] ERROR:", e);
     // 500 → Leadsie może ponowić; stan jest idempotentny (unia checklisty, nadpisanie bloku leadsie)

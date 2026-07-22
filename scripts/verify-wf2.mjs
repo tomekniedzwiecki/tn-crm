@@ -612,5 +612,54 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     : bad('WS.ads_kampanie.desc', 'brak dopiski o osobistym userze / restarcie sesji');
 }
 
+// ── 18. Polityka DEDYKOWANEGO konta (istniejące konto klienta → NOWE) — decyzja Tomka 22.07 ──
+// Klient z istniejącym kontem i tak zakłada nowe, dedykowane. Portal instruuje, connect obsługuje
+// multi-account (nota, bez zapisu act_), instructions_md (live) niesie politykę. SSOT §12.
+{
+  const norm = (s) => s.normalize('NFC');
+  const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
+  const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  const connectSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-connect', 'index.ts'), 'utf8');
+
+  // (a) portal CLIENT_WS.ads_konto instruuje o NOWYM dedykowanym koncie (w bloku ads_konto)
+  {
+    const kStart = portalHtml.indexOf('ads_konto: {');
+    const kEnd = portalHtml.indexOf('ads_strona: {', kStart);
+    const kBlock = kStart >= 0 && kEnd > kStart ? portalHtml.slice(kStart, kEnd) : '';
+    norm(kBlock).includes(norm('dedykowane temu sklepowi'))
+      ? ok('portal CLIENT_WS.ads_konto: instrukcja o NOWYM dedykowanym koncie („dedykowane temu sklepowi")')
+      : bad('portal CLIENT_WS.ads_konto dedykowane', 'brak frazy „dedykowane temu sklepowi" w guide ads_konto');
+  }
+
+  // (b) panel WS.ads_konto.desc niesie politykę dedykowanego konta (bez zmiany checklisty)
+  norm(panelSrc).includes(norm('DEDYKOWANE konto pod ten sklep'))
+    ? ok('projekt.html WS.ads_konto.desc: polityka dedykowanego konta dopisana')
+    : bad('projekt.html WS.ads_konto.desc', 'brak dopisku polityki („DEDYKOWANE konto pod ten sklep")');
+
+  // (c) wf2-ads-connect: gałąź multi-account (nota + brak zapisu act_ przy >1 koncie Connected)
+  (connectSrc.includes('const multiAccount = connectedAdAccounts.length > 1')
+    && connectSrc.includes('!curActId && !multiAccount')
+    && connectSrc.includes('⚠️ AUTOMAT: Leadsie — klient podłączył')
+    && connectSrc.includes('.like("body", "⚠️ AUTOMAT: Leadsie — klient podłączył%")'))
+    ? ok('wf2-ads-connect: gałąź multi-account (>1 konto → nota z własnym dedup, act_ ręcznie)')
+    : bad('wf2-ads-connect multi-account', 'brak multiAccount / guardu !multiAccount / noty „klient podłączył" / dedup');
+
+  // (d) instructions_md (ŻYWA BAZA) kroku ads_konto zawiera „dedykowane" (migracja o zaaplikowana)
+  const kr = await rest("wf2_step_defs?select=instructions_md&key=eq.ads_konto", SK);
+  const im = Array.isArray(kr.data) && kr.data[0] ? String(kr.data[0].instructions_md || '') : '';
+  norm(im).includes(norm('dedykowane'))
+    ? ok('wf2_step_defs.ads_konto.instructions_md: zawiera „dedykowane" (migracja 20260722o)')
+    : bad('ads_konto instructions_md', 'brak „dedykowane" w żywej bazie (migracja 20260722o zaaplikowana?)');
+
+  // (e) migracja obecna w repo (reprodukowalność) + dopisek, nie nadpisanie (guard idempotencji)
+  {
+    const migPath = join(ROOT, 'supabase', 'migrations', '20260722o_wf2_konto_dedykowane_instr.sql');
+    const mig = existsSync(migPath) ? readFileSync(migPath, 'utf8') : '';
+    (mig.includes("instructions_md = instructions_md ||") && mig.includes("not like '%dedykowane temu sklepowi%'"))
+      ? ok('migracja 20260722o: DOPISEK (append || + guard not like — idempotentny, nic nie ścina)')
+      : bad('migracja 20260722o', 'brak append (|| ) lub guardu idempotencji not like');
+  }
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);
