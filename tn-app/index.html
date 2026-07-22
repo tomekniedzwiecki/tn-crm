@@ -56,6 +56,10 @@
         .wa-ic:hover { background:rgba(37,211,102,.14); }
         .wa-ic i { font-size:15px; }
         .pc-badge { flex-shrink:0; display:inline-block; padding:4px 10px; border-radius:6px; border:1px solid; font-size:11.5px; font-weight:500; white-space:nowrap; }
+        /* badge FAZY OPERACYJNEJ (spowiednik → budowa → dostęp → testy → start) — główny wyznacznik karty */
+        .phase-badge { flex-shrink:0; display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:6px;
+            border:1px solid; font-size:11.5px; font-weight:600; white-space:nowrap; }
+        .phase-badge i { font-size:12.5px; }
         .demo-tag { position:absolute; top:12px; right:12px; font:600 9px/1 ui-monospace,monospace; letter-spacing:.08em;
             color:#52525b; border:1px solid #232323; border-radius:5px; padding:3px 6px; background:#0a0a0a; }
         /* proces: 5 segmentów etapów */
@@ -87,9 +91,6 @@
         .pc-link:hover { color:#52a8ff; background:rgba(0,112,243,.1); }
         .pc-link i { font-size:15px; }
         .pc-portlabel { font-size:12.5px; color:#8b8b94; white-space:nowrap; }
-        .kh-chip { display:inline-flex; align-items:center; gap:4px; font:500 11px/1 'Inter',sans-serif; border:1px solid; border-radius:6px; padding:4px 7px; white-space:nowrap; }
-        .kh-done { color:#62c073; border-color:rgba(69,165,87,.3); background:rgba(69,165,87,.08); }
-        .kh-open { color:#f26d78; border-color:rgba(229,72,77,.35); background:rgba(229,72,77,.08); }
         .pc-act { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#6b6b74; white-space:nowrap; }
         /* pole wyszukiwania */
         .searchbox { display:flex; align-items:center; gap:8px; background:#0a0a0a; border:1px solid #1f1f1f; border-radius:8px; padding:7px 11px; }
@@ -170,6 +171,10 @@
                     </button>
                     <div id="stages-wrap" class="space-y-5 mt-5 hidden"></div>
                 </div>
+
+                <!-- Chipy FAZ OPERACYJNYCH: gdzie w cyklu spowiednik→budowa→dostęp→testy→start
+                     stoją projekty (licznik) + klik = filtr kart. Główny wyznacznik widoku. -->
+                <div id="phase-filter" class="lc-filter mb-3"></div>
 
                 <!-- Pasek nad listą: wyszukiwarka + chipy stanu + aktywny filtr + licznik -->
                 <div class="flex flex-wrap items-center gap-3 mb-5">
@@ -281,6 +286,37 @@
         };
         const LC_RANK = { active: 0, paused: 1, completed: 2, cancelled: 3 };
         function lifecycleOf(p) { return LC_META[p.lifecycle] ? p.lifecycle : 'active'; }
+
+        // ── FAZA OPERACYJNA — główny wyznacznik „co się dzieje" z projektem ──
+        // Wyliczana z twardych sygnałów: spowiednik (spar_knowhow_summary.status),
+        // kickoff/kroki E3 (budowa), demo_klienta (dostęp), testy_klienta, start_live.
+        const PHASE_ORDER = ['spowiednik', 'gotowy', 'budowa', 'dostep', 'testy', 'testy_done', 'live'];
+        const PHASE_META = {
+            spowiednik: { label: 'Spowiednik',        color: '#f5a623', icon: 'ph-hourglass-high', title: 'Czekamy, aż klient wypełni spowiednika — nie zaczynaj budowy' },
+            gotowy:     { label: 'Do budowy',         color: '#52a8ff', icon: 'ph-play-circle',    title: 'Spowiednik wypełniony — można zaczynać budowę' },
+            budowa:     { label: 'Budowa',            color: '#0070f3', icon: 'ph-hammer',         title: 'Budowa aplikacji w toku' },
+            dostep:     { label: 'Dostęp przekazany', color: '#f5a623', icon: 'ph-key',            title: 'Wersja robocza pokazana klientowi — klient ma dostęp' },
+            testy:      { label: 'Testy klienta',     color: '#f5a623', icon: 'ph-flask',          title: 'Klient testuje aplikację i zgłasza uwagi' },
+            testy_done: { label: 'Testy zakończone',  color: '#45a557', icon: 'ph-list-checks',    title: 'Uwagi z testów zebrane — poprawki i przygotowanie startu' },
+            live:       { label: 'Wystartowała',      color: '#45a557', icon: 'ph-rocket-launch',  title: 'Aplikacja wystartowała — działa produkcyjnie' },
+        };
+        let filterPhase = null;
+
+        // Najwyższa osiągnięta faza (od najpóźniejszej). Projekt ręczny (bez sesji
+        // sparingu) nie ma spowiednika — startuje od „Do budowy".
+        function computePhase(p, steps) {
+            const st = {}; steps.forEach(s => { st[s.step_key] = s.status; });
+            if (st['start_live'] === 'done') return 'live';
+            if (st['testy_klienta'] === 'done') return 'testy_done';
+            if (st['testy_klienta'] === 'in_progress') return 'testy';
+            if (st['demo_klienta'] === 'done') return 'dostep';
+            const kh = knowhowByProj[p.id];
+            const khClosed = !p.spar_session_id || !!(kh && kh.status === 'closed');
+            const buildStarted = st['kickoff'] === 'done' ||
+                steps.some(s => { const d = defByKey[s.step_key]; return d && d.stage === 3 && (s.status === 'done' || s.status === 'in_progress'); });
+            if (buildStarted) return 'budowa';
+            return khClosed ? 'gotowy' : 'spowiednik';
+        }
 
         // widok listy: które stany pokazywać (multi-toggle). Domyślnie tylko aktywne.
         function loadViewLC() {
@@ -419,6 +455,7 @@
             buildSearchIndex();
             renderStages();
             renderLifecycleChips();
+            renderPhaseChips();
             renderCards();
         }
 
@@ -435,6 +472,8 @@
                 if (p.customer_phone) { const d = String(p.customer_phone).replace(/\D/g, ''); if (d) parts.push(d); }
                 parts.push(STATUS_META[p.status]?.label || p.status || '');
                 parts.push(LC_META[lifecycleOf(p)].label);
+                const ph = aggByProj[p.id]?.phase;
+                if (ph) parts.push(PHASE_META[ph].label);
                 p._idx = foldStr(parts.join(' '));
             });
         }
@@ -477,6 +516,7 @@
                     segs,
                     lastAct: lastAct[p.id] || null,
                     deadline: computeDeadline(p),
+                    phase: computePhase(p, steps),
                 };
             });
         }
@@ -544,6 +584,25 @@
         }
         function clearFilter() { toggleFilter(filterStepKey); }
 
+        // ============ FILTR FAZ OPERACYJNYCH (chipy) ============
+        // Liczniki z projektów widocznych wg filtra stanu (viewLC) — spójne z listą.
+        function renderPhaseChips() {
+            const wrap = document.getElementById('phase-filter'); if (!wrap) return;
+            const base = viewLC.size ? projects.filter(p => viewLC.has(lifecycleOf(p))) : [];
+            const counts = {}; PHASE_ORDER.forEach(k => { counts[k] = 0; });
+            base.forEach(p => { const ph = aggByProj[p.id]?.phase; if (ph) counts[ph]++; });
+            wrap.innerHTML = PHASE_ORDER.map(k => {
+                const m = PHASE_META[k], n = counts[k], on = filterPhase === k;
+                const style = on ? `border-color:${m.color};` : '';
+                return `<button class="lc-chip ${on ? 'on' : ''} ${n === 0 ? 'is-zero' : ''}" style="${style}" onclick="togglePhaseFilter('${k}')" title="${m.title}">
+                    <i class="ph ${m.icon}" style="color:${m.color};font-size:13px"></i>${m.label}<span class="lc-n">${n}</span></button>`;
+            }).join('');
+        }
+        function togglePhaseFilter(k) {
+            filterPhase = filterPhase === k ? null : k;
+            renderPhaseChips(); renderCards();
+        }
+
         // ============ FILTR STANU (chipy) ============
         function renderLifecycleChips() {
             const wrap = document.getElementById('lc-filter'); if (!wrap) return;
@@ -559,7 +618,7 @@
         }
         function toggleViewLC(lc) {
             if (viewLC.has(lc)) viewLC.delete(lc); else viewLC.add(lc);
-            saveViewLC(); renderLifecycleChips(); renderCards();
+            saveViewLC(); renderLifecycleChips(); renderPhaseChips(); renderCards();
         }
 
         // ============ MENU ⋯ + zmiana stanu ============
@@ -593,7 +652,7 @@
             if (error) { showToast('Błąd usuwania: ' + error.message, 'error'); return; }
             projects = projects.filter(x => x.id !== id);
             closeDelModal();
-            buildSearchIndex(); renderLifecycleChips(); renderCards();
+            buildSearchIndex(); renderLifecycleChips(); renderPhaseChips(); renderCards();
             showToast('Projekt usunięty', 'success');
         }
 
@@ -605,7 +664,7 @@
             p.lifecycle = lc;
             const { error } = await supabaseClient.from('wfa_projects').update({ lifecycle: lc }).eq('id', id);
             if (error) { p.lifecycle = prev; showToast('Błąd zmiany stanu: ' + error.message, 'error'); return; }
-            buildSearchIndex(); renderLifecycleChips(); renderCards();
+            buildSearchIndex(); renderLifecycleChips(); renderPhaseChips(); renderCards();
             showToast('Stan: ' + LC_META[lc].label, 'success');
         }
 
@@ -614,6 +673,7 @@
             const grid = document.getElementById('proj-grid');
             const q = (document.getElementById('search')?.value || '').trim().toLowerCase();
             let rows = viewLC.size ? projects.filter(p => viewLC.has(lifecycleOf(p))) : [];
+            if (filterPhase) rows = rows.filter(p => aggByProj[p.id]?.phase === filterPhase);
             if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
             if (q) { const toks = q.split(/\s+/).filter(Boolean).map(foldStr); rows = rows.filter(p => { const idx = p._idx || ''; return toks.every(t => idx.includes(t)); }); }
 
@@ -634,7 +694,8 @@
 
         function renderCard(p) {
             const agg = aggByProj[p.id] || {};
-            const sm = STATUS_META[p.status] || STATUS_META.fundament;
+            const phM = PHASE_META[agg.phase] || PHASE_META.spowiednik;
+            const phaseBadge = `<span class="phase-badge" style="color:${phM.color};border-color:${phM.color}59;background:${phM.color}14" title="${phM.title}"><i class="ph ${phM.icon}"></i>${phM.label}</span>`;
             const demo = isDemo(p);
             const lc = lifecycleOf(p);
             const lcM = LC_META[lc];
@@ -678,16 +739,6 @@
                 ? `<div class="pc-links">${links.join('')}</div>`
                 : `<span class="pc-portlabel text-zinc-700">Brak linków</span>`;
 
-            // SPOWIEDNIK — bramka startu budowy: czerwony „w toku" (nie zaczynaj), zielony po domknięciu.
-            // Tylko projekty z sesją sparingu; brak wiersza summary = w toku (bezpieczny default).
-            const kh = knowhowByProj[p.id];
-            const khClosed = !!(kh && kh.status === 'closed');
-            const khHtml = p.spar_session_id
-                ? (khClosed
-                    ? `<span class="kh-chip kh-done" title="klient domknął spowiednika${kh.closed_at ? ' · ' + escapeHtml(relDate(kh.closed_at)) : ''} — można budować"><i class="ph ph-check-circle"></i>Spowiednik</span>`
-                    : `<span class="kh-chip kh-open" title="czekamy, aż klient kliknie „To już wszystko" — nie zaczynaj budowy"><i class="ph ph-hourglass-high"></i>Spowiednik</span>`)
-                : '';
-
             const actHtml = agg.lastAct ? `<span class="pc-act"><i class="ph ph-clock-countdown"></i>${escapeHtml(relDate(agg.lastAct.created_at))}</span>` : '';
 
             return `<div class="pcard${demo ? ' is-demo' : ''}${idle ? ' is-idle' : ''}" onclick="location.href='/tn-app/projekt?id=${p.id}'">
@@ -699,7 +750,7 @@
                         <div class="pc-title" style="${demo ? (lcBadge ? 'padding-right:6px' : 'padding-right:66px') : ''}">${escapeHtml(title)}</div>
                         <div class="pc-client">${escapeHtml(clientLine) || '&nbsp;'}${waIcon(p)}</div>
                     </div>
-                    ${(demo && !lcBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}${lcBadge}</div>`}
+                    ${(demo && !lcBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : phaseBadge}${lcBadge}</div>`}
                 </div>
 
                 <div>
@@ -714,7 +765,7 @@
 
                 <div class="pc-foot">
                     <div class="flex items-center gap-2.5 min-w-0">${linksHtml}</div>
-                    <div class="flex items-center gap-2.5 flex-shrink-0">${khHtml}${actHtml}</div>
+                    <div class="flex items-center gap-2.5 flex-shrink-0">${actHtml}</div>
                 </div>
             </div>`;
         }
