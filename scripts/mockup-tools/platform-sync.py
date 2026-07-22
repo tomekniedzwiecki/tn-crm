@@ -244,6 +244,36 @@ def _substitute(html, wf2_product_id, canonical, pixel_id, checkout_url, strip_n
     return html
 
 
+def _harden(html, product_id, brand):
+    """Ochrona przed kopiowaniem (decyzja Tomka 22.07): ukryć kodu się NIE DA (przeglądarka
+    musi go dostać), więc: (1) strip komentarzy fabryki + collapse whitespace poza
+    script/pre/textarea (know-how i czytelność znikają), (2) deterministyczny fingerprint
+    md5('wf2:'+product_id)[:12] w <meta name=build> + data-b na <body> (dowód kopii —
+    odtwarzalny bez bazy), (3) nota © na szczycie. Trzecia warstwa = origin-gate w
+    wf2-landing-api (kopia na obcej domenie ma martwą cenę/checkout)."""
+    import hashlib
+    fp = hashlib.md5(("wf2:" + str(product_id)).encode()).hexdigest()[:12]
+    # wytnij bloki nietykalne
+    holes = []
+    def _hole(m):
+        holes.append(m.group(0))
+        return "\x00H%d\x00" % (len(holes) - 1)
+    guarded = re.sub(r"<script\b[\s\S]*?</script>|<pre\b[\s\S]*?</pre>|<textarea\b[\s\S]*?</textarea>",
+                     _hole, html, flags=re.I)
+    guarded = re.sub(r"<!--[\s\S]*?-->", "", guarded)          # komentarze fabryki out
+    guarded = re.sub(r"[ \t]*\n\s*", "\n", guarded)            # wcięcia/puste linie out
+    guarded = re.sub(r"\n{2,}", "\n", guarded)
+    for i, h in enumerate(holes):
+        guarded = guarded.replace("\x00H%d\x00" % i, h)
+    guarded = guarded.replace("<body", '<body data-b="%s"' % fp, 1)
+    guarded = re.sub(r"(<head[^>]*>)", r'\1<meta name="build" content="%s">' % fp, guarded, count=1)
+    nota = ("<!-- (c) %s. Wszystkie prawa zastrzezone. Kod, uklad i tresci tej strony sa utworem; "
+            "kopiowanie = naruszenie praw autorskich. Build %s identyfikuje kazda kopie. -->"
+            % (brand or "sklep", fp))
+    guarded = re.sub(r"(<!doctype[^>]*>\s*)", r"\1" + nota.replace("\\", "\\\\") + "\n", guarded, count=1, flags=re.I)
+    return guarded
+
+
 def cmd_publish(a):
     pr = _project(a.project)
     sid = _shop_id(pr)
@@ -260,6 +290,9 @@ def cmd_publish(a):
     canonical = f"https://{dom}/{path}" if path else f"https://{dom}"
     strip = a.strip_noindex or custom
     html = _substitute(html, p["id"], canonical, pr.get("pixel_id"), p.get("checkout_url"), strip)
+    if not getattr(a, "no_harden", False):
+        html = _harden(html, p["id"], p.get("platform_name") or p["name"])
+        log("harden: strip komentarzy + collapse + fingerprint (ochrona przed kopiami)")
     d = adapter_ok({"action": "publish_landing", "shop_id": sid, "path": path, "html": html,
                     "name": a.name or p.get("platform_name") or p["name"]}, "publish_landing")
     url = d.get("url") or canonical
@@ -325,6 +358,8 @@ def main():
     s.add_argument("project"); s.add_argument("product"); s.add_argument("--file"); s.add_argument("--path")
     s.add_argument("--name"); s.add_argument("--strip-noindex", action="store_true")
     s.add_argument("--allow-no-runtime", action="store_true")
+    s.add_argument("--no-harden", dest="no_harden", action="store_true",
+                   help="pomiń ochronę przed kopiami (strip komentarzy+collapse+fingerprint)")
     s = sub.add_parser("home", help="publikacja strony głównej (path:'')")
     s.add_argument("project"); s.add_argument("file"); s.add_argument("--strip-noindex", action="store_true")
     s = sub.add_parser("page", help="generyczna podstrona z pliku (prawne/kontakt)")

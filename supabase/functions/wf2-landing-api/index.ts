@@ -61,14 +61,34 @@ Deno.serve(async (req) => {
     // websiteId sklepu (Public Storefront API keyuje wszystko websiteId+clientId).
     // wf2_projects.platform_shop_id = JAWNY identyfikator sklepu w storefroncie — zero PII.
     let websiteId: string | null = null;
+    let projDomain = "";
     try {
       const { data: proj } = await supabase
         .from("wf2_projects")
-        .select("platform_shop_id")
+        .select("platform_shop_id, domain")
         .eq("id", data.project_id)
         .maybeSingle();
       websiteId = proj?.platform_shop_id ?? null;
+      projDomain = (proj?.domain || "").toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
     } catch (_) { /* brak sklepu ≠ brak ceny — landing i tak działa z fallbackiem kasy */ }
+
+    // ── ORIGIN-GATE (ochrona przed kopiami landingów, decyzja Tomka 22.07) ──
+    // Skopiowany landing na OBCEJ domenie wysyła Origin/Referer obcego hosta → 403,
+    // czyli kopia ma martwą cenę i checkout. Fail-open przy BRAKU nagłówka (curl,
+    // file:// w fabryce, health-checki) — blokujemy tylko JAWNIE obce pochodzenie.
+    const srcHdr = req.headers.get("origin") || req.headers.get("referer") || "";
+    let srcHost = "";
+    try { srcHost = srcHdr ? new URL(srcHdr).hostname.toLowerCase() : ""; } catch (_) { srcHost = ""; }
+    if (srcHost) {
+      const sameOrSub = (h: string, dom: string) => !!dom && (h === dom || h.endsWith("." + dom));
+      const allowed =
+        sameOrSub(srcHost, projDomain) ||
+        sameOrSub(srcHost, "trevio.pl") || sameOrSub(srcHost, "trevio.shop") ||
+        sameOrSub(srcHost, "tomekniedzwiecki.pl") ||
+        srcHost.endsWith(".vercel.app") ||
+        srcHost === "localhost" || srcHost === "127.0.0.1";
+      if (!allowed) return json({ error: "forbidden_origin" }, 403);
+    }
 
     // social-proof: ile zamówień z platformy zawiera ten produkt (mapowanie robi wf2-orders-sync).
     // Uczciwe liczby własnego sklepu — landing pokazuje TYLKO przy sensownym progu (decyzja frontu).
