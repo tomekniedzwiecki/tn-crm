@@ -9,7 +9,7 @@ Zgoda jest **odrębna** od Umowy Budowy (umowy o wykonanie i wdrożenie aplikacj
 
 ## CZĘŚĆ A — Treść checkboxa do lejka (krótka)
 
-> ☐ **Zgadzam się, aby Tomasz Niedźwiecki AI pokazał zanonimizowany przykład mojego projektu — „Materiały Pokazowe"** (robocza nazwa, makiety/zrzuty ekranów, ogólny opis funkcji — **bez danych bezpośrednio mnie identyfikujących**) w galerii „Inspiracje", na stronach WWW i profilach społecznościowych oraz w materiałach promocyjnych Usługodawcy. Wiem, że materiały mogą być oznaczone jako **wygenerowane z udziałem AI** i że **zgodę mogę cofnąć w każdej chwili** (usunięcie z galerii i materiałów Usługodawcy do 7 dni, ze skutkiem na przyszłość, bez prawa do ponownej publikacji).
+> ☐ **Zgadzam się, aby Usługodawca (Tomasz Niedźwiecki AI) przedstawił zanonimizowany przykład mojego projektu — „Materiały Pokazowe"** (robocza nazwa, makiety/zrzuty ekranów, ogólny opis funkcji — **bez danych bezpośrednio mnie identyfikujących**) w galerii „Inspiracje", na stronach WWW i profilach społecznościowych oraz w materiałach promocyjnych Usługodawcy. Wiem, że materiały mogą być oznaczone jako **wygenerowane z udziałem AI** i że **zgodę mogę cofnąć w każdej chwili** (usunięcie z galerii i materiałów Usługodawcy do 7 dni, ze skutkiem na przyszłość, bez prawa do ponownej publikacji).
 
 **Zasady techniczne checkboxa:**
 - checkbox **nigdy nie jest domyślnie zaznaczony** (brak pre-check, brak „zaznacz wszystko");
@@ -60,3 +60,5 @@ Data i potwierdzenie zgody: **{{DATA}}** — {{KANAL_ZGODY: checkbox w lejku / e
 ---
 
 **Rewizja po audycie i konsultacji gpt-5.6-sol 21.07 — naniesiono poprawki 24–28** (definicja „Materiały Pokazowe" i spójne stosowanie CZĘŚĆ A/pkt 1–5; pola eksploatacji + prawo kadrowania/zamazywania/zmiany formatu/skracania + techniczne sublicencje + terytorium bez ograniczeń + czas do cofnięcia pkt 4; cofnięcie kończące licencję na przyszłość z zakazem ponownej publikacji także materiału wcześniej upublicznionego pkt 5; podgląd przed/po publikacji + zatwierdzenie zestawu przy jednostronnym NDA pkt 8; AI Act — dobrowolne oznaczanie zamiast twierdzenia o obowiązku z art. 50 ust. 4 pkt 6; rozróżnienie trzech warstw zgody + oświadczenie o nienaruszaniu praw osób trzecich pkt 1).
+
+**Rewizja 3 (22.07): ujednolicono rejestr językowy na prawniczy (decyzja Tomka) — bez zmian merytorycznych.**

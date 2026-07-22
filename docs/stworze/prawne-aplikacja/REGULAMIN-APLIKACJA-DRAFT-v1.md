@@ -6,20 +6,20 @@ Dokument zastępuje dotychczasowy „Regulamin rezerwacji współpracy »Aplikac
 
 ---
 
-## W skrócie — najważniejsze zasady
+## Podsumowanie najważniejszych postanowień *(charakter informacyjny — wiążąca jest treść paragrafów)*
 
-To streszczenie ma pomóc Ci szybko zrozumieć, na co się umawiamy. Nie zastępuje treści Regulaminu — w razie wątpliwości wiążą postanowienia dalszych paragrafów.
+Poniższe podsumowanie ma charakter informacyjny i służy przejrzystości. Nie zastępuje treści Regulaminu — w razie wątpliwości wiążące są postanowienia dalszych paragrafów.
 
-1. **Kto i co.** Prowadzę serwis „Aplikacja" pod adresem tomekniedzwiecki.pl/aplikacja. Możesz przeglądać stronę, założyć konto, porozmawiać z asystentem AI o pomyśle na własne narzędzie, a po zawarciu umowy — korzystać z portalu klienta.
-2. **Rozmawiasz z systemem AI.** Rozmowy prowadzi asystent oparty na sztucznej inteligencji, działający w moim imieniu i wyraźnie oznaczony w interfejsie. Plany, makiety, raporty i prototypy powstają z udziałem AI — mają charakter poglądowy i koncepcyjny, nie są poradą inwestycyjną ani obietnicą wyników.
-3. **Pierwsza rozmowa jest darmowa.** Za pierwszą rozmowę projektową nic nie płacisz. Każda kolejna rozmowa jest odpłatna — w cenie wskazanej w Serwisie w chwili zamówienia.
-4. **Kolejna rozmowa (odpłatna) wykonuje się od razu.** Prosisz o natychmiastowe wykonanie usługi. Po jej pełnym wykonaniu (przeprowadzeniu rozmowy z wygenerowaniem materiałów) tracisz prawo odstąpienia; jeśli odstąpisz w trakcie — zapłacisz tylko za to, co już wykonano.
-5. **Rezerwacja jest w pełni zwrotna.** Jeżeli nie zawrzemy umowy o budowę — z dowolnego powodu, Twojego albo mojego — oddaję całą wpłaconą kwotę. Jeśli wejdziemy we współpracę, rezerwacja pomniejsza cenę budowy. To **nie jest zadatek** i nie przepada.
-6. **Budowa aplikacji to osobna, pisemna umowa.** Sam Regulamin o niej tylko informuje. Orientacyjnie: jednorazowa cena budowy (w wysokości wskazanej w aktualnej ofercie, z zaliczoną rezerwacją) oraz wynagrodzenie od przychodu (Udział) 10% do czasu wykupu. Wzór umowy pokażę Ci przed jej zawarciem.
-7. **Bez gwarancji wyników.** Robię swoją robotę najlepiej, jak potrafię, ale to biznes — nikt uczciwy nie zagwarantuje przychodu ani zysku. Treści z AI mogą zawierać błędy; decyzje podejmujesz Ty.
-8. **Galeria „Inspiracje" tylko za Twoją zgodą.** Nic nie publikuję bez Twojej osobnej, dobrowolnej zgody. Publikacja obejmuje Materiały Pokazowe (roboczą nazwę, makiety, ogólny opis funkcji) bez danych bezpośrednio Cię identyfikujących, a zgodę możesz cofnąć w każdej chwili.
-9. **Twoje prawa.** Jako konsument (lub przedsiębiorca na prawach konsumenta) masz 14 dni na odstąpienie od umów odpłatnych. Reklamacje rozpatruję w 14 dni. Twoje dane przetwarzam zgodnie z Polityką Prywatności.
-10. **Uczciwe zmiany.** Regulamin mogę zmienić tylko z ważnych przyczyn, z miesięcznym wyprzedzeniem, a Ty możesz wtedy zakończyć korzystanie z usług bez żadnych kar.
+1. **Usługodawca i zakres usług.** Usługodawca prowadzi serwis „Aplikacja" pod adresem tomekniedzwiecki.pl/aplikacja. Klient może przeglądać stronę, założyć konto, przeprowadzić rozmowę z asystentem AI o pomyśle na własne narzędzie, a po zawarciu umowy — korzystać z portalu klienta.
+2. **Rozmowa z systemem AI.** Rozmowy prowadzi asystent oparty na sztucznej inteligencji, działający w imieniu Usługodawcy i wyraźnie oznaczony w interfejsie. Plany, makiety, raporty i prototypy powstają z udziałem AI — mają charakter poglądowy i koncepcyjny, nie stanowią porady inwestycyjnej ani obietnicy wyników.
+3. **Pierwsza rozmowa jest bezpłatna.** Za pierwszą rozmowę projektową Klient nie ponosi opłaty. Każda kolejna rozmowa jest odpłatna — w cenie wskazanej w Serwisie w chwili zamówienia.
+4. **Kolejna rozmowa (odpłatna) jest wykonywana natychmiast.** Klient żąda natychmiastowego wykonania usługi. Po jej pełnym wykonaniu (przeprowadzeniu rozmowy wraz z wygenerowaniem materiałów) Klient traci prawo odstąpienia; w razie odstąpienia w trakcie — płaci wyłącznie za świadczenie spełnione do chwili odstąpienia.
+5. **Rezerwacja jest w pełni zwrotna.** Jeżeli Strony nie zawrą umowy o budowę — z dowolnej przyczyny, po stronie Klienta albo Usługodawcy — Usługodawca zwraca całą wpłaconą kwotę. W razie podjęcia współpracy rezerwacja pomniejsza cenę budowy. Rezerwacja **nie jest zadatkiem** i nie podlega przepadkowi.
+6. **Budowa aplikacji to odrębna umowa pisemna.** Regulamin o niej wyłącznie informuje. Orientacyjnie: jednorazowa cena budowy (w wysokości wskazanej w aktualnej ofercie, z zaliczoną rezerwacją) oraz wynagrodzenie od przychodu (Udział) 10% do czasu wykupu. Usługodawca udostępnia Klientowi wzór umowy przed jej zawarciem.
+7. **Brak gwarancji wyników.** Usługodawca wykonuje usługi z należytą starannością, jednak nie gwarantuje przychodu ani zysku. Treści generowane z udziałem AI mogą zawierać błędy; decyzje podejmuje Klient.
+8. **Galeria „Inspiracje" wyłącznie za zgodą Klienta.** Usługodawca nie publikuje żadnych materiałów bez odrębnej, dobrowolnej zgody Klienta. Publikacja obejmuje Materiały Pokazowe (roboczą nazwę, makiety, ogólny opis funkcji) bez danych bezpośrednio identyfikujących Klienta, a zgodę można cofnąć w każdej chwili.
+9. **Prawa Klienta.** Klientowi będącemu konsumentem (lub przedsiębiorcą na prawach konsumenta) przysługuje 14-dniowy termin odstąpienia od umów odpłatnych. Usługodawca rozpatruje reklamacje w terminie 14 dni. Dane osobowe przetwarzane są zgodnie z Polityką Prywatności.
+10. **Zmiany Regulaminu.** Usługodawca może zmienić Regulamin wyłącznie z ważnych przyczyn, z miesięcznym wyprzedzeniem; Klient może wówczas zakończyć korzystanie z usług bez jakichkolwiek kar.
 
 ---
 
@@ -330,3 +330,5 @@ Poniżej lista miejsc, w których przyjąłem założenie wymagające decyzji To
 ---
 
 **Rewizja po audycie i konsultacji gpt-5.6-sol 21.07 — naniesiono poprawki 1–13** (odpowiedzialność za podwykonawców i zgodność usługi cyfrowej §14; ograniczenie cesji §19; klamra przesłanek zmian §18; stopniowalne sankcje Konta + moment zawarcia umowy o Konto + 30-dniowy eksport Materiałów Koncepcyjnych §4; oświadczenie o treściach Klienta §5; reżim 49 zł — definicja pełnego wykonania, metoda proporcji, jeden checkbox, art. 38 ust. 1 pkt 1 §8; reframe rezerwacji na zwrotną opłatę rezerwacyjną §9/§3; sprostowanie praw autorskich i kwoty pozostałej do zapłaty + proaktywny projekt umowy §10; granice Asystenta AI + brak trenowania modeli §6; ADR zróżnicowane dla PNPK §17; telefon +48 533 308 623 i metody płatności BLIK/szybkie płatności §1/§8/§9/§13; ujednolicenie pojęcia „Materiały Pokazowe" i złagodzenie klauzuli anonimowości §2/§11).
+
+**Rewizja 3 (22.07): ujednolicono rejestr językowy na prawniczy (decyzja Tomka) — bez zmian merytorycznych.**

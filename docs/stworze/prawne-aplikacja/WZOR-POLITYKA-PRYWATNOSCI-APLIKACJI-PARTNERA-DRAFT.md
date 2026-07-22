@@ -40,14 +40,14 @@ Niniejsza Polityka wyjaśnia, jak przetwarzamy dane osobowe użytkowników serwi
 
 ## 1. Administrator danych
 
-Administratorem Twoich danych osobowych jest **{{PARTNER_DANE}}** (dalej: „Administrator" lub „my"). Kontakt w sprawach danych osobowych: **{{PARTNER_EMAIL_KONTAKT}}**.
+Administratorem danych osobowych jest **{{PARTNER_DANE}}** (dalej: „Administrator" lub „my"). Kontakt w sprawach danych osobowych: **{{PARTNER_EMAIL_KONTAKT}}**.
 
 ## 2. Jakie dane przetwarzamy
 
 - **dane konta:** adres e-mail, hasło (w postaci zaszyfrowanej), nazwa użytkownika,
 - **dane identyfikacyjne i kontaktowe** podane przy korzystaniu z usługi (imię, nazwisko, nazwa firmy, NIP, adres, telefon — w zakresie potrzebnym do świadczenia usługi),
 - **dane transakcyjne:** historia zamówień/subskrypcji, potwierdzenia płatności (bez pełnych danych karty — te przetwarza operator płatności),
-- **treści** wprowadzane przez Ciebie w aplikacji,
+- **treści** wprowadzane przez Użytkownika w aplikacji,
 - **dane techniczne:** adres IP, informacje o przeglądarce i urządzeniu, pliki cookies, logi.
 
 ## 3. Cele i podstawy prawne
@@ -69,7 +69,7 @@ Aby świadczyć usługę, korzystamy z zaufanych dostawców. Działają oni jako
 
 | Dostawca | Funkcja | Status | Transfer poza EOG |
 |---|---|---|---|
-| **Tomasz Niedźwiecki AI** (Tomek) | opieka techniczna, utrzymanie i serwis aplikacji, hosting płatności | podmiot przetwarzający (na podstawie DPA) | — |
+| **Tomasz Niedźwiecki AI** | opieka techniczna, utrzymanie i serwis aplikacji, hosting płatności | podmiot przetwarzający (na podstawie DPA) | — |
 | **Supabase** | baza danych, uwierzytelnianie, przechowywanie plików | podmiot przetwarzający (poddostawca) | możliwy — na podstawie SCC |
 | **Vercel** | hosting aplikacji (warstwa frontowa) | podmiot przetwarzający (poddostawca) | USA — SCC |
 | **Resend** | wysyłka e-maili transakcyjnych | podmiot przetwarzający (poddostawca) | USA — SCC |
@@ -77,9 +77,9 @@ Aby świadczyć usługę, korzystamy z zaufanych dostawców. Działają oni jako
 | **Stripe** | obsługa płatności online (karty, subskrypcje) | **odrębny administrator** danych płatniczych | USA — SCC / DPF |
 | **{{ANALITYKA}}** *(jeśli używana)* | analityka i pomiar ruchu | wg roli danego narzędzia | wg dostawcy |
 
-Powierzenie Tomkowi i jego poddostawcom odbywa się na podstawie **umowy powierzenia przetwarzania danych (DPA)** zgodnej z art. 28 RODO. Aktualny wykaz poddostawców i lokalizacji przetwarzania udostępniamy na żądanie.
+Powierzenie danych podmiotowi przetwarzającemu (Tomasz Niedźwiecki AI) i jego poddostawcom odbywa się na podstawie **umowy powierzenia przetwarzania danych (DPA)** zgodnej z art. 28 RODO. Aktualny wykaz poddostawców i lokalizacji przetwarzania udostępniamy na żądanie.
 
-**Stripe** przetwarza dane płatnicze jako **samodzielny administrator** — nie mamy dostępu do pełnych danych Twojej karty.
+**Stripe** przetwarza dane płatnicze jako **samodzielny administrator** — nie mamy dostępu do pełnych danych karty płatniczej Użytkownika.
 
 **Transfery poza EOG** odbywają się na podstawie **standardowych klauzul umownych (SCC)** oraz — jeśli dotyczy — ram **Data Privacy Framework**, z niezbędnymi środkami dodatkowymi.
 
@@ -92,21 +92,21 @@ Powierzenie Tomkowi i jego poddostawcom odbywa się na podstawie **umowy powierz
 
 ## 6. Informacja o AI *(pozostawić tylko jeśli aplikacja używa AI)*
 
-Aplikacja korzysta z funkcji opartych na sztucznej inteligencji. Tam, gdzie wchodzisz w interakcję z systemem AI, jest to **wyraźnie oznaczone** (art. 50 rozporządzenia (UE) 2024/1689 — AI Act). Wyniki generowane przez AI mogą zawierać błędy i mają charakter pomocniczy.
+Aplikacja korzysta z funkcji opartych na sztucznej inteligencji. Tam, gdzie Użytkownik wchodzi w interakcję z systemem AI, jest to **wyraźnie oznaczone** (art. 50 rozporządzenia (UE) 2024/1689 — AI Act). Wyniki generowane przez AI mogą zawierać błędy i mają charakter pomocniczy.
 
-## 7. Twoje prawa
+## 7. Prawa Użytkownika
 
-Masz prawo do: **dostępu**, **sprostowania**, **usunięcia**, **ograniczenia przetwarzania**, **przenoszenia danych**, **sprzeciwu** (w tym wobec marketingu) oraz **wycofania zgody** w każdej chwili. Aby skorzystać z praw — napisz na **{{PARTNER_EMAIL_KONTAKT}}**.
+Użytkownikowi przysługuje prawo do: **dostępu**, **sprostowania**, **usunięcia**, **ograniczenia przetwarzania**, **przenoszenia danych**, **sprzeciwu** (w tym wobec marketingu) oraz **wycofania zgody** w każdej chwili. W celu skorzystania z praw należy napisać na **{{PARTNER_EMAIL_KONTAKT}}**.
 
-Przysługuje Ci też prawo skargi do organu nadzorczego — **Prezesa Urzędu Ochrony Danych Osobowych (PUODO)**, ul. Stawki 2, 00-193 Warszawa.
+Przysługuje również prawo skargi do organu nadzorczego — **Prezesa Urzędu Ochrony Danych Osobowych (PUODO)**, ul. Stawki 2, 00-193 Warszawa.
 
 ## 8. Zautomatyzowane decyzje
 
-Twoje dane **nie służą** do zautomatyzowanego podejmowania decyzji wywołujących wobec Ciebie skutki prawne lub w podobny sposób istotnie na Ciebie wpływających.
+Dane **nie służą** do zautomatyzowanego podejmowania decyzji wywołujących wobec Użytkownika skutki prawne lub w podobny sposób istotnie na niego wpływających.
 
 ## 9. Pliki cookies
 
-Aplikacja używa plików cookies (niezbędnych, funkcjonalnych, a jeśli dotyczy — analitycznych i marketingowych). Ustawienia cookies zmienisz w przeglądarce.
+Aplikacja używa plików cookies (niezbędnych, funkcjonalnych, a jeśli dotyczy — analitycznych i marketingowych). Ustawienia cookies można zmienić w przeglądarce.
 
 ## 10. Zmiany polityki
 
@@ -121,3 +121,5 @@ Politykę możemy aktualizować (np. przy zmianie przepisów lub dostawców). Ak
 3. **[DO POTWIERDZENIA] Lista poddostawców = spójna z DPA.** Supabase/Vercel/Resend/AI to „lista rodzajowa" z § D Załącznika 2 umowy. Utrzymać spójność: jeśli fabryka zmieni dostawcę (np. inny hosting maili), zaktualizować i DPA, i ten szablon.
 4. **[DO POTWIERDZENIA] Standard fabryki.** Zakres MVP (Załącznik 1 umowy) wymienia „regulamin/polityka prywatności/RODO" jako element każdej budowy. Ten szablon powinien stać się kanonicznym źródłem (analogicznie do `templates/prawne-sklepy/` dla sklepów) — rozważyć umieszczenie w szablonach fabryki TN App i generowanie z placeholderów przy wdrożeniu, zamiast pisać ręcznie per aplikacja.
 5. **[DO POTWIERDZENIA] Regulamin aplikacji Partnera.** Ten dokument to sama polityka prywatności. Każda aplikacja potrzebuje też **regulaminu** (usług elektronicznych, prawa konsumenta użytkowników Partnera) — to osobny szablon, tu nieobjęty. Zasygnalizować, czy przygotować analogiczny wzór regulaminu.
+
+**Rewizja 3 (22.07): ujednolicono rejestr językowy na prawniczy (decyzja Tomka) — bez zmian merytorycznych.**

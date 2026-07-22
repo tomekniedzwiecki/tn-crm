@@ -84,6 +84,7 @@ Przekazanie potwierdza **protokół przekazania** podpisany przez obie Strony.
 
 ## NOTATKI (do usunięcia)
 
+- **Rewizja 3 (22.07):** ujednolicono rejestr językowy na prawniczy (decyzja Tomka) — Wykonawca zamiast «Tomek», usunięto zwroty w 2. osobie i kolokwializmy; bez zmian merytorycznych.
 - **Kiedy używać:** gdy Operator korzysta z opcji wykupu z § 9 Umowy głównej (po min. 12 mies.; wariant wcześniejszy przy zbyciu biznesu — § 10 ust. 1 Umowy głównej, § 2 ust. 3 tego wzoru). Dokument wykonawczy — nie zmienia mechaniki wykupu, tylko ją realizuje.
 - **Do uzupełnienia:** daty, dane Operatora, `{{KWOTA_WYKUPU}}` + słownie i Załącznik nr 1 (12 kwot → średnia → ×36), tryb płatności, checklisty przekazania.
 - **Cena = 36 × średnia miesięczna Udziału z 12 mies.** Zawsze dołącz Załącznik nr 1 z wyliczeniem — inaczej cena jest nieweryfikowalna. **Udział i cena wykupu są kwotami brutto** (§ 6 ust. 5 Umowy głównej) — z księgowością potwierdź jedynie moment i podstawę VAT.

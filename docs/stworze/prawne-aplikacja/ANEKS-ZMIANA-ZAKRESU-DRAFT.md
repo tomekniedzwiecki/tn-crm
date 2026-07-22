@@ -47,6 +47,7 @@ Aneks sporządzono w **formie właściwej dla Umowy głównej** (jeżeli Umowa w
 
 ## NOTATKI (do usunięcia)
 
+- **Rewizja 3 (22.07):** ujednolicono rejestr językowy na prawniczy (decyzja Tomka) — Wykonawca zamiast «Tomek», usunięto zwroty w 2. osobie i kolokwializmy; bez zmian merytorycznych.
 - **Kiedy używać:** klient chce nową funkcję **poza** zakresem MVP z Załącznika nr 1. Zawsze **wyceniamy z góry** — bez „dorobimy, rozliczymy potem".
 - **Do uzupełnienia:** numer aneksu, daty, opis funkcji, `{{KWOTA}}` netto + słownie, warunki i termin płatności, wpływ na termin.
 - **Forma podpisu = forma Umowy głównej.** Jeśli Umowa główna była zawarta w formie pisemnej / z podpisem kwalifikowanym (QES) ad solemnitatem (bo przenosi prawa autorskie), **Aneks też** musi mieć tę formę. Jeśli Aneks dotyczy wyłącznie zakresu prac i wynagrodzenia (nie rusza przeniesienia praw), sprawdź klauzulę o formie zmian w Umowie — zwykle i tak wymaga formy pisemnej.

@@ -122,3 +122,5 @@ Strony pozostają w rozmowach dotyczących potencjalnej lub realizowanej współ
 ---
 
 **Rewizja po audycie i konsultacji gpt-5.6-sol 21.07 — naniesiono poprawki 14–18** (warunki dostawców AI/chmury zamiast kategorycznego „podmioty przetwarzające" + NDA ≠ umowa powierzenia §3/§5; definicja jednego naruszenia — brak multiplikacji §9; klauzula incydentowa i żądanie zaniechania §11; brak wyłączności/zakazu konkurencji + „podobieństwo produktów nie dowodzi" §10 ust. 3; oświadczenie Strony Ujawniającej o uprawnieniu §10 ust. 1; brak gwarancji poprawności i brak obowiązku współpracy §10 ust. 2; pierwszeństwo Umowy Budowy §10 ust. 4; moment zakończenia rozmów = Umowa Budowy albo 90 dni braku aktywności §6; wyjątek publikacyjny po cofnięciu zgody §3 ust. 3; prorogacja z wyjątkiem dla Konsumenta i PNPK §12 ust. 3).
+
+**Rewizja 3 (22.07): ujednolicono rejestr językowy na prawniczy (decyzja Tomka) — bez zmian merytorycznych.**
