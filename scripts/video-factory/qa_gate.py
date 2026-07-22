@@ -28,6 +28,14 @@ Checklist (dla agenta-recenzenta, per siatka):
  13. UMIEJSCOWIENIE UZYCIA NA CIELE == placement_ref (lifestyle z poprawnym zalozeniem)!
      Produkt wierny ale zle zalozony (masazer na GARDLE zamiast na KARKU, 19.07) = REJECT.
      EN: kark = "nape/back of the neck" — samo "neck" laduje na przodzie szyi.
+ 14. MODEL UZYCIA == KARTA.product.model_uzycia (feedback Tomka 22.07 — Skrolik/Ugniatek)!
+     Osobna os od wiernosci ksztaltu (2/7) i anatomii postaci. Pytanie per klip: "czy scena
+     pokazuje POPRAWNE uzycie — wlasciwy ELEMENT STEROWANIA aktywowany jak w realu?".
+     Skrolik: kciuk DOCISKA jeden z 3 przyciskow, palec wskazujacy NIE jest wyciagniety i NIE
+     celuje w ekran (scroll = skutek kliku, NIE gest/zyroskop). Masazer: glowice DO ciala,
+     chwyt oburacz za uchwyty. Dowolna interakcja z model_uzycia.nie_robi (gest w powietrzu
+     w kierunku ekranu, dotyk ekranu, obrot jak zyroskop, uzycie jak inny produkt) = REJECT
+     klipu NAWET gdy produkt idealnie wierny (reklama uczaca blednej obslugi odstrasza leada).
 
 Werdykt: agent MUSI wyemitowac WIERSZ NA KLATKE (nr, #obiektow produktu, #dloni, flagi) — ZAKAZ
 oceny zbiorczej. Siatka = triaz; klatka z flaga -> dociagnij PELNA rozdzielczosc. Dla klipow MC

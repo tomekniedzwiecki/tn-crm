@@ -454,6 +454,34 @@ kref zawiedzie na innym produkcie).
   flux/Wan/OmniHuman). Transient 503 na status-pollu się zdarza (test: 2/20) → dlatego gen_batch/gen/
   render tolerują 4 błędy z rzędu (job już OPŁACONY, dociągalny).
 
+## 0k. MODEL UŻYCIA — fabryka MUSI ROZUMIEĆ, JAK działa produkt (feedback Tomka 22.07)
+
+Incydent Skrolik + Ugniatek: kreacje pokazały produkt WIERNIE, ale UŻYWANY BŁĘDNIE. **Skrolik** to
+pierścień-PILOT z trzema PRZYCISKAMI, które klika się kciukiem — w video palec wykonywał gest
+w powietrzu / celował wyciągnięty w ekran (jak sterowanie żyroskopem/gestem), zamiast KLIKAĆ przycisk;
+scroll na ekranie to SKUTEK kliku, nie machania. **Ugniatek** (masażer 6-głowicowy) w części scen miał
+głowice skierowane OD ciała zamiast dociśnięte do mięśnia. Tomek: „Fabryka powinna ROZUMIEĆ produkt:
+jak się go używa, jak działa. Takie błędy nie mogą się powtarzać." **Wierność produktu ≠ wierność
+UŻYCIA** — to rozszerzenie reguły 0i „umiejscowienie na ciele" z GDZIE (na jakiej części ciała) na
+JAK-SIĘ-OBSŁUGUJE (który element sterowania i jak aktywowany).
+
+**Twarda bramka `model_uzycia` (obowiązkowy blok w `KARTA.product`, KROK 2 PROCEDURY):** Z FAKTÓW
+aukcji (`ali_snapshot`: specs/opis/warianty + klipy referencyjne) — NIE zgadując — operator spisuje:
+- **`interakcja`** — co użytkownik FIZYCZNIE robi z ELEMENTEM STEROWANIA (który przycisk/uchwyt/spust/
+  głowica/powierzchnia i jak aktywowany): „kciuk TEJ SAMEJ dłoni dociska jeden z 3 przycisków — wyraźny
+  docisk, przewinięcie feedu = skutek"; „dociska głowicami do mięśnia oburącz za uchwyty".
+- **`nie_robi`** (ZAKAZY SCEN) — interakcje, których być NIE MOŻE: gest palcem w powietrzu w kierunku
+  ekranu, palec wskazujący celujący w telefon, dotykanie ekranu, przechylanie/obrót jak żyroskop/
+  joystick, trzymanie odwrotnie, użycie jak inny produkt (masażer jak pistolet). Wchodzą też do negative.
+- **`noszenie`** — jak produkt jest noszony/trzymany na ciele lub w ręce.
+
+**Egzekwowanie:** KAŻDA klatka-klucz (KROK 5) i KAŻDY prompt sceny MUSI być zgodny z `model_uzycia`;
+do promptu wchodzi opis INTERAKCJI (co robi ręka z elementem sterowania), do negative — zakazy z
+`nie_robi`. qa_gate/product_gate (KROK 7 pkt 3d) pytają „czy scena pokazuje POPRAWNE użycie wg
+`model_uzycia` (interakcja z właściwym elementem sterowania)?" — niezgodność = FAIL klipu, osobna oś
+od anatomii (3b) i od wierności kształtu. Analogiczne akapity: `STANDARD-GRAFIKI-SKLEPY.md` (bramka
+G3 wierności — scena użycia = poprawna interakcja) i `STANDARD-LANDING-SKLEPY.md` (sceny produktowe).
+
 ## 1. Stan wyjściowy (fakty z kodu, 17.07)
 
 - **NIE MAMY pobranych plików mp4.** Radar trzyma wyłącznie LINKI: `bud_tt_products.tiktok_url`

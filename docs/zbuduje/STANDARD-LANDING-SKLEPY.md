@@ -833,6 +833,18 @@ twardy-scrim" blokuje F4 tak samo jak NIEZGODNA. Detekcja maszynowa (wspomaga vi
 największego jednolitego prostokąta koloru tła przy krawędzi > ~18% pola sceny na scenie typu B/C
 = sygnał FAIL do werdyktu.
 
+**⚠️ F3A #3 — MODEL UŻYCIA (osobna oś od wierności produktu i od osadzenia; feedback Tomka 22.07,
+incydent Skrolik/Ugniatek w fabryce wideo).** Gate wierności orzeka, czy PRODUKT zgadza się
+z paszportem — i przepuści scenę produktową pokazującą BŁĘDNĄ OBSŁUGĘ (produkt wierny, użycie złe:
+pierścień-pilot Skrolik z palcem celującym w ekran / gestem w powietrzu zamiast KLIKANIA przycisków
+kciukiem; masażer z głowicami skierowanymi OD ciała). Dlatego dla KAŻDEJ sceny klasy **[P] „produkt
+w użyciu / demo-sekwencja"** pass-2 (świeży Sonnet) orzeka DODATKOWO: „czy interakcja jest zgodna
+z MODELEM UŻYCIA produktu (właściwy element sterowania aktywowany jak w realu; ZERO zakazanych
+interakcji — gest w powietrzu w kierunku ekranu, dotyk ekranu, obrót jak żyroskop, użycie jak inny
+produkt)?". Model użycia spisz z FAKTÓW aukcji (`ali_snapshot`: specs/opis/warianty). Werdykt
+w `WIERNOSC.md` kolumna `uzycie ∈ {OK, złe-użycie}`; „złe-użycie" blokuje F4 tak samo jak NIEZGODNA.
+SSOT: `GENERATOR-VIDEO-STRATEGIA.md` 0k (blok `KARTA.product.model_uzycia`).
+
 **F4 — KOD (gpt-5.6-sol LUB agent autorsko — Z4).** Szkielet-kontrakt z najnowszego wzorca (head: canonical/OG/
 noindex `{{CANONICAL_URL}}`, JSON-LD @graph, JEDEN exec-script: pixel `{{PIXEL_ID}}`
 VC/ATC/IC + link decoration + HOOKS + sticky IO + wideo autoplay-on-visible; lightboxy;

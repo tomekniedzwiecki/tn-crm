@@ -188,6 +188,17 @@ zgodne. FAIL cechy produktu → regeneracja celowana (G2 force) max 3 rundy → 
 cech produktu jej nie dotyczy, warunek = 0 forbidden + rola = „przed" (nota „scena bez produktu").
 → dowód: `dowody/AD-<angle>.png` + werdykt w `dowody/WIERNOSC-ADS.md`.
 
+**⚠️ G3 #model-użycia — SCENA UŻYCIA = POPRAWNA INTERAKCJA (osobna oś od wierności kształtu; feedback
+Tomka 22.07, incydent Skrolik/Ugniatek w fabryce wideo).** Wierność PRODUKTU ≠ wierność UŻYCIA:
+kreacja może mieć produkt idealnie zgodny z paszportem, a mimo to pokazywać BŁĘDNĄ obsługę (Skrolik
+= pierścień-PILOT: palec celujący w ekran / gest w powietrzu zamiast KLIKANIA przycisków kciukiem;
+masażer: głowice skierowane OD ciała). Dlatego dla każdej kreacji `demo`/`lifestyle` z produktem
+W UŻYCIU pass-2 orzeka DODATKOWO: „czy interakcja jest zgodna z modelem użycia produktu (właściwy
+element sterowania aktywowany jak w realu; ZERO zakazanych interakcji — gest w powietrzu, dotyk
+ekranu, obrót jak żyroskop, użycie jak inny produkt)?" — model użycia spisz z FAKTÓW aukcji
+(`ali_snapshot`: specs/opis/warianty). Niezgodność = FAIL sceny (regen celowany), NAWET gdy cechy
+produktu ZGODNA. SSOT modelu użycia: `GENERATOR-VIDEO-STRATEGIA.md` 0k (blok `KARTA.product.model_uzycia`).
+
 ### G3a — BRAMKA ANATOMII (ludzie i zwierzęta) — v10.1
 **Cel:** żadna kreacja nie pokazuje uciętego/rozjeżdżonego ciała człowieka ani zwierzęcia. Luka
 systemowa ujawniona na **Macie akupresury 20.07** (leżąca kobieta miała UCIĘTY/niespójny TUŁÓW —
