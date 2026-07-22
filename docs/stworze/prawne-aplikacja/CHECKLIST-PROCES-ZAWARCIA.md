@@ -89,6 +89,7 @@
   - **Przeniesienie praw autorskich wymaga formy pisemnej pod rygorem nieważności** (art. 53 pr. aut.). **Skan, zdjęcie podpisu ani Profil Zaufany NIE wystarczą.** QES obu stron = forma pisemna (art. 78¹ k.c.).
   - Przy PAdES: drugi podpisujący dokłada podpis do **oryginalnego** podpisanego pliku (ponowny zapis PDF unieważnia pierwszy podpis).
   - **Faktura:** cena budowy **12 500 zł netto (15 375 zł brutto)**, płatna z góry w całości przy zawarciu; **rezerwacja 500 zł zaliczana** → do zapłaty pozostaje ok. **14 875 zł brutto**. Ustalić z księgową: faktura zaliczkowa vs końcowa, stawka VAT, moment obowiązku podatkowego. Na życzenie Klienta — faktura.
+  - **Cena INDYWIDUALNA:** cena w umowie = kwota z **FAKTYCZNEJ oferty klienta** (placeholdery `{{CENA_NETTO}}` / `{{CENA_BRUTTO}}` / `{{REZERWACJA_KWOTA}}` / `{{KWOTA_POZOSTALA_BRUTTO}}` w drafcie) — może różnić się od standardu powyżej; próg wykupu = **2× cena brutto z tej umowy** (`{{PROG_WYKUPU_BRUTTO}}`). Kwoty w tej checkliście to cennik standardowy.
   - **Prawa autorskie przechodzą dopiero z chwilą PÓŹNIEJSZEGO z: odbioru danego rezultatu i zapłaty CAŁOŚCI ceny za budowę** (§ 8 ust. 2) — nie „z chwilą podpisu".
 
 ### 6. Kickoff / start prac  ·  [w trakcie: aneksy]
