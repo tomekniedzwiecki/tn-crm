@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id')
+      .select('id, name, status, verdict, wniosek_status, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -592,6 +592,7 @@ Deno.serve(async (req) => {
         gtm: gtm,
         landing_url: session.landing_url || null,
         verdict: session.verdict || null,
+        wniosek: session.wniosek_status || null,
         status: session.status || 'active',
         lead_id: session.lead_id || null,
         paid_at: session.paid_at || null,

@@ -647,7 +647,7 @@ function visibleSessions() {
 // Config źródła danych lejka APLIKACJA (różnice spar_*/bud_* → PanelCore.loadSessions).
 const LOAD_CFG = {
   table: 'spar_sessions',
-  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, gen_error_count, raport_meta:market_report->_meta',
+  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, gen_error_count, wniosek_at, wniosek_status, wniosek_auto, wniosek_decided_at, raport_meta:market_report->_meta',
   rpcCosts: 'spar_session_costs', rpcAvatars: 'spar_session_avatars', emailsTable: 'spar_emails',
 };
 async function loadAll() {
@@ -684,7 +684,7 @@ function renderPipeline() {
         <div class="flex items-center gap-2.5">
           ${avatarBlock(s, 32)}
           <div class="flex-1 min-w-0">
-            <div class="font-medium text-white text-sm truncate">${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] text-zinc-600">TEST</span>' : ''}</div>
+            <div class="font-medium text-white text-sm truncate">${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] text-zinc-600">TEST</span>' : ''}${wniosekPendingBadge(s)}</div>
             <div class="text-[11px] text-zinc-500 truncate">${esc(s.email || s.profession || '—')}</div>
           </div>
         </div>
@@ -714,7 +714,7 @@ function renderSesje() {
     const st = STAGES.find((x) => x.id === stageOf(s));
     return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer" onclick="openSession('${s.id}')">
       <td class="px-4 py-2.5 text-zinc-400 whitespace-nowrap text-xs">${fmtDate(s.created_at)}</td>
-      <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
+      <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}${wniosekPendingBadge(s)}</td>
       <td class="px-4 py-2.5"><div class="flex items-center gap-2.5">${avatarThumb(s, 28)}<div class="min-w-0"><div class="text-zinc-400 text-xs truncate">${esc(s.email || '—')}</div>${s.phone ? `<div class="text-zinc-600 text-xs">${esc(s.phone)}</div>` : ''}</div></div></td>
       <td class="px-4 py-2.5 hidden md:table-cell">${sourceBadge(s)}</td>
       <td class="px-4 py-2.5 hidden sm:table-cell"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
@@ -941,7 +941,7 @@ async function openSession(id) {
     supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
-    supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm, sequence_cancelled_at, full_paid_at, knowhow_closed_at, idea_source').eq('id', id).maybeSingle(),
+    supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm, sequence_cancelled_at, full_paid_at, knowhow_closed_at, idea_source, wniosek_at, wniosek_status, wniosek_auto, wniosek_decided_at').eq('id', id).maybeSingle(),
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
     supabaseClient.from('spar_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
     ordersQ,
@@ -958,6 +958,11 @@ async function openSession(id) {
     leadData.s.full_paid_at = art.full_paid_at || null;
     leadData.s.knowhow_closed_at = art.knowhow_closed_at || null;
     if (art.idea_source) leadData.s.idea_source = art.idea_source;
+    // Wniosek o współpracę: świeży stan (mógł dojść po ostatnim ładowaniu listy).
+    leadData.s.wniosek_at = art.wniosek_at || null;
+    leadData.s.wniosek_status = art.wniosek_status || null;
+    leadData.s.wniosek_auto = !!art.wniosek_auto;
+    leadData.s.wniosek_decided_at = art.wniosek_decided_at || null;
   }
   leadData.wiedza = { items: khItems || [], summary: khSummary || null };
   // Status paywallu (defensywnie — kolumny paywall_opened_at/abandoned dokłada
@@ -1027,7 +1032,7 @@ function renderLeadHead(s) {
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-white font-semibold text-lg truncate">${accentDot(s)}${esc(projName(s))}</h2>
-          ${signalBadge(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}${leadHealthChips(s)}
+          ${signalBadge(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}${wniosekPendingBadge(s, true)}${leadHealthChips(s)}
         </div>
         <div class="text-xs text-zinc-500 mt-0.5 truncate">${esc(s.email || 'bez e-maila')}${s.phone ? ' · ' + esc(s.phone) : ''}${s.auth_provider ? ' · ' + esc(s.auth_provider) : ''} · ${fmtDate(s.created_at)}</div>
       </div>
@@ -1678,6 +1683,7 @@ function leadAkcjeHTML() {
     </div>
   </button>`;
   return `<div class="max-w-xl space-y-2.5">
+    ${wniosekBoxHTML(s)}
     ${stageBox}
     ${platnosciPtr}
     ${row(s.is_test, `toggleTest('${s.id}', this.checked)`, 'Sesja testowa (poza metrykami i follow-upami)', 'accent-blue-500')}
@@ -1815,6 +1821,67 @@ async function toggleHidden(id, val) {
   if (s) s.hidden_from_feed = val;
   toast(val ? 'Ukryto z publicznych inspiracji (do 60 s)' : 'Projekt znów widoczny w inspiracjach');
   afterToggle(id);
+}
+// ── WNIOSEK O WSPÓŁPRACĘ (dwustopniowy filtr rezerwacji) ──
+// Po zielonym werdykcie lead bezpłatnie zgłasza projekt. Ocena „mocny" = auto-akcept
+// (wniosek_auto=true); pozostałe = 'pending' → Tomek decyduje TU. Po ręcznym
+// 'accepted' cron spar-followups sam wyśle mail z linkiem do rezerwacji (nic nie
+// wysyłamy z panelu). RLS pozwala na UPDATE tylko kolumn wniosek_status/wniosek_decided_at.
+// Pulsujący chip „WNIOSEK" dla listy/kanbanu/nagłówka — tylko gdy oczekuje decyzji.
+function wniosekPendingBadge(s, clickable) {
+  if (!s || s.wniosek_status !== 'pending') return '';
+  const act = clickable ? ' onclick="event.stopPropagation();switchLeadTab(\'akcje\')" role="button"' : '';
+  const cur = clickable ? ' cursor-pointer hover:bg-amber-500/20' : '';
+  return ` <span${act} class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold text-amber-300 bg-amber-500/10 border-amber-500/40 align-middle${cur} transition" title="Wniosek o współpracę oczekuje na Twoją decyzję"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>WNIOSEK</span>`;
+}
+// Blok decyzji w szczególe sesji (zakładka Akcje) — renderowany tylko gdy jest wniosek.
+function wniosekBoxHTML(s) {
+  if (!s || !s.wniosek_status) return '';
+  const STAT = {
+    pending:  { label: 'Oczekuje na decyzję', cls: 'text-amber-300',   icon: 'ph-hourglass-medium', border: 'border-amber-500/40' },
+    accepted: { label: 'Zaakceptowany',        cls: 'text-emerald-400', icon: 'ph-check-circle',      border: 'border-emerald-500/30' },
+    rejected: { label: 'Odrzucony',            cls: 'text-zinc-400',    icon: 'ph-x-circle',          border: 'border-white/10' },
+  };
+  const st = STAT[s.wniosek_status] || STAT.pending;
+  const auto = s.wniosek_auto ? ' <span class="text-emerald-400/80">(auto — ocena „mocny")</span>' : '';
+  const submitted = s.wniosek_at ? `Zgłoszono ${esc(fmtDate(s.wniosek_at))}` : 'Zgłoszono (brak daty)';
+  const decided = s.wniosek_decided_at ? ` · decyzja ${esc(fmtDate(s.wniosek_decided_at))}` : '';
+  const actions = s.wniosek_status === 'pending'
+    ? `<div class="flex items-center gap-2 mt-3">
+        <button onclick="decideWniosek('${s.id}','accepted')" class="flex-1 px-3.5 py-2 rounded-lg border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 text-sm font-medium transition"><i class="ph ph-check mr-1.5"></i>Akceptuj — zapraszam do rozmowy</button>
+        <button onclick="decideWniosek('${s.id}','rejected')" class="shrink-0 px-3.5 py-2 rounded-lg border border-white/10 text-zinc-400 hover:text-red-300 hover:border-red-500/30 text-sm transition"><i class="ph ph-x mr-1.5"></i>Odrzuć</button>
+      </div>
+      <div class="text-[11px] text-zinc-500 mt-2"><i class="ph ph-info mr-1"></i>Po akceptacji system sam wyśle mail z linkiem do rezerwacji (cron do 30 min).</div>`
+    : '';
+  return `<div class="p-3.5 rounded-xl bg-zinc-900/60 border ${st.border}">
+    <div class="text-sm text-zinc-300 mb-1"><i class="ph ph-handshake mr-1 text-amber-400"></i>Wniosek o współpracę</div>
+    <div class="text-[12px] mb-0.5">Status: <span class="${st.cls} font-medium"><i class="ph ${st.icon} mr-0.5"></i>${st.label}</span>${auto}</div>
+    <div class="text-[11px] text-zinc-500">${submitted}${decided}</div>
+    ${actions}
+  </div>`;
+}
+// Ręczna decyzja Tomka. UPDATE tylko wniosek_status + wniosek_decided_at (grant kolumnowy RLS).
+// Maila NIE wysyłamy — po 'accepted' zajmie się tym cron spar-followups (do 30 min).
+async function decideWniosek(id, decision) {
+  const isAcc = decision === 'accepted';
+  const msg = isAcc
+    ? 'Zaakceptować wniosek o współpracę?\n\nPo zapisie cron spar-followups sam wyśle temu leadowi mail z linkiem do rezerwacji (do 30 min). Nic nie musisz wysyłać ręcznie.'
+    : 'Odrzucić wniosek o współpracę? Lead nie dostanie zaproszenia do rozmowy.';
+  if (!confirm(msg)) { if (leadData && leadData.s.id === id) renderLeadTab(); return; }
+  const decidedAt = new Date().toISOString();
+  const { error } = await supabaseClient.from('spar_sessions')
+    .update({ wniosek_status: decision, wniosek_decided_at: decidedAt })
+    .eq('id', id);
+  if (error) { toast('Błąd zapisu: ' + (error.message || '')); console.error(error); return; }
+  const s = sessions.find((x) => x.id === id);
+  if (s) { s.wniosek_status = decision; s.wniosek_decided_at = decidedAt; }
+  if (leadData && leadData.s.id === id) {
+    leadData.s.wniosek_status = decision;
+    leadData.s.wniosek_decided_at = decidedAt;
+    renderLeadHead(leadData.s);
+    renderLeadTab();
+  }
+  toast(isAcc ? 'Wniosek zaakceptowany — mail z linkiem poleci automatem (do 30 min)' : 'Wniosek odrzucony');
 }
 
 // ── Ręczne przeniesienie leada między etapami (override) ──

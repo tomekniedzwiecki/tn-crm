@@ -111,6 +111,11 @@ Deno.serve(async (req) => {
         message = formatSparGenErrorMessage(data)
         break
 
+      case 'spar_wniosek':
+        webhookUrl = webhookSparing
+        message = formatSparWniosekMessage(data)
+        break
+
       case 'bud_preview':
         webhookUrl = webhookSparing
         message = formatSparPreviewMessage({ ...data, funnel: 'sklep' })
@@ -1711,6 +1716,31 @@ function formatSparGenErrorMessage(data: {
   const link = sparLeadLink(data.session_id)
   if (link) blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: link, style: 'primary', action_id: 'view_spar_gen_error' }] })
   blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
+// Wniosek o współpracę (dwustopniowy filtr rezerwacji, 2026-07-22): zielony lead
+// zgłosił projekt. auto=true → zakwalifikowany automatycznie (ocena „mocny");
+// auto=false → czeka na decyzję Tomka w panelu tn-aplikacje.
+function formatSparWniosekMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  project_name?: string
+  auto?: boolean
+}) {
+  const who = [data.name, data.email, data.phone].filter(Boolean).join(' · ') || '(bez danych)'
+  const head = data.auto
+    ? '📝 Aplikacja — WNIOSEK o współpracę (zakwalifikowany automatycznie)'
+    : '📝 Aplikacja — WNIOSEK o współpracę (CZEKA NA TWOJĄ DECYZJĘ w panelu!)'
+  const blocks: unknown[] = [
+    { type: 'header', text: { type: 'plain_text', text: head, emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${who}${data.project_name ? `\nProjekt: *${data.project_name}*` : ''}` } },
+  ]
+  if (data.session_id) {
+    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `<https://crm.tomekniedzwiecki.pl/tn-aplikacje/index#sesja-${data.session_id}|Otwórz sesję w panelu>` }] })
+  }
   return { blocks }
 }
 

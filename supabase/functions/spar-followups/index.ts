@@ -287,11 +287,12 @@ function followupView(kind: string, s: SessionRow): string {
   if (kind === 'payment_rescue') return checkoutResumeLink(s) // LINK_VIEW = dokończenie płatności
   if (kind === 'komplet_gotowy') return chatLink(s.id, 'komplet_gotowy', '#projekt')
   if (kind === 'reclose_1' || kind === 'reclose_2') return chatLink(s.id, kind, '#projekt')
+  if (kind === 'wniosek_accepted') return chatLink(s.id, kind, '#projekt')
   if (kind.startsWith('nurture_')) return chatLink(s.id, kind, '#projekt')
   return chatLink(s.id, kind) // abandoned_chat / abandoned_chat_2 / abandoned_chat_3 → utm_campaign per mail
 }
 function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
-const RESERVE_PANEL_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2']
+const RESERVE_PANEL_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2', 'wniosek_accepted']
 function reserveFor(kind: string, s: SessionRow): string | null { return RESERVE_PANEL_KINDS.includes(kind) ? panelReserveLink(s, kind) : null }
 
 // Statyczny mail (plain, „z palca") — gallery podglądu + fallback gdy GPT off.
@@ -318,6 +319,7 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     reclose_1: { subject: `${n}: rozmowa wciąż czeka`, body: `Cześć${im}!\n\nProjekt ${n} jest gotowy i czeka w panelu — a pierwszy krok to po prostu niezobowiązująca wspólna rozmowa. 500 zł jest w pełni zwrotne, więc realnie nic nie ryzykujesz.\n\nGdy będziesz gotowy, [zarezerwuj rozmowę](LINK_RESERVE) — [projekt zobaczysz tutaj](LINK_VIEW).` },
     reclose_2: { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie chcę zawracać Ci głowy — projekt ${n} zostaje zapisany i czeka, kiedy będziesz gotowy. Rozmowa jest niezobowiązująca, a 500 zł w pełni zwrotne.\n\nJeśli zechcesz to ruszyć, [rezerwacja jest tutaj](LINK_RESERVE), a [projekt w panelu](LINK_VIEW).` },
     payment_rescue: { subject: 'Widzę, że rezerwacja nie doszła do końca', body: `Cześć${im}!\n\nZauważyłem, że zaczęła się Twoja rezerwacja wspólnej rozmowy, ale płatność nie doszła do końca — czasem przerwie ją bank albo połączenie. Nic straconego.\n\nGdyby coś przerwało, [dokończ rezerwację tutaj](LINK_VIEW). Przypominam: 500 zł jest w pełni zwrotne, więc nic nie ryzykujesz.` },
+    wniosek_accepted: { subject: `${n}: przejrzałem Twój projekt — wchodzę w rozmowę`, body: `Cześć${im}!\n\nOsobiście przejrzałem Twoje zgłoszenie — kartę projektu ${n} i wynik badania rynku. Kwalifikuję je do wspólnej rozmowy: chcę ten projekt z Tobą przegadać.\n\nNastępny krok to [rezerwacja rozmowy](LINK_RESERVE) — 500 zł, w pełni zwrotne (nie wejdziemy we współpracę → wraca w całości). Po rezerwacji przygotowuję plan przedsięwzięcia i odzywam się osobiście. [Projekt masz w panelu](LINK_VIEW).` },
   }
   const t = T[kind] || T.abandoned_chat
   const fallback = (kind.startsWith('abandoned_chat') || kind === 'knowhow_unlock') ? 'Wróć do rozmowy tutaj' : 'Wszystko jest w Twoim panelu'
@@ -687,7 +689,7 @@ Deno.serve(async (req) => {
     // Run crona: tylko cron-secret lub admin
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
 
-    const sent: Record<string, number> = { paid_sync: 0, full_paid_sync: 0, paid_welcome: 0, knowhow_unlock: 0, payment_rescue: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, reclose_1: 0, reclose_2: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
+    const sent: Record<string, number> = { paid_sync: 0, full_paid_sync: 0, paid_welcome: 0, knowhow_unlock: 0, payment_rescue: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, reclose_1: 0, reclose_2: 0, wniosek_accepted: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
     let mailBudget = MAX_PER_RUN
     // Okno wysyłek 8–23 PL dotyczy WSZYSTKICH maili (też paid_welcome); cutoff 23
     // (decyzja Tomka 2026-06-16) łapie wieczornych porzucaczy, póki pamiętają
@@ -771,7 +773,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, full_paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, sequence_cancelled_at, pipeline_override, created_at'
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, full_paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, sequence_cancelled_at, pipeline_override, created_at, wniosek_status, wniosek_decided_at, wniosek_auto'
 
     // ── 1) SYNC PŁATNOŚCI: orders(paid, Rezerwacja Aplikacja) → paid_at + lead won + welcome ──
     // Safety-net dla webhooka (tpay-webhook oznacza paid_at w czasie rzeczywistym; ten cron
@@ -1160,6 +1162,31 @@ Deno.serve(async (req) => {
       if (daysSince < NURTURE_THRESH_D[sentCount]) continue // za wcześnie na następny
       if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
       await sendOnce(NURTURE_KINDS[sentCount], s)
+    }
+
+    // ── 4c) WNIOSEK ZAAKCEPTOWANY RĘCZNIE → mail „przejrzałem, wchodzę w rozmowę" ──
+    //   Dwustopniowy filtr rezerwacji (2026-07-22): auto-akcept (ocena „mocny")
+    //   dzieje się na żywo w rozmowie — bez maila. Ręczna akceptacja Tomka w panelu
+    //   przychodzi PO czasie → user musi dostać wiadomość z linkiem do rezerwacji.
+    //   Idempotencja spar_emails (kind wniosek_accepted). STOP przy paid/rezygnacji.
+    {
+      const { data: wnRows, error: wnErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .eq('wniosek_status', 'accepted')
+        .eq('wniosek_auto', false)
+        .is('paid_at', null)
+        .is('full_paid_at', null)
+        .is('sequence_cancelled_at', null)
+        .not('email', 'is', null)
+        .gte('wniosek_decided_at', hoursAgo(24 * 7))
+        .limit(50)
+      if (wnErr) console.error('[spar-followups] wniosek_accepted fetch error:', wnErr)
+      const wnSess = ((wnRows || []) as SessionRow[]).filter((s) => s.pipeline_override !== 'resigned' && s.pipeline_override !== 'lost')
+      for (const s of wnSess) {
+        await sendOnce('wniosek_accepted', s)
+      }
     }
 
     // ── 5) RE-CLOSE po nudge'u rezerwacji (reclose_1 +48h, reclose_2 +5 dni) ──

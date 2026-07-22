@@ -406,7 +406,7 @@ async function createLeadForGreenVerdict(
 // webhooka). Fire-and-forget z perspektywy logiki — błąd Slacka NIGDY nie może
 // wywrócić rozmowy, więc tylko logujemy.
 async function postSlackSparing(
-  type: 'spar_contact' | 'spar_green' | 'spar_revive' | 'spar_knowhow_closed',
+  type: 'spar_contact' | 'spar_green' | 'spar_revive' | 'spar_knowhow_closed' | 'spar_wniosek',
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
@@ -1219,6 +1219,46 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true }, 200, corsHeaders)
     }
 
+    // ── Wniosek o współpracę (dwustopniowy filtr rezerwacji, 2026-07-22) ─────
+    //   Po zielonym werdykcie user NAJPIERW bezpłatnie zgłasza projekt (klik w karcie).
+    //   Kwalifikacja: ocena „mocny" z badania rynku → akcept AUTOMATYCZNY (uczciwie:
+    //   to twarda bramka rynkowa, nie udawany człowiek); inaczej → pending, decyzję
+    //   podejmuje Tomek w panelu tn-aplikacje (mail po akcepcie wysyła spar-followups).
+    //   Karta rezerwacji 500 zł pokazuje się DOPIERO po statusie 'accepted'.
+    if (body.event === 'wniosek') {
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      const { data: sess } = await sb
+        .from('spar_sessions')
+        .select('id, verdict, assessment, wniosek_status, email, name, phone, preview_brief, is_test')
+        .eq('id', sessionId)
+        .maybeSingle()
+      if (!sess) return jsonResponse({ error: 'brak_sesji' }, 404, corsHeaders)
+      if (sess.verdict !== 'zielony') return jsonResponse({ error: 'brak_werdyktu' }, 400, corsHeaders)
+      if (sess.wniosek_status) {
+        // Idempotentnie: powtórny klik / drugi tab nie nadpisuje decyzji.
+        return jsonResponse({ ok: true, status: sess.wniosek_status }, 200, corsHeaders)
+      }
+      const mocny = ((sess.assessment as Record<string, unknown> | null)?.ocena === 'mocny')
+      const status = mocny ? 'accepted' : 'pending'
+      const now = new Date().toISOString()
+      await sb.from('spar_sessions').update({
+        wniosek_at: now,
+        wniosek_status: status,
+        wniosek_decided_at: mocny ? now : null,
+        wniosek_auto: mocny,
+        updated_at: now,
+      }).eq('id', sessionId).is('wniosek_status', null)
+      if (!sess.is_test) {
+        await postSlackSparing('spar_wniosek', {
+          session_id: sessionId,
+          name: sess.name, email: sess.email, phone: sess.phone,
+          project_name: (sess.preview_brief as Record<string, unknown> | null)?.nazwa || null,
+          auto: mocny,
+        })
+      }
+      return jsonResponse({ ok: true, status }, 200, corsHeaders)
+    }
+
     // ── Zapis kontaktu z bramki BEZ wiadomości ──
     //   Wołany po domknięciu bramki, zwłaszcza gdy werdykt już padł i kolejnej
     //   tury może nie być. Bez tego telefon/konto z bramki nie trafiłyby do bazy
@@ -1647,7 +1687,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, panel_visits, seen_landing_at, paywall_opened_at, paywall_abandoned_at, makieta_last_at')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, panel_visits, seen_landing_at, paywall_opened_at, paywall_abandoned_at, makieta_last_at, wniosek_status')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -2366,7 +2406,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                 { role: 'system', content: closeSystem },
                 ...messages,
                 { role: 'assistant', content: assistantText },
-                { role: 'user', content: '[SYSTEM] Zielony werdykt zapisany, karta projektu domknięta. Wykonaj TERAZ turę domknięcia wg DRZEWA DOMYKANIA: 1-2 zdania kotwicy wartości (co dokładnie dostał i dlaczego ten projekt się spina) + warunki wprost (rezerwacja 500 zł, w pełni zwrotna, uruchamia osobisty kontakt Tomka z planem) + wystaw <makieta></makieta> w osobnej linii. Bez pytań o pozwolenie, bez „co chcesz doprecyzować". Zacznij naturalnie, jakbyś kontynuował wypowiedź.' },
+                { role: 'user', content: '[SYSTEM] Zielony werdykt zapisany, karta projektu domknięta. Wykonaj TERAZ turę domknięcia wg DRZEWA DOMYKANIA: 1-2 zdania kotwicy wartości (co dokładnie dostał i dlaczego ten projekt się spina) + następny krok wprost (najpierw BEZPŁATNE zgłoszenie projektu do kwalifikacji — przycisk w karcie poniżej, zero ryzyka; po pozytywnej kwalifikacji rezerwacja wspólnej rozmowy 500 zł, w pełni zwrotna, uruchamia osobisty kontakt Tomka z planem) + wystaw <makieta></makieta> w osobnej linii. Bez pytań o pozwolenie, bez „co chcesz doprecyzować". Zacznij naturalnie, jakbyś kontynuował wypowiedź.' },
               ])
               assistantText += '\n' + second.text
               if (second.text.includes('<makieta')) {
@@ -2394,7 +2434,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           // emailKnown: sesja ma już maila po stronie serwera — frontend przy
           // powrocie z linku ?id= nie zna go lokalnie i bez tej flagi pokazywałby
           // bramkę o imię/mail DRUGI raz.
-          const meta = { verdict: verdict.verdict, leadId, emailKnown: !!effectiveEmail }
+          const meta = { verdict: verdict.verdict, leadId, emailKnown: !!effectiveEmail, wniosek: (existingSession?.wniosek_status as string | null | undefined) ?? null }
           controller.enqueue(
             encoder.encode(`event: spar_meta\ndata: ${JSON.stringify(meta)}\n\n`),
           )
