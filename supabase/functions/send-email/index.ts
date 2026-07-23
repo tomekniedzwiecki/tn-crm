@@ -35,6 +35,9 @@ const VALID_EMAIL_TYPES = [
   'offer_expired',
   'products_shared',
   'workflow_created',
+  // Rezerwacja budowy sklepu (100 zl) — potwierdzenie + CTA WhatsApp (2026-07-23);
+  // wysyla tpay-webhook przy pierwszym zaksiegowaniu rezerwacji
+  'bud_reservation_confirmed',
   'workflow_stage_completed',
   'report_published',
   'branding_delivered',
@@ -84,6 +87,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   offer_expired: 'Twoja oferta wygasła',
   products_shared: 'Propozycje produktowe — wybierz swój produkt',
   workflow_created: 'Płatność przyjęta — podpisz umowę',
+  bud_reservation_confirmed: 'Rezerwacja przyjęta — napisz do mnie na WhatsApp',
   workflow_stage_completed: 'Etap {{stageNumber}} ukończony — {{stageName}}',
   report_published: 'Raport dotyczący Twojego produktu jest gotowy',
   branding_delivered: 'Branding Twojej marki jest gotowy!',

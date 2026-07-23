@@ -218,6 +218,21 @@
                     </div>
                 </div>
 
+                <!-- What's Next - Rezerwacja budowy sklepu (100 zl) -->
+                <div id="whats-next-bud-reservation" class="hidden text-left bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6 fade-up fade-up-3">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                            <i class="ph-duotone ph-lock-key text-xl text-emerald-400"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-white text-sm">Rezerwacja opłacona — miejsce zaklepane!</p>
+                            <p class="text-zinc-400 text-sm mt-1 leading-relaxed">
+                                Chcesz ruszyć od razu? Napisz do mnie na WhatsApp, że właśnie wpłaciłeś rezerwację — od tego zaczniemy rozmowę o Twoim sklepie. Wolisz poczekać? Odezwę się do Ciebie sam.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- What's Next - Installment -->
                 <div id="whats-next-installment" class="hidden text-left bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6 fade-up fade-up-3">
                     <div class="flex items-start gap-3">
@@ -245,6 +260,25 @@
                        class="block w-full text-zinc-500 hover:text-zinc-300 px-5 py-2.5 text-sm font-medium transition-colors">
                         <i class="ph ph-question mr-1"></i>
                         Masz pytania?
+                    </a>
+                </div>
+
+                <!-- Actions - Rezerwacja budowy sklepu -->
+                <div id="actions-bud-reservation" class="hidden space-y-3 fade-up fade-up-4">
+                    <a href="https://wa.me/48793113898?text=Cze%C5%9B%C4%87%20Tomek!%20W%C5%82a%C5%9Bnie%20wp%C5%82aci%C5%82em%2Fam%20rezerwacj%C4%99%20budowy%20sklepu."
+                       target="_blank" rel="noopener"
+                       style="background: linear-gradient(to bottom, #25D366, #128C7E); box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 4px 12px rgba(37, 211, 102, 0.3);"
+                       class="block w-full text-white px-5 py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+                        <i class="ph-fill ph-whatsapp-logo text-lg"></i>
+                        Napisz do mnie na WhatsApp
+                    </a>
+                    <p class="text-zinc-600 text-xs leading-relaxed">
+                        To mój prywatny numer (793&nbsp;113&nbsp;898) — proszę, zachowaj go dla siebie i nie udostępniaj nikomu.
+                    </p>
+                    <a href="https://tomekniedzwiecki.pl"
+                       class="block w-full text-zinc-500 hover:text-zinc-300 px-5 py-2.5 text-sm font-medium transition-colors">
+                        <i class="ph ph-house mr-1"></i>
+                        Wolę poczekać — wróć na stronę główną
                     </a>
                 </div>
 
@@ -339,6 +373,18 @@
                             .rpc('order_conversion_tracking', { p_order_id: orderId });
                         orderTracking = Array.isArray(trk) ? trk[0] : trk;
                     } catch {}
+                }
+
+                // Rezerwacja budowy sklepu (100 zl): dedykowany blok z CTA WhatsApp
+                // (detekcja spojna z isBudReservation w tpay-webhook; pelna platnosc >=1000 nie wchodzi)
+                const descL = (order?.description || '').toLowerCase();
+                const isBudRes = parseFloat(order?.amount) < 1000 && /rezerwacj/.test(descL) &&
+                    (/zbuduj|sklep|biznes online/.test(descL));
+                if (isBudRes && !order?.installment_id) {
+                    document.getElementById('whats-next-standard').classList.add('hidden');
+                    document.getElementById('whats-next-bud-reservation').classList.remove('hidden');
+                    document.getElementById('actions-standard').classList.add('hidden');
+                    document.getElementById('actions-bud-reservation').classList.remove('hidden');
                 }
 
                 // Check if this is an installment payment

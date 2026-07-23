@@ -1110,6 +1110,36 @@ Deno.serve(async (req) => {
         // Send Slack notification for successful payment
         await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' }, supabase)
 
+        // Rezerwacja budowy sklepu (100 zł) → potwierdzenie z CTA WhatsApp
+        // (dyrektywa Tomka 23.07: klient ma od razu dostać jego numer i móc napisać,
+        // że wpłacił rezerwację — albo poczekać na kontakt). Szablon
+        // bud_reservation_confirmed w settings; pełna płatność (≥1000) NIE dostaje
+        // tego maila (tam potwierdzenie idzie ręcznym draftem z linkiem do portalu).
+        try {
+          const descR = (order.description || '').toLowerCase()
+          const amtR = parseFloat(String(order.amount)) || 0
+          const isBudResMail = amtR < 1000 && descR.includes('rezerwacj') &&
+            (descR.includes('zbuduj') || descR.includes('sklep') || descR.includes('biznes online'))
+          if (isBudResMail && order.customer_email) {
+            const res = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
+              body: JSON.stringify({
+                type: 'bud_reservation_confirmed',
+                data: {
+                  email: order.customer_email,
+                  clientName: (order.customer_name || '').split(' ')[0] || 'Cześć',
+                  leadId: order.lead_id || undefined,
+                },
+              }),
+            })
+            if (!res.ok) console.error('[tpay-webhook] bud_reservation_confirmed mail padł:', res.status, await res.text())
+            else console.log('[tpay-webhook] bud_reservation_confirmed mail wysłany:', order.customer_email)
+          }
+        } catch (mailErr) {
+          console.error('[tpay-webhook] bud_reservation_confirmed mail error (nieblokujące):', mailErr)
+        }
+
         // Send Meta Conversions API event
         await sendMetaConversion(order, supabase)
 
