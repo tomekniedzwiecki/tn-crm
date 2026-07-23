@@ -27,7 +27,7 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;700&amp;family=Mulish:wght@400;600;700&amp;display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;700&amp;family=Mulish:wght@400;600;700&amp;display=swap">
 
-  <link rel="preload" as="image" type="image/webp" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/skrolik/sceny/sc-hero.webp">
+  <link rel="preload" as="image" type="image/webp" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/skrolik/assets/sc-hero-tlo.webp">
 
   <script type="application/ld+json">
   {
@@ -392,252 +392,102 @@
   </header>
 
   <!-- SEKCJA:01-hero START -->
-<section id="hero" class="hr-hero sect-pad hero">
-  <div class="wrap hr-grid">
-    <h1 class="display hr-title reveal">
-      Telefon stoi.<br>
-      Ty przewijasz<br>
-      kciukiem.
-    </h1>
+<section id="hero" class="hr-hero hero">
+  <!-- HERO TLO (naprawa 23.07, audyt): scena = TLO strony (kanon mata trafionek.pl/mata),
+       nie "ozywiona pocztowka" w ramce (.hr-media radius+shadow). sc-hero-tlo = JEDEN kadr
+       full-bleed pod trescia (dlon z Skrolikiem + telefon z przewijanym feedem); petla i2v
+       wpinana JS w slot sceny; scrim gradientowy w tokenach TEJ strony (--paper #F8F1F0);
+       tresc lezy NA scenie. -->
+  <div class="hr-scene">
+    <picture class="hr-scene-pic">
+      <source media="(max-width:760px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/skrolik/assets/sc-hero-tlo-800.webp">
+      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/skrolik/assets/sc-hero-tlo.webp" width="1536" height="1024" loading="eager" fetchpriority="high"
+           alt="Dłoń ze Skrolikiem na palcu przewija kciukiem feed na stojącym obok telefonie.">
+    </picture>
+    <div class="hr-scene-vid" aria-hidden="true"></div>
+    <div class="hr-scrim" aria-hidden="true"></div>
+  </div>
 
-    <p class="lead hr-lead reveal">
-      Skrolik to mały pierścień-pilot Bluetooth: pionowe przewijanie, kartkowanie ebooków i zdalna migawka — zakładasz na palec i klikasz kciukiem
-    </p>
+  <div class="hr-content">
+    <div class="hr-intro">
+      <span class="hr-accent" aria-hidden="true"></span>
+      <h1 class="display hr-title">
+        Telefon stoi.<br>
+        Ty przewijasz<br>
+        kciukiem.
+      </h1>
+      <p class="lead hr-lead">
+        Skrolik to mały pierścień-pilot Bluetooth: pionowe przewijanie, kartkowanie ebooków i zdalna migawka — zakładasz na palec i klikasz kciukiem
+      </p>
+    </div>
 
-    <figure class="hr-media reveal">
-      <video class="anim-video" muted loop playsinline preload="none"
-        poster="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/skrolik/sceny/sc-hero.webp" data-anim-src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/skrolik/assets/hero-video.mp4" aria-hidden="true"></video>
-      <img
-        src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/skrolik/sceny/sc-hero.webp"
-        alt="Skrolik założony na palec podczas zdalnego przewijania telefonu"
-        width="1100"
-        height="1650"
-        loading="eager"
-        fetchpriority="high"
-      >
-      <svg class="sig hr-sig" viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M38 24 A12 12 0 0 0 38 40"></path>
-        <path d="M43 18 A20 20 0 0 0 43 46"></path>
-        <path d="M48 12 A28 28 0 0 0 48 52"></path>
-      </svg>
-    </figure>
-
-    <div class="hr-actions reveal">
-      <a class="btn cta" data-checkout href="#zamow">Zamawiam Skrolika</a>
+    <div class="hr-offer">
+      <a class="btn cta hr-cta" data-checkout href="#zamow">Zamawiam Skrolika</a>
       <p class="hr-micro">Płatność online lub przy odbiorze · 14 dni na zwrot</p>
     </div>
   </div>
 
-  <style scoped>
-    .hr-hero {
-      min-height: 0;
-      overflow: hidden;
-      background: var(--paper);
-      color: var(--ink);
+  <style>
+    #hero.hr-hero{position:relative;min-height:100svh;overflow:clip;color:var(--ink);background:var(--paper);
+      --hr-inset:max(var(--s5), calc((100vw - 1180px) / 2 + var(--s2)))}
+    #hero.hr-hero *{box-sizing:border-box}
+
+    /* SCENA = tlo calego 1. ekranu (kanon mata) */
+    #hero .hr-scene{position:absolute;inset:0;z-index:0;overflow:hidden;background:var(--paper-2)}
+    #hero .hr-scene-pic{position:absolute;inset:0;z-index:1;display:block}
+    #hero .hr-scene-pic img{display:block;width:100%;height:100%;object-fit:cover;object-position:52% 50%}
+    #hero .hr-scene-vid{position:absolute;inset:0;z-index:2}
+    #hero .hr-scene-vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:52% 50%;opacity:0;transition:opacity .8s var(--mo-ease);pointer-events:none}
+    #hero .hr-scene-vid video.on{opacity:1}
+    #hero .hr-scrim{position:absolute;inset:0;z-index:3;pointer-events:none;
+      background:
+        linear-gradient(100deg, rgba(248,241,240,.96) 0%, rgba(248,241,240,.92) 26%, rgba(248,241,240,.58) 47%, rgba(248,241,240,.16) 63%, rgba(248,241,240,0) 75%),
+        linear-gradient(to top, rgba(248,241,240,.5) 0%, rgba(248,241,240,0) 30%),
+        linear-gradient(to bottom, rgba(248,241,240,.42) 0%, rgba(248,241,240,0) 12%)}
+
+    /* TRESC na scenie: lewa kolumna, wysrodkowana pionowo */
+    #hero .hr-content{position:relative;z-index:5;display:flex;flex-direction:column;justify-content:center;
+      gap:var(--s3);min-height:100svh;width:100%;max-width:calc(var(--hr-inset) + 520px);
+      margin:0;padding:calc(var(--s6) + var(--s2)) var(--s4) var(--s6) var(--hr-inset)}
+
+    #hero .hr-intro{display:block}
+    #hero .hr-accent{display:block;width:84px;height:4px;border-radius:999px;
+      background:linear-gradient(90deg,var(--cta),var(--cta-hover))}
+    #hero .hr-title{margin:var(--s2) 0 0;max-width:none;color:var(--ink);
+      font-size:clamp(34px,3.9vw,56px);line-height:1.02;letter-spacing:-0.02em;
+      text-shadow:0 1px 14px rgba(248,241,240,.72)}
+    #hero .hr-lead{margin:var(--s3) 0 0;max-width:32rem;color:var(--body);
+      font-size:clamp(16px,1.5vw,18px);line-height:1.55}
+
+    /* OFERTA = frosted karta na scenie (CTA + micro; hero Skrolika bez ceny — jak w oryginale) */
+    #hero .hr-offer{display:grid;gap:var(--s2);margin-top:var(--s1);padding:var(--s4);
+      border:1px solid var(--line);border-radius:var(--radius-lg);
+      background:color-mix(in srgb, var(--card) 90%, transparent);
+      -webkit-backdrop-filter:blur(12px) saturate(1.1);backdrop-filter:blur(12px) saturate(1.1);
+      box-shadow:var(--shadow-lg)}
+    #hero .hr-cta{display:flex;width:100%;min-height:54px;align-items:center;justify-content:center;
+      padding-inline:var(--s4);text-align:center}
+    #hero .hr-micro{margin:0;color:var(--body);font-size:13.5px;line-height:1.45;text-align:center}
+
+    /* MOBILE (<=760, kanon mata): scena band -> tresc na papierze (bez tekstu na kadrze) */
+    @media (max-width:760px){
+      #hero.hr-hero{min-height:0;display:flex;flex-direction:column;overflow:visible;--hr-inset:var(--s3)}
+      #hero .hr-scene{order:1;position:relative;inset:auto;z-index:0;width:100%;height:clamp(300px,46svh,430px)}
+      #hero .hr-scene-pic img,#hero .hr-scene-vid video{object-position:58% 48%}
+      #hero .hr-scrim{background:linear-gradient(to bottom, rgba(248,241,240,.3) 0%, rgba(248,241,240,0) 14%),linear-gradient(to top, rgba(248,241,240,.5) 0%, rgba(248,241,240,0) 24%)}
+      #hero .hr-content{order:2;position:static;min-height:0;width:auto;justify-content:flex-start;gap:var(--s3);padding:var(--s4) var(--s3) var(--s5)}
+      #hero .hr-title{font-size:var(--h1-m);line-height:1.04;text-shadow:none}
+      #hero .hr-offer{padding:var(--s3)}
     }
 
-    .hr-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 52fr) minmax(0, 48fr);
-      grid-template-areas:
-        "title media"
-        "lead media"
-        "actions media";
-      grid-template-rows: auto auto auto;
-      column-gap: clamp(28px, 4vw, 60px);
-      row-gap: var(--s2);
-      align-content: center;
-      align-items: start;
-      min-height: 70vh;
-    }
-
-    .hr-title {
-      grid-area: title;
-      align-self: end;
-      max-width: 100%;
-      margin: 0;
-      color: var(--ink);
-      font-size: var(--h1-d);
-      line-height: 1.02;
-      letter-spacing: -.02em;
-      text-wrap: balance;
-    }
-
-    .hr-lead {
-      grid-area: lead;
-      align-self: start;
-      max-width: 34rem;
-      margin: var(--s2) 0 0;
-      color: var(--body);
-      font-size: clamp(17px, 1.5vw, 18px);
-      line-height: 1.6;
-    }
-
-    .hr-media {
-      position: relative;
-      grid-area: media;
-      align-self: center;
-      justify-self: end;
-      width: 100%;
-      max-height: 80vh;
-      margin: 0;
-      overflow: hidden;
-      aspect-ratio: 9 / 10;
-      border-radius: var(--radius-lg);
-      background: var(--paper-2);
-      box-shadow: var(--shadow-md);
-    }
-
-    .hr-media img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border-radius: var(--radius-lg);
-      object-fit: cover;
-    }
-
-    .hr-sig {
-      position: absolute;
-      top: 28%;
-      left: 30%;
-      width: 34%;
-      height: auto;
-      pointer-events: none;
-    }
-
-    .hr-sig path {
-      fill: none;
-      stroke: var(--cta);
-      stroke-width: 1.5;
-      stroke-linecap: round;
-      opacity: 0.55;
-      vector-effect: non-scaling-stroke;
-    }
-
-    .hr-actions {
-      grid-area: actions;
-      align-self: start;
-      width: min(100%, 30rem);
-      margin-top: var(--s3);
-    }
-
-    .hr-actions .btn.cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 54px;
-      width: 100%;
-      padding-inline: var(--s4);
-      text-align: center;
-    }
-
-    .hr-micro {
-      margin: var(--s2) 0 0;
-      color: var(--body);
-      font-size: 13.5px;
-      line-height: 1.45;
-      text-align: center;
-    }
-
-    @media (max-width: 760px) {
-      .hr-hero {
-        min-height: auto;
-      }
-
-      .hr-grid {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-areas:
-          "title"
-          "lead"
-          "media"
-          "actions";
-        gap: var(--s3);
-        min-height: auto;
-        align-items: start;
-      }
-
-      .hr-title {
-        align-self: auto;
-        max-width: 100%;
-        font-size: var(--h1-m);
-        line-height: 1.04;
-      }
-
-      .hr-lead {
-        max-width: none;
-        line-height: 1.5;
-      }
-
-      .hr-media {
-        justify-self: center;
-        width: min(100%, calc(46svh * 4 / 5));
-        max-height: 46svh;
-        aspect-ratio: 4 / 5;
-      }
-
-      .hr-media img {
-        object-position: center;
-      }
-
-      .hr-sig {
-        top: 25%;
-        left: 29%;
-        width: 36%;
-      }
-
-      .hr-actions {
-        width: 100%;
-      }
-
-      .hr-actions .btn.cta {
-        width: 100%;
-      }
-    }
-  
-    /* ANIM (LL-041/LL-049): hero-video + sceny 03 — ambient na kazdym viewporcie */
-    .hr-media .anim-video,
-    [id="ekran-zostaje"] .ez-figure .anim-video {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .6s ease;
-    }
-
-    .hr-media .anim-video.on,
-    [id="ekran-zostaje"] .ez-figure .anim-video.on {
-      opacity: 1;
-    }
-
-    [id="ekran-zostaje"] .ez-figure {
-      position: relative;
-      overflow: hidden;
-      border-radius: var(--radius-lg);
-    }
-
-    [id="ekran-zostaje"] .ez-figure img {
-      width: 100%;
-      height: auto;
-      aspect-ratio: 1 / 1;
-      object-fit: cover;
-    }
-
-    .hr-media .hr-sig {
-      z-index: 2;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .hr-media .anim-video,
-      [id="ekran-zostaje"] .ez-figure .anim-video {
-        transition: none !important;
-      }
-    }
-</style>
+    /* anim-video sekcji #ekran-zostaje — PRZENIESIONE ze starego hero scoped-style (ktory je hostowal
+       przy dawnym .hr-media); zachowane 1:1, zeby wymiana hero na mata nie zdjela stylu tamtej sceny */
+    [id="ekran-zostaje"] .ez-figure .anim-video{position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;object-fit:cover;opacity:0;pointer-events:none;transition:opacity .6s ease}
+    [id="ekran-zostaje"] .ez-figure .anim-video.on{opacity:1}
+    [id="ekran-zostaje"] .ez-figure{position:relative;overflow:hidden;border-radius:var(--radius-lg)}
+    [id="ekran-zostaje"] .ez-figure img{width:100%;height:auto;aspect-ratio:1/1;object-fit:cover}
+    @media (prefers-reduced-motion:reduce){[id="ekran-zostaje"] .ez-figure .anim-video{transition:none !important}}
+  </style>
 </section>
 <!-- SEKCJA:01-hero END -->
 
@@ -4969,6 +4819,35 @@
 
       elements.forEach((element) => observer.observe(element));
     })();
+  </script>
+
+  <!-- HERO-VIDEO TLO (naprawa 23.07): ambient loop wpiety w slot sceny mata (#hero .hr-scene-vid).
+       Feed na ekranie telefonu przewija sie pionowo (dzialanie Skrolika) + klik kciukiem; poster=obraz
+       sceny (picture pod spodem, zero CLS); wideo fade-in po 'playing'. reduced-motion/save-data ->
+       sam poster. Autoplay muted playsinline (desktop I mobile, LL-049). IO play/pause. -->
+  <script>
+  (function(){try{
+    var mm=window.matchMedia; if(!mm)return;
+    if(mm('(prefers-reduced-motion: reduce)').matches)return;
+    var conn=navigator.connection||{}; if(conn&&conn.saveData)return;
+    var slot=document.querySelector('#hero .hr-scene-vid'); if(!slot)return;
+    var SB="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/skrolik/";
+    var v=document.createElement('video');
+    v.muted=true;v.defaultMuted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.preload='metadata';
+    v.setAttribute('muted','');v.setAttribute('loop','');v.setAttribute('playsinline','');
+    v.setAttribute('preload','metadata');v.setAttribute('aria-hidden','true');
+    v.setAttribute('poster',SB+'assets/sc-hero-tlo.webp');
+    v.innerHTML='<source src="'+SB+'video/hero-loop-tlo.mp4" type="video/mp4">';
+    v.addEventListener('playing',function(){v.classList.add('on');});
+    slot.appendChild(v); v.load();
+    var p=v.play(); if(p&&p.catch)p.catch(function(){});
+    var hero=document.getElementById('hero');
+    if('IntersectionObserver'in window&&hero){
+      new IntersectionObserver(function(es){es.forEach(function(en){
+        if(en.isIntersecting){var q=v.play();if(q&&q.catch)q.catch(function(){});}else{v.pause();}
+      });},{threshold:0,rootMargin:'150px 0px'}).observe(hero);
+    }
+  }catch(e){}})();
   </script>
 </body>
 </html>
