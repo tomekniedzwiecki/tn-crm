@@ -209,7 +209,20 @@ interface SessionRow {
   sequence_cancelled_at: string | null
   pipeline_override: string | null
   created_at: string | null
+  wniosek_status: string | null
+  wniosek_decided_at: string | null
+  wniosek_auto: boolean | null
 }
+
+// ── Dwustopniowy filtr rezerwacji (22.07): dopóki zgłoszenie projektu nie jest
+//    zaakceptowane, karta 500 zł NIE istnieje — maile z CTA rezerwacji muszą wtedy
+//    prowadzić do BEZPŁATNEGO zgłoszenia (przycisk przy karcie projektu w rozmowie).
+//    Audyt 23.07: reclose/nurture pchały „zarezerwuj 500 zł" sesjom bez kwalifikacji.
+//    Pending = decyzja Tomka w toku → maili płatnościowych nie wysyłamy wcale
+//    (po akcepcie i tak idzie wniosek_accepted).
+const PAY_CTA_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2']
+function wniosekAccepted(s: SessionRow): boolean { return s.wniosek_status === 'accepted' }
+const WNIOSEK_GOAL_OVERRIDE = ' UWAGA — DWUSTOPNIOWY FILTR: ten rozmówca NIE przeszedł jeszcze kwalifikacji zgłoszenia. NIE wolno wzywać do rezerwacji ani wymieniać kwoty 500 zł. Jedyne CTA: BEZPŁATNE zgłoszenie projektu do kwalifikacji — przycisk „Zgłaszam projekt" przy karcie projektu w rozmowie (link LINK_VIEW). Wspomnij, że Tomek osobiście przegląda każde zgłoszenie.'
 
 // Ostatnie wymiany rozmowy (kanał sparing) → zwięzły kontekst do GPT, żeby mail
 // realnie nawiązywał do TEGO, co padło, a nie był generyczny. Markery <ocena>/
@@ -293,7 +306,11 @@ function followupView(kind: string, s: SessionRow): string {
 }
 function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
 const RESERVE_PANEL_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2', 'wniosek_accepted']
-function reserveFor(kind: string, s: SessionRow): string | null { return RESERVE_PANEL_KINDS.includes(kind) ? panelReserveLink(s, kind) : null }
+function reserveFor(kind: string, s: SessionRow): string | null {
+  // Bez zaakceptowanego zgłoszenia link rezerwacji nie istnieje (dwustopniowy filtr)
+  if (PAY_CTA_KINDS.includes(kind) && !wniosekAccepted(s)) return null
+  return RESERVE_PANEL_KINDS.includes(kind) ? panelReserveLink(s, kind) : null
+}
 
 // Statyczny mail (plain, „z palca") — gallery podglądu + fallback gdy GPT off.
 function staticEmail(kind: string, s: SessionRow): { subject: string; html: string } {
@@ -321,7 +338,14 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     payment_rescue: { subject: 'Widzę, że rezerwacja nie doszła do końca', body: `Cześć${im}!\n\nZauważyłem, że zaczęła się Twoja rezerwacja wspólnej rozmowy, ale płatność nie doszła do końca — czasem przerwie ją bank albo połączenie. Nic straconego.\n\nGdyby coś przerwało, [dokończ rezerwację tutaj](LINK_VIEW). Przypominam: 500 zł jest w pełni zwrotne, więc nic nie ryzykujesz.` },
     wniosek_accepted: { subject: `${n}: przejrzałem Twój projekt — wchodzę w rozmowę`, body: `Cześć${im}!\n\nOsobiście przejrzałem Twoje zgłoszenie — kartę projektu ${n} i wynik badania rynku. Kwalifikuję je do wspólnej rozmowy: chcę ten projekt z Tobą przegadać.\n\nNastępny krok to [rezerwacja rozmowy](LINK_RESERVE) — 500 zł, w pełni zwrotne (nie wejdziemy we współpracę → wraca w całości). Po rezerwacji przygotowuję plan przedsięwzięcia i odzywam się osobiście. [Projekt masz w panelu](LINK_VIEW).` },
   }
-  const t = T[kind] || T.abandoned_chat
+  let t = T[kind] || T.abandoned_chat
+  // Dwustopniowy filtr: bez akceptu zgłoszenia CTA płatności podmieniamy na bezpłatne zgłoszenie
+  if (PAY_CTA_KINDS.includes(kind) && !wniosekAccepted(s)) {
+    const soft = kind === 'reclose_2' || kind === 'nurture_6'
+    t = soft
+      ? { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie chcę zawracać Ci głowy — projekt ${n} zostaje zapisany i nic nie przepada. Gdybyś chciał go ruszyć, pierwszy krok jest bezpłatny: zgłoszenie projektu do kwalifikacji jednym kliknięciem przy karcie w rozmowie.\n\n[Wróć do projektu](LINK_VIEW).` }
+      : { subject: `${n}: następny krok jest bezpłatny`, body: `Cześć${im}!\n\nProjekt ${n} ma zielony werdykt — i następny krok nic nie kosztuje: przy karcie projektu w rozmowie czeka przycisk „Zgłaszam projekt — bezpłatnie". Osobiście przeglądam każde zgłoszenie i jeśli widzę potencjał, zapraszam do wspólnej rozmowy.\n\n[Zgłoś projekt tutaj](LINK_VIEW) — to jedno kliknięcie.` }
+  }
   const fallback = (kind.startsWith('abandoned_chat') || kind === 'knowhow_unlock') ? 'Wróć do rozmowy tutaj' : 'Wszystko jest w Twoim panelu'
   return { subject: t.subject, html: mdToHtml(t.body, viewFor(kind, s), reserveFor(kind, s), fallback) }
 }
@@ -375,14 +399,16 @@ function followupBrief(kind: string, s: SessionRow): { goal: string; facts: stri
   if (kind === 'verdict_last_call') {
     const plan = s.business_plan; let liczba = ''
     if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
-    return { goal: MAIL_CELE['verdict_last_call'] || '', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
+    const override = wniosekAccepted(s) ? '' : WNIOSEK_GOAL_OVERRIDE
+    return { goal: (MAIL_CELE['verdict_last_call'] || '') + override, facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
   }
   if (kind === 'reclose_1' || kind === 'reclose_2') {
     // Post-nudge domknięcie: „gęsto nie długo" + konkret; ekonomika projektu jako miękki argument.
     const dens = MAIL_CELE._dens || ''
     const plan = s.business_plan; let liczba = ''
     if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
-    return { goal: dens + (MAIL_CELE[kind] || ''), facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
+    const override = wniosekAccepted(s) ? '' : WNIOSEK_GOAL_OVERRIDE
+    return { goal: dens + (MAIL_CELE[kind] || '') + override, facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
   }
   if (kind === 'payment_rescue') {
     return { goal: MAIL_CELE['payment_rescue'] || '', facts: `narzędzie: ${n}` }
@@ -700,6 +726,9 @@ Deno.serve(async (req) => {
     // claim → send → (rollback przy błędzie). Zwraca true gdy mail poszedł.
     async function sendOnce(kind: string, s: SessionRow, prebuilt?: { subject: string; html: string }): Promise<boolean> {
       if (!s.email || mailBudget <= 0) return false
+      // Zgłoszenie czeka na decyzję Tomka → wstrzymujemy maile płatnościowe
+      // (bez claimu — po decyzji mail może pójść normalnie)
+      if (PAY_CTA_KINDS.includes(kind) && s.wniosek_status === 'pending') return false
       const { data: claim, error: claimErr } = await supabase
         .from('spar_emails')
         .upsert([{ session_id: s.id, kind, email: s.email }], { onConflict: 'session_id,kind', ignoreDuplicates: true })
@@ -1233,18 +1262,26 @@ Deno.serve(async (req) => {
       }
       // anchor B: paywall_opened_at — DEFENSYWNIE (kolumna może jeszcze nie istnieć;
       // dodaje ją równolegle inna sesja). Gdy zapytanie się wywali → pomijamy.
+      // anchor C (23.07, dwustopniowy filtr): makieta_last_at — karta zgłoszenia
+      // wystawiona w rozmowie. Zielone sesje kończą teraz często DOKŁADNIE na
+      // bezpłatnej karcie i nigdy nie otwierają paywalla (audyt: 3/6 mocnych sesji
+      // z 22-23.07) — kotwica paywall ich nie łapała, reclose nie ruszał.
       const paywallAnchor = new Map<string, number>()
+      const makietaAnchor = new Map<string, number>()
       try {
-        const { data: pw, error: pwErr } = await supabase.from('spar_sessions').select('id, paywall_opened_at').in('id', rcIds)
-        if (!pwErr) for (const r of (pw || []) as { id: string; paywall_opened_at: string | null }[]) { if (r.paywall_opened_at) paywallAnchor.set(r.id, Date.parse(r.paywall_opened_at)) }
-      } catch { /* kolumna nie istnieje — anchor tylko z nudge */ }
+        const { data: pw, error: pwErr } = await supabase.from('spar_sessions').select('id, paywall_opened_at, makieta_last_at').in('id', rcIds)
+        if (!pwErr) for (const r of (pw || []) as { id: string; paywall_opened_at: string | null; makieta_last_at: string | null }[]) {
+          if (r.paywall_opened_at) paywallAnchor.set(r.id, Date.parse(r.paywall_opened_at))
+          if (r.makieta_last_at) makietaAnchor.set(r.id, Date.parse(r.makieta_last_at))
+        }
+      } catch { /* kolumny nie istnieją — anchor tylko z nudge */ }
       for (const s of recloseSess) {
         const t = rcTouch.get(s.id)
         const done = RECLOSE_KINDS.filter((k) => t?.kinds.has(k)).length
         if (done >= RECLOSE_KINDS.length) continue // obie odsłony poszły
-        const pw = paywallAnchor.get(s.id) || 0
+        const pw = Math.max(paywallAnchor.get(s.id) || 0, makietaAnchor.get(s.id) || 0)
         const nudge = nudgeAnchor.get(s.id) || 0
-        // anchor: paywall (intencja) LUB — gdy pielęgnacja WYCZERPANA — ostatni nudge.
+        // anchor: paywall/karta (intencja) LUB — gdy pielęgnacja WYCZERPANA — ostatni nudge.
         // Wymóg „nurtureDone" dla ścieżki nudge chroni przed kolizją reclose↔nurture.
         let anchor = 0
         if (pw) anchor = pw

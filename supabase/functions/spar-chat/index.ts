@@ -2265,7 +2265,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                   // Bramka padła (null po retry) — bez tego user zostawał z obietnicą
                   // badania, które nigdy nie przychodzi (cichy ślepy zaułek). Uczciwy
                   // komunikat + prosta ścieżka ponowienia (kolejna tura znów wystawi <ocena>).
-                  const gateFail = '\n\nNie udało mi się dokończyć badania rynku — chwilowy problem po mojej stronie, nie Twojego pomysłu. Napisz „sprawdź jeszcze raz", a powtórzę badanie od razu.'
+                  const gateFail = '\n\nNie udało mi się dokończyć badania rynku — chwilowy problem po mojej stronie, nie Twojego pomysłu. Kliknij poniżej, a powtórzę badanie od razu.\n<opcje>["Sprawdź jeszcze raz"]</opcje>'
                   assistantText += gateFail
                   try {
                     controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'error' })}\n\n`))
@@ -2274,7 +2274,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                 }
               } catch (gErr) {
                 console.error('[spar-chat] bramka/ocena error:', gErr)
-                const gateFail = '\n\nNie udało mi się dokończyć badania rynku — chwilowy problem po mojej stronie, nie Twojego pomysłu. Napisz „sprawdź jeszcze raz", a powtórzę badanie od razu.'
+                const gateFail = '\n\nNie udało mi się dokończyć badania rynku — chwilowy problem po mojej stronie, nie Twojego pomysłu. Kliknij poniżej, a powtórzę badanie od razu.\n<opcje>["Sprawdź jeszcze raz"]</opcje>'
                 assistantText += gateFail
                 try {
                   controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'error' })}\n\n`))
