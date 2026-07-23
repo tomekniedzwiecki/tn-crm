@@ -10,6 +10,11 @@
 > (własne KYC, własny dashboard, merchant of record); płatności userów aplikacji = **direct charges** na koncie klienta;
 > % Tomka pobierany automatycznie jako **application fee** przy każdej transakcji (w tym każdej fakturze subskrypcji).
 > Prowizję Stripe ponosi klient (zapis w umowie). % konfigurowalny per projekt: `wfa_projects.fee_percent` (domyślnie 10).
+>
+> **⚠️ Udział = NETTO + VAT (decyzja Tomka 23.07.2026).** `fee_percent` (i env `APP_FEE_PERCENT`) to stawka **NETTO** (10) — „10%"
+> w umowie/panelu zostaje prawdą. Kwota faktycznie pobierana przez application fee to **BRUTTO**: NETTO × `VAT_RATE` (1.23).
+> Realizacja w kodzie fabryki (`_shared/stripe.ts` → `VAT_RATE`; `applicationFeeAmount()` dla płatności jednorazowych,
+> `application_fee_percent = feePct × VAT_RATE` dla subskrypcji). NIE zmieniamy danych ani env — mnożnik jest w kodzie.
 
 ## Krok po kroku (Dashboard Stripe, ~20 minut)
 
@@ -44,8 +49,8 @@
 
 - Krok `stripe_kyc` (klient): generujemy Account Link → klient sam zakłada konto Standard i przechodzi KYC
   (dokumenty, konto bankowe). Zapisujemy `acct_…` w projekcie.
-- Krok `stripe_plany` (my): produkty/ceny tworzone NA KONCIE KLIENTA (direct), application fee = `fee_percent` projektu;
-  webhook aplikacji z weryfikacją sygnatury i idempotencją.
+- Krok `stripe_plany` (my): produkty/ceny tworzone NA KONCIE KLIENTA (direct), application fee = `fee_percent`% NETTO × 1.23 VAT
+  (pobór BRUTTO, decyzja 23.07.2026 — `VAT_RATE` w `_shared/stripe.ts`); webhook aplikacji z weryfikacją sygnatury i idempotencją.
 - Twój % ze wszystkich aplikacji: Dashboard → Connect → **Application fees** (zbiorczo, bez własnej księgowości).
 
 ## Uwagi

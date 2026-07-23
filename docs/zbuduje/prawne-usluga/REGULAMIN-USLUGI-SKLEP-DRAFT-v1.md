@@ -1,8 +1,8 @@
 # Regulamin usługi budowy i rozwoju sklepu internetowego
 
-**Wersja 2.0**
-Data wejścia w życie: {{DATA_WEJSCIA}}
-Wersja poprzednia (1.0) dostępna w archiwum pod adresem: /sklep/regulamin/v1/
+**Wersja 2.1**
+Data wejścia w życie: 24 lipca 2026 r.
+Wersje poprzednie (archiwum): 1.0 — /sklep/regulamin/v1/ · 2.0 — /sklep/regulamin/v2/
 
 ---
 
@@ -17,7 +17,7 @@ Poniższe podsumowanie służy przejrzystości i ma charakter wyłącznie inform
 3. **Zwrotność opłaty rezerwacyjnej.** Do chwili zawarcia Umowy Głównej Klient może się wycofać, a Usługodawca zwraca opłatę rezerwacyjną w całości, bez potrąceń. W razie zawarcia Umowy Głównej opłata rezerwacyjna pomniejsza cenę (§8).
 4. **Umowne prawo rezygnacji po Etapie 1 (bezpiecznik).** Po zbudowaniu fundamentu biznesu (Etap 1) każda ze Stron może zrezygnować z dalszej współpracy; w takim przypadku Usługodawca zwraca Klientowi **całość** wpłaconych kwot (§10).
 5. **Budżet reklamowy.** Budżet reklamowy Klient finansuje odrębnie, ze środków własnych i ze swojego konta reklamowego. Usługodawca prowadzi kampanie w imieniu Klienta (§7 ust. 5).
-6. **Infrastruktura i Materiały.** Sklep działa na Platformie Usługodawcy, a domenę Usługodawca rejestruje na siebie. Marka, strony, grafiki, materiały wideo i teksty stanowią Materiały Usługodawcy; Klient otrzymuje do nich licencję na czas współpracy. Klient może je wykupić na własność na podstawie odrębnej umowy — cena wykupu wynosi 24-krotność średniej miesięcznej prowizji (nie mniej niż 1900 zł netto, powiększane o VAT) i obejmuje transfer domeny (§13).
+6. **Infrastruktura i Materiały.** Sklep działa na Platformie Usługodawcy, a domenę Usługodawca rejestruje na siebie. Marka, strony, grafiki, materiały wideo i teksty stanowią Materiały Usługodawcy; Klient otrzymuje do nich licencję na czas współpracy. Klient może je wykupić na własność na podstawie odrębnej umowy — cena wykupu wynosi 24-krotność średniej miesięcznej prowizji (nie mniej niż dwukrotność ceny usługi netto wskazanej w ofercie, na podstawie której zawarto Umowę; powiększane o VAT) i obejmuje transfer domeny (§13).
 7. **Prowizja 5%.** Od uruchomienia sprzedaży Usługodawcy przysługuje prowizja 5% od Przychodu Sklepu (kwota netto powiększana o VAT), stanowiąca wynagrodzenie za utrzymanie Sklepu, licencję, wsparcie i doradztwo, należne przez czas trwania współpracy (§14).
 8. **Rola sprzedawcy.** Sprzedawcą wobec kupujących jest Klient — jego dane figurują w regulaminie Sklepu, a on odpowiada za podatki i reklamacje. Usługodawca wspiera Klienta w tym zakresie (§12).
 9. **Zakończenie współpracy.** Po zbudowaniu Sklepu Klient może wypowiedzieć fazę ciągłą w każdym czasie, z miesięcznym wyprzedzeniem, bez żadnych opłat. Zakończenie współpracy oznacza zakończenie działania Sklepu na Platformie i domenie Usługodawcy; Usługodawca wydaje wówczas Klientowi jego dane (kupujących i zamówienia). Klient może też wykupić markę i Materiały na własność (§13, §16).
@@ -207,7 +207,7 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 4. Licencja jest niewyłączna, obowiązuje na czas trwania współpracy i wygasa z chwilą jej zakończenia (§16).
 5. Usługodawca zobowiązuje się do **niewykonywania autorskich praw osobistych** do Materiałów w zakresie potrzebnym do normalnego korzystania z nich przez Klienta w ramach Sklepu.
 6. **Przeniesienie autorskich praw majątkowych** do Materiałów albo udzielenie **licencji wyłącznej** możliwe jest wyłącznie na podstawie **odrębnej umowy zawartej w formie pisemnej.** Wypowiedzenie umowy nie jest uzależnione od wykupu i nie wiąże się z żadną opłatą za zakończenie współpracy — **wykup jest odrębnym, dobrowolnym nabyciem praw i aktywów Usługodawcy**, dostępnym w każdym czasie na następujących, z góry określonych zasadach:
-   a) **cena wykupu** wynosi **24-krotność średniej miesięcznej prowizji (§14) z ostatnich 12 pełnych miesięcy sprzedaży** — a jeżeli sprzedaż trwała krócej, z całego okresu pełnych miesięcy sprzedaży — **nie mniej jednak niż 1900 zł netto**; wszystkie kwoty wskazane w niniejszej literze są kwotami **netto** i są powiększane o podatek VAT według stawki obowiązującej w dniu wystawienia faktury; miesiące bez sprzedaży uwzględnia się ze średnią równą zero; jeżeli nie upłynął żaden pełny miesiąc sprzedaży, cena wykupu wynosi 1900 zł netto; za zgodą Stron cena może zostać rozłożona na raty;
+   a) **cena wykupu** wynosi **24-krotność średniej miesięcznej prowizji (§14) z ostatnich 12 pełnych miesięcy sprzedaży** — a jeżeli sprzedaż trwała krócej, z całego okresu pełnych miesięcy sprzedaży — **nie mniej jednak niż dwukrotność ceny usługi (netto) wskazanej w ofercie, na podstawie której zawarto Umowę Główną**; wszystkie kwoty wskazane w niniejszej literze są kwotami **netto** i są powiększane o podatek VAT według stawki obowiązującej w dniu wystawienia faktury; miesiące bez sprzedaży uwzględnia się ze średnią równą zero; jeżeli nie upłynął żaden pełny miesiąc sprzedaży, cena wykupu jest równa wskazanemu wyżej minimum, tj. dwukrotności ceny usługi (netto) wskazanej w ofercie, na podstawie której zawarto Umowę Główną; za zgodą Stron cena może zostać rozłożona na raty;
    b) wykup obejmuje: przeniesienie autorskich praw majątkowych do Materiałów na polach eksploatacji wymienionych w ust. 3, **transfer domeny** na Klienta (o ile pozwalają na to zasady rejestratora; w razie obiektywnej niemożliwości transferu — dalsze utrzymywanie domeny na rzecz Klienta albo inne uzgodnione rozwiązanie zastępcze) oraz wydanie konfiguracji Sklepu;
    c) z chwilą wykupu **prowizja przestaje być naliczana**;
    d) po wykupie Klient może kontynuować korzystanie z Platformy na jej standardowych zasadach komercyjnych, na podstawie odrębnej umowy z Platformą;
@@ -362,7 +362,7 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
    e) zmianę danych Usługodawcy.
 2. O zmianie Regulaminu Usługodawca powiadamia na **Trwałym nośniku** z wyprzedzeniem co najmniej **1 miesiąca** przed jej wejściem w życie. Do dnia wejścia zmian w życie Klient może **wypowiedzieć umowę bez żadnych opłat.**
 3. **Zmiany nie działają wstecz** i nie mogą zmieniać ceny ani wysokości prowizji ustalonych w zawartej już Umowie Głównej. W zakresie świadczeń ciągłych zmieniony Regulamin wiąże Klienta od dnia wejścia zmian w życie, o ile przed tym dniem Klient nie wypowiedział umowy zgodnie z ust. 2.
-4. **Umowy zawarte pod rządami wcześniejszej wersji Regulaminu wykonuje się na warunkach wersji obowiązującej w chwili ich zawarcia.** Wersja 1.0 Regulaminu dostępna jest w archiwum pod adresem /sklep/regulamin/v1/. Zmiana Regulaminu wobec umów pozostających w mocy następuje wyłącznie w trybie określonym w niniejszym paragrafie (ważne przyczyny, uprzednie powiadomienie i prawo wypowiedzenia bez opłat).
+4. **Umowy zawarte pod rządami danej wersji Regulaminu wykonuje się na warunkach tej wersji — tj. wersji obowiązującej w chwili ich zawarcia.** Wcześniejsze wersje Regulaminu dostępne są w archiwum pod adresami: wersja 1.0 — /sklep/regulamin/v1/, wersja 2.0 — /sklep/regulamin/v2/. Zmiana Regulaminu wobec umów pozostających w mocy następuje wyłącznie w trybie określonym w niniejszym paragrafie (ważne przyczyny, uprzednie powiadomienie i prawo wypowiedzenia bez opłat).
 
 ---
 
@@ -373,7 +373,7 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 3. Usługodawca może przenieść prawa i obowiązki z umowy na następcę prawnego (w tym na spółkę powstałą z przekształcenia działalności), powiadamiając Klienta na Trwałym nośniku; Klient, który nie akceptuje tej zmiany, może wypowiedzieć umowę bez okresu wypowiedzenia i bez żadnych opłat.
 4. Jeżeli którekolwiek postanowienie Regulaminu okaże się nieważne lub bezskuteczne, pozostałe postanowienia zachowują moc.
 5. Załącznikiem do Regulaminu jest **Załącznik nr 1 — wzór formularza odstąpienia od umowy.**
-6. Regulamin w wersji 2.0 obowiązuje od dnia wejścia w życie wskazanego na wstępie ({{DATA_WEJSCIA}}).
+6. Regulamin w wersji 2.1 obowiązuje od dnia wejścia w życie wskazanego na wstępie (24 lipca 2026 r.).
 
 ---
 
@@ -408,6 +408,16 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 Poniżej lista miejsc, w których przyjąłem założenie wymagające decyzji Tomka. Każdy punkt to świadomy wybór wypełniający lukę w faktach — proszę zweryfikować i potwierdzić lub zmienić.
 
 > ⚠️ **Wersja renderowana na stronę (/sklep/regulamin/) NIE zawiera sekcji „NOTATKI ROBOCZE" — cała ta sekcja jest usuwana przed publikacją.**
+
+---
+
+### Rewizja 2.1 (23.07.2026, wejście w życie 24.07.2026)
+
+Minimum wykupu 1900 zł netto → **dwukrotność ceny usługi (netto) wskazanej w ofercie, na podstawie której zawarto Umowę** (decyzja Tomka: 1900 zł zdecydowanie za mało; **formuła zamiast sztywnej kwoty** — minimum skaluje się automatycznie ze zmianą cennika; flaga E [min. 1900 = NETTO, DO POTWIERDZENIA] zrealizowana, a 🚩 FLAGA 1900 zł z sekcji B rozwiązana). Przy obecnej cenie standardowej **4900 zł brutto (≈ 3983,74 zł netto)** minimum wynosi **≈ 7967 zł netto** (+ VAT). Formuła spójna z linią dokumentów aplikacji (wykup = wielokrotność strumienia / cena usługi).
+
+**Wykup pozostaje UPRAWNIENIEM Klienta** — dobrowolnym nabyciem praw i aktywów Usługodawcy (§13 ust. 6), nie obowiązkiem; wypowiedzenie umowy nadal nie jest uzależnione od wykupu ani z nim nie wiąże się żadna opłata za zakończenie współpracy.
+
+Zmiany operatywne: Podsumowanie pkt 6, §13 ust. 6 lit. a (oba wystąpienia „1900" → formuła). Wersjonowanie: nagłówek → **2.1**, data wejścia **24 lipca 2026 r.** (placeholder `{{DATA_WEJSCIA}}` rozwiązany); §23 ust. 4 rozszerzony (umowy wykonywane na warunkach swojej wersji; archiwum v1.0 = /sklep/regulamin/v1/, v2.0 = /sklep/regulamin/v2/); §24 ust. 6 → 2.1. **v2.0 weszła 23.07 (17:05) i jeden Klient zawarł już pod nią umowę → NIE zmieniana in-place; idzie do archiwum /sklep/regulamin/v2/.** Historyczne wpisy Rewizji 2.0 poniżej zachowane bez zmian (opisują stan v2.0, w tym ówczesne min. 1900 zł).
 
 ---
 

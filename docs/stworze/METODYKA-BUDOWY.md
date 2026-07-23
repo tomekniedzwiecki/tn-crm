@@ -260,6 +260,10 @@ Tomek przegląda DOWODY, nie kod.
   na koncie operatora (%, czas trwania raz/X mies./na zawsze, limit użyć — 1 = kod imienny, ważność);
   sekcja „Rabaty" w panelu operatora; checkout z `allow_promotion_codes`. Zero własnej księgowości —
   Stripe liczy, a udział platformy nalicza się od kwoty PO rabacie automatycznie.
+- **Udział platformy = NETTO + VAT, pobór BRUTTO (decyzja Tomka 23.07.2026).** `APP_FEE_PERCENT` / `wfa_projects.fee_percent`
+  to stawka NETTO (10) — „10%" w umowie i panelu zostaje prawdą; NIE zmieniamy danych ani env. Kwotę faktycznie pobieraną
+  application fee liczymy jako NETTO × `VAT_RATE` (stała 1.23 w `_shared/stripe.ts`): `applicationFeeAmount()` dla płatności
+  jednorazowych (`Math.round(amount*pct*VAT_RATE/100)`), a dla subskrypcji `application_fee_percent = feePct × VAT_RATE`.
 - Trial: domyślnie **bez karty na wejściu** (nieznana marka = karta ścina rejestracje ~65%); prośba o kartę
   w momencie aha (contextual capture). Model per apka potwierdza krok `pricing`.
 - AI w produkcie tylko jako silnik jednego workflow niszy (mierzalna oszczędność w 1. sesji użytkownika), nigdy bajer.
