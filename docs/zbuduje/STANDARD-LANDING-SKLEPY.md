@@ -1588,18 +1588,16 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 9. Sanity rendera (F7.2) czyste: zero błędów technicznych renderu.
 10. Wersje + grafiki zarchiwizowane na pulpicie; koszty w ledgerze **ORAZ w `wf2_costs`
     (od 18.07 OBOWIĄZKOWO — zakładka „Koszty" w /tn-sklepy; incydent Drapek: ledger był,
-    panel pusty)**. Po KAŻDEJ fazie sesja loguje przez `panel-sync.py cost_add` (project_id wf2;
-    produkt z portfela → `product_id` + `step` lp_*; landing spoza portfela wf2 → projekt
-    rozwojowy `baacc66f-3dd0-462a-9799-de9c7aaea639`) DWA rodzaje pozycji:
-    - **(a) twarde API** — jak dotąd: `kind` wg źródła (`openai-image`/`gpt-image`/`fal`/`moonshot`/
-      `gemini`/`inne`), `amount` = realny wydatek USD;
-    - **(b) `kind='claude'`** — praca agenta fazy: **ZMIERZONE** tokeny subagenta (z harness) × stawka
-      **MIESZANA** modelu przy jawnym założeniu proporcji input/output **80/20**:
-      Sonnet 5 = **$5,40/MTok** (0,8×$3+0,2×$15) · Opus 4.8 = **$9,00/MTok** (0,8×$5+0,2×$25) ·
-      Haiku 4.5 = **$1,80/MTok** (0,8×$1+0,2×$5). `note` MUSI zawierać **model + liczbę tokenów +
-      „blend 80/20"**, żeby szacunek był audytowalny (np. „Agent Opus F1 plan ~221k tok (blend 80/20)").
-    **Główna pętla orkiestratora NIE wchodzi do `wf2_costs`** — pozostaje szacunkiem w
-    `WORKFLOW-V2-TOKENY.md` (brak zmierzonego licznika billingowego głównej pętli).
+    panel pusty)**. Po fazie, która poniosła twardy wydatek API, sesja loguje przez
+    `panel-sync.py cost_add` (project_id wf2; produkt z portfela → `product_id` + `step` lp_*;
+    landing spoza portfela wf2 → projekt rozwojowy `baacc66f-3dd0-462a-9799-de9c7aaea639`):
+    - **`wf2_costs` = WYŁĄCZNIE twarde koszty API** (realny wydatek z kieszeni: `openai-image`/
+      `gpt-image`/`fal`/`moonshot`/`gemini`/`inne`), `amount` = realny wydatek USD.
+    - **Praca agentów Claude = abonament — NIE jest kosztem** i NIE wchodzi do `wf2_costs` ani do
+      żadnego rollupu kosztów (dyrektywa Tomka 23.07: „korzystamy z abonamentu, tego nie liczę").
+      Tokeny Claude wolno (informacyjnie) notować w `WORKFLOW-V2-TOKENY.md` — to licznik na życzenie,
+      NIE koszt księgowy.
+    - **Fazy bez kosztów API nie logują wpisów** — zero markerów $0 (żaden wiersz „faza bez generacji").
     Etap (`stage`) nadaje się AUTOMATYCZNIE: `cost_add` wyprowadza go z `wf2_step_defs` po kluczu
     kroku (lp_* → etap 2 „Landing"); jawny `stage=` podawaj tylko dla wpisów bez kroku.
 11. **Karta Prawdy (Z7) — COPY-GATE `gate-check.py` blok `copy`:** grep `shop.name`/URL sklepu
@@ -1782,7 +1780,18 @@ Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/rep
 
 ## CHANGELOG DECYZJI (F8)
 
-- **2026-07-23 (KOSZT PRACY AGENTA DO PANELU — `kind='claude'`; dyrektywa Tomka „nie rejestrujesz
+- **2026-07-23 (KOREKTA polityki kosztów — praca agentów Claude NIE jest kosztem; dyrektywa Tomka
+  „korzystamy z abonamentu, tego nie liczę"):** wycofuje TREŚCIOWO wpis niżej (`kind='claude'`).
+  **`wf2_costs` rejestruje WYŁĄCZNIE twarde koszty API** — realny wydatek z kieszeni (openai-image/
+  fal/moonshot…). Praca agentów Claude idzie z abonamentu i NIE wchodzi do `wf2_costs` ani żadnego
+  rollupu kosztów. Fazy bez kosztów API nie logują wpisów (zero markerów $0). Tokeny Claude zostają
+  licznikiem informacyjnym w `WORKFLOW-V2-TOKENY.md` (NIE koszt księgowy). **Wykonano na projekcie
+  ssawek (`1a097f94`):** usunięto z `wf2_costs` 5 wpisów `kind='claude'` ($0,93+$1,93+$1,99+$0,85+
+  $36,00) + marker-śmieć „F0 … bez kosztów generacji" ($0); zostały 2 twarde API (favicony $0,30 +
+  makiety $1,86 = $2,16). ZOSTAJE bez zmian (poprawne, niezależne od polityki): fix `cost_add` stage
+  auto-derive z `wf2_step_defs` (panel-sync.py) oraz wpisy w `WORKFLOW-V2-TOKENY.md`.
+
+- **[SKORYGOWANY 2026-07-23 — patrz wpis korekty wyżej]** **2026-07-23 (KOSZT PRACY AGENTA DO PANELU — `kind='claude'`; dyrektywa Tomka „nie rejestrujesz
   kosztów tutaj poprawnie"):** panel „Koszty" pokazywał tylko twarde API (np. $0,30 po dwóch ciężkich
   fazach), bo praca agentów Claude (tokeny) NIE była logowana. **ZMIANY:** (1) pkt 10 checklisty —
   po KAŻDEJ fazie oprócz twardego API sesja loguje `kind='claude'`: ZMIERZONE tokeny subagenta ×

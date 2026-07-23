@@ -109,6 +109,8 @@ TESTY §9 + noty decyzyjne → test:wf2 19/19.
 
 ### 2026-07-23 — FABRYKA ssawek/Popiołek (tor Allegro→Marka) F0–F2.5
 
+> **(licznik informacyjny — Claude w abonamencie, NIE księgowany w `wf2_costs`; dyrektywa 23.07.)**
+
 Zakres: ekstrakcja konkretnej oferty Allegro (odkurzacz Lehmann Haddo, slug `ssawek`, DEMO) →
 F0 dane/kuracja zdjęć/KARTA PRAWDY → F1+F1.7 plan i przewodnik landingu → F2.5 branding
 mini-marki „Popiołek" (6 faviconów gpt-image-2 medium). Panel /tn-sklepy dostał koszty per
