@@ -488,6 +488,24 @@ egzekwowany na swojej fazie):
    i rozmrożone na tym samym blacie tej samej sceny), NIGDY kolaż/duet dwóch osobnych zdjęć
    obok siebie. Powód podwójny: kolaż rozbija kompozycję (feedback) i zabija i2v — Kling
    animuje JEDNĄ scenę, dwa niezależne kadry = dwa pół-martwe światy w jednej pętli.
+   **⛔ OSADZENIE = SCENA W TLE STRONY, NIE POCZTÓWKA (Tomek 23.07, PIĄTA eskalacja hero,
+   Rozmrozik v3: „zobacz jak teraz to wygląda… totalnie nie pasuje. Powinieneś to
+   zdjęcie/video zrobić W TLE bardziej, aby fajnie pasowało z tą stroną — skupiłeś się
+   tylko na pokazaniu zdjęć razem. Musisz myśleć o takich rzeczach"):** scalenie kadrów
+   to połowa roboty — scena hero musi być INTEGRALNĄ częścią strony, nie fotografią
+   wklejoną w białą ramkę-kartę obok kolumny tekstu („ożywiona pocztówka" = ten sam błąd
+   co „ożywiona miniaturka" pkt 5, w eleganckim przebraniu). KANON = mata
+   (trafionek.pl/mata): `.hero-scene` full-bleed `position:absolute; inset:0` POD treścią
+   (wideo `object-fit:cover` na całej sekcji, `min-height:100svh`), czytelność treści daje
+   GRADIENT-SCRIM w kolorze papieru strony (mata: 101deg, paper .86→.14→0), treść leży NA
+   scenie. Wariant dopuszczalny przy jaśniejszej estetyce: scena bez ramki zlewająca się
+   z tłem sekcji (tło sceny WYGENEROWANE pod token `--paper`, krawędzie roztopione maską,
+   zero border/radius/shadow oddzielających). KONSEKWENCJA DLA GENERACJI: kadr projektuje
+   się POD osadzenie — negative space na treść/scrim po stronie copy, tło sceny
+   harmonizowane z tokenami strony, przy full-bleed safe-zone na crop obu viewportów
+   (mobile = osobny kadr portrait tej samej sceny albo świadomy crop z priorytetem
+   produktu i nośnika ruchu). Krytyk F2: „czy medium jest OSADZONE (tło/blend), czy
+   WKLEJONE (karta/ramka)?" — wklejone = REGEN makiety.
 3. **F3 sc-hero** generowana jako ŹRÓDŁO i2v, nie niezależna ilustracja: to samo zdjęcie
    jest posterem sceny i source'em generacji pętli (poster=klatka 1 ⇒ zero skoku przy
    fade-in). Test przydatności kadru przed zamknięciem F3: „czy Kling ma tu co poruszyć
