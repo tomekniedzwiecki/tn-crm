@@ -75,6 +75,30 @@ def _load_wf2_secret():
 WF2_SECRET = _load_wf2_secret()
 
 
+def _load_watermark_salt():
+    """Dedykowana sól watermarku (opcjonalna). Gdy brak → _harden użyje ps.KEY (service
+    key) jako sekretu HMAC. Osobna sól odsprzęga weryfikację znaku od rotacji service-key."""
+    try:
+        with open(ps.ENV_PATH, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("WF2_WATERMARK_SALT="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except FileNotFoundError:
+        pass
+    return os.environ.get("WF2_WATERMARK_SALT")
+
+
+def build_id(product_id):
+    """WATERMARK niewywnioskowalny z HTML: HMAC-SHA256(sekret, 'wf2:'+product_id)[:16].
+    Sekret = WF2_WATERMARK_SALT (jeśli jest) lub SUPABASE_SERVICE_KEY (ps.KEY) — kopista
+    go NIE MA, więc nie odtworzy znaku; MY odtwarzamy zawsze (dowód DMCA: recompute →
+    match). Zastępuje dawne md5('wf2:'+id) [product_id JAWNY → red team odtworzył w minutę]."""
+    import hmac, hashlib
+    secret = (_load_watermark_salt() or getattr(ps, "KEY", None) or "wf2-fallback").encode()
+    return hmac.new(secret, ("wf2:" + str(product_id)).encode(), hashlib.sha256).hexdigest()[:16]
+
+
 def log(msg):
     print(f"[platform-sync] {msg}", flush=True)
 
@@ -245,14 +269,15 @@ def _substitute(html, wf2_product_id, canonical, pixel_id, checkout_url, strip_n
 
 
 def _harden(html, product_id, brand):
-    """Ochrona przed kopiowaniem (decyzja Tomka 22.07): ukryć kodu się NIE DA (przeglądarka
-    musi go dostać), więc: (1) strip komentarzy fabryki + collapse whitespace poza
-    script/pre/textarea (know-how i czytelność znikają), (2) deterministyczny fingerprint
-    md5('wf2:'+product_id)[:12] w <meta name=build> + data-b na <body> (dowód kopii —
-    odtwarzalny bez bazy), (3) nota © na szczycie. Trzecia warstwa = origin-gate w
-    wf2-landing-api (kopia na obcej domenie ma martwą cenę/checkout)."""
-    import hashlib
-    fp = hashlib.md5(("wf2:" + str(product_id)).encode()).hexdigest()[:12]
+    """Ochrona przed kopiowaniem: ukryć kodu się NIE DA (przeglądarka musi go dostać), więc
+    (1) strip komentarzy fabryki + collapse whitespace poza script/pre/textarea (know-how
+    i czytelność znikają), (2) WATERMARK niewywnioskowalny — build_id() = HMAC(sekret,
+    'wf2:'+product_id)[:16], rozsiany w 4 MIEJSCACH: <meta name=build>, <body data-b>,
+    komentarz ©, oraz UKRYTY span indeksowalny przez Google (skaner SERP celuje w niego).
+    Usunięcie jednego locusa nie kasuje tropu; sekret znany tylko nam → dowód DMCA.
+    (3) nota © na szczycie. Warstwa runtime = origin-gate w wf2-landing-api (kopia na obcej
+    domenie ma martwą cenę/checkout; furtka *.vercel.app zamknięta 23.07)."""
+    fp = build_id(product_id)
     # wytnij bloki nietykalne
     holes = []
     def _hole(m):
@@ -267,10 +292,18 @@ def _harden(html, product_id, brand):
         guarded = guarded.replace("\x00H%d\x00" % i, h)
     guarded = guarded.replace("<body", '<body data-b="%s"' % fp, 1)
     guarded = re.sub(r"(<head[^>]*>)", r'\1<meta name="build" content="%s">' % fp, guarded, count=1)
+    # ukryty, indeksowalny locus (a11y: aria-hidden; poza kadrem; prefiks 'wf2·' = celny
+    # zapytanie skanera SERP i jednoznaczny trop w notice DMCA)
+    # wzorzec sr-only (clip) — gwarantuje ZERO h-scroll (twarde gate'y!) w odróżnieniu od left:-9999px
+    mark = ('<span aria-hidden="true" data-mk style="position:absolute;width:1px;height:1px;'
+            'padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;'
+            'border:0">wf2·%s</span>' % fp)
+    if re.search(r"</body>", guarded, flags=re.I):
+        guarded = re.sub(r"(</body>)", lambda m: mark + m.group(1), guarded, count=1, flags=re.I)
     nota = ("<!-- (c) %s. Wszystkie prawa zastrzezone. Kod, uklad i tresci tej strony sa utworem; "
             "kopiowanie = naruszenie praw autorskich. Build %s identyfikuje kazda kopie. -->"
             % (brand or "sklep", fp))
-    guarded = re.sub(r"(<!doctype[^>]*>\s*)", r"\1" + nota.replace("\\", "\\\\") + "\n", guarded, count=1, flags=re.I)
+    guarded = re.sub(r"(<!doctype[^>]*>\s*)", lambda m: m.group(1) + nota + "\n", guarded, count=1, flags=re.I)
     return guarded
 
 
