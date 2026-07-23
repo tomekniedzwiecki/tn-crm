@@ -1508,6 +1508,17 @@ zdublowała się z kartą wrappera, sekcyjny padding modułu zrobił martwe bia�
    wizualnej jak każda inna — dopasowanie F7.1 i finisz MUSZĄ mieć w dowodach screenshot
    `#zamow` desktop 1280 + mobile 390 z werdyktem (łamane CTA / karta-w-karcie / martwe
    pasy / ściśnięte pola = FAIL). CSS skórki wolno naprawiać; JS/submit — nigdy.
+4. **KANON MODUŁU = `checkout-inline@3`** (23.07, decyzja Tomka: paczkomaty z mapką):
+   dostawa punktowa wykrywana runtime (`requiresPickupPoint` ze storefrontu), konfiguracja
+   mapy WYŁĄCZNIE z API platformy (`/storefront/delivery-method/broker-config` →
+   apaczka.appId → widżet BliskaPaczka / inpost.geoWidgetToken → InPost Geowidget; NIGDY
+   hardcode), wybrany punkt → `checkout-details` pola `pickupPoint*`, adres opcjonalny
+   przy paczkomacie, gate „Wybierz punkt odbioru", skrypty widżetu lazy (dopiero po kliku).
+   `@2` zamrożony (nie rozwijać). Wpięcie do landingu: `scripts/mockup-tools/
+   inject-checkout3.py <index.html>` (deterministyczna podmiana 3 bloków; skórka landingu
+   i atrybuty sekcji nietykane). Nowa metoda dostawy na sklepie: `wf2-platform
+   add_delivery` z PŁASKIM `priceGroupId`+`price` (nie tablica priceGroups!); COD na
+   brokerze Apaczka wymaga wcześniej NRB (`set_cod_account`).
 
 **PŁATNOŚCI**: pełen wachlarz (BLIK/karta/COD) — COD jako główny risk-reversal w narracji,
 nie jedyna forma. Pokazujemy TYLKO metody realnie dostępne w checkoucie platformy.
