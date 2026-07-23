@@ -253,6 +253,7 @@
         .off { display:none !important; }
         #side-nav { position:fixed; top:0; left:0; bottom:0; width:240px; z-index:45; background:#080808;
             border-right:1px solid #1a1a1c; display:none; flex-direction:column; }
+        body.preview-on #side-nav { top:40px; } /* pasek „Podgląd administratora" nie zasłania nagłówka sidebara */
         body.nav-on #side-nav { display:flex; }
         @media (max-width:1024px){ body.nav-on #side-nav { display:none; } }
         .sn-head { padding:18px 18px 15px; border-bottom:1px solid #161616; display:flex; gap:12px; align-items:center; }
@@ -516,12 +517,9 @@
             </div>
         </section>
 
-        <!-- Wasze ceny i zyski -->
-        <section id="sec-ceny" class="hidden">
-            <div class="shead"><h2>Wasze ceny i zyski</h2><span class="scount" id="ceny-count"></span></div>
-            <p class="sdesc">Ile kosztuje produkt, ile zostaje Wam na czysto z każdej sprzedaży i jak zmieniała się cena. Podaj swoją cenę zakupu — policzymy Wasz zysk co do grosza.</p>
-            <div id="ceny-list" style="display:flex;flex-direction:column;gap:16px"></div>
-        </section>
+        <!-- Wasze ceny i zyski — SCHOWANE do odwołania (CENY_SECTION_ENABLED); przy włączonej
+             fladze renderCeny buduje całą zawartość dynamicznie (zero śladu w DOM, gdy wyłączone) -->
+        <section id="sec-ceny" class="hidden"></section>
 
         <div class="foot">
             <p id="p-deadline"></p>
@@ -869,7 +867,7 @@
     // wejście do treści portalu — wspólny ogon: po logowaniu ALBO po zgodzie (bez re-logowania)
     function enterPortal() {
         show('content');
-        if (previewMode) $('preview-banner').classList.remove('hidden');
+        if (previewMode) { $('preview-banner').classList.remove('hidden'); document.body.classList.add('preview-on'); }
         // deep-link #…v=zadania|strony|postep|sklep → właściwy widok od razu
         syncView();
         if (tasksHashOn()) { tasksScreenTracked = true; track('open_step', 'Twoje zadania'); }
@@ -1358,7 +1356,10 @@
     function renderCeny() {
         const sec = $('sec-ceny');
         const list = CENY_SECTION_ENABLED ? cenyProducts() : [];
-        if (!list.length) { sec.classList.add('hidden'); $('ceny-list').innerHTML = ''; return; }
+        if (!list.length) { sec.classList.add('hidden'); sec.innerHTML = ''; return; }
+        sec.innerHTML = `<div class="shead"><h2>Wasze ceny i zyski</h2><span class="scount" id="ceny-count"></span></div>
+            <p class="sdesc">Ile kosztuje produkt, ile zostaje Wam na czysto z każdej sprzedaży i jak zmieniała się cena. Podaj swoją cenę zakupu — policzymy Wasz zysk co do grosza.</p>
+            <div id="ceny-list" style="display:flex;flex-direction:column;gap:16px"></div>`;
         sec.classList.remove('hidden');
         $('ceny-count').textContent = list.length + ' ' + plProd(list.length);
         const dis = previewMode ? 'disabled' : '';
