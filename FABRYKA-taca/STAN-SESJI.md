@@ -69,3 +69,16 @@ order_detail/set_cod_account/raw (x-wf2-secret). Sklepy: Ulepszek 019f8b91-5c90�
 Zaradek (Hoffa, projekt c2af0524) — landingi ugniatek/odsaczek/skrolik. Projekt 448f2395 ·
 Rozmrozik 60215ce4/59e53d40(TT) · Brzuszek 6dd560cf/a7b70e6a(TT) · Rozgrzewek 4404200a/
 5e1d40a8(TT). Saldo fal $67.34. Suma kosztów projektu ~$27.14 + 30,32 PLN.
+
+## 🏁 FINAŁ SESJI (aktualizacja 7 — 23.07 wieczór)
+- **WSZYSTKIE 9 FEEDBACKÓW TOMKA WDROŻONE I ZWERYFIKOWANE** (#8 mapka: checkout-inline@3
+  LIVE ×6 z mapką z API platformy — visual 3×PASS po hotfixie note; #9 checkout Brzuszka:
+  fix + STANDARD OSADZENIE MODUŁU KASY + LL-063, visual 6/6 PASS).
+- checkout-inline@3 = KANON (STANDARD §4 pkt 4; inject-checkout3.py — UWAGA: wersja
+  naprawiona po incydencie „literal w JS maskował brak markupu note”). Metody
+  „InPost Paczkomat” (Apaczka, 9,99, COD off do NRB) na sklepach Ulepszek+Zaradek;
+  kolejność: kurier 0, paczkomat 1. broker-config kształt potwierdzony sondą.
+- TABELA BLOKAD finalna → wf2_notes (10 pozycji: AKCEPT MAKIET ×3, ads, zgłoszenie
+  Adrianowi ×2 nieblokujące, NRB→COD/pl_test, prawne/dostawy, duplikat Trevio,
+  gałąź Geowidget nietestowana).
+- LL-055..064 komplet; commity wypchnięte do 621133c0. Koszty ~7.14 + 30,32 PLN.
