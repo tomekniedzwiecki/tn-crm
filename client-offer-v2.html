@@ -3215,28 +3215,23 @@
         // ===== Detect deposit-paid state =====
         // Returns true if the lead has a paid order with the deposit amount.
         // Override via ?full URL param for preview/testing.
+        // orders są niewidoczne dla anon (RLS) — bezpośredni SELECT zwracał zawsze [],
+        // więc sprawdzenie idzie przez wąski RPC gated tokenem oferty (tylko boolean).
         async function detectDepositPaid() {
             const params = new URLSearchParams(window.location.search);
             if (params.has('full')) return true;
 
-            if (!lead?.id) return false;
+            if (!__OFFER_TOKEN) return false;
 
             try {
                 const { data, error } = await supabaseClient
-                    .from('orders')
-                    .select('id, status, amount, description')
-                    .eq('lead_id', lead.id)
-                    .eq('status', 'paid')
-                    .in('amount', [DEPOSIT_AMOUNT, 500])
-                    .or('description.ilike.Zadatek*,description.ilike.Rezerwacja*')
-                    .order('paid_at', { ascending: false })
-                    .limit(1);
+                    .rpc('offer_deposit_paid', { p_offer_token: __OFFER_TOKEN });
 
                 if (error) {
                     console.warn('[deposit] detection error:', error);
                     return false;
                 }
-                return Array.isArray(data) && data.length > 0;
+                return data === true;
             } catch (err) {
                 console.warn('[deposit] detection threw:', err);
                 return false;
