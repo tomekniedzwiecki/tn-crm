@@ -21,9 +21,14 @@ lidera**: mniejszą, ale ważną funkcję/proces, którego lider nie robi wcale 
 (specyficzna dokumentacja, zgody, cykliczne terminy, artefakt branżowy, rozliczenia niszowe),
 i wokół której da się zbudować całe narzędzie — dokładnie jak `/sparing`. Status `'odrzucony'`
 zostaje w słowniku, ale **wyłącznie jako świadoma decyzja PO raporcie branżowym** (werdykt NO_GO +
-decyzja człowieka), z możliwością re-badania nowym promptem. Twarde NO_GO tylko gdy: rynek < ~2000
-firm, brak osiągalnej persony operatora, po realnym zbadaniu konkurencji naprawdę nie da się
-wskazać sensownego wedge'a, albo rdzeń rozwiązuje system rządowy bez miejsca na warstwę operacyjną.
+decyzja człowieka), z możliwością re-badania nowym promptem. **FILOZOFIA MAŁEGO RYNKU (decyzja
+Tomka 23.07): ŻADNEGO sztywnego progu liczby firm.** Nisza na 200-500 firm często jest
+nieobsłużona DOKŁADNIE dlatego, że była za mała dla klasycznego software house'u — a nas AI czyni
+rentownymi przy małej skali; mały rynek z przymusem bólu i bez konkurencji = realne pokrycie
+30-50%. Oceniamy **ekonomię pokrycia** (liczba firm × realne pokrycie × cena), nie liczbę firm.
+Twarde NO_GO tylko gdy: brak osiągalnej persony operatora, po realnym zbadaniu konkurencji
+naprawdę nie da się wskazać sensownego wedge'a, rdzeń rozwiązuje system rządowy bez miejsca na
+warstwę operacyjną, albo ekonomia pokrycia nie spina się nawet optymistycznie (~30+ płacących).
 **Od v3 samo istnienie lidera NIGDY nie jest powodem odrzucenia bez raportu** (reguła „dedykowany
 lider = twarde NO_GO" z v2 została usunięta także z sekcji „Model działania" niżej i z promptu).
 Migracje: `20260723b_wfp_v3_kolejnosc.sql` (cofa seedowe 'odrzucony' → 'katalogowy', dodaje `wave`,
@@ -441,10 +446,13 @@ Raport branżowy AI (akcja `vertical_research`) = BRAMKA przed prospectingiem: 8
 (rynek PL / decydent / ból zweryfikowany / konkurencja z NAZWAMI / regulacje / wedge+ekonomia /
 persona+gdzie szukać / werdykt GO-NO_GO + score). Scoring 6 osi (0-2 pkt): fragmentacja×2,
 saturacja×3, siła bólu×2, willingness-to-pay×2, persona operatora×2, wedge clarity×1.
-Twarde NO_GO (v3): rynek <2000 firm / brak osiągalnej persony / po realnym zbadaniu konkurencji
-NIE DA SIĘ wskazać wedge'a / rdzeń pokryty systemem rządowym (CEPiK/eWniosekPlus/EKOB/CEEB) bez
-miejsca na warstwę OPS. **Sam dedykowany lider NIGDY nie jest powodem NO_GO** — najpierw szukamy
-wedge'a obok lidera (FILOZOFIA v3 wyżej); w razie wątpliwości „go" z niższym score, decyduje człowiek.
+Twarde NO_GO (v3): brak osiągalnej persony / po realnym zbadaniu konkurencji NIE DA SIĘ wskazać
+wedge'a / rdzeń pokryty systemem rządowym (CEPiK/eWniosekPlus/EKOB/CEEB) bez miejsca na warstwę
+OPS / ekonomia pokrycia nie spina się nawet optymistycznie (~30+ płacących przy realnym pokryciu).
+**Sam dedykowany lider NIGDY nie jest powodem NO_GO** — najpierw szukamy wedge'a obok lidera
+(FILOZOFIA v3 wyżej). **Mała liczba firm NIGDY nie jest samodzielnym powodem NO_GO** — liczy się
+ekonomia pokrycia (FILOZOFIA MAŁEGO RYNKU wyżej; sztywny próg „<2000 firm" USUNIĘTY 23.07 decyzją
+Tomka). W razie wątpliwości „go" z niższym score, decyduje człowiek.
 Zasady: nie badać wszystkich naraz (na żądanie wg priority); generyk field-service ≠ zajęte
 (to sygnał bólu — szansa na dedykowany wedge); jeden wertykal = jeden operator (zajety blokuje
 prospecting); raporty się starzeją — re-badanie dozwolone.

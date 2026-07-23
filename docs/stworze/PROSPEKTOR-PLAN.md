@@ -476,9 +476,13 @@ wzorzec isTrustedInternalCall) — service-role dozwolony TYLKO dla `classify_re
   max_output_tokens 8000; prompt `wfp_prompt_vertical`): raport 8 sekcji (rynek PL/decydent/ból/
   konkurencja software z NAZWAMI/regulacje/wedge+ekonomia/persona+gdzie szukać/WERDYKT go|no_go
   + score 0-24 wg 6 osi: fragmentacja×2, saturacja×3, ból×2, willingness×2, persona×2, wedge×1;
-  twarde bramki NO_GO: dedykowany lider / rynek <2000 firm / brak persony / rdzeń=system rządowy).
-  Zapis report/report_at/verdict/vscore; status: katalogowy|wstrzymany|odrzucony → `zbadany`
-  (w_badaniu ustawiane na czas trwania). Usage kind 'vertical'. Koszt ~0,3-0,5 USD.
+  twarde bramki NO_GO po zmianach v3 23.07: brak persony / brak wskazywalnego wedge'a /
+  rdzeń=system rządowy / ekonomia POKRYCIA nie spina się nawet optymistycznie. Dedykowany lider
+  ≠ NO_GO (wedge obok lidera); mała liczba firm ≠ NO_GO (FILOZOFIA MAŁEGO RYNKU — próg „<2000
+  firm" USUNIĘTY, liczy się liczba_firm × realne pokrycie × cena). Score liczy EDGE z osi
+  (verticalScore, fix 23.07 — model zwraca tylko osie). Zapis report/report_at/verdict/vscore;
+  status: katalogowy|wstrzymany|odrzucony → `zbadany` (w_badaniu ustawiane na czas trwania).
+  Usage kind 'vertical'. Koszt ~0,3-0,5 USD.
 - **Gate wysyłki wg wertykalu:** `send` variant first wymaga `vertical.status='w_prospectingu'`
   → inaczej 409 `wertykal_nie_w_prospectingu` (bramka GO: przejście `zbadany→w_prospectingu`
   robi człowiek w UI po werdykcie). `reply_send`/`second` — bez tej bramki (rozmowa już trwa).
