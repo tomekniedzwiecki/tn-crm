@@ -340,6 +340,16 @@ KONTRAKTEM dla F2/F4/gate. Blok w `PLAN.md` (nagłówek dokładnie `## MANIFEST 
   → sekcja porzucona PRZED buildem (koder ją pominął, plan o niej „zapomniał") była NIEWIDZIALNA. Manifest zamienia
   pytanie „co zbudowano?" na „co MIAŁO powstać?" — i egzekwuje różnicę.
 
+**GIT-DYSCYPLINA FABRYKI (Tomek 23.07: „commituj swoje zmiany i niech fabryka też to
+zawsze robi, bo robi się bałagan").** Każda faza zamykająca krok panelu (F1 plan · F2
+makiety · F3 sceny · F4 kod+publish · F7.1 dopasowanie · F5 życie · finisz) kończy się
+commitem w tn-crm: `git add <pliki fazy> && git commit -m "wf2(<slug>): <faza> — <skrót>"`.
+Push na koniec bloku pracy (sesji/subagenta). Untracked pliki FABRYKA-*/sklepy/* po
+zamkniętej fazie = faza NIEKOMPLETNA. Agent kończący pracę na plikach repo commituje SAM
+(trailer `Co-Authored-By: Claude <model> <noreply@anthropic.com>`); przy równoległych
+agentach commit robi ten, kto ZAMYKA plik (ostatni w łańcuchu na danym landingu) — nigdy
+dwóch agentów w git naraz (index.lock, precedens LL o równoległym gicie).
+
 **F1.7 — PRZEWODNIK GRAFICZNY (całościowy plan wizualny; PRZED makietami).**
 Po planie F1, przed F2, agent tworzy RAZ per landing przewodnik warstwy wizualnej:
 łuk narracyjny (każda sekcja = klatka filmu), matryca OSI RÓŻNORODNOŚCI (≥3 konteksty
@@ -364,13 +374,27 @@ grafik — nie doklejka na końcu).** PRZEWODNIK niesie obowiązkowy blok `## SC
 **hero + DWIE dodatkowe sekcje**, każda z wpisem {sekcja · nośnik ruchu · beat pętli (co się
 rusza, jak wraca do klatki 1)}. Kryteria wyboru dwóch dodatkowych:
 (1) scena ma NATURALNY NOŚNIK RUCHU FIZYCZNEGO (para/płyn/tkanina/sypkie/dym/światło/włosy/
-olej) — produkt pozostaje statyką (doktryna hero-video, LL-022); (2) rozrzut po narracji —
+olej) — produkt pozostaje statyką (doktryna hero-video, LL-022) **⚠️ Z WYJĄTKIEM KLASY
+AKTYWNEJ — patrz niżej**; (2) rozrzut po narracji —
 jedna w górnej, jedna w dolnej połowie strony (nie dwie sąsiednie); (3) preferuj typ osadzenia
 B/C fullframe (ruch działa najmocniej na pełnym kadrze); ⛔ nie sekcje TOR-I (już żyją
 interakcją), nie zamow/faq. **Grafiki scen ANIM w F2/F3 są KOMPONOWANE POD RUCH** (wzorzec
 mata-v6): nośnik ruchu „WYSTAWIONY" — ma przestrzeń w kadrze i nie jest przycięty krawędzią,
 zero tekstu wpieczonego w strefie ruchu, kompozycja znosi delikatny dryf pętli. W F6 sceny
 ANIM dostają klipy Kling i2v (pętla first=last) jak hero — budżet +2 klipy (~0,35 $/klip).
+**⚠️ KLASA PRODUKTU STERUJE BEATEM HERO-VIDEO (Tomek 23.07, Brzuszek: „w hero zupełnie
+inaczej działa ten produkt i nie wziąłeś tego pod uwagę podczas animacji"):**
+- **Produkt PASYWNY** (taca, mata, masażer leżący, pojemnik — nie ma własnego ruchu
+  w użyciu hero): doktryna dotychczasowa — produkt/człowiek STATYCZNE, żyje ambient
+  (para/tkanina/światło). Zamrożenie świata wygląda tu naturalnie.
+- **Produkt AKTYWNY** (maszyna do ćwiczeń, urządzenie z ruchomym mechanizmem — RUCH JEST
+  ISTOTĄ produktu): beat hero-video MUSI pokazywać DZIAŁANIE — użytkownik wykonuje JEDEN
+  wolny, kontrolowany cykl ruchu ZGODNY Z MECHANIKĄ z PASZPORTU (np. wózek z kolanami
+  sunie po pochyłej belce i wraca); rama/konstrukcja rigid (NEG na morfing), ambient
+  najwyżej dodatkiem. Zamrożony człowiek w pół-ruchu na maszynie = błąd (martwa scena
+  + fałszywy przekaz o produkcie). Ping-pong ffmpeg naturalnie oddaje rytm powtórzeń.
+- Klasę produktu deklaruje PRZEWODNIK w karcie hero (pole „mechanika ruchu produktu",
+  źródło = PASZPORT MODEL UŻYCIA); wybór beatu bez tej deklaracji = FAIL krytyka F1.7.
 Jeśli po F3 któraś scena ANIM straciła nośnik ruchu — wybierz inną scenę ALBO 1 regeneracja
 pod ruch (z notą LEDGER). **⛔ LL-049 (feedback Tomka 22.07 „na mobile nie ma animowanego
 video w hero"): ambient hero-video (i sceny ANIM) GRA NA KAŻDYM VIEWPORCIE — desktop
