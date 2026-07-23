@@ -55,3 +55,27 @@ jakość OK → **PASS UCZCIWY**.
 `bud-assets/rozgrzewek/tt/rozgrzewek-tt1.mp4` + `…-poster.webp`. Sekcja `wideo` (rail 1-kafelkowy,
 wyśrodkowany) wpięta po `zdjecia-kupujacych`, spójna ze STYLE-DNA (muszla `--card`, radius 18/10,
 brak akcentu poza CTA/swash). Manifest: `video: SKIP → build`.
+
+
+---
+
+## 2026-07-23 — NAPRAWA OSADZENIA HERO (kanon mata, F1.7c pkt 2) · REUSE sceny+pętli
+Audyt 23.07: hero = „ożywiona pocztówka" (scena w zaokrąglonym boxie z cieniem obok kolumny
+tekstu — `.hr-wrap` grid 46/54, `.hr-scene` border-radius + box-shadow). Naprawa: przebudowa
+markupu+CSS na kanon **mata** (jak Rozmrozik v4):
+- `.hr-scene` full-bleed `position:absolute; inset:0; z-index:0` POD treścią; usunięto `.hr-wrap`
+  grid, border-radius, box-shadow, `.hr-scene::after` poświatę, `.hr-video-inject`.
+- `.hr-scrim` gradient 100deg w tokenie `--paper` (rgb 250,243,239) → czytelność copy po lewej.
+- `.hr-content` = lewa kolumna na scenie (`max-width:calc(hr-inset + 520px)`, ~666px na 1440),
+  text-align:left; frosted karta ceny + frosted pills zaufania NA scenie.
+- Mobile ≤760: scena pełnokadrowy band (`height:clamp(280px,46svh,420px)`) → treść na papierze.
+- JS-mount pętli przepięty na slot `.hr-scene-vid`, obserwuje `#hero` (LL-049 — gra na każdym
+  viewporcie; reduced-motion/save-data → poster). Backup: `index.html.bak-hero-tlo`.
+
+**Decyzja scena:** REUSE (oceniona uczciwie vision-em). Tło sceny harmonizuje 1:1 z `--paper`;
+ruch (para, lampa, kulki) po prawej z dala od copy; pętla `hero-loop-pp-v3.mp4` (ampl. 7.75)
+już zaakceptowana; regen groziłby zepsuciem wierności displaya „9" (LL-060). **Koszt generacji: $0.**
+
+**F7.4 GESTALT:** świeży visual-verify → **CZYSTY** (hero integralne, mata nie pocztówka; checkout
+spójny). Werdykt: `GESTALT.md`. Publish: https://ulepszek.pl/rozgrzewek HTTP 200, 0 FAIL, noindex zdjęty.
+HOME bez zmian (ten sam plik pętli). #zamow nietknięty.
