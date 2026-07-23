@@ -1080,15 +1080,15 @@
 
             document.getElementById('valid-until-preview').textContent = formatDate(clientOffer.valid_until);
 
-            // Oferta z rozmowy AI → link powrotu + brak bramki e-mail (lead przyszedł z czatu)
+            // Oferta z rozmowy AI → link powrotu do czatu
             if (clientOffer.source === 'rozmowa' && lead?.id) {
                 const back = document.getElementById('back-to-talk');
                 back.href = `https://tomekniedzwiecki.pl/rozmowa/?lid=${lead.id}&from=oferta`;
                 back.classList.remove('hidden');
-                await enterOffer();
-                return;
             }
 
+            // Bramka e-mail dla KAŻDEJ oferty (także source='rozmowa') — sam token w linku
+            // nie uwierzytelnia, link bywa forwardowany; hasłem jest e-mail leada.
             showScreen('login-screen');
         }
 
