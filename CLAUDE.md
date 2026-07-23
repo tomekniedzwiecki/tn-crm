@@ -343,18 +343,25 @@ Karta „Testy aplikacji" w portalu widoczna gdy krok `testy_klienta` ma status 
 Koncept (SSOT): `docs/stworze/MODUL-TESTY-KLIENTA.md`.
 
 ### Moduł „Prospektor" (`/tn-app/prospektor`) — outbound fabryki aplikacji
-Odwrócony lejek: baza firm → AI research (web_search) → pomysł aplikacji dla branży (bramka
-anty-saturacji) → hiper-dopasowany 1. kontakt (mail+LinkedIn) → kolejka akceptacji Tomka →
-**draft w Gmailu (system NIGDY nie wysyła sam)**. **SSOT: `docs/stworze/PROSPEKTOR-PLAN.md`
-(sekcja STAN WDROŻENIA = prawda) — CZYTAĆ przed pracą.** Tabele `wfp_*` (RLS wyłącznie
-team_members), edge `wfp-engine` (akcje research/idea/mail/gmail_draft/status_change/save_setting;
-gate verifyTeamMember; limit dzienny `settings.wfp_daily_cap`), prompty w `settings.wfp_prompt_*`
-+ `wfp_stopka_prawna` (stopka PKE/RODO doklejana WYŁĄCZNIE w gmail_draft variant first).
-Rejestr wertykali `wfp_verticals` = wyłączność branż (zajety blokuje pomysły; auto-awans
-wyslany→w_grze, deal→zajety). Lead z prospekta TYLKO przez `lead-upsert`
-(lead_source='prospektor' pomija automatyzację lead_created — inaczej poszedłby mail powitalny!).
-Suppression: opt-out nieodwracalny z UI, rekordów z opt-out nie usuwamy. Migracja:
-`node scripts/apply-wfp-prospektor.mjs`.
+Odwrócony lejek: katalog wertykali (~100; raport branżowy AI = bramka GO/NO_GO) → baza firm →
+AI research (web_search) → pomysł (bramka anty-saturacji) → 1. kontakt (mail+LinkedIn) →
+**kolejka akceptacji Tomka → WYSYŁKA przez Resend (decyzja Tomka 23.07: klik „Zatwierdź
+i WYŚLIJ" = jedyna droga; NIC nie wychodzi bez akceptacji; draft Gmail = fallback)** →
+odpowiedzi wpadają do modułu (Resend Inbound → wfp_inbox), AI klasyfikuje (STOP = AUTO
+opt-out, wymóg prawny) i proponuje odpowiedź → Tomek akceptuje → wysyłka w wątku.
+**SSOT: `docs/stworze/PROSPEKTOR-PLAN.md` (sekcje STAN WDROŻENIA cz. I i II.6 = prawda)
++ katalog `docs/stworze/PROSPEKTOR-WERTYKALE.md` — CZYTAĆ przed pracą.**
+Tabele `wfp_*` (RLS team-only), edge `wfp-engine` (research/idea/mail/send/reply_*/
+classify_reply/vertical_research/gmail_draft/status_change/save_setting/domain; gate
+verifyTeamMember, service-role tylko classify/suggest; limity `wfp_daily_cap` AI
+i `wfp_send_daily_cap` wysyłek). Adres wysyłkowy `settings.wfp_from_email` =
+tomek@kontakt.tomekniedzwiecki.pl (subdomena verified w Resend; DNS w strefie GoDaddy przez
+`wfa-domain` dns_set — NS tomekniedzwiecki.pl ≠ Vercel!). Stopka PKE/RODO doklejana WYŁĄCZNIE
+przy wysyłce/drafcie 1. kontaktu. Wertykale: wysyłka first TYLKO w statusie `w_prospectingu`
+(po raporcie GO); prospekt sparing→wertykal w_grze, deal→zajety. Lead TYLKO przez `lead-upsert`
+(lead_source='prospektor' pomija automatyzację lead_created!). Suppression: opt-out
+nieodwracalny z UI, rekordów z opt-out nie usuwamy. Migracje: `apply-wfp-prospektor.mjs` +
+`apply-wfp-v2.mjs`.
 
 ## Procedury Claude
 

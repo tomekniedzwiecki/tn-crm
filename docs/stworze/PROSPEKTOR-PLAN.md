@@ -521,12 +521,28 @@ Loop-guard: `from_email == wfp_from_email` → ignore (nie odpowiadamy sami sobi
   zostaje dla toru LinkedIn).
 - **KPI:** + „Wysłane dziś X/limit", „Odpowiedzi do obsłużenia N".
 
-## II.6 Kolejność wdrożenia v2
-1. Migracja → 2. `setup-wfp-domain.mjs` (subdomena Resend+DNS; jeśli weryfikacja padnie —
-   zostaje fallback biuro@) → 3. deploy wfp-engine + wfa-inbox-webhook + slack-notify →
-   4. test:webhooks → 5. push front → 6. E2E: send na własny adres testowy; inbound symulowany
-   realnym mailem NA wfp_from_email; classify+suggest+reply_send; vertical_research na 1 wertykalu
-   → 7. visual-verify.
+## II.6 STAN WDROŻENIA v2 (prawda, 2026-07-23 przedpołudnie) — **WDROŻONE, LIVE**
+- [x] Migracja `20260723a_wfp_v2.sql` ZASTOSOWANA (102 wertykale: 80 katalogowych + 22 odrzucone;
+  wfp_inbox/outbox; prompty reply/vertical/classify; kpi v2). Re-aplikacja: `node scripts/apply-wfp-v2.mjs`.
+- [x] **Domena `kontakt.tomekniedzwiecki.pl` VERIFIED w Resend** (sending SPF/DKIM + receiving MX).
+  DNS dodane przez edge `wfa-domain` action dns_set (strefa GoDaddy — NS tomekniedzwiecki.pl to
+  domaincontrol.com, NIE Vercel!). Administracja domeną: akcja `domain` w wfp-engine
+  (op: create/status/verify/receiving — sekret Resend zostaje w edge; Management API zwraca
+  tylko digesty sekretów, nie plaintext). `wfp_from_email` = `tomek@kontakt.tomekniedzwiecki.pl`.
+- [x] Edge LIVE: wfp-engine (send/classify_reply/reply_suggest/reply_send/vertical_research/domain),
+  wfa-inbox-webhook (tor Prospektora addytywnie), slack-notify (case wfp_reply → #sparing).
+  test:webhooks 4/4 po każdym deployu.
+- [x] E2E v2 na produkcji 9/9 PASS: gate wertykalu 409 → send (stopka w body) → duplikat 409 →
+  REALNY inbound przez subdomenę (webhook → match → auto-classify 'pozytywna' → auto-suggest) →
+  reply_send w wątku (In-Reply-To) → inbound „STOP" → AUTOMATYCZNY opt-out (actor auto) →
+  vertical_research. Koszt AI testu ~0,44 USD.
+- [x] Pierwszy realny raport branżowy: **firmy-ppoz = NO_GO 12/24** (istnieją dedykowani gracze:
+  gasnica-control.pl, ppozmanager.pl, techpres, qrsystem) — bramka anty-saturacji działa.
+- [x] Visual-verify v2 (desktop+mobile): 8/8 PASS, 3 kosmetyki naprawione (etykieta Źródła,
+  ukrywanie badge 0; koszt AI z testów w KPI = celowa kronika).
+- Znane niuanse: `sent_today` liczy też wysyłki testowe (wfp_outbox nie ma is_test — akceptowalne);
+  wiadomość sklasyfikowana jako opt_out dostaje handled_at automatycznie (nie wisi w liczniku);
+  `send-email` (symulacja odpowiedzi w testach) nadaje z ceo@, nie biuro@.
 
 ## 7. Czego NIE robimy w v1 (świadomie)
 - Auto-wysyłka / sekwencje followup — NIGDY auto; followupy = przyszła iteracja też przez drafty.
