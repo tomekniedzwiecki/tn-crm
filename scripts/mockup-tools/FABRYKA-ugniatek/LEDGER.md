@@ -42,3 +42,43 @@ hero-P, data-mo="dyptyk"), pol hero martwe. Zlamanie STANDARD F1.7c: "JEDEN KADR
 ### KOSZTY (do raportu glownej sesji)
 - Scena: 1x genimg gpt-image-2 (quality high) [billing OpenAI/wf2-gen].
 - i2v: 1x Kling v2.1 PRO ~5s [fal]; saldo fal 66.00 -> 65.87 USD (delta ~0.13 dla petli ugniatka).
+
+
+## TRIAŻ #1 (23.07): audyt sekcji #wideo "W akcji" — OBCA MARKA + zła kategoria → SEKCJA UKRYTA
+Audyt klatek KAŻDEGO klipu (ffmpeg: 3 klatki/klip @15/50/85% czasu, inspekcja vision):
+- **tt1** (@jierebyqcwi, 19s): CZARNY masazer OBCEJ MARKI "KAJUE" (nadruk na obudowie) + wypalony
+  ekran TikTok Shop + "Search 'KAJUE' on TikTok Shop" + ceny $89.99/$34.98. → OFF-PRODUCT + reklama konkurencji. ODRZUT.
+- **tt3** (@seaurchin, 30s): ZIELONY/miętowy PISTOLET perkusyjny (massage gun) — "six modes 1 2 3 4 5",
+  "grab a partner". Inny produkt/kategoria (PASZPORT: BRAK raczki pistoletowej). ODRZUT.
+- **tt4** (@jierebyqcwi, 30s): ten sam czarny KAJUE + "WORLD CUP SALE $34.98 Search 'KAJUE Massage Gun'"
+  + ekran Amazon $89.99 vs "Ours $34.98". → OFF-PRODUCT + reklama konkurencji. ODRZUT.
+- **tt5** (@ayitireveye2026, 62s): CZARNY pistolet perkusyjny z zestawem NAKLADEK (grot/kula) na nodze.
+  Inny produkt (PASZPORT: BRAK zestawu nakladek, to NIE massage gun). ODRZUT.
+Wynik: **4/4 OFF-PRODUCT** (2x czarny KAJUE-konkurencja + promo, 2x massage gun zla kategoria).
+
+Materiał zastępczy — WYCZERPANY:
+- storage `bud-assets/ugniatek/tt/`: TYLKO tt1/tt3/tt4/tt5 (tt2/tt6/tt7 = 404). Brak innych.
+- `bud_tt_products` (kolumny videos/videos_curated/ali_snapshot/tiktok_url): brak wiersza on-product dla
+  Ugniatka (handle'i z landinga @jierebyqcwi/@seaurchin/@ayitireveye2026 NIE ma w tabeli; jedyny match "ugniat"
+  = "elektryczny ugniatacz do jamu" = sprzet kuchenny, rejected). ZERO on-product.
+- archiwum `FABRYKA-ugniatek/assets/ugc-1.mp4 + ugc-2.mp4` (5s): pokazuja WLASCIWY satynowo-srebrny owalny
+  masazer (ugc-1=docisk kobiety do karku, ugc-2=oparcie lędźwi "P2"), ALE to AI-demo (styl scen hero, wersje
+  -raw), NIE realne UGC tworcy → nie pasuja do sekcji ramowanej jako "@author / od tworcy" bez falszowania
+  atrybucji; redundantne z nowym hero.
+
+**DECYZJA (b): SEKCJA #wideo UKRYTA** — `style="display:none" data-hidden-reason` na `<section id="wideo">`
++ komentarz z powodem. MARKUP ZACHOWANY (klipy nie laduja sie: display:none blokuje IO/lazy). Uzasadnienie:
+obca marka (KAJUE) na wlasnej stronie sprzedazowej jest GORSZA niz brak sekcji; STANDARD F0 off-product=odrzut;
+"klasa dowodowa bez SKIP" dopuszcza brak przy wyczerpaniu materialu.
+**ODROBIC** gdy pojawi sie realne UGC pokazujace satynowo-srebrny owalny masazer (6 glowic 2x3, 2 uchwyty).
+Alternatywa na przyszlosc: przeramowac sekcje na uczciwe "demo dwoch form" i uzyc ugc-1/ugc-2 (bez atrybucji @tworca).
+
+## TRIAŻ #1 — poprawki #final + #anatomia
+- **#final:** usuniety `<span class="fn-callout">6 kulowych głowic</span>` — floatujacy chip (position:absolute
+  right:0 bottom) nachodzil na packshot jak zgubiony tooltip; info juz jest w #anatomia (redundancja). Weryfikacja
+  live: `#final .fn-callout` nieobecny.
+- **#anatomia:** BRAK BLEDU DANYCH. "22 300 mm²" to COUNT-UP (`<span class="cu" data-cu="22300">`) zgodny z
+  KARTA-PRAWDY ("powierzchnia robocza do 22 300 mm²"). Wartosc "22 081" z audytu = klatka W TRAKCIE animacji
+  count-up (0->22 300), nie rozjazd danych. Weryfikacja live: #anatomia renderuje "22 300 mm". Nic nie zmieniano.
+- Publish: HTTP 200, published-gate 0 FAIL. Weryfikacja live: #wideo offsetHeight=0 display:none, 0 posterow
+  konkurencji wyrenderowanych.

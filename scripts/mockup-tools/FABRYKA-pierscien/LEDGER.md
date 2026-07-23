@@ -42,3 +42,12 @@ landscape full-bleed by ja pocial). NIE nadaje sie do osadzenia z nakladka copy 
 ### KOSZTY (do raportu glownej sesji)
 - Scena: 1x genimg gpt-image-2 (quality high) [OpenAI/wf2-gen].
 - i2v: 1x Kling v2.1 PRO ~5s [fal]; saldo fal 65.87 -> 65.38 USD (delta ~0.49 dla petli skrolika).
+
+
+## TRIAŻ #1 (23.07): audyt sekcji #wideo "Zobacz Skrolik w akcji" — KLIP OK, bez zmian
+Sekcja ma JEDEN klip (tt1, credit @hellozdvj8x; body "Jeden klip od twórcy"). Audyt klatek (ffmpeg 3 klatki
+@15/50/85%): pokazuje WLASCIWY produkt — pierscien-pilot na palcu (warianty czarny/rozowy/bialy = kolory Skrolika)
++ telefon oparty na konsoli bieżni, kciuk klika, ekran przewija feed. Zgodne z kategoria i uzyciem; BRAK obcej
+marki, BRAK zlej kategorii, BRAK wypalonego promo konkurencji. **VERDYKT: ON-PRODUCT, ACCEPT — sekcja BEZ ZMIAN.**
+(Wczesniejsza flaga "nie zaudytowane / tt1-3" wynikala z wojny o fokus przegladarki; audyt zrobiony z plikow ffmpeg,
+sekcja ma faktycznie 1 klip = tt1, dobry.)
