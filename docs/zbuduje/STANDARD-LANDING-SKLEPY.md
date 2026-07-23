@@ -402,6 +402,33 @@ I mobile; jedyny guard w JS = `prefers-reduced-motion` (autoplay mobilny wymaga 
 playsinline, oba są w wzorcu). Guard `min-width:768` w starterze ambient = BŁĄD wzorca,
 usunięty z żywych landingów.**
 
+**F1.7c — HERO POD ANIMACJĘ OD MAKIETY („HERO-STAGE"; Tomek 23.07, TRZECIA eskalacja tematu
+hero: „widzę po tych grafikach w hero, że one nie są przygotowane tak, żeby potem było łatwo
+je animować […] na etapie tworzenia makiety hero — desktop czy mobile — powinieneś już
+wiedzieć, że to zdjęcie ma się animować i ma być ważnym, CENTRALNYM punktem tego landingu").**
+Hero-video NIE jest efektem doklejanym do gotowej makiety — cała linia produkcyjna hero
+projektuje OD POCZĄTKU scenę pod ruch. KONTRAKT HERO-STAGE (F1.7→F2→F3→F6, każdy punkt
+egzekwowany na swojej fazie):
+1. **F1.7 karta hero** deklaruje w komplecie: klasę produktu (F1.7b) · nośnik ruchu · beat
+   pętli · **KADR POD i2v** — jeden plan, locked-off camera, fotorealizm, nośnik ruchu
+   „WYSTAWIONY" (ma przestrzeń, nie jest przycięty krawędzią), strefa ruchu WOLNA od tekstu
+   i nakładek. Brak któregokolwiek pola = FAIL krytyka przewodnika.
+2. **F2 makieta hero (desktop I mobile)** komponuje medium jako CENTRALNY, DOMINUJĄCY punkt:
+   slot medium to gwiazda kompozycji (na desktopie zwyczajowo ≥~50% powierzchni hero, na
+   mobile dominujący/pełnokadrowy), proporcje slotu = proporcje przyszłej pętli (beat nie
+   będzie potem dokrawany), copy/CTA nie nachodzą na strefę ruchu. **Krytyk F2 ma TWARDY
+   punkt „makieta hero zaprojektowana pod animację?" — FAIL blokuje F3.**
+3. **F3 sc-hero** generowana jako ŹRÓDŁO i2v, nie niezależna ilustracja: to samo zdjęcie
+   jest posterem sceny i source'em generacji pętli (poster=klatka 1 ⇒ zero skoku przy
+   fade-in). Test przydatności kadru przed zamknięciem F3: „czy Kling ma tu co poruszyć
+   bez morfowania produktu?" — jeśli nie, kadr wraca do poprawki.
+4. **F6 pętla** generowana z sc-hero (source=poster). Wideo osadzone w slocie z makiety —
+   bez zmiany layoutu hero na tym etapie.
+5. Wideo doklejone post-hoc do makiety nieprojektowanej pod ruch = ZNANY BŁĄD (Ulepszek
+   23.07: efekt „ożywionej miniaturki" zamiast wow) — dopuszczalne wyłącznie jako NAPRAWA
+   istniejącego landingu, z notą LEDGER i jawną oceną, czy hero nie wymaga przeprojektowania
+   slotu (powiększenie medium do rangi punktu centralnego).
+
 **F1.7a — ROLA PRODUKTU W ŁUKU NARRACYJNYM (EMOCJA↔PRODUKT; Drapek 18.07 — scena PROBLEM
 pokazywała psa KULĄCEGO SIĘ DEFENSYWNIE przy NASZEJ desce = przekaz „nasz produkt = źródło
 stresu", odwrotny do intencji).** Karta KAŻDEJ sceny (F1.7) MUSI jawnie określać ROLĘ w łuku
