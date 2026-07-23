@@ -51,7 +51,10 @@ Kolejność wdrożenia:
 
 - **Panorama Firm** (§8.1/§8.4 regulaminu: zakaz tworzenia innej bazy/komercyjnego użycia),
 - **pkt.pl** (analogicznie), **Oferteo** (zakaz rozpowszechniania danych z serwisu),
-- **Google Maps/Places** (ToS §3.2.3(a) „No Scraping"; wprost zakaz budowania lead-list).
+- **Google Maps/Places** (ToS §3.2.3(a) „No Scraping"; wprost zakaz budowania lead-list),
+- **katalog.janachowska.pl** (zweryfikowane 23.07: regulamin §5 pkt 4 — „zabronione jest
+  jakiekolwiek agregowanie i przetwarzanie danych… w celu ich dalszego udostępniania…
+  jak i poza Internetem"; dodatkowo robots.txt blokuje filtry podkategorii).
 Dozwolony wyłącznie RĘCZNY pojedynczy lookup. Nie automatyzować. Nie kupować scrapów Maps
 (Outscraper itp.) jako fundamentu — ryzyko kontraktowe + brak przewagi nad CEIDG.
 
@@ -74,7 +77,7 @@ Dozwolony wyłącznie RĘCZNY pojedynczy lookup. Nie automatyzować. Nie kupowa�
 | serwis-oczyszczalni | **CEIDG PKD 43.22.Z + 37.00.Z** + enrichment | katalogi B2B po marce (wodkaneko.pl, srodowisko.pl — kontakt na profilach; producenci NIE publikują list instalatorów) | nie |
 | asenizacja | **CEIDG PKD 37.00.Z** + enrichment | **wykazy BIP gmin** (rejestr zezwoleń na opróżnianie zbiorników — informacja publiczna; nazwa+adres+NIP+telefon, bez e-maila; ~2477 gmin, format HTML/PDF różny, część BIP blokuje boty) | częściowo (tel) |
 | biegli-sadowi | **PDF-y list biegłych ~47 sądów okręgowych** (BIP; kontakt OPT-IN — tylko za zgodą biegłego, e-mail rzadki) | znajdzbieglego.com (16 182 biegłych — tylko namierzanie, regulamin niejasny → bez masówki) | rzadko |
-| cukiernie-torty | **CEIDG PKD 10.71.Z + 47.24.Z** + enrichment | katalog.janachowska.pl/cukiernia (566 pozycji, kontakt na profilach — ręcznie) | nie |
+| cukiernie-torty | **CEIDG PKD 10.71.Z + 47.24.Z** + enrichment | ~~katalog.janachowska.pl~~ ⛔ (regulamin zakazuje agregacji — patrz lista zakazów); cukiernie-weselne.pl też zabramkowane (formularz) → wertykal CZEKA na CEIDG | nie |
 
 Uwagi: biegli-sadowi to jedyny wertykal bez route'u PKD (osoby, nie firmy) — niska
 pokrywalność kontaktów, dużo pracy ręcznej; planować niższy wolumen. PKD: do 31.12.2026

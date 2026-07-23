@@ -205,9 +205,28 @@ function saneClassify(o: unknown): o is { typ: string; uzasadnienie?: string } {
 function saneReplySuggest(o: unknown): o is { temat: string; tresc: string } {
   return isObj(o) && isStr(o.temat) && isStr(o.tresc) && o.tresc.trim().length > 0;
 }
+// Prompt v3 (wedge, 23.07): model zwraca osie 0-2, wagi liczy SYSTEM (frag×2+sat×3+ból×2+
+// will×2+pers×2+wedge×1, max 24). Top-level score akceptowany dla kompatybilności ze starym
+// promptem (backup w settings), ale nie jest wymagany.
+const VERT_AXES: [string, number][] = [
+  ["fragmentacja", 2], ["saturacja", 3], ["bol", 2], ["willingness", 2], ["persona", 2], ["wedge", 1],
+];
+function verticalScore(o: Record<string, unknown>): number | null {
+  if (typeof o.score === "number") return Math.max(0, Math.min(24, Math.round(o.score)));
+  const osie = o.osie;
+  if (!isObj(osie)) return null;
+  let sum = 0;
+  for (const [key, w] of VERT_AXES) {
+    const v = Number((osie as Record<string, unknown>)[key]);
+    if (!Number.isFinite(v)) return null;
+    sum += Math.max(0, Math.min(2, Math.round(v))) * w;
+  }
+  return Math.max(0, Math.min(24, sum));
+}
 function saneVertical(o: unknown): o is Record<string, unknown> {
   if (!isObj(o)) return false;
-  return isStr(o.werdykt) && (o.werdykt === "go" || o.werdykt === "no_go") && typeof o.score === "number";
+  if (!isStr(o.werdykt) || (o.werdykt !== "go" && o.werdykt !== "no_go")) return false;
+  return verticalScore(o) !== null;
 }
 
 // ── v2: gate service-role (wzorzec wfa-partner-mail isTrustedInternalCall) ────
@@ -656,7 +675,7 @@ Deno.serve(async (req) => {
         return json({ error: "zla_odpowiedz", message: "Model zwrócił nieprawidłowy raport." }, 502, c);
       }
       const verdict = obj.werdykt === "go" ? "go" : "no_go";
-      const vscore = Math.max(0, Math.min(24, Math.round(Number(obj.score) || 0)));
+      const vscore = verticalScore(obj) ?? 0;
       const { error: uErr } = await sb.from("wfp_verticals").update({ report: obj, report_at: new Date().toISOString(), verdict, vscore, status: finalStatus }).eq("id", verticalId);
       if (uErr) { console.error("[wfp-engine] vertical save error", uErr); await restore(); return json({ error: "blad_zapisu", message: "Nie udało się zapisać raportu." }, 500, c); }
       return json({ ok: true, verdict, vscore, report: obj, status: finalStatus, searches: r.searchCalls }, 200, c);
