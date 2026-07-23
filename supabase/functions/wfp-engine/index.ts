@@ -174,9 +174,11 @@ async function recentEvent(sb: SB, prospectId: string, kind: string): Promise<bo
 }
 
 // Prospekt osoby fizycznej (biegły/rzeczoznawca) — osobny tor stopki i promptu maila.
-// Sygnał: source='sad-okregowy' (wykaz biegłych). Rozszerzalne o kolejne source osobowe.
+// Zbiór źródeł osobowych (NIE pojedynczy literał) — nowe źródło danych osób fizycznych dodaj TU,
+// inaczej ominie ochronę art. 14 (prompt/stopka „do firmy"). Dopisz każde source osób fizycznych.
+const OSOBA_SOURCES = new Set(["sad-okregowy"]);
 function isOsobaProspect(p: Record<string, unknown> | null | undefined): boolean {
-  return !!p && p.source === "sad-okregowy";
+  return !!p && isStr(p.source) && OSOBA_SOURCES.has(p.source);
 }
 
 // Złóż stopkę prawną. Dla osób fizycznych używa wfp_stopka_prawna_osoba i podstawia
@@ -203,15 +205,15 @@ async function composeStopka(sb: SB, prospect?: Record<string, unknown> | null):
   return out;
 }
 
-// Suppression (trwała lista wykluczeń) — sprawdzenie po lower(email). Fail-open + log
-// (drugorzędna warstwa; podstawowa blokada to opted_out na wierszu). Nie blokuje przy blipie DB.
+// Suppression (trwała lista wykluczeń) — sprawdzenie po lower(email). FAIL-CLOSED: przy błędzie DB
+// RZUCA (nie zwraca false) — bramka wysyłki ma wtedy WSTRZYMAĆ (409), nie przepuścić maila do osoby,
+// która mogła zgłosić sprzeciw (RODO). Wołający owija w try/catch i zwraca 409 „spróbuj ponownie".
 async function isSuppressed(sb: SB, email: string): Promise<boolean> {
   const e = (email || "").trim().toLowerCase();
   if (!e) return false;
-  try {
-    const { data } = await sb.from("wfp_suppression").select("email_lower").eq("email_lower", e).maybeSingle();
-    return !!data;
-  } catch (err) { console.error("[wfp-engine] isSuppressed error:", err); return false; }
+  const { data, error } = await sb.from("wfp_suppression").select("email_lower").eq("email_lower", e).maybeSingle();
+  if (error) throw error;
+  return !!data;
 }
 
 // Dopisz e-mail do suppression (idempotentnie). Wołane przy opt-out (STOP) i complaint.
@@ -827,10 +829,16 @@ Deno.serve(async (req) => {
       if (!prospect.mail || !isObj(prospect.mail)) return json({ error: "brak_maila", message: "Najpierw wygeneruj wiadomości." }, 409, c);
       const email = isStr(prospect.email) ? prospect.email.trim() : "";
       if (!email) return json({ error: "brak_emaila", message: "Prospekt nie ma adresu e-mail." }, 409, c);
-      if (await isSuppressed(sb, email)) return json({ error: "wykluczony", message: "Adres na liście wykluczeń (suppression) — kontakt zablokowany." }, 409, c);
+      try { if (await isSuppressed(sb, email)) return json({ error: "wykluczony", message: "Adres na liście wykluczeń (suppression) — kontakt zablokowany." }, 409, c); }
+      catch (e) { console.error("[wfp-engine] suppression check failed (gmail_draft):", e); return json({ error: "weryfikacja_niedostepna", message: "Weryfikacja wykluczeń chwilowo niedostępna — spróbuj ponownie." }, 409, c); }
 
       const variant = body.variant === "second" ? "second" : "first";
       const force = body.force === true;
+      // Higiena adresu (spójnie z send): twarde odbicie / brak MX / zła składnia = blokada; literówka = force.
+      if (prospect.bounced_at) return json({ error: "adres_odbil", message: "Ten adres wcześniej odbił (hard bounce) — draft zablokowany." }, 409, c);
+      const ecD = isStr(prospect.email_check) ? prospect.email_check : "";
+      if (ecD === "bad" || ecD === "no_mx") return json({ error: "email_zly", message: "Adres nie przechodzi weryfikacji (zła składnia / brak MX) — popraw adres." }, 409, c);
+      if (ecD === "typo" && !force) return json({ error: "email_literowka", message: "Adres wygląda na literówkę — popraw go albo wymuś (force)." }, 409, c);
       // Osoba fizyczna (biegły): 1. kontakt wymaga konkretnego źródła w stopce (art. 14 RODO) — brak = blokada.
       if (variant === "first" && isOsobaProspect(prospect) && !(isStr(prospect.source_detail) && (prospect.source_detail as string).trim())) {
         return json({ error: "brak_zrodla", message: "Brak konkretnego źródła listy (art. 14 RODO) dla osoby fizycznej — uzupełnij źródło przed wysyłką." }, 409, c);
@@ -903,7 +911,8 @@ Deno.serve(async (req) => {
       if (!prospect.mail || !isObj(prospect.mail)) return json({ error: "brak_maila", message: "Najpierw wygeneruj wiadomości." }, 409, c);
       const emailTo = isStr(prospect.email) ? prospect.email.trim() : "";
       if (!emailTo) return json({ error: "brak_emaila", message: "Prospekt nie ma adresu e-mail." }, 409, c);
-      if (await isSuppressed(sb, emailTo)) return json({ error: "wykluczony", message: "Adres na liście wykluczeń (suppression) — wysyłka zablokowana." }, 409, c);
+      try { if (await isSuppressed(sb, emailTo)) return json({ error: "wykluczony", message: "Adres na liście wykluczeń (suppression) — wysyłka zablokowana." }, 409, c); }
+      catch (e) { console.error("[wfp-engine] suppression check failed (send):", e); return json({ error: "weryfikacja_niedostepna", message: "Weryfikacja wykluczeń chwilowo niedostępna — spróbuj ponownie." }, 409, c); }
       const resendKey = Deno.env.get("resend_api_key");
       if (!resendKey) return json({ error: "brak_konfiguracji", message: "Brak klucza Resend." }, 500, c);
 

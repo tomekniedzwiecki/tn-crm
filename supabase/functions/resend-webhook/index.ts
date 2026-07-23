@@ -187,6 +187,12 @@ Deno.serve(async (req) => {
           const bounceType = String(payload.data?.bounce?.type || '')
           // Brak typu → traktuj jak twardy (bezpieczniej wykluczyć adres niż palić reputację).
           const permanent = !bounceType || /permanent|hard/i.test(bounceType)
+          // Trwały wpis suppression (reason 'bounce') — przeżywa usunięcie/re-import spalonego adresu
+          // (bounced_at na wierszu ginie przy re-imporcie; suppression łapie go w dedupie importu).
+          if (permanent && emailLower) {
+            await supabase.from('wfp_suppression')
+              .upsert({ email_lower: emailLower, reason: 'bounce' }, { onConflict: 'email_lower', ignoreDuplicates: true })
+          }
           if (prospectId && permanent) {
             await supabase.from('wfp_prospects')
               .update({ bounced_at: new Date().toISOString(), email_check: 'bad' })

@@ -128,20 +128,23 @@ function hasForwardHeader(headers: unknown): boolean {
 // (MX→Resend). Odpowiedzi trafiają na Reply-To → Resend Inbound → tu → wfp_inbox. Dlatego match
 // robimy po adresie ODBIORCZYM (wfp_reply_to), nie po From. (Odpowiedzi wprost na ceo@ idą do
 // Gmaila i tu nie docierają — świadomy koszt rozdzielenia From/Reply-To.)
-let _wfpFromCache: { val: string; at: number } | null = null;
+// Zwraca ZBIÓR adresów Prospektora {wfp_reply_to, wfp_from_email} — match odpowiedzi po OBU,
+// nie po jednym. Chroni odpowiedzi „in-flight" (wysłane gdy From=Reply-To=stary adres) oraz
+// odpowiedzi wprost na From, gdy From≠Reply-To (po flipie na ceo@). ceo@ (MX→Gmail) i tak nie
+// dociera do tego webhooka, więc dodanie go do zbioru nie daje fałszywych trafień.
+let _wfpAddrCache: { vals: string[]; at: number } | null = null;
 // deno-lint-ignore no-explicit-any
-async function getWfpFromEmail(sb: any): Promise<string> {
+async function getWfpAddresses(sb: any): Promise<string[]> {
   const now = Date.now();
-  if (_wfpFromCache && now - _wfpFromCache.at < 60_000) return _wfpFromCache.val;
+  if (_wfpAddrCache && now - _wfpAddrCache.at < 60_000) return _wfpAddrCache.vals;
   try {
     const { data } = await sb.from("settings").select("key,value").in("key", ["wfp_reply_to", "wfp_from_email"]);
     const rows = (data as Array<{ key: string; value: string }> | null) || [];
-    const byKey = (k: string) => ((rows.find((r) => r.key === k)?.value as string) || "").toLowerCase().trim();
-    const val = byKey("wfp_reply_to") || byKey("wfp_from_email");
-    _wfpFromCache = { val, at: now };
-    return val;
+    const vals = [...new Set(rows.map((r) => (r.value || "").toLowerCase().trim()).filter(Boolean))];
+    _wfpAddrCache = { vals, at: now };
+    return vals;
   } catch {
-    return _wfpFromCache?.val || "";
+    return _wfpAddrCache?.vals || [];
   }
 }
 
@@ -251,10 +254,10 @@ Deno.serve(async (req) => {
     // Mail na settings.wfp_from_email = odpowiedź na cold outreach → wfp_inbox +
     // update prospekta + classify_reply + slack. Dodatek addytywny — ścieżka
     // wfa_projects poniżej NIETKNIĘTA (tu robimy `return` dla trafień Prospektora).
-    const wfpFromEmail = await getWfpFromEmail(supabase);
-    if (wfpFromEmail && toEmail === wfpFromEmail) {
-      // Loop-guard: nie odpowiadamy sami sobie.
-      if (fromEmail === wfpFromEmail) {
+    const wfpAddrs = await getWfpAddresses(supabase);
+    if (wfpAddrs.length && wfpAddrs.includes(toEmail)) {
+      // Loop-guard: nie odpowiadamy sami sobie (dowolny nasz adres jako nadawca).
+      if (wfpAddrs.includes(fromEmail)) {
         return json({ success: true, ignored: true, reason: "wfp loop-guard" });
       }
 
