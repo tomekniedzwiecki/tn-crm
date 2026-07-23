@@ -107,6 +107,15 @@ Rozmrozik 60215ce4/59e53d40(TT) · Brzuszek 6dd560cf/a7b70e6a(TT) · Rozgrzewek 
    regeneracji.
 - Push do f67953c0 + a4dade3e. Osobny wątek: OCHRONA landingów 4 warstwy (doktryna
   docs/zbuduje/OCHRONA-LANDINGOW.md §7 runbook migracji assetów — czeka „go" Tomka).
+7. **KASA — WARIANT PRODUKT-OBOK (Tomek na Rozmroziku: „Checkout też jest źle ostylowany.
+   Gdzieś musisz mieć jakieś śmieci z tą kasą… cały ten box jest poświęcony na dane do
+   zamówienia"):** pasek .zc-summary (thumb+nazwa+1 szt.+tabelka) = DUPLIKAT karty
+   produktu obok → hidden + display:none na 4 landingach (brzuszek/rozmrozik/skrolik/
+   odsaczek; rozgrzewek/ugniatek bez karty = pasek zostaje). Total przy CTA = ISTNIEJĄCY
+   .zc-total „Razem do zapłaty" (pułapka: 1. próba dodała własny total = dubel — cofnięta
+   przed publishem). + skin jednokolumnowy rozmrozika (wzorzec skrolik — total/CTA były
+   ściśnięte w 2-kolumnowym gridzie modułu). Visual 4/4 PASS + re-check PASS (COD
+   przelicza, CTA „przy odbiorze"). STANDARD §4 pkt 5 + kontrakt skórowania @3 + LL-075.
 6. **HERO v4 — OSADZENIE W TLE (PIĄTA eskalacja hero; Tomek na v3: „totalnie nie pasuje…
    zdjęcie/video zrobić W TLE, aby pasowało ze stroną"):** v3 była „ożywioną pocztówką"
    (karta .hr-stage obok tekstu). v4 = kanon mata: .hr-scene full-bleed inset:0 + scrim
