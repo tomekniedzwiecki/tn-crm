@@ -801,16 +801,19 @@
             if (aging>0) tiles.push(tile(aging,'Zalega >3 dni', '#e5484d'));
             let html = `<div class="grid gap-2.5" style="grid-template-columns:repeat(auto-fill,minmax(118px,1fr))">${tiles.join('')}</div>`;
             if (!kpiOk) html += `<div class="text-[11px] text-zinc-600 mt-2"><i class="ph ph-warning-circle"></i> KPI z RPC niedostępne — liczniki z załadowanej listy (pełna paginacja).</div>`;
-            // reply-rate per wertykal (z listy — pełna paginacja, nie ucięte)
+            // Ranking nisz (instrument testu dywersyfikacji): odsetek ODPOWIEDZI oraz
+            // odsetek ROZMÓW (rozmowa+ = realny cel „chcemy rozmawiać" — odpowiedź „nie,
+            // spam" liczy się jako reply, ale NIE jako rozmowa). Z listy (pełna paginacja).
             const vr = verticals.map(v => {
                 const bs = (vCounts[v.id]||{}).byStatus || {};
                 const sp = ['wyslany','odpowiedzial','rozmowa','sparing','deal'].reduce((s,x)=>s+(bs[x]||0),0);
                 const rp = ['odpowiedzial','rozmowa','sparing','deal'].reduce((s,x)=>s+(bs[x]||0),0);
-                return sp>0 ? { name:v.name, rate:Math.round(rp/sp*100), sp } : null;
-            }).filter(Boolean).sort((a,b)=>b.rate-a.rate);
+                const co = ['rozmowa','sparing','deal'].reduce((s,x)=>s+(bs[x]||0),0);
+                return sp>0 ? { name:v.name, rate:Math.round(rp/sp*100), conv:Math.round(co/sp*100), sp } : null;
+            }).filter(Boolean).sort((a,b)=> b.rate-a.rate || b.conv-a.conv);
             if (vr.length){
-                html += `<div class="mt-2 flex flex-wrap gap-2 items-center text-[11px] text-zinc-500"><span class="text-zinc-600">Reply/wertykał:</span>`
-                    + vr.map(x => `<span class="minichip" style="margin:0">${esc(x.name)}: <b class="text-zinc-300">${x.rate}%</b> <span class="text-zinc-600">(${x.sp})</span></span>`).join('') + `</div>`;
+                html += `<div class="mt-2 flex flex-wrap gap-2 items-center text-[11px] text-zinc-500"><span class="text-zinc-600">Nisze (odpowiedzi · rozmowy / wysłane):</span>`
+                    + vr.map(x => `<span class="minichip" style="margin:0">${esc(x.name)}: <b class="text-zinc-300">${x.rate}%</b> odp <span class="text-zinc-600">·</span> <b class="${x.conv>0?'text-[#2dd4bf]':'text-zinc-600'}">${x.conv}%</b> rozm <span class="text-zinc-600">(${x.sp})</span></span>`).join('') + `</div>`;
             }
             wrap.innerHTML = html;
         }
