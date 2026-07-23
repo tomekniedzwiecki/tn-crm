@@ -1453,7 +1453,7 @@ def _poprzednicy(M, m, ctx):
     for _, s, p in cand[:int(m.get("n_poprzednich", 3))]:
         html = read_text(p)
         if html:
-            out.append((s, html, latest_archiwum(M["sciezki"]["archiwum_glob"], s)))
+            out.append((s, html, latest_archiwum(M["sciezki"]["archiwum_glob"], s, M["sciezki"].get("archiwum_aliasy"))))
     return out
 
 def check_cross_landing(res, M, ctx):
@@ -2278,12 +2278,20 @@ def check_finalny_pass(res, M, ctx):
                 "%d findings odfiltrowanych" % len(findings) if findings else "0 findings")
 
 # ================================================================== main
-def latest_archiwum(glob_tmpl, slug):
-    pat = glob_tmpl.replace("{slug}", slug)
-    dirs = [d for d in glob.glob(pat) if os.path.isdir(d)]
+def latest_archiwum(glob_tmpl, slug, aliasy=None):
+    """Rozwiaz archiwum produkcji. AUDYT 23.07: archiwa zyja w 3 lokalizacjach i pod
+    ALIASAMI (taca=rozmrozik, masazer=rozgrzewek, merach=brzuszek, pierscien=skrolik,
+    koszyk=odsaczek) — glob_tmpl moze byc STRINGIEM lub LISTA templates, a slug
+    probowany jest razem z aliasami z gate-manifest sciezki.archiwum_aliasy."""
+    tmpls = glob_tmpl if isinstance(glob_tmpl, list) else [glob_tmpl]
+    names = [slug] + list((aliasy or {}).get(slug, []))
+    dirs = []
+    for t in tmpls:
+        for n in names:
+            dirs += [d for d in glob.glob(t.replace("{slug}", n)) if os.path.isdir(d)]
     if not dirs:
         return None
-    # wybierz po dacie modyfikacji (najnowsza FABRYKA-*)
+    # wybierz po dacie modyfikacji (najnowsze archiwum wygrywa niezaleznie od lokalizacji)
     dirs.sort(key=lambda d: os.path.getmtime(d), reverse=True)
     return dirs[0]
 
@@ -2338,8 +2346,14 @@ def main():
     M = json.loads(read_text(args.manifest))
     slug = args.slug
 
-    arch = args.archiwum or latest_archiwum(M["sciezki"]["archiwum_glob"], slug)
-    code = args.code or M["sciezki"]["kod"].replace("{slug}", slug)
+    arch = args.archiwum or latest_archiwum(M["sciezki"]["archiwum_glob"], slug, M["sciezki"].get("archiwum_aliasy"))
+    code = args.code
+    if not code:
+        # AUDYT 23.07: landingi zyja pod sklepy/<merchant>/{slug} (patryk/rafal/...),
+        # nie pod jedna sztywna sciezka — template moze byc globem; pick najnowszy plik.
+        _cands = sorted(glob.glob(M["sciezki"]["kod"].replace("{slug}", slug)),
+                        key=lambda f: os.path.getmtime(f) if os.path.isfile(f) else 0, reverse=True)
+        code = _cands[0] if _cands else M["sciezki"]["kod"].replace("{slug}", slug)
 
     print("=" * 74)
     print("GATE-CHECK  ·  slug=%s" % slug)

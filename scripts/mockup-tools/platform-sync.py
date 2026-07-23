@@ -352,6 +352,49 @@ def _checkout_preflight(html):
             "data-zc-api ...> (wzór: rozgrzewek/odsaczek). Publikacja ZABLOKOWANA.")
 
 
+def _published_gate(live_text, allow_noindex):
+    """TWARDY gate GO-LIVE w torze publish (AUDYT 23.07, klasa LL-070: reguly 'published'
+    gate-check odpalaly sie TYLKO przy recznym --published — czyli nigdy; landing
+    z placeholderem/martwym product-id/cena w JSON-LD mogl wyjsc LIVE). Reuse fail_regex
+    z gate-manifest.json (SSOT regul) na pobranym LIVE html. allow_noindex=True na
+    domenie starter (noindex tam celowo ZOSTAJE — log 'noindex ZOSTAJE')."""
+    import json as _json
+    mpath = os.path.join(_HERE, "gate-manifest.json")
+    try:
+        rules = _json.load(open(mpath, encoding="utf-8"))["published"]["fail_regex"]
+    except Exception as e:
+        raise SystemExit(f"[platform-sync] published-gate: nie moge wczytac regul z gate-manifest.json ({e}) — FAIL-CLOSED, publikacja przerwana")
+    hits = []
+    for r in rules:
+        if allow_noindex and "noindex" in r.get("label", ""):
+            continue
+        if re.search(r["regex"], live_text, re.I):
+            hits.append(r["label"])
+    if hits:
+        raise SystemExit("[platform-sync] PUBLISHED-GATE FAIL — na LIVE zostaly artefakty:\n  - "
+                         + "\n  - ".join(hits) + "\n  Napraw zrodlo i opublikuj ponownie.")
+
+
+_FORBIDDEN_NAME_RE = re.compile(
+    r"drena[zż]|limfatyczn|leczn|terapeutyczn|medyczn|spalan[ie]|odchudz", re.I)
+
+
+def _platform_name_gate(p):
+    """Bramka nazwy klientowej (LL-055: robocza nazwa produktu = claim medyczny 'drenaz
+    limfatyczny' wyciekla do kasy/sticky przez fallback platform_name->name; lekcja miala
+    status WDROZONA bez zadnego mechanizmu). Publish WYMAGA platform_name i odrzuca
+    claimy zakazane w nazwie trafiajacej do kasy."""
+    name = (p.get("platform_name") or "").strip()
+    if not name:
+        raise SystemExit("[platform-sync] NAME-GATE FAIL — produkt bez platform_name "
+                         "(fallback do roboczej nazwy zrodlowej ZABRONIONY: LL-055, claim "
+                         "medyczny wyciekl do kasy). Ustaw platform_name i ponow.")
+    m = _FORBIDDEN_NAME_RE.search(name)
+    if m:
+        raise SystemExit(f"[platform-sync] NAME-GATE FAIL — platform_name zawiera claim "
+                         f"zakazany ('{m.group(0)}'): {name!r}. Przemianuj (LL-055).")
+
+
 def cmd_publish(a):
     pr = _project(a.project)
     sid = _shop_id(pr)
@@ -364,6 +407,7 @@ def cmd_publish(a):
     if "{{WF2_PRODUCT_ID}}" not in html and not a.allow_no_runtime:
         raise SystemExit("[platform-sync] HTML bez {{WF2_PRODUCT_ID}} — brak runtime-snippetu (landing-runtime-snippet.html). Wymuszenie: --allow-no-runtime")
     _checkout_preflight(html)  # twarda bramka kontraktu kasy — patrz docstring
+    _platform_name_gate(p)     # twarda bramka nazwy klientowej (LL-055)
     dom, custom = _active_domain(sid)
     path = a.path if a.path is not None else p["slug"]
     canonical = f"https://{dom}/{path}" if path else f"https://{dom}"
@@ -383,6 +427,9 @@ def cmd_publish(a):
     url = d.get("url") or canonical
     live = requests.get(url, timeout=30)
     ok_id = p["id"] in live.text
+    # GO-LIVE gate na serwowanym HTML (fail_regex z gate-manifest published) — patrz _published_gate
+    _published_gate(live.text, allow_noindex=not strip)
+    log("published-gate: 0 FAIL (placeholdery/noindex/ceny-zapieczone/martwe linki)")
     ps.product_meta(p["id"], {"platform_page_url": url})
     ps.project_link_add(a.project, f"Landing {p.get('platform_name') or p['name']} (platforma)", url, icon="ph-rocket-launch")
     log(f"DOWÓD: publish {url} → HTTP {live.status_code} · {d.get('bytes')} B · runtime product_id w HTML: {'TAK' if ok_id else 'NIE'} · noindex {'ZDJĘTY' if strip else 'ZOSTAJE (domena starter)'}")

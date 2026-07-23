@@ -59,7 +59,7 @@ ps = _m.ps
 # Kopia na TYCH hostach = nasz własny live/preview, nie plagiat. Domeny projektów dokładane dynamicznie.
 OUR_DOMAINS_STATIC = [
     "trevio.pl", "trevio.shop", "tomekniedzwiecki.pl", "niedzwiecki.ai",
-    "sklepy.niedzwiecki.ai", "vercel.app", "ulepszek.pl", "localhost",
+    "sklepy.niedzwiecki.ai", "ulepszek.pl", "localhost",
 ]
 
 WATERMARK_PREFIX = "wf2·"        # 'wf2·' (U+00B7 middle dot) — celny, unikalny prefiks watermarku
