@@ -1032,10 +1032,14 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     ? ok('portal.html: onResponse → applySavedFields (input [data-task][data-field] + Zapisano ✓ + P.steps.client_fields)')
     : bad('portal.html saved', 'brak onResponse/applySavedFields/d.saved/selektora pola/aktualizacji client_fields');
 
-  // (h) zasada MOBILE w prompcie (aplikacja mobilna Meta Business Suite → prowadź / poleć komputer)
-  (guideSrc.includes('APLIKACJA MOBILNA') && guideSrc.includes('Meta Business Suite') && /KOMPUTERZE|komputerze/.test(guideSrc))
-    ? ok('wf2-ads-guide prompt: zasada MOBILE (aplikacja mobilna Meta Business Suite → przeglądarka na komputerze / prowadź po appce)')
-    : bad('wf2-ads-guide prompt MOBILE', 'brak zasady o aplikacji mobilnej / Meta Business Suite / komputerze');
+  // (h) zasady MOBILE + EMPATIA SYTUACYJNA w prompcie: konkretna ścieżka telefonowa (przeglądarka
+  //     w trybie komputerowym), zakaz kreatora reklamy w appce, plan A/plan B, rozpoznanie sytuacji.
+  (guideSrc.includes('APLIKACJA MOBILNA') && guideSrc.includes('Meta Business Suite')
+    && guideSrc.includes('Wersja na komputer') && guideSrc.includes('Poproś o witrynę na komputer')
+    && /NIE prowadź przez kreator reklamy/.test(guideSrc)
+    && guideSrc.includes('EMPATIA SYTUACYJNA') && guideSrc.includes('plan A') && guideSrc.includes('plan B'))
+    ? ok('wf2-ads-guide prompt: EMPATIA SYTUACYJNA + ścieżka mobilna (przeglądarka tryb komputerowy, zakaz kreatora w appce, plan A/B)')
+    : bad('wf2-ads-guide prompt MOBILE/EMPATIA', 'brak ścieżki mobilnej (tryb komputerowy) / zakazu kreatora / zasady empatii sytuacyjnej plan A/B');
 
   // (i) firma: guard defensywny — zapis blokowany dopóki „firma" w HIDDEN_FOR_CLIENT (sync z PREVIEW_ONLY_STEPS)
   /taskKey === "firma" && HIDDEN_FOR_CLIENT\.has\("firma"\)/.test(guideSrc)
