@@ -107,3 +107,12 @@ Rozmrozik 60215ce4/59e53d40(TT) · Brzuszek 6dd560cf/a7b70e6a(TT) · Rozgrzewek 
    regeneracji.
 - Push do f67953c0 + a4dade3e. Osobny wątek: OCHRONA landingów 4 warstwy (doktryna
   docs/zbuduje/OCHRONA-LANDINGOW.md §7 runbook migracji assetów — czeka „go" Tomka).
+6. **HERO v4 — OSADZENIE W TLE (PIĄTA eskalacja hero; Tomek na v3: „totalnie nie pasuje…
+   zdjęcie/video zrobić W TLE, aby pasowało ze stroną"):** v3 była „ożywioną pocztówką"
+   (karta .hr-stage obok tekstu). v4 = kanon mata: .hr-scene full-bleed inset:0 + scrim
+   w tokenach strony (#F2F7FA) + treść NA scenie; **sc-hero-v4 REGENEROWANA POD osadzenie**
+   (lewa ~40% negative-space pod copy — nie przesuwanie starego kadru), nowa pętla i2v
+   amplituda 8.95 PASS, chipy usunięte, mobile świadomy crop 66%/50%. Bug kolumny copy
+   naprawiony (182px→stałe 498px na 1920). Visual PASS 1920/1440/390 (×2 niezależnie),
+   „MATA, nie pocztówka". STANDARD F1.7c pkt 2 „OSADZENIE" + LL-074 + pamięć (5. eskalacja).
+   Koszt $0.74 (wf2_costs ×2). Commity: 3ecee112 + 59a7c58a (doktryna), wypchnięte.
