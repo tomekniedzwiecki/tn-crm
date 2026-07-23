@@ -63,7 +63,7 @@ naszych produktach i zgłasza obce hosty.
   IMPORTUJE (jedno źródło prawdy), nie duplikuje. Landing produktu → build_id z `product_id`; strona
   główna → z `project_id` (lustro `_harden`).
 - **Zapytanie:** `"wf2·<build_id>" -site:<nasze-domeny>` (wykluczamy trevio.pl/.shop,
-  tomekniedzwiecki.pl, niedzwiecki.ai, vercel.app, localhost + `wf2_projects.domain` z bazy — żeby
+  tomekniedzwiecki.pl, niedzwiecki.ai, localhost + `wf2_projects.domain` z bazy — żeby
   nie łapać własnego live/preview). Trafienie na obcym hoście = kandydat na kopię.
 - **Provider (auto-detekcja klucza w .env, kolejność):** Google Programmable Search (CSE:
   `GOOGLE_CSE_KEY`+`GOOGLE_CSE_CX`) → SerpAPI (`SERPAPI_KEY`) → Bing v7 (`BING_SEARCH_KEY`).

@@ -1259,12 +1259,32 @@ NIE sprawdza — placeholdery są tam OCZEKIWANE (podmiana dopiero przy publikac
    kompozytach może robić agent (vision) — GPT wołać do PRZEBUDÓW sekcji; mechaniczne fixy
    CSS/typografii <5% pliku = fixy integracyjne (dozwolone agentowi, raportowane).
 2. **Sanity rendera (krytyk wyglądu PRZENIESIONY do F2 — ocenia MAKIETY przed akceptem,
-   Z2):** po akceptcie makiet strona NIE podlega już krytyce smaku/wyglądu — zostaje szybki
-   przegląd visual-verify wyłącznie pod błędy TECHNICZNE renderu (złamany layout, niezaładowane
-   obrazy, h-scroll, jank). Uwaga estetyczna do gotowej strony = uwaga do MAKIETY: wraca
-   do F2 jako poprawka grafiki + ponowne przeniesienie, nie „poprawka kodem wg gustu".
-   Każda wersja archiwizowana: `Desktop\TN-Sklepy-grafiki\FABRYKA-*\<slug>\vN\`
+   Z2):** po akceptcie makiet strona NIE podlega KAPRYŚNEJ krytyce smaku per-sekcja —
+   zostaje szybki przegląd visual-verify pod błędy TECHNICZNE renderu (złamany layout,
+   niezaładowane obrazy, h-scroll, jank) **ORAZ obowiązkowy F7.4 GESTALT (niżej) — jedyne
+   miejsce, gdzie CAŁOŚĆ żywej strony podlega osądowi**. Uwaga estetyczna per-sekcja =
+   uwaga do MAKIETY: wraca do F2 jako poprawka grafiki + ponowne przeniesienie, nie
+   „poprawka kodem wg gustu". Każda wersja archiwizowana:
+   `Desktop\TN-Sklepy-grafiki\FABRYKA-*\<slug>\vN\`
    (index.html + full-1280 + full-390 + KRYTYKA.md); grafiki w `assets\`.
+2b. **F7.4 GESTALT — AKCEPT FINALNEGO RENDERU „OCZAMI KLIENTA" (AUDYT 23.07; przyczyna
+   WSZYSTKICH pętli eskalacji Tomka — hero ×5, checkout ×11: fabryka oceniała makiety
+   i metryki, a NIKT nigdy nie oglądał finalnej ŻYWEJ strony jako całości; każdy feedback
+   Tomka był dokładnie tą brakującą krytyką):** po publikacji (i po KAŻDYM naprawczym
+   re-publish zmieniającym wygląd) **ŚWIEŻY agent, który NIE budował strony** (visual-verify
+   / świeży Opus), ogląda opublikowaną CAŁOŚĆ: desktop 1440 i mobile 390, hero z GRAJĄCĄ
+   pętlą, pełny scroll przez wszystkie sekcje, `#zamow` z formularzem. Werdykt na poziomie
+   GESTALT — pytania obowiązkowe: (1) czy strona wygląda SKOŃCZENIE i spójnie (jak praca
+   projektanta, nie składanka sekcji)? (2) czy hero robi WRAŻENIE i jest INTEGRALNE ze
+   stroną (nie „ożywiona pocztówka")? (3) czy kasa wygląda jak część strony? (4) co
+   ZGRZYTA w całości (nie per-sekcja)? (5) czy kupiłbym tu za własne pieniądze — czemu
+   nie? Werdykt = artefakt `GESTALT.md` w archiwum (data, viewporty, werdykt, zgrzyty).
+   **Bez czystego F7.4: NIE ustawiamy status=gotowy i NIE zdejmujemy noindex.** Zgrzyt
+   gestalt = naprawa (makieta/scena/osadzenie) + ponowny F7.4 — nie „odnotowano".
+   **⚖️ METRYKA NIGDY NIE ZAMYKA PYTANIA O WRAŻENIE:** amplituda/SSIM/crop% to backstopy
+   regresji — mogą ESKALOWAĆ do świeżego oka, ale PASS metryki nie zastępuje werdyktu
+   gestalt (lekcje: amplituda 8.97 przy zepsutych kolorach; „11.86 PASS" a hero i tak
+   „totalnie nie pasowało" przez osadzenie).
 3. **F7.3 FINALNY PASS DETALI — OBOWIĄZKOWY, ostatni gate przed oddaniem (Tomek 16.07:
    „musi być sprawdzenie na koniec wszystkiego, pixel-perfect"):** pełna procedura
    `docs/zbuduje/FINALNY-PASS.md` — 4 passy kaskadowo (design-linter skryptowy → vision

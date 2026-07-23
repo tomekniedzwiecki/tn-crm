@@ -1,4 +1,4 @@
-# STAN SESJI AUTOPILOT WF2 — projekt 448f2395 (ULEPSZEK / Patryk Skrzypniak) · 2026-07-23 (aktualizacja 6)
+# STAN SESJI AUTOPILOT WF2 — projekt 448f2395 (ULEPSZEK / Patryk Skrzypniak) · 2026-07-23 (aktualizacja 9 — AUDYT+SPRZĄTANIE, sesja zamykana)
 
 ## ✅ RDZEŃ PROJEKTU DOMKNIĘTY
 - **3× PRODUKT GOTOWY** (wf2_products.status=gotowy): Rozmrozik · Brzuszek · Rozgrzewek.
@@ -50,8 +50,27 @@
    (realne metody dostawy zamiast sandbox), krok firma.
 5. Duplikat produktu Rozmrozika na Trevio 019f8c16-240c… — ręczne skasowanie (API bez
    DELETE); nota open w wf2_notes.
-6. InPost Paczkomaty — wg raportu badacza (może wymagać Adriana).
+6. ~~InPost Paczkomaty~~ **WDROŻONE** (checkout-inline@3 LIVE ×6 z mapką z broker-config;
+   u Adriana zostaje tylko: doc broker-config + pickupPoint w partner order_detail — NIEblokujące).
 7. pl_integracje — pending (pixel/CAPI po ads).
+
+## 🧾 AUDYT ZAMKNIĘCIA (aktualizacja 9, 23.07) — 5 agentów, 39 ustaleń
+WDROŻONE OD RĘKI: F7.4 GESTALT (STANDARD F7 pkt 2b + LL-076 — root-cause pętli eskalacji);
+published-gate + name-gate w publish (LL-077, testy 9/9 + E2E); gate-check resolver
+(archiwum_glob lista+aliasy taca/masazer/merach/pierscien/koszyk, kod glob — 6/6 slugów
+rozwiązuje, wcześniej 4/6 padało); FAIL-CLOSED + klasa nośnika „KROK OSĄDU" (nagłówek LEKCJE);
+home sync kafli (ulepszek pp-v2/v3/v4, zaradek ugniatek v2 — grały klipy ODRZUCONE);
+vercel.app usunięty z detekcji copy-scan (sprzeczność z §1); MODULY.md checkout @3;
+LEKCJE: legenda pod tabelą + sort 77 wierszy; sprzątanie (8× .bak out, .bak-hero-v4
+z trackingu, *.bak-* w .gitignore, png 15MB→jpg 11KB).
+BACKLOG (nowa sesja / decyzje Tomka): patrz raport końcowy sesji + finding-lista
+scratchpad audyt-findings.md — najważniejsze: (a) HERO 4 landingów niezgodne z F1.7c
+OSADZENIE (rozgrzewek/brzuszek/skrolik = pocztówki w ramce, ugniatek = DIPTYK) — duża
+produkcja graficzna; (b) konsolidacja archiwów FABRYKA-* (3 lokalizacje, aliasy, ~1.5 GB
+binariów w repo — decyzja: git-lfs / wyniesienie); (c) manifest-check + hero_amplituda
+jako check w gate-check (dziś tylko runnery); (d) kamień „AKCEPT FINALNEGO RENDERU"
+w panelu tn-sklepy (lustro akceptu makiet); (e) FABRYKA-ssawek 248 MB — produkt w toku
+czy do wyniesienia (decyzja Tomka); (f) gate UGC-5★ maszynowo (dziś procedura+vision).
 
 ## TWARDE ZASADY (bez zmian — nie łamać)
 NIE PSUJ TPAY · zero Meta publikacji · zero maili · E2E tylko sandbox/[Test] · marże tylko
