@@ -2202,6 +2202,86 @@ def check_published(res, M, ctx):
         res.add("published", rule["label"], status_for(ok, sev),
                 "" if ok else "%d trafien: %s" % (len(hits), str(list(dict.fromkeys(hits))[:4])))
 
+# ============================================================ F1.7c pkt 6: GATE AMPLITUDY HERO
+def check_hero_amplituda(res, M, ctx):
+    """STANDARD F1.7c pkt 6 (LL-062, 4. eskalacja hero Tomka: 'nic sie nie dzieje') — petla hero
+    MUSI miec MIERZALNY ruch: diff klatek 0<->5 s (grayscale mean) >= prog (dom. 8.0).
+    Do audytu 23.07 pomiar zyl TYLKO w jednorazowych runnerach regen-hero-* = zero pokrycia
+    dla nowych hero. Ten check domyka regule maszynowo: bierze PIERWSZY hero-loop/hero-video
+    mp4 z HTML, sciaga, ffmpeg wyjmuje klatki 0 s i 5 s, PIL liczy diff. UWAGA (doktryna):
+    amplituda NIE zastepuje wiernosci ani werdyktu GESTALT — to backstop regresji."""
+    m = M.get("hero_amplituda") or {}
+    sev = m.get("severity", "FAIL")
+    prog = float(m.get("prog", 8.0))
+    html = ctx.get("html") or ""
+    urls = re.findall(r'https://[^\s"\'<>]+(?:hero-loop[^\s"\'<>]*|hero-video[^\s"\'<>]*)\.mp4', html)
+    if not urls:
+        # JS-mount sklada URL konkatenacja (var SB=".../bud-assets/<slug>/";
+        # src=SB+'video/hero-loop-pp-vN.mp4') -> zloz nazwe (moze niesc podkatalog)
+        # z prefiksami bud-assets obecnymi w HTML; kandydaci: base+name i base+basename.
+        names = re.findall(r'["\']([A-Za-z0-9._/-]*?(?:hero-loop|hero-video)[^"\']*?\.mp4)["\']', html)
+        bases = re.findall(r'https://[^\s"\'<>]+/bud-assets/[A-Za-z0-9._-]+/(?:(?:video|assets)/)?', html)
+        if names and bases:
+            n = names[0]
+            cands = []
+            for b in dict.fromkeys(bases):
+                cands += [b + n, b + n.rsplit("/", 1)[-1]]
+            urls = list(dict.fromkeys(cands))
+    if not urls:
+        res.add("hero_amplituda", "hero-loop mp4 w HTML", "WARN",
+                "nie znaleziono URL petli hero (wymog hero-video egzekwuje manifest-check)")
+        return
+    if ctx.get("no_net"):
+        res.add("hero_amplituda", "pomiar", "SKIP", "--no-net")
+        return
+    import tempfile, subprocess
+    try:
+        import requests as _rq
+        from PIL import Image, ImageChops
+        r = None
+        url = urls[0]
+        for cand in urls[:3]:  # przy zlozonych URL-ach (kilka baz) pierwszy istniejacy wygrywa
+            rr = _rq.get(cand, timeout=ctx.get("timeout", 10) * 3)
+            if rr.status_code == 200 and rr.content[:4] != b"<htm":
+                r, url = rr, cand
+                break
+        if r is None:
+            res.add("hero_amplituda", "pobranie petli", "WARN",
+                    "zaden kandydat mp4 nie zwrocil 200: %s" % [u.rsplit('/', 1)[-1] for u in urls[:3]])
+            return
+        with tempfile.TemporaryDirectory() as td:
+            mp4 = os.path.join(td, "h.mp4")
+            open(mp4, "wb").write(r.content)
+            frames = {}
+            for t in ("0", "5"):
+                fp = os.path.join(td, "f%s.png" % t)
+                pr = subprocess.run(["ffmpeg", "-y", "-ss", t, "-i", mp4, "-frames:v", "1", fp],
+                                    capture_output=True, timeout=60)
+                if pr.returncode != 0 or not os.path.isfile(fp):
+                    # petla krotsza niz 5 s -> wez ostatnia klatke
+                    pr2 = subprocess.run(["ffmpeg", "-y", "-sseof", "-0.2", "-i", mp4,
+                                          "-frames:v", "1", fp], capture_output=True, timeout=60)
+                    if pr2.returncode != 0 or not os.path.isfile(fp):
+                        res.add("hero_amplituda", "ekstrakcja klatek", "WARN",
+                                "ffmpeg nie wyjal klatki t=%ss (%s)" % (t, url.rsplit('/', 1)[-1]))
+                        return
+                frames[t] = Image.open(fp).convert("L")
+            a, b = frames["0"], frames["5"]
+            if a.size != b.size:
+                b = b.resize(a.size)
+            hist = ImageChops.difference(a, b).histogram()
+            total = sum(hist)
+            mean = sum(i * c for i, c in enumerate(hist)) / total if total else 0.0
+        ok = mean >= prog
+        res.add("hero_amplituda", "diff klatek 0<->5s >= %.1f" % prog, status_for(ok, sev),
+                "%.2f (%s)%s" % (mean, url.rsplit('/', 1)[-1],
+                                 "" if ok else " — martwa petla: mocniejszy beat/nosnik, nie upload"))
+    except FileNotFoundError:
+        res.add("hero_amplituda", "pomiar", "WARN", "brak ffmpeg w PATH — pomiar niedostepny")
+    except Exception as e:
+        res.add("hero_amplituda", "pomiar", "WARN", "blip pomiaru: %s" % str(e)[:120])
+
+
 # ================================================================== F7.3 FINALNY PASS (task#1): detail-lint.py
 def check_finalny_pass(res, M, ctx):
     """Odpal detail-lint.py (PASS 0 design-linter: WCAG/touch>=44/crop/martwa-interakcja/pay-badges-
@@ -2326,6 +2406,7 @@ CHECK_ORDER = [
     ("panel_sync", check_panel_sync),
     ("kapitalizacja_deposit", check_kapitalizacja_deposit),
     ("cena_panel", check_cena_panel),
+    ("hero_amplituda", check_hero_amplituda),
     ("published", check_published),
     ("finalny_pass", check_finalny_pass),
 ]
