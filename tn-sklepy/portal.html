@@ -1364,14 +1364,13 @@
             });
     }
     function isTaskDone(d) { const st = stepFor(d.key, null); return !!(st && st.status === 'done'); }
-    // Odblokowanie: po utworzeniu marki (krok marka done LUB frontStage>=2) klient może zrobić
-    // wszystkie zadania od razu; „przejęcia" czekają do końcówki (frontStage>=6). Zrobione = zawsze widoczne.
+    // Odblokowanie (decyzja Tomka 23.07): zwykłe zadania odblokowane od startu — bez czekania na
+    // markę. „Twoja firma" jest ostatnia w TASK_ORDER, a klientowi pojawia się dopiero po
+    // konfiguracji kampanii (filtr w buildState); „przejęcia" czekają do końcówki (frontStage>=6).
     function taskUnlocked(d) {
         if (isTaskDone(d)) return true;
-        if (d.key === 'firma') return true; // widoczność steruje buildState (po konfiguracji kampanii); gdy już jest — od razu odblokowane
         if (d.key === 'przejecie_kampanii' || d.key === 'przejecie_operacji') return frontStage() >= 6;
-        const marka = stepFor('marka', null);
-        return (marka && marka.status === 'done') || frontStage() >= 2;
+        return true;
     }
     function plRzeczy(n) { return n === 1 ? 'rzecz' : 'rzeczy'; }
 
