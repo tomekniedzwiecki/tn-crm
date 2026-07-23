@@ -90,13 +90,24 @@ def _cover(slug):
     except Exception:
         pass
     hero = f"{PUB}/bud-assets/{slug}/scenes/hero-d.webp"
-    return hero if _url_ok(hero) else None
+    if _url_ok(hero):
+        return hero
+    # konwencja fabryk parasolowych (Ulepszek 23.07): sceny w assets/ jako sc-*.webp
+    for name in ("sc-hero-800.webp", "sc-hero.webp", "sc-hero-thawed-800.webp", "sc-hero-thawed.webp"):
+        u = f"{PUB}/bud-assets/{slug}/assets/{name}"
+        if _url_ok(u):
+            return u
+    return None
 
 
 def _hover_img(slug, cover):
     """Drugi kadr karty (hover-swap): hero-d → demo-a → demo-01, różny od covera."""
     for name in ("hero-d.webp", "demo-a.webp", "demo-01.webp"):
         u = f"{PUB}/bud-assets/{slug}/scenes/{name}"
+        if u != cover and _url_ok(u):
+            return u
+    for name in ("sc-final.webp", "sc-demo-cover.webp", "sc-moment.webp", "packshot-thumb.webp"):
+        u = f"{PUB}/bud-assets/{slug}/assets/{name}"
         if u != cover and _url_ok(u):
             return u
     return cover
