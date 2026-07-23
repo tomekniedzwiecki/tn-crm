@@ -123,6 +123,23 @@ function hasForwardHeader(headers: unknown): boolean {
   return false;
 }
 
+// ── PROSPEKTOR (wfp): adres wysyłkowy z settings.wfp_from_email (cache 60 s) ──
+// Mail na ten adres = odpowiedź na cold outreach → tor wfp_inbox (NIE wfa_inbox).
+let _wfpFromCache: { val: string; at: number } | null = null;
+// deno-lint-ignore no-explicit-any
+async function getWfpFromEmail(sb: any): Promise<string> {
+  const now = Date.now();
+  if (_wfpFromCache && now - _wfpFromCache.at < 60_000) return _wfpFromCache.val;
+  try {
+    const { data } = await sb.from("settings").select("value").eq("key", "wfp_from_email").maybeSingle();
+    const val = ((data?.value as string) || "").toLowerCase().trim();
+    _wfpFromCache = { val, at: now };
+    return val;
+  } catch {
+    return _wfpFromCache?.val || "";
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
@@ -224,6 +241,109 @@ Deno.serve(async (req) => {
       content_type: a.content_type ?? null,
       size: typeof a.size === "number" ? a.size : null,
     }));
+
+    // ══ TOR PROSPEKTORA (PRZED match wfa_projects) ═════════════════════════════
+    // Mail na settings.wfp_from_email = odpowiedź na cold outreach → wfp_inbox +
+    // update prospekta + classify_reply + slack. Dodatek addytywny — ścieżka
+    // wfa_projects poniżej NIETKNIĘTA (tu robimy `return` dla trafień Prospektora).
+    const wfpFromEmail = await getWfpFromEmail(supabase);
+    if (wfpFromEmail && toEmail === wfpFromEmail) {
+      // Loop-guard: nie odpowiadamy sami sobie.
+      if (fromEmail === wfpFromEmail) {
+        return json({ success: true, ignored: true, reason: "wfp loop-guard" });
+      }
+
+      // Match prospekta po adresie nadawcy (brak → prospect_id NULL, ręczne przypisanie w UI).
+      // ilike jest case-insensitive, ale traktuje % i _ jako wildcardy — a _ bywa w local-part
+      // maila (jan_kowalski@…). Bez escapowania „jan_kowalski" dopasowałby też „janXkowalski"
+      // → przypisanie odpowiedzi do CUDZEGO prospekta (skażenie rekordu). Escapujemy metaznaki.
+      const fromEmailLike = fromEmail.replace(/[\\%_]/g, "\\$&");
+      const { data: prospRows } = await supabase
+        .from("wfp_prospects")
+        .select("id, company_name, status, replied_at, opted_out")
+        .ilike("email", fromEmailLike)
+        .limit(1);
+      const prosp = prospRows?.[0] || null;
+
+      // INSERT idempotentny (upsert po resend_id, ignoreDuplicates — retry svix bez dubla).
+      const { data: wfpInserted, error: wfpInsErr } = await supabase
+        .from("wfp_inbox")
+        .upsert({
+          prospect_id: prosp?.id ?? null,
+          resend_id: emailId,
+          message_id: messageId,
+          from_email: fromEmail,
+          from_name: fromName,
+          to_email: toEmail,
+          subject,
+          text_body: textBody,
+          html_body: htmlBody,
+          attachments: attachMeta,
+          received_at: payload.created_at || new Date().toISOString(),
+        }, { onConflict: "resend_id", ignoreDuplicates: true })
+        .select("id");
+      if (wfpInsErr) {
+        console.error("[wfa-inbox-webhook] wfp_inbox insert error:", wfpInsErr);
+        return json({ success: false, error: wfpInsErr.message }, 200);
+      }
+      const wfpRow = wfpInserted?.[0];
+      if (!wfpRow) {
+        // Duplikat (retry) — nie klasyfikujemy/nie notyfikujemy ponownie.
+        return json({ success: true, duplicate: true, wfp: true, resend_id: emailId });
+      }
+      const wfpInboxId = wfpRow.id;
+      console.log(`[wfa-inbox-webhook] wfp_inbox ${wfpInboxId} (prospect=${prosp?.id ?? "—"}, from=${fromEmail})`);
+
+      // Prospekt zmatchowany: replied_at + status advance-only → odpowiedzial + event.
+      if (prosp) {
+        const RANK: Record<string, number> = {
+          nowy: 0, research: 1, pomysl: 2, mail_gotowy: 3, zaakceptowany: 4,
+          wyslany: 5, odpowiedzial: 6, rozmowa: 7, sparing: 8, deal: 9,
+        };
+        const cur = RANK[prosp.status];
+        const upd: Record<string, unknown> = {};
+        if (!prosp.replied_at) upd.replied_at = new Date().toISOString();
+        // opt_out/odpadl poza RANK → cur undefined → statusu nie ruszamy (advance-only, nie cofamy rozmowa/sparing).
+        if (cur !== undefined && cur < 6) upd.status = "odpowiedzial";
+        if (Object.keys(upd).length) await supabase.from("wfp_prospects").update(upd).eq("id", prosp.id);
+        await supabase.from("wfp_events").insert({
+          prospect_id: prosp.id, actor: "auto", kind: "reply",
+          description: `Odpowiedź od ${fromEmail}`, payload: { subject, inbox_id: wfpInboxId },
+        });
+      }
+
+      // Fire-and-forget: classify_reply (service-role) + slack-notify wfp_reply (błąd nie wywraca).
+      const wfpNotify = (async () => {
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/wfp-engine`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseKey}` },
+            body: JSON.stringify({ action: "classify_reply", inboxId: wfpInboxId }),
+          });
+        } catch (e) { console.error("[wfa-inbox-webhook] wfp classify_reply error:", e); }
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/slack-notify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseKey}` },
+            body: JSON.stringify({
+              type: "wfp_reply",
+              data: {
+                firma: prosp?.company_name || (fromEmail.includes("@") ? fromEmail.split("@")[1] : fromEmail),
+                od: fromName ? `${fromName} <${fromEmail}>` : fromEmail,
+                temat: subject || "(bez tematu)",
+                snippet: (textBody || "").slice(0, 200),
+                prospect_id: prosp?.id ?? null,
+              },
+            }),
+          });
+        } catch (e) { console.error("[wfa-inbox-webhook] wfp slack-notify error:", e); }
+      })();
+      // deno-lint-ignore no-explicit-any
+      const ER = (globalThis as any).EdgeRuntime;
+      if (ER?.waitUntil) ER.waitUntil(wfpNotify); else await wfpNotify;
+
+      return json({ success: true, wfp: true, id: wfpInboxId, prospect_id: prosp?.id ?? null });
+    }
 
     // ── Match projektu: domena z toEmail == wfa_projects.domain (case-insensitive), nie-test ──
     let project: any = null;

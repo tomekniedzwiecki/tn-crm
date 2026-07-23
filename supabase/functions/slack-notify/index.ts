@@ -161,6 +161,11 @@ Deno.serve(async (req) => {
         message = formatWf2AdsReadyMessage(data)
         break
 
+      case 'wfp_reply':
+        webhookUrl = webhookSparing
+        message = formatWfpReplyMessage(data)
+        break
+
       default:
         throw new Error(`Nieznany typ powiadomienia: ${type}`)
     }
@@ -228,6 +233,50 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+// PROSPEKTOR — odpowiedź prospekta wpadła do wfp_inbox (kanał #sparing).
+function formatWfpReplyMessage(data: {
+  firma?: string
+  od?: string
+  temat?: string
+  snippet?: string
+  prospect_id?: string
+}) {
+  const snippet = (data.snippet || '').replace(/\s+/g, ' ').trim().substring(0, 200)
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: '📨 Prospektor — nowa odpowiedź', emoji: true }
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: `*Firma:*\n${data.firma || '—'}` },
+        { type: 'mrkdwn', text: `*Od:*\n${data.od || '—'}` }
+      ]
+    },
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: `*Temat:* ${data.temat || '(bez tematu)'}${snippet ? `\n> ${snippet}` : ''}` }
+    }
+  ]
+  if (data.prospect_id) {
+    blocks.push({
+      type: 'actions',
+      elements: [{
+        type: 'button',
+        text: { type: 'plain_text', text: '📋 Otwórz w Prospektorze', emoji: true },
+        url: `https://crm.tomekniedzwiecki.pl/tn-app/prospektor?id=${data.prospect_id}`,
+        action_id: 'view_wfp_prospect'
+      }]
+    })
+  }
+  blocks.push({
+    type: 'context',
+    elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}` }]
+  })
+  return { blocks }
+}
 
 function leadLink(email: string, label?: string, leadId?: string): string {
   const display = label || email

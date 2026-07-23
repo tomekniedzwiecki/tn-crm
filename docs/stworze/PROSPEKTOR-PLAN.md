@@ -389,6 +389,145 @@ ręcznej ~20-30/dzień, otwarcia Resend OFF — mierzymy odpowiedzi).
 - Testy E2E: rekord `is_test=true` (Firma testowa) → research → idea → mail → gmail_draft
   (draft na adres testowy claude3@tomekniedzwiecki.pl, NIE do obcej firmy!) → sprzątnięcie.
 
+═══════════════════════════════════════════════════════════════════════════
+
+# CZĘŚĆ II — v2 (2026-07-23, decyzja Tomka): pełny obieg mailowy + wertykale v2
+
+**DECYZJA TOMKA 23.07 (nadpisuje v1):** system WYSYŁA maile przez Resend po akceptacji
+w panelu — Tomek nie uczestniczy w wysyłce, tylko akceptuje. Odpowiedzi wpadają do
+Prospektora (Resend Inbound), AI je klasyfikuje i przygotowuje propozycje odpowiedzi,
+które Tomek akceptuje → wysyłka w wątku. Bramka human-in-the-loop przenosi się
+z „wysyłki" na „akceptację": **NIC nie wychodzi bez kliknięcia Tomka** (wyjątek: brak —
+nawet obsługa STOP tylko zapisuje opt-out, nie wysyła potwierdzeń). Droga gmail_draft
+zostaje jako fallback.
+
+## II.1 Infrastruktura mailowa
+
+- **Adres wysyłkowy:** `settings.wfp_from_email` (docelowo `tomek@kontakt.tomekniedzwiecki.pl`
+  — dedykowana subdomena `kontakt.tomekniedzwiecki.pl` w Resend: sending SPF/DKIM + receiving MX,
+  DNS przez `vercel dns add`; skrypt `scripts/setup-wfp-domain.mjs`) + `wfp_from_name`
+  („Tomasz Niedźwiecki"). Reply-To = ten sam adres → odpowiedzi wracają przez Resend Inbound
+  do GLOBALNEGO webhooka `wfa-inbox-webhook`. Fallback przed weryfikacją subdomeny:
+  `biuro@tomekniedzwiecki.pl` (zweryfikowana) — przełącznik w settings, zero deployu.
+- **Limit wysyłek:** `settings.wfp_send_daily_cap` (seed **25**/dzień — deliverability świeżej
+  subdomeny; liczone z `wfp_outbox` 24h) → 409 `limit_wysylek`. Podnosić stopniowo (warm-up).
+- **Higiena cold:** wysyłka `text` plain, BEZ sygnatury HTML; nagłówek `List-Unsubscribe`
+  (mailto:wfp_from_email z tematem STOP) — wzorzec outreach-send; otwarcia OFF (mierzymy reply).
+
+## II.2 Model danych (migracja `20260723a_wfp_v2.sql`)
+
+- **`wfp_outbox`**: `id uuid PK, prospect_id FK→wfp_prospects ON DELETE SET NULL, kind text
+  CHECK ('first','second','reply'), to_email, subject, body text, resend_id text, in_reply_to text,
+  status text CHECK ('sent','failed') , error text, created_at`. RLS team. INDEX (prospect_id), (created_at).
+- **`wfp_inbox`** (wzorzec wfa_inbox): `id uuid PK, prospect_id FK→wfp_prospects ON DELETE SET NULL,
+  resend_id text UNIQUE, message_id text, from_email, from_name, to_email, subject, text_body,
+  html_body, attachments jsonb, received_at, classified jsonb, suggested_reply jsonb,
+  handled_at timestamptz, created_at`. RLS team.
+  `classified` = `{typ:'pozytywna'|'neutralna'|'negatywna'|'ooo'|'opt_out'|'spam', uzasadnienie}` (AI);
+  `suggested_reply` = `{temat, tresc, wygenerowano_at}` (AI, edytowalne przy wysyłce).
+- **`wfp_verticals` — rozszerzenie (v2):** nowe kolumny `category text, pain text, wedge_hint text,
+  priority integer CHECK 1..5, operator_persona text, report jsonb, report_at timestamptz,
+  verdict text CHECK ('go','no_go') NULL, vscore integer`. NOWY zestaw statusów:
+  `katalogowy → w_badaniu → zbadany → w_prospectingu → w_grze → zajety | odrzucony | wstrzymany`
+  (CHECK podmienić; mapowanie starych: `otwarty`→`katalogowy`, reszta bez zmian).
+- **Seed katalog ~90 wertykali** (z researchu 23.07, w 13 kategoriach) — UPSERT po `key`:
+  nowe wiersze INSERT; istniejące UPDATE (category/pain/wedge_hint/priority/persona/saturation_note).
+  KOREKTY z weryfikacji saturacji: `warsztaty-samochodowe`, `fizjoterapia`, `zaklady-pogrzebowe`
+  (i inne [zweryf.] wysokie) → status `odrzucony` + saturation_note z nazwami konkurentów
+  (żaden nie ma prospektów — bezpieczne). Priority 5: firmy-ppoz, firmy-ddd; priority 4:
+  pracownie-protetyczne, kamieniarstwo, asenizacja, zespoly-dj-weselni, cukiernie-torty,
+  szkolki-roslin, nadzor-budowlany, serwis-udt, bhp-outsourcing, stolarnia-na-wymiar,
+  obozy-kolonie, wynajem-sprzetu-eventowego, pielegnacja-zieleni, kominiarstwo.
+- **`wfp_usage.kind`** CHECK + `'reply'` + `'vertical'` + `'classify'`.
+- **Settings seed:** `wfp_from_email` (seed `biuro@tomekniedzwiecki.pl` — podmiana po weryfikacji
+  subdomeny), `wfp_from_name`, `wfp_send_daily_cap`='25', `wfp_prompt_reply` (propozycje odpowiedzi),
+  `wfp_prompt_vertical` (raport branżowy), `wfp_prompt_classify` (klasyfikacja odpowiedzi).
+- **RPC `wfp_kpi()`** — dodać: `sent_today` (wfp_outbox 24h), `inbox_unhandled`
+  (wfp_inbox handled_at IS NULL AND classified->>'typ' != 'spam').
+
+## II.3 Edge — nowe akcje `wfp-engine`
+
+Wspólne: gate `verifyTeamMember` LUB service-role (Bearer == SERVICE_ROLE_KEY → actor 'auto';
+wzorzec isTrustedInternalCall) — service-role dozwolony TYLKO dla `classify_reply` i `reply_suggest`.
+
+- **`send`** `{prospectId, variant:'first'|'second', temat?, tresc?}` — zastępuje gmail_draft jako
+  główna droga. Wymogi jak gmail_draft (mail, email, !opted_out) + limit `wfp_send_daily_cap`.
+  Kompozycja: first = tresc + stopka (composeStopka); second bez stopki. Wysyłka POST
+  api.resend.com/emails `{from: "name <wfp_from_email>", to, reply_to: wfp_from_email, subject,
+  text, headers: {List-Unsubscribe}}`. Sukces → INSERT wfp_outbox, status→`wyslany`
+  (advance-only), `sent_channel='mail'`, event `sent`. Błąd Resend → outbox status failed + 502.
+  Idempotencja: recentEvent('sent') <10s → 409; wysłany first istnieje w outbox → 409
+  `juz_wyslany` (chyba że force).
+- **`classify_reply`** `{inboxId}` (service-role z webhooka lub team z UI) — Chat Completions
+  (prompt `wfp_prompt_classify`): klasyfikacja typu + wykrycie sprzeciwu. Zapis `classified`.
+  `opt_out` → AUTOMATYCZNIE opted_out prospekta (wymóg prawny: sprzeciw realizowany natychmiast;
+  jedyny automat bez kliku — niczego nie wysyła). Pozytywna/neutralna → od razu wywołaj
+  wewnętrznie logikę reply_suggest (jedna inwokacja). Event `reply_classified`.
+- **`reply_suggest`** `{inboxId, force?}` — AI propozycja odpowiedzi: kontekst = wątek
+  (wfp_outbox+wfp_inbox tego prospekta chronologicznie) + research + idea + MODEL_BLOCK
+  (`aplikacja_model_biznesowy`) + prompt `wfp_prompt_reply`. Zasady: po polsku, styl Tomka
+  (1-3 krótkie akapity), uczciwie wg SSOT, bez kwot w 1. odpowiedzi (kwoty na rozmowie),
+  cel = umówić 15-min rozmowę; przy negatywnej — krótkie podziękowanie. Zapis `suggested_reply`.
+- **`reply_send`** `{inboxId, temat?, tresc?}` (TYLKO team — to jest klik akceptacji Tomka) —
+  wysyła w wątku: `In-Reply-To`/`References` = wfp_inbox.message_id, from/reply_to jak send,
+  subject = `Re: ...`. Sukces → INSERT wfp_outbox kind 'reply', `handled_at=now()`, event.
+  Limit dzienny wysyłek obowiązuje.
+- **`vertical_research`** `{verticalId}` — Responses API + web_search (max_tool_calls 8,
+  max_output_tokens 8000; prompt `wfp_prompt_vertical`): raport 8 sekcji (rynek PL/decydent/ból/
+  konkurencja software z NAZWAMI/regulacje/wedge+ekonomia/persona+gdzie szukać/WERDYKT go|no_go
+  + score 0-24 wg 6 osi: fragmentacja×2, saturacja×3, ból×2, willingness×2, persona×2, wedge×1;
+  twarde bramki NO_GO: dedykowany lider / rynek <2000 firm / brak persony / rdzeń=system rządowy).
+  Zapis report/report_at/verdict/vscore; status: katalogowy|wstrzymany|odrzucony → `zbadany`
+  (w_badaniu ustawiane na czas trwania). Usage kind 'vertical'. Koszt ~0,3-0,5 USD.
+- **Gate wysyłki wg wertykalu:** `send` variant first wymaga `vertical.status='w_prospectingu'`
+  → inaczej 409 `wertykal_nie_w_prospectingu` (bramka GO: przejście `zbadany→w_prospectingu`
+  robi człowiek w UI po werdykcie). `reply_send`/`second` — bez tej bramki (rozmowa już trwa).
+  Auto-awans v2: prospekt `sparing` → wertykal `w_grze`; `deal` → `zajety` (stary awans
+  wyslany→w_grze USUNĄĆ).
+
+## II.4 Inbound routing (`wfa-inbox-webhook` — modyfikacja)
+
+W bloku match (przed match wfa_projects): jeśli `toEmail` == `settings.wfp_from_email`
+(case-insensitive; cache w module) → tor Prospektora:
+1. INSERT `wfp_inbox` (upsert po resend_id, ignoreDuplicates — retry-safe); match prospekta
+   po `lower(from_email)` w wfp_prospects (brak → prospect_id NULL, do ręcznego przypisania w UI).
+2. Prospekt zmatchowany: `replied_at=now()` (jeśli NULL), status→`odpowiedzial` (advance-only,
+   nie cofa rozmowa/sparing), event `reply`.
+3. Fire-and-forget (EdgeRuntime.waitUntil): POST wfp-engine `{action:'classify_reply', inboxId}`
+   z Bearer SERVICE_ROLE + POST slack-notify `{type:'wfp_reply', data:{firma, od, temat, snippet}}`
+   (nowy case w slack-notify → webhook #sparing; błąd Slacka nie wywraca).
+4. `return` — mail NIE trafia do wfa_inbox (to nie skrzynka aplikacji).
+Loop-guard: `from_email == wfp_from_email` → ignore (nie odpowiadamy sami sobie).
+
+## II.5 Frontend v2
+
+- **Akceptacja:** główny przycisk = **„Zatwierdź i WYŚLIJ"** (action send, confirm modal
+  z pełnym podglądem: from/to/temat/treść+stopka); gmail_draft zostaje jako mały przycisk
+  zapasowy „draft w Gmailu". Badge limitu: „wysłane dziś X/25".
+- **Tab „Odpowiedzi"** (nowy, badge nieobsłużonych): lista wfp_inbox (od, firma→link do drawera,
+  temat, badge klasyfikacji, data, obsłużone/nie); widok rozwijany: pełna treść odpowiedzi,
+  WĄTEK (outbox+inbox chronologicznie), karta „Propozycja odpowiedzi" (temat+treść EDYTOWALNE
+  z suggested_reply; „Wygeneruj ponownie"=reply_suggest force) + **„Zatwierdź i wyślij odpowiedź"**
+  (reply_send) + „Oznacz jako obsłużone bez odpowiedzi" (handled_at przez update) + STOP/opt-out
+  + przypisanie prospekta gdy NULL (search-select).
+- **Wertykale v2:** grupowanie po `category` (akordeony), sort po priority desc, filtry
+  status/priority/kategoria; karta: nazwa, badge status+priority, pain, wedge_hint, persona,
+  saturation_note; akcja **„Zbadaj branżę (raport AI)"** → vertical_research z paskiem;
+  po zbadaniu: werdykt GO/NO_GO + score + przycisk „Pokaż raport" (drawer/modal render sekcji)
+  + przejście „→ Do prospectingu" (status w_prospectingu; tylko przy go — przy no_go wymaga
+  potwierdzenia). Statusy edytowalne selectem (jak v1).
+- **Drawer prospekta:** sekcja „Korespondencja" (wątek outbox+inbox, najnowsze na dole);
+  status `wyslany` ustawiany przez send automatycznie (przycisk ręczny „Oznacz jako wysłany"
+  zostaje dla toru LinkedIn).
+- **KPI:** + „Wysłane dziś X/limit", „Odpowiedzi do obsłużenia N".
+
+## II.6 Kolejność wdrożenia v2
+1. Migracja → 2. `setup-wfp-domain.mjs` (subdomena Resend+DNS; jeśli weryfikacja padnie —
+   zostaje fallback biuro@) → 3. deploy wfp-engine + wfa-inbox-webhook + slack-notify →
+   4. test:webhooks → 5. push front → 6. E2E: send na własny adres testowy; inbound symulowany
+   realnym mailem NA wfp_from_email; classify+suggest+reply_send; vertical_research na 1 wertykalu
+   → 7. visual-verify.
+
 ## 7. Czego NIE robimy w v1 (świadomie)
 - Auto-wysyłka / sekwencje followup — NIGDY auto; followupy = przyszła iteracja też przez drafty.
 - Integracja GUS BIR1/CEIDG API (klucz wymaga wniosku; hook w polu `source` — przyszłość).

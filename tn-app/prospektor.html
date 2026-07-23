@@ -85,6 +85,40 @@
         }
         .link-a { color:#52a8ff; text-decoration:underline; text-underline-offset:2px; word-break:break-all; }
         .link-a:hover { color:#8bc4ff; }
+
+        /* ── v2: puls „w badaniu" ──────────────────────────────── */
+        @keyframes vpulse { 0%,100% { opacity:1; } 50% { opacity:.45; } }
+        .vt-pulse { animation:vpulse 1.15s ease-in-out infinite; }
+
+        /* ── v2: gwiazdki priority ─────────────────────────────── */
+        .pri-star { font-size:12px; color:#3a3a3f; }
+        .pri-star.on { color:#f5b955; }
+
+        /* ── v2: akordeony kategorii ───────────────────────────── */
+        details > summary { list-style:none; }
+        details > summary::-webkit-details-marker { display:none; }
+        .vt-cat > summary { list-style:none; cursor:pointer; }
+        .vt-cat > summary::-webkit-details-marker { display:none; }
+        .vt-cat > summary .caret { transition:transform .2s; }
+        .vt-cat[open] > summary .caret { transform:rotate(90deg); }
+
+        /* ── v2: wątek korespondencji ──────────────────────────── */
+        .thread { display:flex; flex-direction:column; gap:8px; }
+        .msg { max-width:88%; border-radius:12px; padding:9px 12px; font-size:12.5px; line-height:1.5; border:1px solid; }
+        .msg .msg-h { font-size:10px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; margin-bottom:4px; opacity:.8; display:flex; gap:8px; align-items:center; }
+        .msg .msg-b { white-space:pre-wrap; word-break:break-word; color:#d4d4d8; }
+        .msg.out { align-self:flex-end; background:rgba(0,112,243,.08); border-color:rgba(0,112,243,.3); }
+        .msg.out .msg-h { color:#52a8ff; }
+        .msg.in  { align-self:flex-start; background:#0c0c0c; border-color:#232323; }
+        .msg.in .msg-h { color:#a1a1aa; }
+
+        /* ── v2: modale szerokie (podgląd wysyłki / raport) ─────── */
+        .modal-box { width:100%; background:#0a0a0a; border:1px solid #1f1f1f; border-radius:14px; display:flex; flex-direction:column; max-height:90vh; }
+        .modal-body { overflow-y:auto; padding:20px; }
+        .rep-h2 { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#71717a; font-weight:700; margin:16px 0 7px; padding-top:12px; border-top:1px solid #171717; }
+        .rep-h2:first-of-type { border-top:0; padding-top:0; margin-top:4px; }
+        .rep-li { display:flex; gap:8px; font-size:12.5px; color:#d4d4d8; padding:3px 0; }
+        .rep-li i { color:#52525b; margin-top:4px; font-size:9px; flex-shrink:0; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -106,6 +140,7 @@
         <div class="border-b border-white/5 bg-black/40 px-6 flex items-center overflow-x-auto flex-shrink-0">
             <button class="tab-btn active" data-tab="pipeline"   onclick="showTab('pipeline')"><i class="ph ph-funnel"></i> Pipeline</button>
             <button class="tab-btn"        data-tab="akceptacja" onclick="showTab('akceptacja')"><i class="ph ph-check-square-offset"></i> Akceptacja <span id="ak-tabn" class="tb-n hidden">0</span></button>
+            <button class="tab-btn"        data-tab="odpowiedzi" onclick="showTab('odpowiedzi')"><i class="ph ph-chat-teardrop-text"></i> Odpowiedzi <span id="od-tabn" class="tb-n hidden">0</span></button>
             <button class="tab-btn"        data-tab="wertykale"  onclick="showTab('wertykale')"><i class="ph ph-squares-four"></i> Wertykale</button>
             <button class="tab-btn"        data-tab="import"     onclick="showTab('import')"><i class="ph ph-upload-simple"></i> Import</button>
             <button class="tab-btn"        data-tab="ustawienia" onclick="showTab('ustawienia')"><i class="ph ph-gear"></i> Ustawienia</button>
@@ -157,29 +192,64 @@
 
             <!-- ══════════ AKCEPTACJA ══════════ -->
             <section id="tab-akceptacja" class="tabpanel hidden p-5 lg:p-8 max-w-[900px] mx-auto animate-enter">
-                <div class="flex items-center justify-between mb-5">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
                     <div>
                         <h1 class="text-2xl font-semibold text-white tracking-tight">Kolejka akceptacji</h1>
-                        <p class="text-zinc-500 text-sm mt-0.5">Każda wiadomość zatwierdzana ręcznie. System nigdy nie wysyła — tworzy tylko draft w Gmailu.</p>
+                        <p class="text-zinc-500 text-sm mt-0.5">Zatwierdzasz ręcznie — dopiero Twój klik wysyła. Nic nie wychodzi bez akceptacji.</p>
                     </div>
-                    <span id="ak-counter" class="badge bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40 text-[12.5px]">0 czeka na Ciebie</span>
+                    <div class="flex items-center gap-2">
+                        <span id="ak-sentbadge" class="badge bg-[#0891b2]/10 text-[#3fc5e0] border-[#0891b2]/40 text-[12.5px]"><i class="ph ph-paper-plane-tilt"></i> wysłane dziś 0/0</span>
+                        <span id="ak-counter" class="badge bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40 text-[12.5px]">0 czeka na Ciebie</span>
+                    </div>
                 </div>
                 <div id="ak-list" class="space-y-4"></div>
             </section>
 
+            <!-- ══════════ ODPOWIEDZI ══════════ -->
+            <section id="tab-odpowiedzi" class="tabpanel hidden p-5 lg:p-8 max-w-[980px] mx-auto animate-enter">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-white tracking-tight">Odpowiedzi</h1>
+                        <p class="text-zinc-500 text-sm mt-0.5">Wiadomości od prospektów. AI klasyfikuje i proponuje odpowiedź — Ty zatwierdzasz wysyłkę.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="flex items-center gap-2 bg-[#0a0a0a] border border-[#1f1f1f] focus-within:border-[#0070f3]/50 rounded-lg px-3 py-2 min-w-[200px]">
+                            <i class="ph ph-magnifying-glass text-zinc-500"></i>
+                            <input id="od-search" type="text" oninput="renderOdpowiedzi()" placeholder="Szukaj: nadawca, temat, firma…" class="bg-transparent outline-none text-white text-sm w-full">
+                        </label>
+                        <label class="chip" style="cursor:pointer"><input id="od-onlyunh" type="checkbox" checked onchange="renderOdpowiedzi()" class="accent-[#0070f3]"> Tylko nieobsłużone</label>
+                    </div>
+                </div>
+                <div id="od-list" class="space-y-3"></div>
+            </section>
+
             <!-- ══════════ WERTYKALE ══════════ -->
             <section id="tab-wertykale" class="tabpanel hidden p-5 lg:p-8 max-w-[1200px] mx-auto animate-enter">
-                <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
                     <div>
                         <h1 class="text-2xl font-semibold text-white tracking-tight">Wertykale</h1>
-                        <p class="text-zinc-500 text-sm mt-0.5">Rejestr branż i wyłączność. „Zajęty" blokuje generator pomysłów; „odrzucony" = saturacja.</p>
+                        <p class="text-zinc-500 text-sm mt-0.5">Katalog branż → raport AI (bramka GO/NO_GO) → „Do prospectingu". „Zajęty" blokuje nowe pomysły.</p>
                     </div>
                     <div class="flex items-end gap-2">
-                        <div><label class="lbl">Nowy wertykał (nazwa)</label><input id="wt-newname" class="inp !w-[220px]" placeholder="np. Instalatorzy PV"></div>
+                        <div><label class="lbl">Nowy wertykał (nazwa)</label><input id="wt-newname" class="inp !w-[200px]" placeholder="np. Firmy kominiarskie"></div>
                         <button onclick="addVertical()" class="btn btn-w"><i class="ph ph-plus"></i> Dodaj</button>
                     </div>
                 </div>
-                <div id="wt-list" class="grid gap-4" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))"></div>
+                <div class="card p-4 mb-4">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <label class="flex items-center gap-2 bg-[#0a0a0a] border border-[#1f1f1f] focus-within:border-[#0070f3]/50 rounded-lg px-3 py-2 flex-1 min-w-[200px]">
+                            <i class="ph ph-magnifying-glass text-zinc-500"></i>
+                            <input id="wt-search" type="text" oninput="renderWertykale()" placeholder="Szukaj: nazwa, ból, persona…" class="bg-transparent outline-none text-white text-sm w-full">
+                        </label>
+                        <select id="wt-fstatus" onchange="renderWertykale()" class="inp !w-auto min-w-[150px]"><option value="">Wszystkie statusy</option></select>
+                        <select id="wt-fprio" onchange="renderWertykale()" class="inp !w-auto min-w-[130px]">
+                            <option value="">Każdy priorytet</option>
+                            <option value="5">Priorytet 5</option><option value="4">Priorytet 4</option><option value="3">Priorytet 3</option><option value="2">Priorytet 2</option><option value="1">Priorytet 1</option>
+                        </select>
+                        <select id="wt-fcat" onchange="renderWertykale()" class="inp !w-auto min-w-[160px]"><option value="">Wszystkie kategorie</option></select>
+                    </div>
+                </div>
+                <div id="wt-list" class="space-y-3"></div>
             </section>
 
             <!-- ══════════ IMPORT ══════════ -->
@@ -269,6 +339,32 @@
         </div>
     </div>
 
+    <!-- Modal podglądu wysyłki (uiSendConfirm) -->
+    <div id="send-modal" class="hidden fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)smClose(false)">
+        <div class="modal-box" style="max-width:600px">
+            <div class="flex items-center justify-between px-5 h-14 border-b border-[#1a1a1a] flex-shrink-0">
+                <div class="flex items-center gap-2.5"><i class="ph ph-paper-plane-tilt text-[#52a8ff]"></i><span id="sm-head" class="text-white font-semibold">Podgląd wysyłki</span></div>
+                <button onclick="smClose(false)" class="p-2 -mr-2 text-zinc-500 hover:text-white"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="modal-body" id="sm-body"></div>
+            <div class="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-[#1a1a1a] flex-shrink-0">
+                <button onclick="smClose(false)" class="btn btn-g">Anuluj</button>
+                <button id="sm-ok" onclick="smClose(true)" class="btn btn-p"><i class="ph ph-paper-plane-right"></i> Wyślij</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal raportu branżowego -->
+    <div id="report-modal" class="hidden fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)rmClose()">
+        <div class="modal-box" style="max-width:760px">
+            <div class="flex items-center justify-between px-5 h-14 border-b border-[#1a1a1a] flex-shrink-0">
+                <div class="min-w-0 flex items-center gap-2.5"><i class="ph ph-file-text text-[#52a8ff]"></i><span id="rm-head" class="text-white font-semibold truncate">Raport branżowy</span></div>
+                <button onclick="rmClose()" class="p-2 -mr-2 text-zinc-500 hover:text-white"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="modal-body" id="rm-body"></div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
@@ -296,12 +392,7 @@
             opt_out:      { label:'Opt-out',       cls:'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40',dot:'#e5484d' },
         };
         const RANK = { nowy:0, research:1, pomysl:2, mail_gotowy:3, zaakceptowany:4, wyslany:5, odpowiedzial:6, rozmowa:7, sparing:8, deal:9 };
-        const VERT_STATUS = {
-            otwarty:   { label:'Otwarty',   cls:'bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40' },
-            w_grze:    { label:'W grze',    cls:'bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40' },
-            zajety:    { label:'Zajęty',    cls:'bg-[#0891b2]/10 text-[#3fc5e0] border-[#0891b2]/40' },
-            odrzucony: { label:'Odrzucony', cls:'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40' },
-        };
+        // VERT_STATUS (v2) zdefiniowany niżej, przy ERR_PL.
         const STEP_PL = { research:'research', idea:'pomysł', mail:'wiadomości' };
         // Kody błędów silnika → komunikaty po polsku (409 i inne).
         const ERR_PL = {
@@ -312,6 +403,45 @@
             zbyt_szybko:        'Za szybko — ta sama akcja przed chwilą. Poczekaj kilka sekund.',
             opted_out:          'Prospekt na liście wykluczeń (opt-out) — akcje AI/draft zablokowane.',
             juz_utworzony:      'Draft pierwszego kontaktu już istnieje dla tego prospekta.',
+            limit_wysylek:      'Osiągnięto dzienny limit wysyłek. Chronimy deliverability świeżej domeny — resztę wyślij jutro (limit podnosimy stopniowo).',
+            wertykal_nie_w_prospectingu: 'Wertykał nie jest w statusie „Do prospectingu". Zbadaj branżę i po werdykcie GO przełącz wertykał na „Do prospectingu" w zakładce Wertykale — dopiero wtedy wolno wysłać 1. kontakt.',
+            juz_wyslany:        'Pierwszy kontakt do tego prospekta został już wysłany.',
+            brak_maila:         'Najpierw wygeneruj wiadomości („Napisz wiadomości").',
+            brak_emaila:        'Prospekt nie ma adresu e-mail — użyj toru LinkedIn.',
+            brak_inboxa:        'Nie znaleziono tej odpowiedzi.',
+            brak_watku:         'Brak wątku do odpowiedzi (odpowiedź nie ma message_id).',
+            brak_propozycji:    'Najpierw wygeneruj propozycję odpowiedzi.',
+        };
+        // ── v2: statusy wertykali (cykl życia). „Zieleń tylko done" → GO/zbadany = niebieski, nie zielony.
+        const VERT_STATUS = {
+            katalogowy:     { label:'Katalogowy',      cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',      dot:'#a1a1aa' },
+            otwarty:        { label:'Katalogowy',      cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',      dot:'#a1a1aa' },
+            w_badaniu:      { label:'W badaniu',       cls:'bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40 vt-pulse', dot:'#f5a623' },
+            zbadany:        { label:'Zbadany',         cls:'bg-sky-500/10 text-sky-300 border-sky-500/30',         dot:'#38bdf8' },
+            w_prospectingu: { label:'Do prospectingu', cls:'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40',   dot:'#0070f3' },
+            w_grze:         { label:'W grze',          cls:'bg-teal-500/10 text-teal-300 border-teal-500/30',      dot:'#2dd4bf' },
+            zajety:         { label:'Zajęty',          cls:'bg-amber-500/10 text-amber-300 border-amber-500/40',   dot:'#f59e0b' },
+            odrzucony:      { label:'Odrzucony',       cls:'bg-[#e5484d]/10 text-[#f26d78]/80 border-[#e5484d]/30',dot:'#e5484d' },
+            wstrzymany:     { label:'Wstrzymany',      cls:'bg-zinc-600/15 text-zinc-500 border-zinc-600/30',      dot:'#52525b' },
+        };
+        const VERT_STATUS_ORDER = ['katalogowy','w_badaniu','zbadany','w_prospectingu','w_grze','zajety','wstrzymany','odrzucony'];
+        // Klasyfikacja odpowiedzi (wfp_inbox.classified.typ).
+        const REPLY_TYP = {
+            pozytywna: { label:'Pozytywna', cls:'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40', ic:'ph-smiley' },
+            neutralna: { label:'Neutralna', cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',    ic:'ph-minus-circle' },
+            negatywna: { label:'Negatywna', cls:'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40', ic:'ph-smiley-sad' },
+            ooo:       { label:'Auto-odpowiedź', cls:'bg-zinc-500/15 text-zinc-400 border-zinc-500/30', ic:'ph-airplane-tilt' },
+            opt_out:   { label:'Opt-out / STOP', cls:'bg-transparent text-[#f26d78] border-[#e5484d]', ic:'ph-hand-palm' },
+            spam:      { label:'Spam', cls:'bg-zinc-700/10 text-zinc-600 border-zinc-700/40', ic:'ph-trash' },
+        };
+        // Ludzkie nagłówki sekcji raportu branżowego (fallback: humanizacja klucza).
+        const REPORT_LABELS = {
+            rynek:'Rynek w PL', rynek_pl:'Rynek w PL', decydent:'Decydent / persona', bol:'Ból operacyjny',
+            bol_zweryfikowany:'Ból (zweryfikowany)', konkurencja:'Konkurencja software', konkurenci:'Konkurenci',
+            software:'Istniejący software', regulacje:'Regulacje', wedge:'Wedge', ekonomia:'Ekonomia',
+            wedge_ekonomia:'Wedge + ekonomia', persona:'Persona operatora', gdzie_szukac:'Gdzie szukać',
+            persona_gdzie_szukac:'Persona + gdzie szukać', werdykt:'Werdykt', score:'Score', uzasadnienie:'Uzasadnienie',
+            osie:'Punktacja (osie)', podsumowanie:'Podsumowanie', ryzyka:'Ryzyka', rekomendacja:'Rekomendacja',
         };
         const SETTING_KEYS = [
             { key:'wfp_prompt_research', label:'Prompt — research firmy', hint:'System prompt analityka (min. 200 znaków).', rows:8 },
@@ -339,6 +469,18 @@
         let activeVariant = 'A';
         let mailBuf = {};
         let batchRunning = false, batchStop = false;
+        // ── v2: skrzynka / wysyłka ──
+        let inbox = [];             // wfp_inbox (pełna paginacja)
+        let outbox = [];            // wfp_outbox (pełna paginacja)
+        let sendCap = 25;           // settings.wfp_send_daily_cap (fallback 25)
+        let fromName = '';          // settings.wfp_from_name
+        let fromEmail = '';         // settings.wfp_from_email
+        let stopkaTemplate = '';    // settings.wfp_stopka_prawna (podgląd read-only)
+        const inboxExpanded = new Set();  // id → rozwinięty wiersz
+        const replyBuf = {};        // inboxId → {temat, tresc} (edycja propozycji)
+        const vertBusy = new Set(); // vertical_id → badanie w toku
+        const sendBusy = new Set(); // klucze wysyłki w toku (double-submit guard: send/reply_send)
+        let curReportVerticalId = null;
 
         // ═══════════ HELPERY ═══════════
         function escapeHtml(str){
@@ -433,7 +575,8 @@
             document.querySelectorAll('.tabpanel').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
             const panel = document.getElementById('tab-'+name); if (panel) panel.classList.remove('hidden');
-            if (name==='akceptacja') renderAkceptacja();
+            if (name==='akceptacja') { renderAkceptacja(); renderAkSentBadge(); }
+            if (name==='odpowiedzi') renderOdpowiedzi();
             if (name==='wertykale') renderWertykale();
             if (name==='ustawienia') renderSettings();
         }
@@ -442,6 +585,10 @@
             if (e.key !== 'Escape') return;
             const cm = document.getElementById('confirm-modal');
             if (cm && !cm.classList.contains('hidden')) { cmClose(false); return; }
+            const sm = document.getElementById('send-modal');
+            if (sm && !sm.classList.contains('hidden')) { smClose(false); return; }
+            const rm = document.getElementById('report-modal');
+            if (rm && !rm.classList.contains('hidden')) { rmClose(); return; }
             const dr = document.getElementById('drawer');
             if (dr && dr.classList.contains('open')) closeDrawer();
         });
@@ -469,6 +616,24 @@
             }
             return map;
         }
+        // wfp_inbox / wfp_outbox — pełna paginacja (jak prospekty). Tabele mogą jeszcze nie istnieć
+        // (migracja v2 przed frontem) → cichy fallback [] bez wywracania panelu.
+        async function fetchAllTable(table, orderCol){
+            const all = []; const PAGE = 1000;
+            for (let from=0; ; from+=PAGE){
+                const { data, error } = await supabaseClient.from(table).select('*').order(orderCol,{ ascending:false }).range(from, from+PAGE-1);
+                if (error){
+                    // brak tabeli (42P01) / RLS = pusto, nie krzycz na cały ekran
+                    if (from===0 && !/relation .* does not exist|42P01/i.test(error.message||'')) console.warn(table, error);
+                    break;
+                }
+                all.push(...(data||[]));
+                if (!data || data.length < PAGE) break;
+            }
+            return all;
+        }
+        const fetchAllInbox  = () => fetchAllTable('wfp_inbox', 'received_at');
+        const fetchAllOutbox = () => fetchAllTable('wfp_outbox', 'created_at');
         function buildIdx(p){
             p._idx = foldStr([p.company_name, p.email, p.city, p.contact_person, p.contact_role, p.nip, verticalName(p.vertical_id)].filter(Boolean).join(' '));
         }
@@ -489,26 +654,35 @@
             renderKpi();
         }
         async function loadAll(){
-            // kurs USD→PLN (settings) — cichy fallback 4.0 gdy RLS nie odda
+            // settings współdzielone (kurs + wysyłka + stopka) — cichy fallback gdy RLS nie odda
             try {
-                const { data:sr } = await supabaseClient.from('settings').select('value').eq('key','usd_pln_rate').maybeSingle();
-                if (sr && sr.value){ const n = parseFloat(sr.value); if (!isNaN(n) && n>0) usdPln = n; }
+                const { data:sr } = await supabaseClient.from('settings').select('key,value')
+                    .in('key', ['usd_pln_rate','wfp_from_name','wfp_from_email','wfp_send_daily_cap','wfp_stopka_prawna']);
+                const map = {}; (sr||[]).forEach(r => map[r.key] = r.value);
+                if (map.usd_pln_rate){ const n = parseFloat(map.usd_pln_rate); if (!isNaN(n) && n>0) usdPln = n; }
+                if (map.wfp_send_daily_cap){ const n = parseInt(map.wfp_send_daily_cap,10); if (Number.isFinite(n) && n>0) sendCap = n; }
+                fromName = map.wfp_from_name || '';
+                fromEmail = map.wfp_from_email || '';
+                stopkaTemplate = map.wfp_stopka_prawna || '';
             } catch(_) {}
 
             const vq = await supabaseClient.from('wfp_verticals').select('*').order('name');
             if (vq.error){ console.error('wfp_verticals', vq.error); showToast('Błąd wertykali: '+vq.error.message,'error'); }
             verticals = vq.data || [];
 
-            const [pRows, uMap] = await Promise.all([ fetchAllProspects(), fetchAllUsage() ]);
-            prospects = pRows; usageByProspect = uMap;
+            const [pRows, uMap, inRows, outRows] = await Promise.all([ fetchAllProspects(), fetchAllUsage(), fetchAllInbox(), fetchAllOutbox() ]);
+            prospects = pRows; usageByProspect = uMap; inbox = inRows; outbox = outRows;
             prospects.forEach(buildIdx);
             recompute();
 
             const boot = document.getElementById('boot'); if (boot) boot.classList.add('hidden');
             fillVerticalSelects();
+            fillVertFilters();
             renderStatusChips();
             renderList();
             updateAkTabBadge();
+            updateOdTabBadge();
+            renderAkSentBadge();
             await loadKpi();
             // podtrzymaj aktywną zakładkę (re-render list dynamicznych);
             // ZAWSZE wywołaj showTab — panel pipeline startuje z .hidden i bez tego
@@ -533,12 +707,32 @@
             recompute(); renderStatusChips(); renderList(); updateAkTabBadge();
             return data;
         }
+        // Odśwież skrzynkę (po wysyłce / obsłużeniu / klasyfikacji).
+        async function refetchMail(){
+            const [inRows, outRows] = await Promise.all([ fetchAllInbox(), fetchAllOutbox() ]);
+            inbox = inRows; outbox = outRows;
+            updateOdTabBadge(); renderAkSentBadge();
+            const odPanel = document.getElementById('tab-odpowiedzi');
+            if (odPanel && !odPanel.classList.contains('hidden')) renderOdpowiedzi();
+        }
 
         function fillVerticalSelects(){
             const opts = '<option value="">— brak —</option>' + verticals.map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('');
             const pvAll = '<option value="">Wszystkie wertykale</option>' + verticals.map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('');
             const pv = document.getElementById('pv-vert'); if (pv){ const cur=pv.value; pv.innerHTML=pvAll; pv.value=cur; }
             ['imp-vert','sf-vert'].forEach(idv => { const el=document.getElementById(idv); if(el){ const cur=el.value; el.innerHTML=opts; el.value=cur; } });
+        }
+        // Filtry zakładki Wertykale (status + kategoria z danych).
+        function fillVertFilters(){
+            const st = document.getElementById('wt-fstatus');
+            if (st){ const cur=st.value;
+                st.innerHTML = '<option value="">Wszystkie statusy</option>' + VERT_STATUS_ORDER.map(s => `<option value="${s}">${esc(VERT_STATUS[s].label)}</option>`).join('');
+                st.value = cur; }
+            const cats = [...new Set(verticals.map(v => (v.category||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pl'));
+            const fc = document.getElementById('wt-fcat');
+            if (fc){ const cur=fc.value;
+                fc.innerHTML = '<option value="">Wszystkie kategorie</option>' + cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + (verticals.some(v=>!(v.category||'').trim())?'<option value="__none">Bez kategorii</option>':'');
+                fc.value = cur; }
         }
 
         (async () => {
@@ -552,6 +746,17 @@
         function cnt(status){
             if (kpiOk && kpi && kpi.counts_per_status && kpi.counts_per_status[status]!==undefined) return kpi.counts_per_status[status]||0;
             return statusCounts[status]||0;
+        }
+        // Wysłane w ostatnich 24h (cap) — RPC wfp_kpi().sent_today, fallback z wfp_outbox (pełna paginacja).
+        function sentTodayVal(){
+            if (kpiOk && kpi && kpi.sent_today!==undefined && kpi.sent_today!==null) return kpi.sent_today;
+            const since = Date.now() - 24*3600*1000;
+            return outbox.filter(o => o.status!=='failed' && new Date(o.created_at).getTime() >= since).length;
+        }
+        // Odpowiedzi nieobsłużone — RPC wfp_kpi().inbox_unhandled, fallback z wfp_inbox.
+        function inboxUnhandledVal(){
+            if (kpiOk && kpi && kpi.inbox_unhandled!==undefined && kpi.inbox_unhandled!==null) return kpi.inbox_unhandled;
+            return inbox.filter(m => !m.handled_at && (!m.classified || m.classified.typ!=='spam')).length;
         }
         function renderKpi(){
             const wrap = document.getElementById('kpi-wrap'); if (!wrap) return;
@@ -577,6 +782,8 @@
                 tile(cnt('odpowiedzial'),'Odpowiedzi', STATUS_META.odpowiedzial.dot),
                 tile(cnt('rozmowa')+cnt('sparing'),'Rozmowy', STATUS_META.rozmowa.dot),
                 tile(cnt('deal'),'Deale', STATUS_META.deal.dot),
+                tile(sentTodayVal()+'/'+sendCap,'Wysłane dziś', '#3fc5e0'),
+                tile(inboxUnhandledVal(),'Do obsłużenia', '#67e8f9'),
                 tile(replyRate+'%','Reply-rate', '#52a8ff'),
                 tile(fmtUsdToPln(costUsd),'Koszt AI', '#f5a623'),
             ];
@@ -725,6 +932,7 @@
                 p.idea ? renderIdea(p) : '',
                 (p.mail ? renderMailSection(p) : ''),
                 renderReviewSection(p),
+                renderCorrespondence(p),
                 renderReplySection(p),
                 renderStatusSection(p),
                 renderDangerSection(p),
@@ -879,21 +1087,23 @@
 
         function renderReviewSection(p){
             if (['nowy','research','pomysl','opt_out','odpadl'].includes(p.status)) return '';
-            const markBtns = `<div class="flex gap-2">
-                    <button onclick="markSent('${p.id}','mail')" class="btn btn-g btn-sm" ${p.opted_out?'disabled':''}><i class="ph ph-envelope"></i> Wysłany (mail)</button>
-                    <button onclick="markSent('${p.id}','linkedin')" class="btn btn-g btn-sm" ${p.opted_out?'disabled':''}><i class="ph ph-linkedin-logo"></i> Wysłany (LinkedIn)</button>
-                </div>`;
+            // Ręczne oznaczenie wysyłki ZOSTAJE tylko dla toru LinkedIn (mail wysyła akcja send).
+            const liBtn = `<button onclick="markSent('${p.id}','linkedin')" class="btn btn-g btn-sm" ${p.opted_out?'disabled':''}><i class="ph ph-linkedin-logo"></i> Wysłane ręcznie przez LinkedIn</button>`;
             let inner = '';
             if (p.status==='mail_gotowy'){
                 inner = `<div class="flex flex-wrap gap-2 mb-3">
-                        <button onclick="approveDraft('${p.id}')" class="btn btn-w btn-sm" ${p.email?'':'disabled'} title="${p.email?'':'Brak adresu e-mail'}"><i class="ph ph-check-fat"></i> Zatwierdź → draft w Gmailu</button>
+                        <button onclick="drawerSend('${p.id}')" class="btn btn-p btn-sm" ${p.email?'':'disabled'} title="${p.email?'':'Brak adresu e-mail'}"><i class="ph ph-paper-plane-right"></i> Zatwierdź i WYŚLIJ</button>
+                        <button onclick="approveDraft('${p.id}')" class="btn btn-g btn-sm" ${p.email?'':'disabled'} title="Utwórz tylko draft w Gmailu (zapas)"><i class="ph ph-envelope"></i> Draft w Gmailu</button>
                         <button onclick="rejectProspect('${p.id}')" class="btn btn-d btn-sm"><i class="ph ph-x"></i> Odrzuć</button>
                     </div>
-                    ${p.email?'':'<div class="text-[11px] text-[#f26d78] mb-2">Brak adresu e-mail — draft mailowy niemożliwy. Użyj toru LinkedIn.</div>'}
-                    <div class="text-[11px] text-zinc-600 mb-1.5 pt-2 border-t border-[#161616]">Wysłane poza systemem (np. LinkedIn)? Oznacz kanał:</div>${markBtns}`;
+                    ${p.email?'':'<div class="text-[11px] text-[#f26d78] mb-2">Brak adresu e-mail — wysyłka mailowa niemożliwa. Użyj toru LinkedIn.</div>'}
+                    <div class="text-[11px] text-zinc-600 mb-1.5 pt-2 border-t border-[#161616]">Kontakt przez LinkedIn zamiast maila?</div>${liBtn}`;
             } else if (p.status==='zaakceptowany'){
                 inner = `<div class="text-[12px] text-teal-300 mb-2"><i class="ph ph-check-circle"></i> Draft utworzony ${esc(fmtDate(p.gmail_draft_at))} — wyślij ręcznie z Gmaila.</div>
-                    <div class="text-[11px] text-zinc-500 mb-2">Po ręcznej wysyłce oznacz kanał:</div>${markBtns}`;
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        <button onclick="drawerSend('${p.id}')" class="btn btn-p btn-sm" ${p.email?'':'disabled'}><i class="ph ph-paper-plane-right"></i> Wyślij przez system</button>
+                    </div>
+                    <div class="text-[11px] text-zinc-600 mb-1.5">Kontakt przez LinkedIn?</div>${liBtn}`;
             } else {
                 const ch = p.sent_channel==='linkedin' ? 'LinkedIn' : (p.sent_channel==='mail' ? 'mail' : '—');
                 inner = `<div class="text-[12px] text-zinc-400"><i class="ph ph-check-circle text-[#62c073]"></i> Wysłany kanałem: <b class="text-zinc-200">${esc(ch)}</b></div>`;
@@ -1134,6 +1344,7 @@
             try {
                 await callEngine({ action:'status_change', prospectId:id, optOut:true });
                 await refetchProspect(id); if (curDrawerId===id) openDrawer(id); loadKpi();
+                const odPanel = document.getElementById('tab-odpowiedzi'); if (odPanel && !odPanel.classList.contains('hidden')) renderOdpowiedzi();
                 showToast('Dodano do wykluczeń','success');
             } catch(e){ showToast(e.message,'error'); }
         }
@@ -1142,6 +1353,18 @@
             const n = prospects.filter(p => p.status==='mail_gotowy').length;
             const el = document.getElementById('ak-tabn'); if (!el) return;
             el.textContent = n; el.classList.toggle('hidden', n===0);
+        }
+        function updateOdTabBadge(){
+            const n = inboxUnhandledVal();
+            const el = document.getElementById('od-tabn'); if (!el) return;
+            el.textContent = n; el.classList.toggle('hidden', !n);
+        }
+        function renderAkSentBadge(){
+            const el = document.getElementById('ak-sentbadge'); if (!el) return;
+            const sent = sentTodayVal();
+            const over = sent >= sendCap;
+            el.className = 'badge text-[12.5px] ' + (over ? 'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40' : 'bg-[#0891b2]/10 text-[#3fc5e0] border-[#0891b2]/40');
+            el.innerHTML = `<i class="ph ph-paper-plane-tilt"></i> wysłane dziś ${sent}/${sendCap}`;
         }
 
         // ═══════════ AKCEPTACJA ═══════════
@@ -1155,9 +1378,7 @@
         function akCard(p){
             const m = p.mail || {}; const idea = p.idea || {};
             const stopka = stopkaById[p.id];
-            const stopkaBox = stopka
-                ? `<div class="text-[11px] text-zinc-500 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5 leading-relaxed">${esc(stopka)}</div>`
-                : `<div class="text-[11px] text-zinc-600 bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5">Stopka zostanie doklejona automatycznie przy tworzeniu draftu.</div>`;
+            const stopkaBox = akStopkaBox(stopka, '11px');
             const ideaLine = idea.nazwa_robocza ? `<div class="text-[12px] text-zinc-500 mb-2"><i class="ph ph-lightbulb text-[#f5b955]"></i> ${esc(idea.nazwa_robocza)} — ${esc(idea.problem||'')}</div>` : '';
             return `<div class="card p-4">
                 <div class="flex items-start justify-between gap-3 mb-2">
@@ -1175,12 +1396,20 @@
                 <label class="lbl">Stopka (read-only)</label>
                 ${stopkaBox}
                 <div class="flex flex-wrap gap-2 mt-3">
-                    <button onclick="akApprove('${p.id}')" class="btn btn-w btn-sm" ${p.email?'':'disabled'} title="${p.email?'':'Brak adresu e-mail'}"><i class="ph ph-check-fat"></i> Zatwierdź → draft</button>
+                    <button onclick="akSend('${p.id}')" class="btn btn-p btn-sm" ${p.email?'':'disabled'} title="${p.email?'':'Brak adresu e-mail'}"><i class="ph ph-paper-plane-right"></i> Zatwierdź i WYŚLIJ</button>
+                    <button onclick="akApprove('${p.id}')" class="btn btn-g btn-sm" ${p.email?'':'disabled'} title="Utwórz tylko draft w Gmailu (zapas)"><i class="ph ph-envelope"></i> Draft w Gmailu</button>
                     <button onclick="rejectProspect('${p.id}')" class="btn btn-d btn-sm"><i class="ph ph-x"></i> Odrzuć</button>
                     <button onclick="akSkip('${p.id}')" class="btn btn-g btn-sm"><i class="ph ph-skip-forward"></i> Pomiń</button>
                 </div>
                 ${p.email?'':'<div class="text-[11px] text-[#f26d78] mt-2">Brak adresu e-mail — użyj toru LinkedIn (szczegóły).</div>'}
             </div>`;
+        }
+        // Wspólny box podglądu stopki (Akceptacja + drawer). Preferuje stopkaById (po akcji mail),
+        // fallback = szablon z settings z podstawionym imieniem (serwer składa właściwą stopkę przy wysyłce).
+        function akStopkaBox(stopka, fs){
+            const txt = stopka || (stopkaTemplate ? stopkaTemplate.replace(/\{\{DANE_NADAWCY\}\}/g, fromName || 'Tomasz Niedźwiecki') : '');
+            if (txt) return `<div class="text-[${fs}] text-zinc-500 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5 leading-relaxed">${esc(txt)}</div>`;
+            return `<div class="text-[${fs}] text-zinc-600 bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5">Stopka prawna (PKE/RODO + „STOP") zostanie doklejona automatycznie przy wysyłce pierwszego kontaktu.</div>`;
         }
         function akSkip(id){ akSkipped.add(id); renderAkceptacja(); }
         async function akApprove(id){
@@ -1203,35 +1432,107 @@
             }
         }
 
-        // ═══════════ WERTYKALE ═══════════
+        // ═══════════ WERTYKALE (v2) ═══════════
+        function priorityStars(pri){
+            const n = Math.max(0, Math.min(5, parseInt(pri,10)||0));
+            if (!n) return '';
+            let s = '';
+            for (let i=1;i<=5;i++) s += `<i class="ph-fill ph-star pri-star ${i<=n?'on':''}"></i>`;
+            return `<span title="Priorytet ${n}/5" class="inline-flex items-center gap-0.5">${s}</span>`;
+        }
+        function filteredVerticals(){
+            let rows = verticals.slice();
+            const fs = document.getElementById('wt-fstatus')?.value;
+            if (fs) rows = rows.filter(v => (v.status||'katalogowy')===fs || (fs==='katalogowy' && v.status==='otwarty'));
+            const fp = document.getElementById('wt-fprio')?.value;
+            if (fp) rows = rows.filter(v => String(parseInt(v.priority,10)||0)===fp);
+            const fc = document.getElementById('wt-fcat')?.value;
+            if (fc==='__none') rows = rows.filter(v => !(v.category||'').trim());
+            else if (fc) rows = rows.filter(v => (v.category||'').trim()===fc);
+            const q = foldStr((document.getElementById('wt-search')?.value||'').trim());
+            if (q){ const toks=q.split(/\s+/).filter(Boolean);
+                rows = rows.filter(v => { const idx = foldStr([v.name,v.key,v.category,v.pain,v.wedge_hint,v.operator_persona,v.saturation_note].filter(Boolean).join(' ')); return toks.every(t => idx.includes(t)); }); }
+            return rows;
+        }
         function renderWertykale(){
             const wrap = document.getElementById('wt-list'); if (!wrap) return;
             if (!verticals.length){ wrap.innerHTML = '<div class="text-zinc-600 text-sm">Brak wertykali. Dodaj pierwszy powyżej.</div>'; return; }
-            wrap.innerHTML = verticals.map(wtCard).join('');
+            const rows = filteredVerticals();
+            if (!rows.length){ wrap.innerHTML = '<div class="card p-8 text-center text-zinc-600">Brak wertykali dla tych filtrów.</div>'; return; }
+            // grupowanie po kategorii
+            const byCat = {};
+            rows.forEach(v => { const c = (v.category||'').trim() || 'Bez kategorii'; (byCat[c] = byCat[c] || []).push(v); });
+            const catNames = Object.keys(byCat).sort((a,b)=> a==='Bez kategorii' ? 1 : b==='Bez kategorii' ? -1 : a.localeCompare(b,'pl'));
+            wrap.innerHTML = catNames.map(c => wtCatBlock(c, byCat[c])).join('');
+        }
+        function wtCatBlock(cat, list){
+            list = list.slice().sort((a,b)=> (parseInt(b.priority,10)||0)-(parseInt(a.priority,10)||0) || (a.name||'').localeCompare(b.name||'','pl'));
+            const nProspecting = list.filter(v=>v.status==='w_prospectingu').length;
+            const nGra = list.filter(v=>['w_grze','zajety'].includes(v.status)).length;
+            const counters = [
+                `<span class="minichip" style="margin:0">${list.length} wertykali</span>`,
+                nProspecting?`<span class="minichip" style="margin:0;color:#52a8ff">${nProspecting} w prospectingu</span>`:'',
+                nGra?`<span class="minichip" style="margin:0;color:#2dd4bf">${nGra} w grze/zajęte</span>`:''
+            ].filter(Boolean).join(' ');
+            return `<details class="vt-cat card" open>
+                <summary class="flex items-center gap-3 px-4 py-3">
+                    <i class="ph ph-caret-right caret text-zinc-500"></i>
+                    <span class="text-white font-semibold">${esc(cat)}</span>
+                    <span class="flex flex-wrap gap-1.5 ml-auto text-[11px]">${counters}</span>
+                </summary>
+                <div class="px-4 pb-4 grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">${list.map(wtCard).join('')}</div>
+            </details>`;
         }
         function wtCard(v){
             const vc = vCounts[v.id] || { total:0, byStatus:{} };
-            const meta = VERT_STATUS[v.status] || VERT_STATUS.otwarty;
-            const statusSel = ['otwarty','w_grze','zajety','odrzucony'].map(s => `<option value="${s}" ${v.status===s?'selected':''}>${esc(VERT_STATUS[s].label)}</option>`).join('');
+            const st = v.status==='otwarty' ? 'katalogowy' : (v.status||'katalogowy');
+            const meta = VERT_STATUS[st] || VERT_STATUS.katalogowy;
+            const busy = vertBusy.has(v.id);
+            const statusSel = VERT_STATUS_ORDER.map(s => `<option value="${s}" ${st===s?'selected':''}>${esc(VERT_STATUS[s].label)}</option>`).join('');
             const byS = STATUS_ORDER.filter(s => (vc.byStatus[s]||0)>0).map(s => `<span class="minichip">${esc(STATUS_META[s].label)}: <b class="text-zinc-300">${vc.byStatus[s]}</b></span>`).join('') || '<span class="text-zinc-700 text-[11px]">brak prospektów</span>';
-            let warn = '';
-            if (v.status==='w_grze') warn = `<div class="text-[11px] text-[#f5b955] bg-[#f5a623]/10 border border-[#f5a623]/30 rounded-lg px-2.5 py-1.5 mb-2"><i class="ph ph-warning"></i> Aktywna rozmowa — ostrożnie z nowymi wysyłkami.</div>`;
-            if (v.status==='zajety') warn = `<div class="text-[11px] text-[#3fc5e0] bg-[#0891b2]/10 border border-[#0891b2]/30 rounded-lg px-2.5 py-1.5 mb-2"><i class="ph ph-lock"></i> Wertykał zajęty — generator pomysłów zablokowany (409).</div>`;
-            if (v.status==='odrzucony') warn = `<div class="text-[11px] text-[#f26d78] bg-[#e5484d]/10 border border-[#e5484d]/30 rounded-lg px-2.5 py-1.5 mb-2"><i class="ph ph-prohibit"></i> Odrzucony (saturacja) — nie prospectujemy.</div>`;
-            return `<div class="card p-4">
-                <div class="flex items-start justify-between gap-2 mb-2">
-                    <div class="min-w-0"><div class="text-white font-semibold truncate">${esc(v.name)}</div>
-                        <div class="text-zinc-600 text-[11px] font-mono">${esc(v.key)} · ${vc.total} prospektów</div></div>
-                    <span class="badge ${meta.cls}">${esc(meta.label)}</span>
+            const info = (label, val) => val ? `<div class="mb-1.5"><span class="text-[10px] uppercase text-zinc-600 font-semibold">${esc(label)}:</span> <span class="text-[12px] text-zinc-400">${esc(val)}</span></div>` : '';
+            // werdykt raportu (verdict/vscore z kolumn)
+            let verdictRow = '';
+            if (v.verdict){
+                const go = v.verdict==='go';
+                verdictRow = `<div class="flex flex-wrap items-center gap-2 mb-2">
+                    <span class="badge ${go?'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40':'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40'}"><i class="ph ${go?'ph-check-circle':'ph-x-circle'}"></i> ${go?'GO':'NO_GO'}</span>
+                    ${(v.vscore!==null&&v.vscore!==undefined)?`<span class="text-[11px] text-zinc-500 font-mono">score ${esc(v.vscore)}/24</span>`:''}
+                    ${v.report?`<button onclick="showReport('${v.id}')" class="text-[11px] text-[#52a8ff] hover:text-white"><i class="ph ph-file-text"></i> Pokaż raport</button>`:''}
+                    ${v.report_at?`<span class="text-[10px] text-zinc-700">${esc(relDate(v.report_at))}</span>`:''}
+                </div>`;
+            }
+            // progres badania
+            const busyBox = busy ? `<div id="vt-prog-${v.id}" class="mb-2 text-[12px] text-[#52a8ff] bg-[#0070f3]/10 border border-[#0070f3]/30 rounded-lg px-3 py-2"></div>` : '';
+            // akcje badania / prospecting
+            const researchBtn = `<button class="btn btn-g btn-sm" ${busy?'disabled':''} onclick="vertResearch('${v.id}')"><i class="ph ph-flask"></i> ${v.report?'Zbadaj ponownie':'Zbadaj branżę (raport AI)'}</button>`;
+            const toProspBtn = (st!=='w_prospectingu' && (st==='zbadany'||v.verdict))
+                ? `<button class="btn btn-p btn-sm" ${busy?'disabled':''} onclick="toProspecting('${v.id}')"><i class="ph ph-arrow-right"></i> Do prospectingu</button>` : '';
+            const prospActive = st==='w_prospectingu' ? `<span class="badge bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40"><i class="ph ph-broadcast"></i> Prospecting aktywny</span>` : '';
+            return `<div class="card p-4" style="background:#0c0c0c">
+                <div class="flex items-start justify-between gap-2 mb-1.5">
+                    <div class="min-w-0"><div class="text-white font-semibold text-[13.5px] leading-tight">${esc(v.name)}</div>
+                        <div class="text-zinc-600 text-[10.5px] font-mono mt-0.5">${esc(v.key)} · ${vc.total} prospektów</div></div>
+                    <span class="badge ${meta.cls} flex-shrink-0">${esc(meta.label)}</span>
                 </div>
-                ${warn}
-                <div class="flex flex-wrap gap-1.5 mb-2.5">${byS}</div>
-                <div class="space-y-2">
-                    <div><label class="lbl">Status</label><select id="wt-${v.id}-status" class="inp" onchange="saveVerticalStatus('${v.id}',this.value)">${statusSel}</select></div>
-                    <div><label class="lbl">Nota o saturacji / konkurencji</label><textarea id="wt-${v.id}-sat" class="inp" rows="${(v.saturation_note||'').length>90?4:2}" style="min-height:${(v.saturation_note||'').length>90?'84px':'48px'}">${esc(v.saturation_note||'')}</textarea></div>
-                    <div><label class="lbl">Notatki</label><textarea id="wt-${v.id}-notes" class="inp" rows="2">${esc(v.notes||'')}</textarea></div>
-                    <button onclick="saveVerticalNotes('${v.id}')" class="btn btn-g btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz notatki</button>
-                </div>
+                <div class="mb-2">${priorityStars(v.priority)}</div>
+                ${verdictRow}
+                ${busyBox}
+                ${info('Ból', v.pain)}
+                ${info('Wedge', v.wedge_hint)}
+                ${info('Persona', v.operator_persona)}
+                ${v.saturation_note?`<div class="text-[11.5px] text-zinc-500 bg-[#080808] border border-[#1a1a1a] rounded-lg px-2.5 py-1.5 my-2"><i class="ph ph-warning-circle text-[#f5b955]"></i> ${esc(v.saturation_note)}</div>`:''}
+                <div class="flex flex-wrap gap-1.5 my-2">${byS}</div>
+                <div class="flex flex-wrap gap-2 mb-2">${researchBtn}${toProspBtn}${prospActive}</div>
+                <details class="mt-1">
+                    <summary class="cursor-pointer text-[11.5px] text-zinc-500 hover:text-zinc-300"><i class="ph ph-gear-six"></i> Status ręczny i notatki</summary>
+                    <div class="space-y-2 mt-2">
+                        <div><label class="lbl">Status</label><select id="wt-${v.id}-status" class="inp" onchange="saveVerticalStatus('${v.id}',this.value)">${statusSel}</select></div>
+                        <div><label class="lbl">Nota o saturacji / konkurencji</label><textarea id="wt-${v.id}-sat" class="inp" rows="2">${esc(v.saturation_note||'')}</textarea></div>
+                        <div><label class="lbl">Notatki</label><textarea id="wt-${v.id}-notes" class="inp" rows="2">${esc(v.notes||'')}</textarea></div>
+                        <button onclick="saveVerticalNotes('${v.id}')" class="btn btn-g btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz notatki</button>
+                    </div>
+                </details>
             </div>`;
         }
         async function addVertical(){
@@ -1240,17 +1541,102 @@
             const key = slugify(name);
             if (!key){ showToast('Nazwa nie daje poprawnego slug','error'); return; }
             if (verticals.some(v => v.key===key)){ showToast('Wertykał o tym kluczu już istnieje','error'); return; }
-            const { data, error } = await supabaseClient.from('wfp_verticals').insert({ name, key, status:'otwarty' }).select('*').single();
+            const { data, error } = await supabaseClient.from('wfp_verticals').insert({ name, key, status:'katalogowy' }).select('*').single();
             if (error){ showToast('Błąd dodawania: '+error.message,'error'); return; }
             verticals.push(data); verticals.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
             document.getElementById('wt-newname').value='';
-            fillVerticalSelects(); renderWertykale(); showToast('Wertykał dodany','success');
+            fillVerticalSelects(); fillVertFilters(); renderWertykale(); showToast('Wertykał dodany','success');
         }
         async function saveVerticalStatus(id, status){
             const { error } = await supabaseClient.from('wfp_verticals').update({ status }).eq('id', id);
-            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            if (error){ showToast('Błąd: '+error.message,'error'); renderWertykale(); return; }
             const v = verticals.find(x=>x.id===id); if (v) v.status = status;
-            renderWertykale(); renderList(); showToast('Status wertykalu: '+VERT_STATUS[status].label,'success');
+            fillVertFilters(); renderWertykale(); renderList(); showToast('Status wertykalu: '+(VERT_STATUS[status]?.label||status),'success');
+        }
+        // Badanie branży (raport AI) — długa akcja (~2-3 min); pasek postępu z licznikiem sekund.
+        async function vertResearch(id){
+            if (vertBusy.has(id)){ showToast('Badanie w toku — poczekaj','info'); return; }
+            vertBusy.add(id);
+            renderWertykale();
+            const EST = 150; let sec = 0;
+            const paint = () => { const box = document.getElementById('vt-prog-'+id);
+                if (box){ const pct = Math.min(96, Math.round(sec/EST*100));
+                    box.innerHTML = `<div class="flex items-center gap-2 mb-1.5"><i class="ph ph-circle-notch animate-spin"></i> Badam branżę i konkurencję… <span class="font-mono">${sec}s</span> <span class="text-zinc-500 ml-auto">~2-3 min</span></div>
+                        <div class="h-1.5 bg-[#141414] rounded-full overflow-hidden"><div class="h-full bg-[#0070f3] transition-all" style="width:${pct}%"></div></div>`; } };
+            paint();
+            const timer = setInterval(()=>{ sec++; paint(); }, 1000);
+            try {
+                await callEngine({ action:'vertical_research', verticalId:id });
+                // odśwież wertykal z bazy
+                const { data } = await supabaseClient.from('wfp_verticals').select('*').eq('id', id).maybeSingle();
+                if (data){ const i = verticals.findIndex(x=>x.id===id); if (i>=0) verticals[i]=data; }
+                const v = verticals.find(x=>x.id===id);
+                showToast(v && v.verdict ? ('Raport gotowy — werdykt '+(v.verdict==='go'?'GO':'NO_GO')) : 'Raport gotowy','success');
+                loadKpi();
+            } catch(e){
+                showToast(e.message||'Błąd badania branży','error');
+            } finally {
+                clearInterval(timer); vertBusy.delete(id); renderWertykale();
+            }
+        }
+        // Przejście „→ Do prospectingu" (bramka GO). Przy no_go — dodatkowe potwierdzenie.
+        async function toProspecting(id){
+            const v = verticals.find(x=>x.id===id); if (!v) return;
+            if (v.verdict==='no_go'){
+                const ok = await uiConfirm({ title:'Wertykał ma werdykt NO_GO', body:'Raport odradził tę branżę (dedykowany lider / mały rynek / brak persony). Na pewno ruszyć prospecting mimo to?', confirmLabel:'Tak, mimo werdyktu', danger:true });
+                if (!ok) return;
+            } else if (!v.verdict){
+                const ok = await uiConfirm({ title:'Bez raportu branżowego', body:'Ten wertykał nie ma jeszcze werdyktu GO/NO_GO. Zalecane najpierw „Zbadaj branżę". Ruszyć prospecting bez raportu?', confirmLabel:'Tak, do prospectingu' });
+                if (!ok) return;
+            }
+            const { error } = await supabaseClient.from('wfp_verticals').update({ status:'w_prospectingu' }).eq('id', id);
+            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            v.status = 'w_prospectingu';
+            fillVertFilters(); renderWertykale(); renderList(); showToast('Wertykał w prospectingu — wysyłka 1. kontaktu odblokowana','success');
+        }
+        // ── Raport branżowy: modal ──
+        function showReport(id){
+            const v = verticals.find(x=>x.id===id); if (!v || !v.report){ showToast('Brak raportu','info'); return; }
+            curReportVerticalId = id;
+            document.getElementById('rm-head').textContent = 'Raport branżowy — ' + (v.name||'');
+            document.getElementById('rm-body').innerHTML = renderReportBody(v);
+            document.getElementById('report-modal').classList.remove('hidden');
+        }
+        function rmClose(){ document.getElementById('report-modal').classList.add('hidden'); curReportVerticalId=null; }
+        function humanKey(k){ if (REPORT_LABELS[k]) return REPORT_LABELS[k];
+            return String(k).replace(/_/g,' ').replace(/^\w/, c=>c.toUpperCase()); }
+        // Rekurencyjny render wartości raportu (string / lista / obiekt / lista obiektów).
+        function renderReportVal(val){
+            if (val===null || val===undefined || val==='') return '<span class="text-zinc-700">—</span>';
+            if (Array.isArray(val)){
+                if (!val.length) return '<span class="text-zinc-700">—</span>';
+                if (val.every(x => typeof x!=='object' || x===null))
+                    return `<div class="space-y-0.5">${val.map(x=>`<div class="rep-li"><i class="ph-fill ph-circle mt-1.5"></i><span>${esc(x)}</span></div>`).join('')}</div>`;
+                return `<div class="space-y-2">${val.map(x => `<div class="bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5">${renderReportVal(x)}</div>`).join('')}</div>`;
+            }
+            if (typeof val==='object'){
+                return `<div class="space-y-1">${Object.entries(val).map(([k,vv]) => `<div class="kv" style="grid-template-columns:130px 1fr"><span class="k">${esc(humanKey(k))}</span><span class="v">${renderReportVal(vv)}</span></div>`).join('')}</div>`;
+            }
+            return esc(val);
+        }
+        function renderReportBody(v){
+            const rep = v.report || {};
+            const go = v.verdict==='go';
+            // Werdykt na górze
+            let head = '';
+            if (v.verdict){
+                head = `<div class="flex flex-wrap items-center gap-3 mb-4 p-3 rounded-xl border ${go?'border-[#0070f3]/40 bg-[#0070f3]/8':'border-[#e5484d]/40 bg-[#e5484d]/8'}">
+                    <span class="badge ${go?'bg-[#0070f3]/15 text-[#52a8ff] border-[#0070f3]/50':'bg-[#e5484d]/15 text-[#f26d78] border-[#e5484d]/50'}" style="font-size:13px;padding:5px 12px"><i class="ph ${go?'ph-check-circle':'ph-x-circle'}"></i> ${go?'GO':'NO_GO'}</span>
+                    ${(v.vscore!==null&&v.vscore!==undefined)?`<span class="text-[13px] text-zinc-300 font-mono">score ${esc(v.vscore)}/24</span>`:''}
+                    ${v.report_at?`<span class="text-[11px] text-zinc-500 ml-auto">${esc(fmtDate(v.report_at))}</span>`:''}
+                </div>`;
+            }
+            // Sekcje — jeśli report ma werdykt/score w środku, pomijamy je w listingu (są w nagłówku).
+            const skip = new Set(['werdykt','verdict','score','vscore']);
+            const entries = Object.entries(rep).filter(([k])=>!skip.has(k));
+            if (!entries.length && !head) return '<div class="text-zinc-600 text-sm">Raport pusty.</div>';
+            const body = entries.map(([k,val]) => `<div class="rep-h2">${esc(humanKey(k))}</div>${renderReportVal(val)}`).join('');
+            return head + body;
         }
         async function saveVerticalNotes(id){
             const saturation_note = (document.getElementById('wt-'+id+'-sat')?.value||'').trim()||null;
@@ -1399,6 +1785,259 @@
                 settingsCache[key] = val;
                 showToast('Zapisano (utworzono kopię zapasową poprzedniej wartości)','success');
             } catch(e){ showToast(e.message,'error'); }
+        }
+
+        // ═══════════ WĄTEK KORESPONDENCJI (wspólny: drawer + Odpowiedzi) ═══════════
+        function buildThread(prospectId){
+            const items = [];
+            outbox.filter(o => o.prospect_id===prospectId).forEach(o => items.push({ dir:'out', at:o.created_at, subject:o.subject, body:o.body, kind:o.kind, status:o.status, error:o.error }));
+            inbox.filter(m => m.prospect_id===prospectId).forEach(m => items.push({ dir:'in', at:m.received_at||m.created_at, subject:m.subject, body:m.text_body, from:m.from_name||m.from_email }));
+            items.sort((a,b)=> new Date(a.at) - new Date(b.at));
+            return items;
+        }
+        function renderThread(items){
+            if (!items || !items.length) return '';
+            const kindPl = { first:'1. kontakt', second:'2. kontakt', reply:'odpowiedź' };
+            return `<div class="thread">${items.map(it => {
+                if (it.dir==='out'){
+                    const failed = it.status==='failed';
+                    return `<div class="msg out">
+                        <div class="msg-h"><i class="ph ph-arrow-up-right"></i> Ja (Tomek)${it.kind?' · '+esc(kindPl[it.kind]||it.kind):''} <span style="margin-left:auto;font-weight:400;text-transform:none;opacity:.6">${esc(fmtDate(it.at))}</span></div>
+                        ${it.subject?`<div class="text-[11px] text-zinc-500 mb-1">${esc(it.subject)}</div>`:''}
+                        <div class="msg-b">${esc(it.body||'')}</div>
+                        ${failed?`<div class="text-[10.5px] text-[#f26d78] mt-1"><i class="ph ph-warning"></i> Wysyłka nieudana${it.error?': '+esc(it.error):''}</div>`:''}
+                    </div>`;
+                }
+                return `<div class="msg in">
+                    <div class="msg-h"><i class="ph ph-arrow-down-left"></i> ${esc(it.from||'Firma')} <span style="margin-left:auto;font-weight:400;text-transform:none;opacity:.6">${esc(fmtDate(it.at))}</span></div>
+                    ${it.subject?`<div class="text-[11px] text-zinc-500 mb-1">${esc(it.subject)}</div>`:''}
+                    <div class="msg-b">${esc(it.body||'')}</div>
+                </div>`;
+            }).join('')}</div>`;
+        }
+        function renderCorrespondence(p){
+            const items = buildThread(p.id);
+            const inner = items.length ? renderThread(items) : '<div class="text-zinc-700 text-[12px]">Brak korespondencji.</div>';
+            return `<details class="dw-sec" ${items.length?'open':''}>
+                <summary class="dw-sec-h" style="cursor:pointer;margin:0"><i class="ph ph-chats-circle"></i> Korespondencja ${items.length?`<span class="text-zinc-600" style="margin-left:auto;font-weight:400">${items.length}</span>`:''}</summary>
+                <div class="mt-3">${inner}</div>
+            </details>`;
+        }
+
+        // ═══════════ WYSYŁKA (send) — podgląd + potwierdzenie ═══════════
+        let _smResolve = null;
+        function uiSendConfirm(opts){
+            // opts: { p, temat, tresc, head?, isReply? }
+            return new Promise(res => {
+                _smResolve = res;
+                const p = opts.p || {};
+                document.getElementById('sm-head').textContent = opts.head || 'Podgląd wysyłki — pierwszy kontakt';
+                const fromLine = fromEmail ? `${fromName||'Tomasz Niedźwiecki'} <${fromEmail}>` : (fromName ? fromName+' (adres z ustawień wfp_from_email)' : 'Nadawca z ustawień (wfp_from_name / wfp_from_email)');
+                let warn = '';
+                if (!opts.isReply){
+                    const vSt = p.vertical_id ? verticalStatus(p.vertical_id) : null;
+                    if (vSt && vSt!=='w_prospectingu') warn = `<div class="text-[12px] text-[#f5b955] bg-[#f5a623]/10 border border-[#f5a623]/30 rounded-lg px-3 py-2 mb-3"><i class="ph ph-warning"></i> Wertykał „${esc(verticalName(p.vertical_id))}" nie jest w „Do prospectingu" — serwer może odrzucić wysyłkę pierwszego kontaktu. Przełącz go w zakładce Wertykale.</div>`;
+                }
+                const stopka = !opts.isReply ? (stopkaById[p.id] || (stopkaTemplate ? stopkaTemplate.replace(/\{\{DANE_NADAWCY\}\}/g, fromName||'Tomasz Niedźwiecki') : '')) : '';
+                const stopkaBlock = opts.isReply ? '' : `<label class="lbl" style="margin-top:12px">Stopka (doklejana automatycznie)</label>
+                    ${stopka ? `<div class="text-[11px] text-zinc-500 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 leading-relaxed">${esc(stopka)}</div>` : '<div class="text-[11px] text-zinc-600 bg-[#080808] border border-[#1a1a1a] rounded-lg p-3">Stopka PKE/RODO + „STOP" — składana serwerowo przy wysyłce.</div>'}`;
+                document.getElementById('sm-body').innerHTML = `${warn}
+                    <div class="kv" style="grid-template-columns:70px 1fr"><span class="k">Od</span><span class="v">${esc(fromLine)}</span></div>
+                    <div class="kv" style="grid-template-columns:70px 1fr"><span class="k">Do</span><span class="v">${esc(p.email||'—')}</span></div>
+                    <div class="kv" style="grid-template-columns:70px 1fr"><span class="k">Temat</span><span class="v">${esc(opts.temat)}</span></div>
+                    <label class="lbl" style="margin-top:12px">Treść</label>
+                    <div class="text-[12.5px] text-zinc-200 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 leading-relaxed">${esc(opts.tresc)}</div>
+                    ${stopkaBlock}`;
+                document.getElementById('send-modal').classList.remove('hidden');
+            });
+        }
+        function smClose(v){ document.getElementById('send-modal').classList.add('hidden'); if(_smResolve){ const r=_smResolve; _smResolve=null; r(v); } }
+
+        // Wysyłka pierwszego kontaktu (send). opts: {temat, tresc}
+        async function sendFirst(id, opts){
+            const p = prospects.find(x=>x.id===id); if (!p){ showToast('Nie znaleziono prospekta','error'); return; }
+            if (!p.email){ showToast('Prospekt nie ma adresu e-mail — użyj toru LinkedIn','error'); return; }
+            const temat = (opts.temat||'').trim(); const tresc = (opts.tresc||'').trim();
+            if (!temat || !tresc){ showToast('Uzupełnij temat i treść wybranego wariantu','error'); return; }
+            // Double-submit guard: blokuje drugie kliknięcie (i drugi modal) zanim pierwsza wysyłka
+            // się rozstrzygnie — bez tego backend „juz_wyslany" nie łapie równoległych in-flight.
+            if (sendBusy.has(id)){ showToast('Wysyłka tego prospekta w toku…','info'); return; }
+            sendBusy.add(id);
+            try {
+                const ok = await uiSendConfirm({ p, temat, tresc });
+                if (!ok) return;
+                const doSend = async (force) => {
+                    await callEngine({ action:'send', prospectId:id, variant:'first', temat, tresc, ...(force?{force:true}:{}) });
+                    await refetchProspect(id); await refetchMail(); if (curDrawerId===id) openDrawer(id); renderAkceptacja(); renderAkSentBadge(); loadKpi();
+                    showToast('Wysłane','success');
+                };
+                try { await doSend(false); }
+                catch(e){
+                    if (e.code==='juz_wyslany'){
+                        const again = await uiConfirm({ title:'Już wysłano', body:'Pierwszy kontakt do tego prospekta już wyszedł. Wysłać ponownie mimo to?', confirmLabel:'Wyślij ponownie', danger:true });
+                        if (again){ try { await doSend(true); } catch(e2){ showToast(e2.message,'error'); } }
+                        return;
+                    }
+                    showToast(e.message,'error');
+                }
+            } finally { sendBusy.delete(id); }
+        }
+        function akSend(id){
+            const temat = document.getElementById('ak-'+id+'-temat')?.value||'';
+            const tresc = document.getElementById('ak-'+id+'-tresc')?.value||'';
+            return sendFirst(id, { temat, tresc });
+        }
+        function drawerSend(id){
+            const temat = activeVariant==='A' ? mailBuf.temat : mailBuf.temat_alt;
+            const tresc = activeVariant==='A' ? mailBuf.tresc : mailBuf.tresc_alt;
+            return sendFirst(id, { temat, tresc });
+        }
+
+        // ═══════════ ODPOWIEDZI ═══════════
+        function renderOdpowiedzi(){
+            const wrap = document.getElementById('od-list'); if (!wrap) return;
+            updateOdTabBadge();
+            if (!inbox.length){ wrap.innerHTML = `<div class="card p-10 text-center text-zinc-600"><i class="ph ph-tray text-3xl block mb-2 text-zinc-700"></i>Brak odpowiedzi. Wpadają tu automatycznie, gdy prospekt odpisze.</div>`; return; }
+            let rows = inbox.slice().sort((a,b)=> new Date(b.received_at||b.created_at) - new Date(a.received_at||a.created_at));
+            if (document.getElementById('od-onlyunh')?.checked) rows = rows.filter(m => !m.handled_at);
+            const q = foldStr((document.getElementById('od-search')?.value||'').trim());
+            if (q){ const toks=q.split(/\s+/).filter(Boolean);
+                rows = rows.filter(m => { const pr = m.prospect_id ? prospects.find(p=>p.id===m.prospect_id) : null;
+                    const idx = foldStr([m.from_name,m.from_email,m.subject,m.text_body, pr&&pr.company_name].filter(Boolean).join(' ')); return toks.every(t=>idx.includes(t)); }); }
+            if (!rows.length){ wrap.innerHTML = `<div class="card p-8 text-center text-zinc-600">Brak wiadomości dla tych filtrów.</div>`; return; }
+            wrap.innerHTML = rows.map(odCard).join('');
+        }
+        function odCard(m){
+            const pr = m.prospect_id ? prospects.find(p=>p.id===m.prospect_id) : null;
+            const cl = (m.classified && m.classified.typ) ? m.classified.typ : null;
+            const tm = cl ? (REPLY_TYP[cl] || { label:cl, cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30', ic:'ph-tag' }) : null;
+            const clBadge = tm
+                ? `<span class="badge ${tm.cls}"><i class="ph ${tm.ic}"></i> ${esc(tm.label)}</span>`
+                : `<span class="badge bg-zinc-600/15 text-zinc-500 border-zinc-600/30"><i class="ph ph-hourglass"></i> Niesklasyfikowana</span>`;
+            const handled = !!m.handled_at;
+            const firmaLink = pr
+                ? `<button onclick="event.stopPropagation();openDrawer('${pr.id}')" class="text-[#52a8ff] hover:text-white truncate">${esc(pr.company_name)}</button>`
+                : `<span class="text-[#f5b955]"><i class="ph ph-warning"></i> nieprzypisany</span>`;
+            const exp = inboxExpanded.has(m.id);
+            const head = `<div class="flex items-start gap-3 p-4 cursor-pointer" onclick="toggleInbox('${m.id}')">
+                <i class="ph ph-caret-right text-zinc-600 mt-1 transition-transform" style="${exp?'transform:rotate(90deg)':''}"></i>
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                        <span class="text-white font-medium truncate max-w-[180px]">${esc(m.from_name||m.from_email||'—')}</span>
+                        <span class="text-zinc-700 text-[11px]">·</span> ${firmaLink}
+                        ${clBadge}
+                        ${handled ? '<span class="badge bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40"><i class="ph ph-check"></i> obsłużone</span>' : '<span class="badge bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40">nieobsłużone</span>'}
+                    </div>
+                    <div class="text-zinc-400 text-[12.5px] truncate">${esc(m.subject||'(bez tematu)')}</div>
+                </div>
+                <span class="text-zinc-600 text-[11px] whitespace-nowrap mt-0.5">${esc(relDate(m.received_at||m.created_at))}</span>
+            </div>`;
+            const body = exp ? `<div class="px-4 pb-4 border-t border-[#141414] pt-3">${odExpanded(m, pr)}</div>` : '';
+            return `<div class="card ${handled?'opacity-75':''}">${head}${body}</div>`;
+        }
+        function odExpanded(m, pr){
+            const rb = replyBuf[m.id] || (replyBuf[m.id] = {
+                temat:(m.suggested_reply&&m.suggested_reply.temat)||('Re: '+(m.subject||'').replace(/^\s*Re:\s*/i,'')),
+                tresc:(m.suggested_reply&&m.suggested_reply.tresc)||''
+            });
+            const cl = m.classified || {};
+            const isOptOut = cl.typ==='opt_out';
+            const parts = [];
+            parts.push(`<label class="lbl">Treść odpowiedzi</label>
+                <div class="text-[12.5px] text-zinc-300 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 leading-relaxed mb-3">${esc(m.text_body||'(pusta)')}</div>`);
+            if (cl.uzasadnienie) parts.push(`<div class="text-[11px] text-zinc-500 mb-3"><i class="ph ph-robot"></i> Klasyfikacja AI: <b class="text-zinc-400">${esc((REPLY_TYP[cl.typ]||{}).label||cl.typ||'—')}</b> — ${esc(cl.uzasadnienie)}</div>`);
+            if (!m.prospect_id){
+                parts.push(`<div class="bg-[#f5a623]/8 border border-[#f5a623]/30 rounded-lg p-3 mb-3">
+                    <div class="text-[12px] text-[#f5b955] mb-2"><i class="ph ph-link"></i> Wiadomość nieprzypisana do prospekta — połącz, aby zobaczyć wątek i wygenerować odpowiedź.</div>
+                    <input id="od-assign-${m.id}" class="inp" placeholder="Szukaj firmy / e-mail…" oninput="odAssignSearch('${m.id}',this.value)">
+                    <div id="od-assign-res-${m.id}" class="mt-2 space-y-1"></div></div>`);
+            } else {
+                const items = buildThread(m.prospect_id);
+                if (items.length) parts.push(`<label class="lbl">Wątek korespondencji</label><div class="mb-3">${renderThread(items)}</div>`);
+            }
+            if (!cl.typ){
+                parts.push(`<button onclick="classifyInbox('${m.id}')" class="btn btn-g btn-sm mb-3"><i class="ph ph-sparkle"></i> Klasyfikuj (AI)</button>`);
+            }
+            if (!isOptOut){
+                const regenDis = m.prospect_id ? '' : 'title="Najpierw przypisz prospekta" disabled style="opacity:.5;cursor:not-allowed"';
+                parts.push(`<div class="dw-sec" style="background:#080808">
+                    <div class="dw-sec-h" style="margin-bottom:8px"><i class="ph ph-pen-nib"></i> Propozycja odpowiedzi
+                        <button onclick="replyRegenerate('${m.id}')" class="text-[11px] text-[#52a8ff] hover:text-white" style="margin-left:auto" ${regenDis}><i class="ph ph-arrows-clockwise"></i> Wygeneruj ponownie</button></div>
+                    ${(m.suggested_reply&&m.suggested_reply.wygenerowano_at)?`<div class="text-[10.5px] text-zinc-600 mb-2">AI: ${esc(fmtDate(m.suggested_reply.wygenerowano_at))}</div>`:''}
+                    <div class="space-y-2">
+                        <div><label class="lbl">Temat</label><input id="od-rt-${m.id}" class="inp" value="${esc(rb.temat)}" oninput="replyBuf['${m.id}'].temat=this.value"></div>
+                        <div><label class="lbl">Treść</label><textarea id="od-rb-${m.id}" class="inp" rows="6" oninput="replyBuf['${m.id}'].tresc=this.value">${esc(rb.tresc)}</textarea></div>
+                    </div>
+                </div>`);
+            } else {
+                parts.push(`<div class="text-[12px] text-[#f26d78] bg-[#e5484d]/10 border border-[#e5484d]/30 rounded-lg p-3 mb-3"><i class="ph ph-hand-palm"></i> Wykryto sprzeciw (STOP). Nie odpowiadamy — potwierdź opt-out prospekta poniżej.</div>`);
+            }
+            const btns = [];
+            if (!isOptOut) btns.push(`<button onclick="replySend('${m.id}')" class="btn btn-p btn-sm" ${m.prospect_id?'':'disabled title="Najpierw przypisz prospekta"'}><i class="ph ph-paper-plane-right"></i> Zatwierdź i wyślij odpowiedź</button>`);
+            if (!m.handled_at) btns.push(`<button onclick="markHandled('${m.id}')" class="btn btn-g btn-sm"><i class="ph ph-check"></i> Obsłużone bez odpowiedzi</button>`);
+            if (pr && !pr.opted_out) btns.push(`<button onclick="optOut('${pr.id}')" class="btn btn-d btn-sm"><i class="ph ph-hand-palm"></i> STOP / opt-out prospekta</button>`);
+            parts.push(`<div class="flex flex-wrap gap-2 mt-3">${btns.join('')}</div>`);
+            return parts.join('');
+        }
+        function toggleInbox(id){ if (inboxExpanded.has(id)) inboxExpanded.delete(id); else inboxExpanded.add(id); renderOdpowiedzi(); }
+        function odAssignSearch(inboxId, q){
+            const box = document.getElementById('od-assign-res-'+inboxId); if (!box) return;
+            const t = foldStr((q||'').trim());
+            if (t.length<2){ box.innerHTML = '<div class="text-[11px] text-zinc-600">Wpisz min. 2 znaki…</div>'; return; }
+            const toks = t.split(/\s+/).filter(Boolean);
+            const matches = prospects.filter(p => { const idx = p._idx || foldStr([p.company_name,p.email].filter(Boolean).join(' ')); return toks.every(x=>idx.includes(x)); }).slice(0,8);
+            if (!matches.length){ box.innerHTML = '<div class="text-[11px] text-zinc-600">Brak dopasowań.</div>'; return; }
+            box.innerHTML = matches.map(p => `<button onclick="assignProspect('${inboxId}','${p.id}')" class="w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[#1f1f1f] hover:border-[#0070f3]/50 hover:bg-[#0070f3]/5 text-[12px]"><span class="text-white truncate">${esc(p.company_name)}</span><span class="text-zinc-600 truncate">${esc(p.email||'—')}</span></button>`).join('');
+        }
+        async function assignProspect(inboxId, prospectId){
+            const { error } = await supabaseClient.from('wfp_inbox').update({ prospect_id: prospectId }).eq('id', inboxId);
+            if (error){ showToast('Błąd przypisania: '+error.message,'error'); return; }
+            const m = inbox.find(x=>x.id===inboxId); if (m) m.prospect_id = prospectId;
+            showToast('Przypisano do prospekta','success'); renderOdpowiedzi();
+        }
+        async function classifyInbox(id){
+            try { showToast('Klasyfikuję…','info'); await callEngine({ action:'classify_reply', inboxId:id }); await refetchMail(); loadKpi(); showToast('Sklasyfikowano','success'); }
+            catch(e){ showToast(e.message,'error'); }
+        }
+        async function replyRegenerate(id){
+            const m = inbox.find(x=>x.id===id); if (!m) return;
+            if (!m.prospect_id){ showToast('Najpierw przypisz prospekta','error'); return; }
+            try {
+                showToast('Generuję propozycję…','info');
+                await callEngine({ action:'reply_suggest', inboxId:id, force:true });
+                const { data } = await supabaseClient.from('wfp_inbox').select('*').eq('id', id).maybeSingle();
+                if (data){ const i = inbox.findIndex(x=>x.id===id); if (i>=0) inbox[i]=data;
+                    if (data.suggested_reply){ replyBuf[id] = { temat:(data.suggested_reply.temat)||(replyBuf[id]&&replyBuf[id].temat)||'', tresc:data.suggested_reply.tresc||'' }; } }
+                renderOdpowiedzi(); loadKpi(); showToast('Nowa propozycja gotowa','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+        async function replySend(id){
+            const m = inbox.find(x=>x.id===id); if (!m) return;
+            if (!m.prospect_id){ showToast('Najpierw przypisz prospekta','error'); return; }
+            const rb = replyBuf[id] || {};
+            const temat = (rb.temat||'').trim(); const tresc = (rb.tresc||'').trim();
+            if (!temat || !tresc){ showToast('Uzupełnij temat i treść odpowiedzi','error'); return; }
+            if (sendBusy.has('r'+id)){ showToast('Wysyłka odpowiedzi w toku…','info'); return; }
+            sendBusy.add('r'+id);
+            try {
+                const pr = prospects.find(p=>p.id===m.prospect_id);
+                // „Do" = adres NADAWCY odpowiedzi (backend wysyła do inbox.from_email) — nie mieszaj
+                // z p.email prospekta (bywa inny, gdy odpisał z innego adresu). Podgląd = prawda wysyłki.
+                const ok = await uiSendConfirm({ head:'Podgląd odpowiedzi (w wątku)', isReply:true,
+                    p:{ email:m.from_email||(pr&&pr.email), vertical_id:pr&&pr.vertical_id, id:pr&&pr.id }, temat, tresc });
+                if (!ok) return;
+                await callEngine({ action:'reply_send', inboxId:id, temat, tresc });
+                await refetchMail(); if (m.prospect_id) await refetchProspect(m.prospect_id); loadKpi();
+                showToast('Odpowiedź wysłana','success');
+            } catch(e){ showToast(e.message,'error'); }
+            finally { sendBusy.delete('r'+id); }
+        }
+        async function markHandled(id){
+            const now = new Date().toISOString();
+            const { error } = await supabaseClient.from('wfp_inbox').update({ handled_at: now }).eq('id', id);
+            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            const m = inbox.find(x=>x.id===id); if (m) m.handled_at = now;
+            updateOdTabBadge(); renderOdpowiedzi(); showToast('Oznaczono jako obsłużone','success');
         }
 
         // Deep-link ?id=<prospect> — otwórz drawer jednorazowo po pierwszym załadowaniu.
