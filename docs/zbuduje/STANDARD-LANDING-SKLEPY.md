@@ -224,7 +224,9 @@ Wynik F-1 nigdy nie brzmi „produkt odpada", tylko „ta strona wymaga X regene
 z text_pl, review_stats, sku_prices; PUSTE specs = tylko komunikaty jakościowe, zero
 zmyślonych cm/kg). **🚫 GATE `source='detail'` — TWARDY, PIERWSZY KROK (incydent Latarek
 17.07: search-galeria = INNY produkt → landing sprzedawał nieistniejące cechy): procedura
-`docs/zbuduje/GALERIA-ALI.md` §0; source≠detail po force:true = STOP PRODUKTU.
+`docs/zbuduje/GALERIA-ALI.md` §0; source∉{detail,allegro} po force:true = STOP PRODUKTU
+(od 23.07 `source='allegro'` = drugie ZAUFANE źródło, tor „Allegro→Marka" — konkretna oferta
+= autentyczna jak detail; SSOT `gate-check.py TRUSTED_SNAPSHOT_SOURCES`).
 Następnie F0.5 KURACJA GALERII (GALERIA-ALI §1-4): werdykty per kadr →
 `bud_tt_products.gallery_curated` + kopia GALERIA.md; galeria na stronie budowana TYLKO
 z kuracji (klasa R).**
@@ -1754,6 +1756,18 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-23 (DRUGIE ZAUFANE ŹRÓDŁO F0: `source='allegro'` — tor „Allegro→Marka", 1. produkt
+  z Allegro):** twardy gate F0 pochodzenia danych (`GALERIA-ALI.md §0`) ufa odtąd `source ∈
+  {'detail','allegro'}` — snapshot zbudowany z KONKRETNEJ oferty Allegro (offerId+productId+galeria
+  `/original/`+specs+opinie natywne PL) jest z definicji autentyczny jak `detail` (jedna wskazana
+  oferta ≠ sklejka `search`). `'search'`/puste nadal = STOP. SSOT listy = `gate-check.py
+  TRUSTED_SNAPSHOT_SOURCES` (`is_trusted_source()`) + test `test-gate-check.py TestTrustedSources`;
+  kopia-z-notą w `panel-sync.py` (gate kalkulacji) i `ad-forge.py` (tytuł do dezambiguacji).
+  ⚠️ WHITE-LABEL zaostrzony dla toru: marka/sprzedawca z aukcji (np. „Lehmann") NIGDY na stronę —
+  landing dostaje NOWĄ mini-markę (F2.5); czytelny nadruk marki na kadrze keep = RETUSZ obowiązkowy.
+  Cena w tym torze jest DANA (cena klienta z aukcji), bez silnika marży/kalkulacji (towar klienta =
+  brak kosztu zakupu). Pierwszy produkt: odkurzacz Lehmann Haddo (slug roboczy `ssawek`, DEMO).
 
 - **2026-07-22 (RUNDA 2 FEEDBACKÓW — Zaradek; LL-044v2/045/046/047):** (1) sekcja wideo =
   4-5 klipów DODANYCH do produktu, zero selekcji (pula: tiktok_url + ali video + surowe

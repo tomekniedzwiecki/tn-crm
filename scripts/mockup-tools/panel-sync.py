@@ -75,6 +75,11 @@ PRODUCT_META_WHITELIST = {
     "video_ai_labeled", "video_status", "video_pattern_tiktok_url", "ads_creatives", "notes",
 }
 
+# Źródła snapshotu ZAUFANE dla gate'u F0 (SSOT: gate-check.py TRUSTED_SNAPSHOT_SOURCES; doktryna
+# docs/zbuduje/GALERIA-ALI.md §0). 'detail'=żywa aukcja Ali; 'allegro'=konkretna oferta Allegro
+# (tor Allegro→Marka, 23.07). Kopia-z-notą (jak lista zakazów detail-lint) — zmiana = zmień też tam.
+TRUSTED_SNAPSHOT_SOURCES = ("detail", "allegro")
+
 
 # ── Klucz service-role: .env (PYTHONEM) → fallback zmienna środowiskowa ──
 def _load_key():
@@ -530,12 +535,13 @@ def kalkulacja(project, product, margin_min=10.0, margin_max=15.0, cost_usd=None
     elif need_refresh and dry_run:
         warns.append("dry-run: pominięto odświeżenie snapshotu (użyto istniejącego z %s)" % snap_date)
 
-    # ── 3. GATE: source musi być 'detail' (--force NIE omija; FAIL-FAST panelu / incydent Latarka) ──
-    source = snap.get("source")
-    if source != "detail":
+    # ── 3. GATE: source musi być ZAUFANY (detail|allegro; --force NIE omija; incydent Latarka) ──
+    source = snap.get("source") or ""
+    if source.strip().lower() not in TRUSTED_SNAPSHOT_SOURCES:
         raise SystemExit(
-            "kalkulacja: GATE STOP — aukcja NIEPOTWIERDZONA (source=%r, wymagane 'detail'). Podmień "
-            "link Ali / odśwież snapshot; --force NIE omija tego gate'u (incydent Latarka 17.07)." % source)
+            "kalkulacja: GATE STOP — źródło NIEZAUFANE (source=%r, wymagane jedno z %s). Podmień "
+            "link / odśwież snapshot; --force NIE omija tego gate'u (incydent Latarka 17.07)."
+            % (source, list(TRUSTED_SNAPSHOT_SOURCES)))
 
     # ── 4. kurs NBP + cena zakupu USD → PLN ──
     rate = _nbp_usd_rate()

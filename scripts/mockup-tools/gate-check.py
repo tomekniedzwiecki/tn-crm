@@ -26,6 +26,22 @@ except Exception:
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# ------------------------------------------------------------- ŹRÓDŁA SNAPSHOTU ZAUFANE (F0)
+# SSOT fabryki dla gate'u F0 „pochodzenie danych" (doktryna: docs/zbuduje/GALERIA-ALI.md §0).
+# Gate NIE jest o żywości aukcji, tylko o POCHODZENIU: snapshot musi pochodzić z konkretnego,
+# potwierdzonego źródła — nie ze sklejki wyszukiwarki (incydent Latarka 17.07: search-galeria =
+# INNY produkt → landing sprzedawał nieistniejące cechy).
+#   • 'detail'  — potwierdzona żywa aukcja AliExpress (bud-ali-snapshot item_detail_*).
+#   • 'allegro' — konkretna oferta Allegro (dane z JEDNEJ aukcji = z definicji autentyczne;
+#                 tor „Allegro→Marka", dodane 2026-07-23). 'search'/puste = NIEzaufane (STOP).
+# Ta lista jest zdublowana w panel-sync.py (kalkulacja) i ad-forge.py — wzorzec „kopia z notą"
+# jak lista zakazów detail-lint (gate-manifest.json _ssot_zakazow): zmiana = zmień WSZĘDZIE.
+TRUSTED_SNAPSHOT_SOURCES = ("detail", "allegro")
+
+def is_trusted_source(src):
+    """True, gdy snapshot pochodzi z zaufanego, konkretnego źródła (TRUSTED_SNAPSHOT_SOURCES)."""
+    return (src or "").strip().lower() in TRUSTED_SNAPSHOT_SOURCES
+
 # ------------------------------------------------------------------ utils
 def read_text(path):
     for enc in ("utf-8", "utf-8-sig", "cp1250", "latin-1"):

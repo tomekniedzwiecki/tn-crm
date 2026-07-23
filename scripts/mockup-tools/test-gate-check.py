@@ -367,5 +367,26 @@ class TestCenaPanel(unittest.TestCase):
         self.assertNotIn("FAIL", statuses(res, "cena_panel"))
 
 
+class TestTrustedSources(unittest.TestCase):
+    """Gate F0 „pochodzenie danych": 'detail' i 'allegro' = ZAUFANE; 'search'/puste = NIE.
+       Pinuje rozszerzenie o źródło 'allegro' (tor Allegro→Marka, 23.07) BEZ osłabiania 'detail'."""
+
+    def test_detail_nadal_zaufane(self):
+        self.assertTrue(GC.is_trusted_source("detail"))
+        self.assertIn("detail", GC.TRUSTED_SNAPSHOT_SOURCES)  # nie osłabiono istniejącego pinu
+
+    def test_allegro_zaufane(self):
+        self.assertTrue(GC.is_trusted_source("allegro"))
+        self.assertIn("allegro", GC.TRUSTED_SNAPSHOT_SOURCES)
+
+    def test_search_i_puste_niezaufane(self):
+        for s in ("search", "", None, "   ", "allegro-fake", "aliexpress"):
+            self.assertFalse(GC.is_trusted_source(s), "%r nie może być zaufane" % (s,))
+
+    def test_case_i_whitespace_tolerancja(self):
+        self.assertTrue(GC.is_trusted_source(" Allegro "))
+        self.assertTrue(GC.is_trusted_source("DETAIL"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
