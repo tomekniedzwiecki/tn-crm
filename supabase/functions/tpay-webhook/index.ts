@@ -20,6 +20,50 @@ const TPAY_STATUS = {
   CHARGEBACK: 'CHARGEBACK', // Refund/chargeback
 }
 
+// Auto-mail po PEŁNEJ płatności za budowę sklepu: potwierdzenie + link do portalu
+// klienta /twoj-biznes?t=<unique_token> (szablon bud_full_payment_confirmed w settings).
+// Idempotentne po wf2_projects.access_mail_sent_at (retry webhooka / kolejna rata nie
+// dubluje maila); po wysyłce stempel + wpis w kronice. Własny try/catch — NIGDY nie
+// przerywa obsługi płatności.
+async function sendBudFullPaymentMail(
+  supabase: any, supabaseUrl: string, supabaseServiceKey: string,
+  projectId: string, amt: number,
+) {
+  try {
+    const { data: proj } = await supabase.from('wf2_projects')
+      .select('id, unique_token, customer_email, customer_name, access_mail_sent_at')
+      .eq('id', projectId).maybeSingle()
+    if (!proj || !proj.customer_email || !proj.unique_token || proj.access_mail_sent_at) return
+    const portalUrl = `https://crm.tomekniedzwiecki.pl/twoj-biznes?t=${proj.unique_token}`
+    const fullName = (proj.customer_name || '').trim()
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
+      body: JSON.stringify({
+        type: 'bud_full_payment_confirmed',
+        data: {
+          email: proj.customer_email,
+          clientName: fullName.split(' ')[0] || 'Cześć',
+          amount: Number(amt).toLocaleString('pl-PL'),
+          portalUrl,
+        },
+      }),
+    })
+    if (!res.ok) {
+      console.error('[tpay-webhook] bud_full_payment_confirmed mail padł:', res.status, await res.text())
+      return
+    }
+    console.log('[tpay-webhook] bud_full_payment_confirmed mail wysłany:', proj.customer_email)
+    await supabase.from('wf2_projects').update({ access_mail_sent_at: new Date().toISOString() }).eq('id', proj.id)
+    await supabase.from('wf2_activities').insert({
+      project_id: proj.id, actor: 'auto', action: 'access_mail',
+      description: `Auto-mail po pełnej płatności: potwierdzenie + link do portalu wysłany na ${proj.customer_email}`,
+    })
+  } catch (e) {
+    console.error('[tpay-webhook] bud_full_payment_confirmed mail error (nieblokujące):', e)
+  }
+}
+
 // Slack webhook for successful payments (from environment variable)
 
 // Send Slack notification for successful payment
@@ -1011,7 +1055,12 @@ Deno.serve(async (req) => {
                     description: 'Projekt utworzony automatycznie po pełnej płatności za budowę',
                   })
                   console.log('[tpay-webhook] WF2: utworzony projekt', proj.id, 'dla bud_session', bs.id)
+                  await sendBudFullPaymentMail(supabase, supabaseUrl, supabaseServiceKey, proj.id, amt)
                 }
+              } else {
+                // projekt już istniał (retry webhooka / dopłata do pełna) — mail
+                // wychodzi tylko, jeśli jeszcze nie wyszedł (gate access_mail_sent_at)
+                await sendBudFullPaymentMail(supabase, supabaseUrl, supabaseServiceKey, exProj.id, amt)
               }
             } catch (wf2Err) {
               console.error('[tpay-webhook] WF2 project create error (nieblokujące):', wf2Err)
@@ -1093,6 +1142,10 @@ Deno.serve(async (req) => {
                 }
               }
             }
+            // Auto-mail potwierdzenia + link do portalu (gate access_mail_sent_at w środku).
+            // projId jest ustawione dla nowego projektu i dla retry webhooka (exByOrder);
+            // „dopisanie kolejnej raty" celowo bez maila startowego.
+            if (projId) await sendBudFullPaymentMail(supabase, supabaseUrl, supabaseServiceKey, projId, amt)
           } catch (wf2Err) {
             console.error('[tpay-webhook] WF2 (bez bud_session) create error (nieblokujące):', wf2Err)
           }

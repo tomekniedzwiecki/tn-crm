@@ -38,6 +38,10 @@ const VALID_EMAIL_TYPES = [
   // Rezerwacja budowy sklepu (100 zl) — potwierdzenie + CTA WhatsApp (2026-07-23);
   // wysyla tpay-webhook przy pierwszym zaksiegowaniu rezerwacji
   'bud_reservation_confirmed',
+  // Pelna platnosc za budowe sklepu — potwierdzenie + link do portalu klienta
+  // /twoj-biznes?t=<token> (2026-07-23); wysyla tpay-webhook po utworzeniu/znalezieniu
+  // projektu wf2, idempotentnie po wf2_projects.access_mail_sent_at
+  'bud_full_payment_confirmed',
   'workflow_stage_completed',
   'report_published',
   'branding_delivered',
@@ -88,6 +92,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   products_shared: 'Propozycje produktowe — wybierz swój produkt',
   workflow_created: 'Płatność przyjęta — podpisz umowę',
   bud_reservation_confirmed: 'Rezerwacja przyjęta — napisz do mnie na WhatsApp',
+  bud_full_payment_confirmed: 'Płatność przyjęta — Twój panel projektu',
   workflow_stage_completed: 'Etap {{stageNumber}} ukończony — {{stageName}}',
   report_published: 'Raport dotyczący Twojego produktu jest gotowy',
   branding_delivered: 'Branding Twojej marki jest gotowy!',
@@ -446,6 +451,10 @@ Deno.serve(async (req) => {
       const templateData: Record<string, any> = {
         email: data.email,
         clientName: data.clientName || 'Cześć',
+        // Rezerwacja/pełna płatność budowy sklepu (tpay-webhook): prefill WhatsApp
+        // (już URL-encoded przez callera) i link do portalu klienta /twoj-biznes?t=…
+        waPrefill: data.waPrefill || '',
+        portalUrl: data.portalUrl || '',
         brandName: data.brandName || '',
         workflowId: data.workflowId || '',
         adminUrl,

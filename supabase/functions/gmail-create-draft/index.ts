@@ -29,6 +29,10 @@ interface CreateDraftRequest {
   fromName?: string;
   /** CC recipients. */
   cc?: string | string[];
+  /** "trash_draft" = usuń istniejący draft po Message-ID zamiast tworzyć nowy. */
+  action?: string;
+  /** Message-ID draftu do usunięcia (zwracany przez ten endpoint przy tworzeniu). */
+  messageId?: string;
 }
 
 /** Encode header value with UTF-8 if it contains non-ASCII (RFC 2047 B-encoding). */
@@ -118,6 +122,36 @@ Deno.serve(async (req) => {
     body = await req.json();
   } catch {
     return json({ error: "Invalid JSON" }, 400);
+  }
+
+  // ── Akcja "trash_draft": usuń draft z Wersji roboczych po Message-ID ──
+  // (sprzątanie zbędnych/nieaktualnych draftów; Message-ID zwraca ten endpoint
+  // przy tworzeniu). STORE \Deleted + EXPUNGE w folderze Drafts — Gmail usuwa
+  // draft całkowicie (drafty nie przechodzą przez kosz).
+  if (body.action === "trash_draft") {
+    if (!body.messageId) return json({ error: "messageId required for trash_draft" }, 400);
+    const pass = Deno.env.get("GMAIL_APP_PASSWORD");
+    if (!pass) return json({ error: "GMAIL_APP_PASSWORD not configured" }, 500);
+    const imapT = new GmailImap();
+    try {
+      await imapT.connect();
+      await imapT.login(body.user || DEFAULT_GMAIL_USER, pass);
+      const draftsFolder = await imapT.selectDrafts();
+      const mid = body.messageId.replace(/"/g, "");
+      const lines = await imapT.runCommand(`UID SEARCH HEADER Message-ID "${mid}"`);
+      const searchLine = lines.find((l) => /^\* SEARCH/i.test(l));
+      const uids = searchLine
+        ? searchLine.replace(/^\* SEARCH/i, "").trim().split(/\s+/).filter(Boolean)
+        : [];
+      if (uids.length === 0) return json({ ok: false, notFound: true, draftsFolder });
+      for (const uid of uids) await imapT.runCommand(`UID STORE ${uid} +FLAGS (\\Deleted)`);
+      await imapT.runCommand(`EXPUNGE`);
+      return json({ ok: true, trashed: uids.length, draftsFolder });
+    } catch (err) {
+      return json({ error: String(err) }, 500);
+    } finally {
+      await imapT.logout();
+    }
   }
 
   if (!body.to || !body.subject || !body.body) {
