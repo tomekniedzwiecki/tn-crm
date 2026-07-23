@@ -48,7 +48,10 @@ def read_text(path):
         try:
             with open(path, "r", encoding=enc) as f:
                 return f.read()
-        except (UnicodeDecodeError, FileNotFoundError):
+        except (UnicodeDecodeError, FileNotFoundError, OSError, ValueError):
+            # OSError/ValueError: ścieżka z niesparsowanym globem (np. 'sklepy/*/slug/index.html')
+            # na Windows = nielegalny znak '*' → open rzuca OSError zamiast FileNotFoundError.
+            # --cross-only PRZED budową kodu ma wtedy spaść na fallback tokenów (:root z TOKENS-MAKIETY).
             if not os.path.exists(path):
                 return None
     try:

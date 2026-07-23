@@ -136,7 +136,8 @@ def parasol_claim(project_id, name, service_key):
 #     litania zakazow to sam szum. Twarde wymogi TECHNICZNE zostaja, bo trzyma je pipeline:
 #     jedno jednolite jasne tlo (alfa z probki rogow + defringe), brak tekstu (OCR-guard +
 #     rubryka #5), plaskie kolory bez gradientu/3D (mono-test #6, rubryka #4), czytelnosc
-#     @32px, srodek + margines (guard fill 0.30-0.92).
+#     @32px, srodek + margines (guard fill 0.15-0.92 — export_favicons kadruje do bbox, wiec
+#     surowy fill tylko odsiewa patologicznie male ikony; ranking preferuje 0.55-0.80).
 #  5. „minimal/flat/modern" latwo laduje w „bezpiecznej strefie" modelu — kotwiczymy
 #     KONKRETNYM charakterem marki zamiast pustych przymiotnikow; kolor pewny, czytelny
 #     na jasnym I ciemnym UI (guard, ktory stary znak oblal).
@@ -359,7 +360,12 @@ def score_candidate(path):
     if n_signif > 5: rejects.append("za duzo kolorow (%d>5)" % n_signif)
     if edge_density > 0.30: rejects.append("mush/za gesto krawedzi (%.2f)" % edge_density)
     if has_text is True: rejects.append("wykryto tekst (OCR)")
-    if fill < 0.30: rejects.append("znak za maly (fill %.2f)" % fill)
+    # fill = pole bbox znaku / pole kadru SUROWEGO kandydata. export_favicons() i tak kadruje
+    # do treści (getbbox + pad) przed resize do 512, więc surowy fill nie odzwierciedla finalnego
+    # znaku. gpt-image konsekwentnie generuje ikonę ~0.19-0.28 kadru → próg 0.30 odrzucał WSZYSTKICH
+    # i wymuszał ręczną finalizację co przebieg. Reject tylko dla patologicznie małych (<0.15 area
+    # ≈ <360px bbox w kadrze 1024 = realny upscale/utrata jakości). Ranking (s_fill) dalej preferuje 0.55-0.80.
+    if fill < 0.15: rejects.append("znak za maly (fill %.2f)" % fill)
     if fill > 0.92: rejects.append("brak marginesu (fill %.2f)" % fill)
     if mono_fill < 0.06: rejects.append("sylwetka znika w mono (%.2f)" % mono_fill)
     s_col = 1.0 - min(abs(n_signif - 3), 5) / 5.0
