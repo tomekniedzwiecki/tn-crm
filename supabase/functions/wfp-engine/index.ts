@@ -466,6 +466,48 @@ Deno.serve(async (req) => {
       return json({ ok: true, backupKey: `${key}_backup_${stamp}`, len: value.length }, 200, c);
     }
 
+    // ═══════ domain: administracja domeną wysyłkową w Resend (gate team) ══════
+    // Sekret Resend nie opuszcza edge (Management API zwraca tylko digesty) —
+    // dlatego kroki Resend API wykonuje funkcja; DNS dodaje operator lokalnie
+    // (vercel dns add) na podstawie zwróconych rekordów. Domena STAŁA (hardcode).
+    if (action === "domain") {
+      const WFP_DOMAIN = "kontakt.tomekniedzwiecki.pl";
+      const RESEND_KEY = Deno.env.get("resend_api_key") || Deno.env.get("RESEND_API_KEY");
+      if (!RESEND_KEY) return json({ error: "brak_klucza", message: "Brak resend_api_key w env funkcji." }, 500, c);
+      const rfetch = (path: string, init: RequestInit = {}) =>
+        fetch(`https://api.resend.com${path}`, {
+          ...init,
+          headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json", ...(init.headers || {}) },
+        });
+      const op = isStr(body.op) ? body.op.trim() : "status";
+      // Znajdź istniejącą domenę po nazwie.
+      const listRes = await rfetch("/domains");
+      if (!listRes.ok) return json({ error: "resend_blad", message: `Resend /domains ${listRes.status}` }, 502, c);
+      const listData = await listRes.json();
+      let dom = (listData?.data || []).find((d: { name?: string }) => d?.name === WFP_DOMAIN) || null;
+
+      if (op === "create" && !dom) {
+        const cr = await rfetch("/domains", { method: "POST", body: JSON.stringify({ name: WFP_DOMAIN, region: "eu-west-1" }) });
+        const crData = await cr.json().catch(() => null);
+        if (!cr.ok) return json({ error: "resend_blad", message: `Create ${cr.status}: ${JSON.stringify(crData).slice(0, 300)}` }, 502, c);
+        dom = crData;
+      }
+      if (!dom) return json({ error: "brak_domeny", message: "Domena nie istnieje w Resend (użyj op:create)." }, 404, c);
+
+      if (op === "verify") {
+        const vr = await rfetch(`/domains/${dom.id}/verify`, { method: "POST" });
+        if (!vr.ok) return json({ error: "resend_blad", message: `Verify ${vr.status}` }, 502, c);
+      }
+      if (op === "receiving") {
+        const pr = await rfetch(`/domains/${dom.id}`, { method: "PATCH", body: JSON.stringify({ capabilities: { receiving: "enabled" } }) });
+        if (!pr.ok) return json({ error: "resend_blad", message: `Receiving ${pr.status}` }, 502, c);
+      }
+      // Zawsze zwróć świeży stan + rekordy DNS (bez sekretów — rekordy DNS są jawne z natury).
+      const getRes = await rfetch(`/domains/${dom.id}`);
+      const full = getRes.ok ? await getRes.json() : dom;
+      return json({ ok: true, domain: { id: full.id, name: full.name, status: full.status, records: full.records || [], capabilities: full.capabilities || null } }, 200, c);
+    }
+
     // ═══════════════ v2: akcje oparte o wfp_inbox (nie wymagają prospectId) ═══
     if (action === "classify_reply" || action === "reply_suggest" || action === "reply_send") {
       const inboxId = isStr(body.inboxId) ? body.inboxId.trim() : "";
