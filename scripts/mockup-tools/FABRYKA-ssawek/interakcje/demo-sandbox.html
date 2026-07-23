@@ -1,0 +1,36 @@
+<!doctype html><html lang="pl"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SANDBOX — demo stepper (TOR-I) — Popiolek</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@700;800&family=Hanken+Grotesk:wght@400;600;700&display=swap">
+<style>
+:root{--font-display:"Barlow Semi Condensed",sans-serif;--font-text:"Hanken Grotesk",sans-serif;
+--paper:#F3EDE4;--paper-2:#E9E1D3;--card:#FBF7F0;--ink:#1C1815;--body:#2E2620;--line:#D7C9B3;--cta:#C2381B;--radius-lg:14px}
+*{box-sizing:border-box}body{margin:0;background:var(--paper-2);color:var(--body);font-family:var(--font-text);padding:40px 20px}
+.wrap{max-width:1180px;margin:0 auto}.eyebrow{font-weight:700;letter-spacing:.22em;text-transform:uppercase;font-size:12.5px;color:var(--ink)}
+h2{font-family:var(--font-display);font-weight:800;font-size:48px;margin:8px 0 6px;color:var(--ink)}
+.lead{margin:0 0 26px}
+.demo__grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.demo__card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;opacity:.62;cursor:pointer;transition:opacity .25s,border-color .25s}
+.demo__card[aria-selected="true"]{opacity:1;border-color:var(--cta);box-shadow:0 10px 26px rgba(70,40,20,.11)}
+.demo__fig{position:relative;aspect-ratio:1/1;overflow:hidden;background:var(--paper-2)}
+.demo__fig img{width:100%;height:100%;object-fit:cover}
+.demo__num{position:absolute;top:0;left:0;z-index:2;min-width:66px;padding:8px 20px 12px 16px;background:var(--card);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:30px;clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%)}
+.demo__card[aria-selected="true"] .demo__num{color:var(--cta)}
+.demo__cap{padding:18px 20px;font-family:var(--font-display);font-weight:700;font-size:19px;color:var(--ink)}
+@media(max-width:820px){.demo__grid{grid-template-columns:1fr}.demo__card{opacity:1}}
+</style></head><body><div class="wrap">
+<p class="eyebrow">Proste jak raz-dwa-trzy</p><h2>Wepnij, wciagnij, wytrzep filtr.</h2>
+<p class="lead">SANDBOX izolowany (TOR-I) — test stanow stepper 01/02/03.</p>
+<div class="demo__grid demo--interactive" role="tablist">
+ <article class="demo__card" role="tab" aria-selected="true" tabindex="0" data-step="1"><div class="demo__fig"><span class="demo__num">01</span><img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/ssawek/assets/sc-demo-01.webp" alt="Wpiecie rury"></div><p class="demo__cap">Wepnij waz i rure</p></article>
+ <article class="demo__card" role="tab" aria-selected="false" tabindex="-1" data-step="2"><div class="demo__fig"><span class="demo__num">02</span><img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/ssawek/assets/sc-demo-02.webp" alt="Ssanie popiolu"></div><p class="demo__cap">Wciagnij popiol, gruz lub wode</p></article>
+ <article class="demo__card" role="tab" aria-selected="false" tabindex="-1" data-step="3"><div class="demo__fig"><span class="demo__num">03</span><img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/ssawek/assets/sc-demo-03.webp" alt="Wytrzep filtr"></div><p class="demo__cap">Wytrzep filtr koszowy i uzyj kolejnego</p></article>
+</div></div>
+<script>
+(function(){var tabs=[].slice.call(document.querySelectorAll('.demo__card'));var timer=null,acted=false;
+function sel(i,f){tabs.forEach(function(t,j){var on=j===i;t.setAttribute('aria-selected',on?'true':'false');t.setAttribute('tabindex',on?'0':'-1');if(on&&f)try{t.focus();}catch(e){}});}
+function act(i,f){acted=true;if(timer){clearInterval(timer);timer=null;}sel(i,f);}
+tabs.forEach(function(t,i){t.addEventListener('click',function(){act(i,false);});t.addEventListener('keydown',function(e){if(e.key==='ArrowRight'){e.preventDefault();act((i+1)%tabs.length,true);}else if(e.key==='ArrowLeft'){e.preventDefault();act((i-1+tabs.length)%tabs.length,true);}});});
+if(window.matchMedia&&matchMedia('(min-width:821px)').matches&&!matchMedia('(prefers-reduced-motion:reduce)').matches){var c=0;sel(0,false);timer=setInterval(function(){if(acted){clearInterval(timer);return;}c=(c+1)%tabs.length;sel(c,false);},3500);}else{sel(0,false);}
+})();
+</script></body></html>

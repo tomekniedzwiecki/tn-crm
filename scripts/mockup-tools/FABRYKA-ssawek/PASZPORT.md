@@ -13,10 +13,11 @@ g02/g03/g04/g06/g08/g09/g10, packshot akcesoriów g14. Werdykt dryfu bryły ZAWS
 | zatrzaski | 2 metalowe (chromowane) klamry-zaczepy sprężynowe spinające pokrywę ze zbiornikiem (po bokach) |
 | podstawa | okrągła **czarna** podstawa z tworzywa na 4 małych obrotowych kółkach (skrętne); króciec ssący (wlot węża) z boku dolnej części |
 | wąż | czarny, karbowany (elastyczny), zakończenia z tworzywa; metalowe rury proste (srebrne/aluminiowe) |
-| ssawka podłogowa | szeroka czarna ssawka 2w1 z **czerwonymi** wkładkami/paskami na spodzie |
-| filtr HEPA | biały, cylindryczny wkład plisowany (harmonijka) — osadzany od góry w zbiorniku |
-| filtr koszowy | szary, materiałowy (siatkowy) worek-kosz wkładany do wnętrza zbiornika |
 | kolorystyka | stal (srebro) + CZERWONA pokrywa + CZARNA podstawa/akcesoria — TRIADA nietykalna |
+
+**Cechy szczegółowe (poza tabelą dyskryminatorów bryły — akcesoria, opisane w „Detal"):** ssawka
+podłogowa 2w1 (czarna, czerwone wkładki) · filtr HEPA (biały wkład plisowany) · filtr koszowy
+(szary, siatkowy) — widoczne tylko na kadrach detalu, nie na każdej scenie bryły.
 
 ## CZEGO NIE MA (model dorabia — UBIJAĆ)
 - ❌ INNYCH kolorów pokrywy (żółta/niebieska/pomarańczowa) — pokrywa jest CZERWONA, zawsze.

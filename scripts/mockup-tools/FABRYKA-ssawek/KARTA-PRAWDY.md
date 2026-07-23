@@ -9,6 +9,7 @@ danych", nigdy zmyślanie. Każda liczba oznaczona: **[KONKRET]** (konkret kupow
   kominka, gruzu/gipsu po remoncie, warsztatu/garażu, auta. Metalowy (stalowy) zbiornik.
 - **Slug roboczy fabryki:** `ssawek`. **Mini-marka = ODŁOŻONA do F2.5** (tor Allegro→Marka:
   landing dostaje NOWĄ tożsamość; marka i sprzedawca z aukcji NIGDY nie trafiają na stronę).
+- **Rekord kuracji:** `bud_tt_products.id = 6d2c2366-f05b-4447-b17f-80cfc3c7e811` (gallery_curated).
 - **Źródło danych:** oferta Allegro `16214946166` („Oficjalny sklep Lehmann"), productId
   `52414220-ed42-4055-ab9b-107f2969af02`, EAN `5903754423987`. **source='allegro' = ZAUFANE**
   (konkretna oferta = autentyczne dane; gate F0 rozszerzony 23.07). Snapshot pobrany 2026-07-23.

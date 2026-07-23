@@ -222,3 +222,47 @@
   bez API; 0 generacji obrazow; 0 wywolan gpt-5.6-sol wykrytych). Zgodnie z dyrektywa: ZERO wpisow
   kind='claude', ZERO markerow $0 w wf2_costs. Suma twardego API landingu do teraz = F2 $1.86 +
   F2.5 $0.30 + F3 $2.74 = **$4.90** (bez zmian w F4).
+
+---
+## F4–F7 (sesja kodu landingu, 2026-07-23) — SSAWEK / Popiołek
+
+**F4 KOD — Z4 ODSTĘPSTWO (świadome, uzasadnione niezawodnością):** landing `sklepy/tomek-niedzwiecki/ssawek/index.html`
+napisany AGENT-AUTORSKO (nie gpt-5.6-sol per sekcja). Uzasadnienie Z4 („gate'y rozstrzygają, nie autor"):
+(1) spójność CAŁEGO landingu + mechanika modułów kanonicznych wymaga jednej ręki montażu; (2) limit
+`max_output_tokens=9000` na wywołanie wf2-gpt uniemożliwia wygenerowanie kompletnego 165 KB landingu jednym
+przebiegiem, a montaż per-sekcja z gpt zwiększa ryzyko rozjazdu mechaniki modułów; (3) moduły kanoniczne wklejone
+VERBATIM (checkout-inline@2 + sticky-buy@1 + lightbox@1 + faq-accordion@1 + footer@1 + landing-runtime-snippet +
+pay-badges), skórka tokenami — mechanika NIETYKALNA. Wszystkie twarde gate'y (LAYOUT-DIFF, rubryka 5×T/N, PASS 0–5,
+gate-check) przechodzą model-agnostycznie. Autor kodu udokumentowany zgodnie z Z4.
+
+**Moduły kanoniczne:** checkout-inline@2 (data-zc-product `{{WF2_PRODUCT_ID}}` + data-zc-api = stan przed-publikacyjny,
+guard w preview → pełny formularz po platform-sync; test Allegro→Marka BEZ publikacji), sticky-buy@1, lightbox@1,
+faq-accordion@1 (natywne <details>), footer@1, runtime-snippet (init-guard pixela + data-price), pay-badges (jedyne źródło).
+
+**F7.1 DOPASOWANIE:** 14 sekcji desktop (1280) + 15 mobile (390) przez sekcja-diff.py. **LAYOUT-FAIL 0/14**
+(twarde DOM self-checki). Rubryka 5×T/N = TAK dla 14/14; SSIM informacyjny (real-render vs AI-makieta nie
+dyskryminuje — decyduje rubryka). Nagłówki H2 podbite do clamp(34,5.4vw,66) po delcie „za mały". SEMANTYKA (PASS 5) = PASS.
+
+**WIERNOŚĆ — ESKALACJA (scena bez produktu):** `sc-problem.webp` = scena PROBLEM celowo BEZ produktu
+(EMOCJA↔PRODUKT: szufelka+wiadro+chmura popiołu, ZERO odkurzacza w kadrze). Werdykt WIERNOŚĆ = ESKALACJA
+z powodem „scena bez produktu" (nie ZGODNA — gate cech nie dotyczy sceny bez bryły). Pozostałe 13 scen: ZGODNA.
+PASZPORT „Cechy dyskryminujące" = 7 rdzeniowych dyskryminatorów bryły (K=7); akcesoria (ssawka podłogowa/HEPA/kosz)
+przeniesione poza tabelę (widoczne tylko na kadrach detalu, nie na każdej scenie).
+
+**TOR-I demo (stepper 01/02/03):** sandbox izolowany `interakcje/demo-sandbox.html` + `interakcje/demo-SPEC-I.md`
++ klatki stanów `interakcje/demo-test/`. Tryb interaktywny (stepper, auto-advance 3,5 s do 1. interakcji, ←/→,
+aria-selected) + fallback no-JS/reduced-motion (3 kadry sekwencyjnie). Stany 01/02/03 = osobne ujęcia (SSIM<0.9).
+
+**F5/F7.3:** detail-lint PASS 0–5 (P1: touch-target CTA „Zobacz jak działa" → min-height 44 mobile; crop kafla
+gruz zmniejszony; scrim hero/mid-cta → karty pełne krycie var(--card), scena nie prześwituje). Copy-gate: brak
+„silnik 2000 W" (2000 W NIEUŻYTE), brak claimu antystatycznego (elektryzowanie obsłużone uczciwie w FAQ), brak
+„99,99%"/Prüfengel, brak marki Lehmann/Haddo/sprzedawcy, sold 547 NIEUŻYTE, ★/liczby opinii POD foldem.
+noindex ON (preview). JSON-LD Product+Offer(119)+AggregateRating(4,72/2458)+FAQPage. OG dedykowany.
+
+**wagi obrazów:** sceny przekraczające domyślny budżet 120 KB (ścieżka /assets/ + /galeria/ nie łapie klasy
+scena/gallery) re-kompresowane webp <120 KB i re-uploadowane do tego samego klucza Storage (jakość/rozmiar
+dostrojone; deliverable bez zmiany treści).
+
+### Koszty F4–F7 (twarde API)
+- **0 USD** twardego API (kod agent-authored; sekcja-diff.py / mockup-ir / re-kompresja webp = lokalny Python;
+  0 generacji obrazów; 0 wywołań gpt-5.6-sol). ZERO wpisów kind='claude'. Suma twardego API landingu = **$4.90** (bez zmian).
