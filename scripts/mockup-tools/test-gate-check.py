@@ -325,6 +325,39 @@ class TestMapaZastosowan(unittest.TestCase):
         self.assertEqual(opn[0][0], "WARN")
         self.assertNotIn("FAIL", statuses(res, "mapa_zastosowan"))
 
+    def test_opinie_w_prozie_nie_liczy_warn(self):
+        """(a) [OPINIE] TYLKO w prozie sekcji (nie w WIERSZU tabeli) = WARN, nie PASS.
+           Regresja buga: 'proza [OPINIE] — celowo nieobecne' dawala falszywy PASS (substring w bloku)."""
+        md = _map_md(n_funkcje=1, n_zas=6, opinie=False, tag="[SPEC]")
+        # wstrzyknij [OPINIE] jako PROZE miedzy tabela ZASTOSOWANIA a naglowek ## SHOWCASE
+        md = md.replace("\n## SHOWCASE",
+                        "\n[OPINIE] — celowo nieobecne (proza, nie wiersz tabeli)\n\n## SHOWCASE")
+        res = self._run(md=md)
+        opn = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "OPINIE" in nm]
+        self.assertTrue(opn)
+        self.assertEqual(opn[0][0], "WARN", "proza [OPINIE] nie moze dawac PASS — liczymy WIERSZE")
+
+    def test_szerokosc_dowiedziona_zastosowania_degraduje_warn(self):
+        """(b) >=2 funkcje + SPEKTRUM przechodzi + ZASTOSOWANIA<6 = DEGRADACJA do WARN (nie FAIL).
+           Prog '6' mierzy odrobienie enumeracji; przy dowiedzionej szerokosci nie jest twardy."""
+        res = self._run(md=_map_md(n_funkcje=2, n_zas=4, n_swiaty=4),
+                        sections=["hero", "zastosowania", "zamow"])
+        zas = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "ZASTOSOWANIA" in nm]
+        self.assertEqual(zas[0][0], "WARN")
+        spk = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "SPEKTRUM" in nm]
+        self.assertEqual(spk[0][0], "PASS")
+        self.assertNotIn("FAIL", statuses(res, "mapa_zastosowan"))
+
+    def test_szerokosc_niedowiedziona_zastosowania_twardy_fail(self):
+        """(b) >=2 funkcje ale SPEKTRUM NIE przechodzi + ZASTOSOWANIA<6 = ZASTOSOWANIA twardy FAIL
+           (brak i szerokosci, i enumeracji — degradacja NIE dziala)."""
+        res = self._run(md=_map_md(n_funkcje=2, n_zas=4, n_swiaty=2),
+                        sections=["hero", "zastosowania"])
+        zas = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "ZASTOSOWANIA" in nm]
+        self.assertEqual(zas[0][0], "FAIL")
+        spk = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "SPEKTRUM" in nm]
+        self.assertEqual(spk[0][0], "FAIL")
+
 
 class TestRegistration(unittest.TestCase):
 

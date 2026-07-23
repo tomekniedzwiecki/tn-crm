@@ -31,9 +31,17 @@ secondary→sekcje), **F1.7** (oś POKRYCIE ZASTOSOWAŃ przewodnika), **F2.5** (
 ## ŹRÓDŁA PRODUCENTA MAPY (Sonnet/Haiku — osąd ZAMKNIĘTY, nie kreacja)
 Zakres wyprowadza się z FAKTÓW, nie z persony. Producent mapy czyta:
 - **KARTA-PRAWDY.md** (funkcje, specs, warianty, opis po destylacji);
-- **`ali_snapshot`**: `reviews.text_pl` (jak KUPUJĄCY realnie używają — najbogatsze źródło
-  nieoczywistych zastosowań), `description`, `categories` (⚠️ kategoria „durszlak"/„odcedzacz"
-  = twardy sygnał funkcji, którą landing pominął przy koszyku), `properties`;
+- **`ali_snapshot`**:
+  - **`title`** (⚠️ **PIERWSZORZĘDNA kotwica funkcji** — tokeny w tytule aukcji niosą zdolności,
+    które kategoria gubi: `filter`/`mesh`/`strainer`/`odcedzacz`/`na mokro`/`wet&dry`/`blower`/
+    `dmuchawa`. Tytuł jest pisany przez sprzedawcę POD wyszukiwanie realnych zastosowań);
+  - **`specs.Type`** (i pokrewne pola typu w `properties.list` — np. „Type: Wet and Dry" =
+    **PIERWSZORZĘDNA kotwica funkcji**; kategorie w drzewie AliExpress bywają generyczne
+    „Vacuum Cleaner", więc `title`+`specs.Type` biorą pierwszeństwo przed `categories`);
+  - `reviews.text_pl` (jak KUPUJĄCY realnie używają — najbogatsze źródło nieoczywistych
+    zastosowań), `description`, `categories` (⚠️ kategoria „durszlak"/„odcedzacz" = twardy sygnał
+    funkcji, którą landing pominął przy koszyku — ale gdy kategoria generyczna, ustępuje
+    `title`/`specs.Type`), `properties`;
 - **pola K1 z `bud_sessions.product_input`**: `problem_wow` / `kat_wow` / `pomysl_landing`
   (dziś PORZUCANE po Etapie 1 — **REUŻYĆ gdy istnieją**: to pierwotna intuicja doboru produktu);
 - **tytuły `videos_curated`** (klipy TT pokazują użycia, których snapshot nie opisuje).
@@ -146,6 +154,21 @@ Nagłówki KANONICZNE — parsuje je gate `mapa_zastosowan` (`gate-check.py`). N
 - **`## ZASTOSOWANIA`** ≥ `min_zastosowania` (default 6) wierszy z tagiem klasy dowodu = FAIL, jeśli mniej.
 - **`SPEKTRUM`** ≥ `min_swiaty` (default 4) światów = FAIL — **tylko gdy mapa deklaruje ≥2 FUNKCJE**
   (produkt 1-funkcyjny: SKIP z notą, bez sztucznej szerokości).
-- **`[OPINIE]`** obecne · **`PRIMARY`** zadeklarowany · **nośnik szerokości w landingu** (sekcja
-  zastosowań / hero-sub spektrum / toggle) przy ≥2 funkcjach = WARN (miękkie przypomnienia).
+- **`[OPINIE]`** obecne — liczone **PO WIERSZACH tabeli `## ZASTOSOWANIA`** (regex klasy dowodu na
+  wierszach danych), NIE substring w bloku (proza „[OPINIE] — celowo nieobecne" dawała fałszywy PASS).
+- **`PRIMARY`** zadeklarowany · **nośnik szerokości w landingu** (sekcja zastosowań / hero-sub
+  spektrum / toggle) przy ≥2 funkcjach = WARN (miękkie przypomnienia).
+- **DEGRADACJA progu `min_zastosowania`**: gdy mapa niesie **≥2 FUNKCJE** i **SPEKTRUM przechodzi**
+  (≥`min_swiaty` światów), niedobór wierszy `## ZASTOSOWANIA` (<`min_zastosowania`) **degraduje do
+  WARN** (`min_zastosowania_degrade_severity`) — szerokość jest już dowiedziona, próg „6" mierzy
+  tylko odrobienie enumeracji, nie szerokość. **Twardy FAIL zostaje TYLKO gdy SPEKTRUM nie przechodzi**
+  (brak wtedy i szerokości, i enumeracji).
+
+> **⚠️ NOTA o `nośniku szerokości (proxy)`:** ten gate potwierdza jedynie **OBECNOŚĆ ETYKIET**
+> (nazwa sekcji `zastosowania` / token `spektrum`/`toggle`/`hero-sub` w kodzie/PLAN) — **NIE
+> potwierdza REALNEGO niesienia szerokości** (czy sekcja faktycznie prowadzi ≥`min_swiaty` różnych
+> światów, a nie 4 kafle jednej funkcji). **Egzekucja SEMANTYCZNA szerokości należy do KRYTYKA F1.7**
+> (oś POKRYCIE ZASTOSOWAŃ przewodnika i rubryka makiety), **nie do proxy.** Zielone proxy ≠ szerokość
+> dowieziona — to tylko brak czerwonego alarmu „zapomniałeś nazwać nośnik".
+
 Progi = DANE w `gate-manifest.json` (tuning tam, nie w kodzie).

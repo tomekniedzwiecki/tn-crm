@@ -1989,22 +1989,32 @@ def check_mapa_zastosowan(res, M, ctx):
     funkcje_block = _md_h2_section(md, m.get("funkcje_marker", "## FUNKCJE"))
     n_funkcje = len(_md_table_data_rows(funkcje_block)) if funkcje_block is not None else 0
     multi = n_funkcje >= m.get("funkcje_wielofunkcyjny_prog", 2)
-    # --- ZASTOSOWANIA: >= min wierszy z tagiem klasy dowodu (FAIL) ---
+    # --- ZASTOSOWANIA: >= min wierszy z KLASA DOWODU. Prog "6" MIERZY ODROBIENIE ENUMERACJI,
+    #     nie szerokosc. Gdy szerokosc JUZ DOWIEDZIONA (>=2 funkcje + SPEKTRUM przechodzi),
+    #     niedobor wierszy degraduje do WARN (min_zastosowania_degrade_severity) — twardy FAIL
+    #     zostaje TYLKO gdy spektrum NIE przechodzi (wtedy brak i szerokosci, i enumeracji). ---
     zas_block = _md_h2_section(md, m.get("zastosowania_marker", "## ZASTOSOWANIA"))
     klasa_rx = re.compile(m.get("klasa_dowodu_regex", r"\[(OPINIE|SPEC|OPIS|KATEGORIA|WIDEO|WNIOSEK)\]"))
     zas_rows = _md_table_data_rows(zas_block) if zas_block is not None else []
     zas_tagged = [ln for ln in zas_rows if klasa_rx.search(ln)]
     min_zas = m.get("min_zastosowania", 6)
     ok_zas = len(zas_tagged) >= min_zas
-    res.add("mapa_zastosowan", "## ZASTOSOWANIA >= %d (z klasa dowodu)" % min_zas,
-            status_for(ok_zas, sev),
-            "%d/%d wierszy z tagiem klasy dowodu  ·  funkcje=%d" % (len(zas_tagged), min_zas, n_funkcje))
-    # --- SELEKCJA: SPEKTRUM swiatow (FAIL tylko przy >=2 funkcjach) ---
+    # SELEKCJA: SPEKTRUM swiatow — liczone TERAZ (przed werdyktem ZASTOSOWAN, bo decyduje o degradacji).
     sel_block = _md_h2_section(md, m.get("selekcja_marker", "## SELEKCJA")) or ""
     sep = m.get("swiat_separator", "·")  # srodkowa kropka '·'
     spm = re.search(m.get("spektrum_regex", r"\*\*SPEKTRUM:?\*\*") + r"(.*)", sel_block)
     worlds = [w.strip(" *`") for w in spm.group(1).split(sep) if w.strip(" *`:-")] if spm else []
     min_sw = m.get("min_swiaty", 4)
+    spektrum_passes = multi and (len(worlds) >= min_sw)
+    zas_sev = sev
+    zas_nota = ""
+    if not ok_zas and spektrum_passes:
+        zas_sev = m.get("min_zastosowania_degrade_severity", "WARN")
+        zas_nota = "  ·  DEGRADACJA->WARN (szerokosc dowiedziona: %d swiatow >= %d)" % (len(worlds), min_sw)
+    res.add("mapa_zastosowan", "## ZASTOSOWANIA >= %d (z klasa dowodu)" % min_zas,
+            status_for(ok_zas, zas_sev),
+            "%d/%d wierszy z tagiem klasy dowodu  ·  funkcje=%d%s" % (len(zas_tagged), min_zas, n_funkcje, zas_nota))
+    # --- SPEKTRUM werdykt: FAIL tylko przy >=2 funkcjach; produkt 1-funkcyjny = SKIP ---
     if not multi:
         res.add("mapa_zastosowan", "SPEKTRUM >= %d swiatow" % min_sw, "SKIP",
                 "produkt 1-funkcyjny (funkcje=%d) — doktryna NIE wymusza sztucznej szerokosci" % n_funkcje)
@@ -2012,18 +2022,23 @@ def check_mapa_zastosowan(res, M, ctx):
         res.add("mapa_zastosowan", "SPEKTRUM >= %d swiatow (mapa >=2 funkcje)" % min_sw,
                 status_for(len(worlds) >= min_sw, m.get("swiaty_severity", sev)),
                 "%d/%d swiatow (separator '%s')" % (len(worlds), min_sw, sep))
-    # --- WARN: [OPINIE] jako klasa dowodu w ZASTOSOWANIACH ---
+    # --- WARN: [OPINIE] jako klasa dowodu — liczona PO WIERSZACH TABELI (regex na wierszach DANYCH),
+    #     NIE substring w bloku: proza typu "[OPINIE] — celowo nieobecne" dawala falszywy PASS. ---
     opinie_tag = m.get("opinie_tag", "[OPINIE]")
-    has_opinie = opinie_tag in (zas_block or "")
-    res.add("mapa_zastosowan", "klasa dowodu %s obecna" % opinie_tag,
+    opinie_rx = re.compile(m.get("opinie_wiersz_regex", re.escape(opinie_tag)))
+    has_opinie = any(opinie_rx.search(ln) for ln in zas_rows)
+    res.add("mapa_zastosowan", "klasa dowodu %s obecna (wiersz tabeli)" % opinie_tag,
             "PASS" if has_opinie else status_for(False, m.get("opinie_severity", "WARN")),
-            "opinie zasilaja mape" if has_opinie else "brak wiersza z %s — rozwaz cytat z opinii kupujacych" % opinie_tag)
+            "opinie zasilaja mape" if has_opinie else "brak WIERSZA z %s — rozwaz cytat z opinii kupujacych" % opinie_tag)
     # --- WARN: PRIMARY (jeden kat komercyjny — hero prowadzi nim) ---
     has_primary = bool(re.search(m.get("primary_regex", r"\*\*PRIMARY:?\*\*"), sel_block))
     res.add("mapa_zastosowan", "PRIMARY (kat komercyjny hero)",
             "PASS" if has_primary else status_for(False, m.get("primary_severity", "WARN")),
             "primary zadeklarowany" if has_primary else "brak **PRIMARY:** w ## SELEKCJA (hero prowadzi jednym katem)")
-    # --- WARN proxy: przy >=2 funkcjach landing ma NOSNIK SZEROKOSCI (sekcja zastosowan / hero-sub spektrum / toggle) ---
+    # --- WARN proxy: przy >=2 funkcjach landing ma NOSNIK SZEROKOSCI (sekcja zastosowan / hero-sub spektrum / toggle).
+    #     ⚠ Proxy potwierdza tylko OBECNOSC ETYKIET (nazwa sekcji / token) — NIE realne niesienie szerokosci.
+    #     Egzekucja SEMANTYCZNA (czy sekcja faktycznie prowadzi >=min_swiaty swiaty) nalezy do KRYTYKA F1.7,
+    #     nie do tego proxy (patrz nota w docs/zbuduje/MAPA-ZASTOSOWAN.md §GATE). ---
     if multi:
         tokeny = [t.lower() for t in m.get("manifest_proxy_tokeny", ["zastosowania", "toggle", "spektrum", "hero-sub"])]
         plan = read_text(os.path.join(arch, "PLAN.md")) if arch else None
