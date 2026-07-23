@@ -544,6 +544,30 @@ Loop-guard: `from_email == wfp_from_email` → ignore (nie odpowiadamy sami sobi
   wiadomość sklasyfikowana jako opt_out dostaje handled_at automatycznie (nie wisi w liczniku);
   `send-email` (symulacja odpowiedzi w testach) nadaje z ceo@, nie biuro@.
 
+## II.7 STAN WDROŻENIA v3 (2026-07-23) — **LIVE** (kolejność zamiast odrzucania)
+
+Decyzja Tomka 23.07: katalog wertykali NIE odrzuca nisz z góry — ustala tylko KOLEJNOŚĆ (fale);
+lider ≠ NO_GO → szukamy „wedge'a obok lidera" (jak `/sparing`). SSOT nisz + fal:
+`docs/stworze/PROSPEKTOR-WERTYKALE.md`.
+- [x] Migracja `20260723b_wfp_v3_kolejnosc.sql` ZASTOSOWANA (Management API,
+  `node scripts/apply-wfp-v3.mjs`): wszystkie seedowe `status='odrzucony'` → `'katalogowy'`
+  (cofnięcie z góry nadanego odrzucenia z v2); nowa kolumna `wfp_verticals.wave`
+  (CHECK 1-3 lub NULL); prompt `settings.wfp_prompt_vertical` przepisany na filozofię
+  wedge-obok-lidera (backup starego w `wfp_prompt_vertical_backup_20260723`; NO_GO TYLKO gdy
+  rynek <2000 firm / brak persony / naprawdę brak wedge'a po zbadaniu / rdzeń w systemie rządowym).
+- [x] Migracja `20260723c_wfp_v3_seed_fal.sql` ZASTOSOWANA (Management API,
+  `node scripts/apply-wfp-v3-seed.mjs`): seed 38 nowych nisz (research GPT, 4 kąty, koszt $2.88;
+  3 nowe kategorie: Serwis techniczny i instalacje / Nieruchomości i administracja / Zawody
+  regulowane i finanse; klaster inspekcyjny do „Bezpieczeństwo i compliance") + przydział fal.
+  Dwa klastry-dźwignie: paszport egzemplarza+kalendarz terminów oraz compliance nowego prawa 2025-26
+  (AML/KRAZ/kaucja/PPWR/UE najem krótki) — „zbuduj rdzeń raz, reskinuj per wertykal".
+- [x] Panel `tn-app/prospektor.html` (tab Wertykale): badge „Fala 1/2/3" przy gwiazdkach priorytetu,
+  filtr „Każda fala / Fala 1-3 / Bez fali", sortowanie kart fala↑→priorytet↓→nazwa, licznik
+  „N w fali 1" w nagłówku kategorii.
+- **Stan bazy po v3: 140 wertykali** — fala 1 = 6, fala 2 = 9, fala 3 = 72, bez fali = 53.
+  firmy-ppoz zostaje `'zbadany'` verdict NO_GO (raport 12/24), bez fali — możliwe re-badanie
+  nowym promptem wedge.
+
 ## 7. Czego NIE robimy w v1 (świadomie)
 - Auto-wysyłka / sekwencje followup — NIGDY auto; followupy = przyszła iteracja też przez drafty.
 - Integracja GUS BIR1/CEIDG API (klucz wymaga wniosku; hook w polu `source` — przyszłość).
@@ -555,7 +579,8 @@ Loop-guard: `from_email == wfp_from_email` → ignore (nie odpowiadamy sami sobi
 1. Retro-akceptacja [DECYZJA-NOC]: wyłączność=branża w PL; beauty odrzucone; persona ekspercka;
    ceny dopiero na rozmowie; 2. kontakt wg SSOT.
 2. Kanał pierwszej partii testowej: LinkedIn (jakość, niższe ryzyko PKE) czy mail (skala)?
-3. Które wertykale odpalamy pierwsze (rekomendacja: instalatorzy PV / ekipy remontowe /
-   wypożyczalnie — wysoki fit, niska saturacja).
+3. ~~Które wertykale odpalamy pierwsze~~ → ROZSTRZYGNIĘTE planem fal v3 (II.7 + WERTYKALE.md):
+   fala 1 = firmy-ddd, szklo-na-wymiar, serwis-oczyszczalni-przydomowych, asenizacja,
+   biegli-sadowi, cukiernie-torty. Do akceptu/przetasowania przez Tomka.
 4. Czy budujemy mini-raport branżowy per wertykal (lead magnet, uczciwy claim badań) — zalecane.
 5. Dedykowana subdomena/skrzynka wysyłkowa (deliverability) — przed skalą.

@@ -343,7 +343,9 @@ Karta „Testy aplikacji" w portalu widoczna gdy krok `testy_klienta` ma status 
 Koncept (SSOT): `docs/stworze/MODUL-TESTY-KLIENTA.md`.
 
 ### Moduł „Prospektor" (`/tn-app/prospektor`) — outbound fabryki aplikacji
-Odwrócony lejek: katalog wertykali (~100; raport branżowy AI = bramka GO/NO_GO) → baza firm →
+Odwrócony lejek: katalog wertykali (140; **v3: KOLEJNOŚĆ nie odrzucanie** — kolumna `wave`
+1-3/NULL = fale prospectingu; lider w niszy ≠ NO_GO, szukamy wedge'a OBOK lidera jak w /sparing;
+'odrzucony' TYLKO po raporcie NO_GO; raport branżowy AI = bramka GO/NO_GO) → baza firm →
 AI research (web_search) → pomysł (bramka anty-saturacji) → 1. kontakt (mail+LinkedIn) →
 **kolejka akceptacji Tomka → WYSYŁKA przez Resend (decyzja Tomka 23.07: klik „Zatwierdź
 i WYŚLIJ" = jedyna droga; NIC nie wychodzi bez akceptacji; draft Gmail = fallback)** →
@@ -361,7 +363,7 @@ przy wysyłce/drafcie 1. kontaktu. Wertykale: wysyłka first TYLKO w statusie `w
 (po raporcie GO); prospekt sparing→wertykal w_grze, deal→zajety. Lead TYLKO przez `lead-upsert`
 (lead_source='prospektor' pomija automatyzację lead_created!). Suppression: opt-out
 nieodwracalny z UI, rekordów z opt-out nie usuwamy. Migracje: `apply-wfp-prospektor.mjs` +
-`apply-wfp-v2.mjs`.
+`apply-wfp-v2.mjs` + `apply-wfp-v3.mjs` + `apply-wfp-v3-seed.mjs`.
 
 ## Procedury Claude
 
