@@ -867,8 +867,8 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
 
   // projekt.html: podgląd rozmów w warsztacie ads_konto (read-only, wf2_guide_messages)
   const panelSrc = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
-  (panelSrc.includes('adsGuideBlock') && panelSrc.includes('wf2_guide_messages') && panelSrc.includes('Przewodnik AI — ostatnie rozmowy'))
-    ? ok('projekt.html: sekcja „Przewodnik AI — ostatnie rozmowy" (adsGuideBlock, wf2_guide_messages)') : bad('projekt.html przewodnik', 'brak adsGuideBlock / odczytu wf2_guide_messages');
+  (panelSrc.includes('adsGuideBlock') && panelSrc.includes('wf2_guide_messages') && panelSrc.includes('Asystent portalu — ostatnie rozmowy') && panelSrc.includes('task_key'))
+    ? ok('projekt.html: sekcja „Asystent portalu — ostatnie rozmowy" (adsGuideBlock + chipy task_key)') : bad('projekt.html przewodnik', 'brak adsGuideBlock / wf2_guide_messages / chipów task_key');
 
   // deploy skonfigurowany (--no-verify-jwt)
   const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');

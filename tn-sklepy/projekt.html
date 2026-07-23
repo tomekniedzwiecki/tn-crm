@@ -1533,7 +1533,7 @@
         //    SSOT: docs/zbuduje/ADS-ONBOARDING-LEADSIE.md §14.
         function adsGuideBlock() {
             return `<details style="background:#0a0a0a;border:1px solid #1f1f1f;border-radius:8px;margin-top:10px" ontoggle="if(this.open)adsGuideLoad(this)">
-                <summary style="cursor:pointer;list-style:none;padding:12px 14px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#ededed"><i class="ph ph-hand-heart" style="color:#52a8ff"></i> Przewodnik AI — ostatnie rozmowy <span style="color:#6a6a6a;font-weight:400;font-size:11px">(klient ↔ asystent konfiguracji reklam)</span></summary>
+                <summary style="cursor:pointer;list-style:none;padding:12px 14px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#ededed"><i class="ph ph-hand-heart" style="color:#52a8ff"></i> Asystent portalu — ostatnie rozmowy <span style="color:#6a6a6a;font-weight:400;font-size:11px">(klient ↔ asystent; wątki per zadanie)</span></summary>
                 <div id="ads-guide-log" style="padding:0 14px 14px;font-size:12px;color:#8a8a8a">Rozwiń, aby wczytać…</div>
             </details>`;
         }
@@ -1542,18 +1542,20 @@
             box.textContent = 'Wczytuję…';
             try {
                 const { data, error } = await supabaseClient.from('wf2_guide_messages')
-                    .select('role, content, images, created_at').eq('project_id', projectId)
-                    .order('created_at', { ascending: false }).limit(20);
+                    .select('role, content, images, created_at, task_key').eq('project_id', projectId)
+                    .order('created_at', { ascending: false }).limit(30);
                 if (error) throw error;
                 const rows = (data || []).reverse();
-                if (!rows.length) { box.innerHTML = '<div style="color:#6a6a6a">Klient jeszcze nie rozmawiał z przewodnikiem.</div>'; return; }
+                if (!rows.length) { box.innerHTML = '<div style="color:#6a6a6a">Klient jeszcze nie rozmawiał z asystentem.</div>'; return; }
+                const TASK_LBL = { ads_strona: 'Strona FB', ads_konto: 'Konto reklamowe', ads_budzet: 'Budżet', firma: 'Firma' };
                 box.innerHTML = rows.map(m => {
                     const me = m.role === 'user';
                     const nImg = Array.isArray(m.images) ? m.images.length : 0;
                     const imgTag = nImg ? ` <span style="color:#52a8ff;font-size:10.5px"><i class="ph ph-image"></i> ${nImg} zrzut(y)</span>` : '';
                     const when = m.created_at ? new Date(m.created_at).toLocaleString('pl-PL') : '';
+                    const task = m.task_key ? `<span style="background:#132036;border:1px solid #234;color:#7fb3ff;border-radius:4px;padding:1px 6px;font-size:9.5px;letter-spacing:.03em;margin-left:6px">${escapeHtml(TASK_LBL[m.task_key] || m.task_key)}</span>` : '';
                     return `<div style="margin:8px 0;padding:8px 11px;background:${me ? '#0d1524' : '#111'};border:1px solid ${me ? '#234' : '#1f1f1f'};border-radius:7px">
-                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#6a6a6a;margin-bottom:3px">${me ? 'Klient' : 'Asystent'} · ${escapeHtml(when)}${imgTag}</div>
+                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#6a6a6a;margin-bottom:3px">${me ? 'Klient' : 'Asystent'} · ${escapeHtml(when)}${task}${imgTag}</div>
                         <div style="color:#d4d4d4;white-space:pre-wrap;word-break:break-word">${escapeHtml(m.content || '')}</div>
                     </div>`;
                 }).join('');
