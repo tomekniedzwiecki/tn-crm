@@ -178,24 +178,47 @@ def _save_candidates(items, outdir, tag):
     return paths
 
 def gen_favicons_local(prompt, count, api_key, outdir, tag=""):
-    """LOKALNY OpenAI /v1/images/generations — quality HIGH (STANDARD F2.5: favicon=high;
-    lokalnie zero limitu wall-clock edge). UWAGA: gpt-image-2 NIE wspiera
+    """LOKALNY OpenAI /v1/images/generations. UWAGA: gpt-image-2 NIE wspiera
     background:transparent (potwierdzone 400 'not supported for this model') —
     generujemy na czystej bieli, alfa = extract_alpha (probka rogow + defringe).
-    Favicon NIE dostaje referencji (styl-master = referencja MAKIET, nie znaku)."""
-    body = json.dumps({"model": "gpt-image-2", "prompt": prompt, "n": count,
-                       "size": "1024x1024", "quality": "high"}).encode("utf-8")
-    req = urllib.request.Request("https://api.openai.com/v1/images/generations", data=body,
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + api_key})
-    raw = urllib.request.urlopen(req, timeout=600).read()
-    j = json.loads(raw.decode("utf-8"))
-    data = j.get("data") or []
-    if not data:
-        raise SystemExit("OpenAI images: pusta odpowiedz: " + json.dumps(j)[:400])
+    Favicon NIE dostaje referencji (styl-master = referencja MAKIET, nie znaku).
+    ⚠️ INFRA (ssawek 23.07): quality HIGH gpt-image-2 trwa >100s/obraz i Cloudflare
+    przed api.openai.com zwraca wtedy HTTP 520 (dokladnie klasa 'blipy OpenAI /
+    transient resilience'). Dlatego: (1) domyslnie quality=medium (env
+    BRAND_FORGE_QUALITY podbija do 'high', jesli infra pozwoli), (2) n=1 na request
+    (krotsza generacja = pod limitem proxy), (3) retry transienta (520/timeout/5xx)."""
+    quality = os.environ.get("BRAND_FORGE_QUALITY", "medium")
     items = []
-    for im in data:
-        b64 = im.get("b64_json")
-        if b64: items.append((base64.b64decode(b64), None))
+    for k in range(max(1, count)):
+        body = json.dumps({"model": "gpt-image-2", "prompt": prompt, "n": 1,
+                           "size": "1024x1024", "quality": quality}).encode("utf-8")
+        last = None
+        for attempt in range(4):
+            try:
+                req = urllib.request.Request("https://api.openai.com/v1/images/generations",
+                    data=body, headers={"Content-Type": "application/json",
+                                        "Authorization": "Bearer " + api_key})
+                raw = urllib.request.urlopen(req, timeout=300).read()
+                j = json.loads(raw.decode("utf-8"))
+                data = j.get("data") or []
+                b64 = data[0].get("b64_json") if data else None
+                if not b64:
+                    raise RuntimeError("pusta odpowiedz: " + json.dumps(j)[:300])
+                items.append((base64.b64decode(b64), None))
+                last = None
+                break
+            except Exception as e:
+                last = e
+                code = getattr(e, "code", None)
+                transient = code in (429, 500, 502, 503, 504, 520, 522, 524) or code is None
+                if attempt < 3 and transient:
+                    time.sleep(6 * (attempt + 1))
+                    continue
+                break
+        if last is not None:
+            print("   [gen] obraz %s%d nieudany po retry: %r" % (tag, k, last))
+    if not items:
+        raise SystemExit("OpenAI images: 0 kandydatow (quality=%s) — transient/limit" % quality)
     return _save_candidates(items, outdir, tag)
 
 def gen_favicons(slug, prompt, count, wf2_secret, outdir, tag=""):
