@@ -320,6 +320,38 @@ def _harden(html, product_id, brand):
     return guarded
 
 
+def _checkout_preflight(html):
+    """TWARDY pre-flight kontraktu root modułu kasy (LL-038; incydenty: Odsączek 22.07 ×2,
+    Brzuszek+Rozmrozik 23.07 — landingi LIVE z wiecznym fallbackiem „Zamówienie chwilowo
+    niedostępne", bo klasa/config siedziały na <div> DZIECKU zamiast na section#zamow).
+    Gate-check MA ten check, ale nie był wymuszany przy publish → od teraz publish ODMAWIA.
+
+    Kontrakt (lustro gate-check.py „checkout-inline: root = #zamow…"): jeżeli HTML zawiera
+    klasę zc-checkout, to element z tą klasą musi być DOKŁADNIE JEDEN i tożsamy
+    z id="zamow", niosąc data-zc-product (uuid albo placeholder {{WF2_PRODUCT_ID}} —
+    hydratyzuje go _substitute) ORAZ data-zc-api. Skrypt modułu czyta config
+    z getElementById('zamow') i stawia stany na nim, a CSS celuje .zc-checkout[data-zc-*]."""
+    if "zc-checkout" not in html:
+        return  # landing bez modułu inline (fallback [data-checkout] na checkout_url) — OK
+    tags = re.findall(r'<[a-z][a-z0-9]*\b[^>]*class="[^"]*\bzc-checkout\b[^"]*"[^>]*>', html, re.I)
+    problems = []
+    if len(tags) != 1:
+        problems.append(f"elementów z klasą zc-checkout: {len(tags)} (musi być DOKŁADNIE 1 — root)")
+    t = tags[0] if tags else ""
+    if 'id="zamow"' not in t:
+        problems.append('root .zc-checkout bez id="zamow" (klasa na dziecku? scal na <section id="zamow">)')
+    if not re.search(r'data-zc-product="(?:\{\{WF2_PRODUCT_ID\}\}|[0-9a-fA-F-]{36})"', t):
+        problems.append("root bez data-zc-product (placeholder {{WF2_PRODUCT_ID}} lub uuid)")
+    if not re.search(r'data-zc-api="https?://[^"]+"', t):
+        problems.append("root bez data-zc-api")
+    if problems:
+        raise SystemExit(
+            "[platform-sync] PRE-FLIGHT KASY FAIL — moduł pokaże fallback 'Zamówienie chwilowo "
+            "niedostępne' zamiast formularza (LL-038):\n  - " + "\n  - ".join(problems) +
+            "\n  Kanon: <section id=\"zamow\" class=\"... zc-checkout\" data-zc-layout data-zc-product "
+            "data-zc-api ...> (wzór: rozgrzewek/odsaczek). Publikacja ZABLOKOWANA.")
+
+
 def cmd_publish(a):
     pr = _project(a.project)
     sid = _shop_id(pr)
@@ -331,6 +363,7 @@ def cmd_publish(a):
     html = open(src, encoding="utf-8").read()
     if "{{WF2_PRODUCT_ID}}" not in html and not a.allow_no_runtime:
         raise SystemExit("[platform-sync] HTML bez {{WF2_PRODUCT_ID}} — brak runtime-snippetu (landing-runtime-snippet.html). Wymuszenie: --allow-no-runtime")
+    _checkout_preflight(html)  # twarda bramka kontraktu kasy — patrz docstring
     dom, custom = _active_domain(sid)
     path = a.path if a.path is not None else p["slug"]
     canonical = f"https://{dom}/{path}" if path else f"https://{dom}"
