@@ -1021,13 +1021,35 @@ Deno.serve(async (req: Request) => {
   // portal wpuszcza bez pytania. Rekordy source='wait14' (tylko testy) mają work_consent_at NULL →
   // traktowane jak brak zgody (wpadają w warunek okna). W podglądzie admina ZAWSZE false.
   // work_consent_prompt = single-source treści (front nie dubluje CONSENT_TEXT).
+  //
+  // ZAKUP NA FIRMĘ (decyzja Tomka 23.07): NIP w zamówieniu = umowa w celach zarobkowych →
+  // konsumenckie prawo odstąpienia nie ma zastosowania i bramki NIE pokazujemy. Klasyfikację
+  // odnotowujemy raz jako source='b2b-nip' (to NIE jest zgoda klienta — to zapis klasyfikacji;
+  // fabryka widzi zielone światło bez czekania na zgodę/15 dni). Atomowo, tylko gdy NULL.
+  const isB2B = !!String(p.customer_nip || "").trim();
+  if (isB2B && !p.work_consent_at && !p.work_consent_source) {
+    const nowIso = new Date().toISOString();
+    const { data: marked } = await sb.from("wf2_projects").update({
+      work_consent_at: nowIso,
+      work_consent_source: "b2b-nip",
+      work_consent_version: CONSENT_VERSION,
+      work_consent_text: "Zakup na firmę (NIP podany w zamówieniu) — umowa zawarta w celach zarobkowych; konsumenckie prawo odstąpienia nie ma zastosowania, prace ruszają bez odrębnej zgody.",
+    }).eq("id", p.id).is("work_consent_at", null).select("id");
+    if (Array.isArray(marked) && marked.length > 0) {
+      await sb.from("wf2_activities").insert({
+        project_id: p.id, actor: "auto", action: "work_consent",
+        description: "Zakup na firmę (NIP w zamówieniu) — bramka zgody konsumenckiej pominięta, prace dozwolone od razu (b2b-nip).",
+      });
+    }
+    (p as Record<string, unknown>).work_consent_at = nowIso;
+  }
   let workStartAfter: string | null = null;
   if (p.created_at) {
     const t = new Date(p.created_at).getTime();
     if (Number.isFinite(t)) workStartAfter = new Date(t + 15 * 24 * 3600 * 1000).toISOString();
   }
   const windowOpen = !!workStartAfter && Date.now() < new Date(workStartAfter).getTime();
-  const needs_work_consent = !readonly && !p.work_consent_at && windowOpen;
+  const needs_work_consent = !readonly && !p.work_consent_at && windowOpen && !isB2B;
 
   return json({
     mode: readonly ? "preview" : "client",

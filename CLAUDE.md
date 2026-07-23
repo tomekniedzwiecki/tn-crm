@@ -157,9 +157,15 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
 - **⛔ BRAMKA ZGODY KONSUMENCKIEJ (21.07.2026, migracja `20260722c_wf2_work_consent`):**
   prace nad projektem NIE startują, dopóki `wf2_projects.work_consent_at` IS NULL i
   `work_consent_source` IS NULL — fabryka przed startem Etapu 1 MUSI to sprawdzić (⛔ brak =
-  STOP; wyjątki: source='pre-regulamin' = grandfathering ORAZ okno minęło — po dacie
-  utworzenia projektu +15 dni prace dozwolone bez zgody [termin odstąpienia upłynął],
-  edge zwraca wtedy needs_work_consent=false + work_start_after). Portal /twoj-biznes po
+  STOP; wyjątki: source='pre-regulamin' = grandfathering, source='b2b-nip' = zakup na firmę
+  [niżej] ORAZ okno minęło — po dacie utworzenia projektu +15 dni prace dozwolone bez zgody
+  [termin odstąpienia upłynął], edge zwraca wtedy needs_work_consent=false + work_start_after).
+  **ZAKUP NA FIRMĘ (decyzja Tomka 23.07, migracja `20260723e_wf2_work_consent_b2b`):**
+  `customer_nip` niepusty = umowa w celach zarobkowych → konsumenckie prawo odstąpienia nie ma
+  zastosowania; edge wf2-portal NIE pokazuje bramki i lazy przy pierwszym wejściu do portalu
+  zapisuje klasyfikację `work_consent_source='b2b-nip'` (+at/text — to zapis klasyfikacji,
+  NIE zgoda). Fabryka: `customer_nip` niepusty = zielone światło nawet PRZED wejściem klienta
+  do portalu (nie czekać na wiersz b2b-nip). Portal /twoj-biznes po
   zalogowaniu pokazuje pełnoekranową bramkę z JEDNĄ decyzją: „Zaczynamy — ruszajcie z
   pracami" (żądanie z art. 21 ust. 2 UoPK; treść = stałe `CONSENT_VERSION`/`CONSENT_TEXT`
   w wf2-portal, obecnie v2-2026-07-21; mail potwierdzający przez send-email — trwały
@@ -352,7 +358,9 @@ i WYŚLIJ" = jedyna droga; NIC nie wychodzi bez akceptacji; draft Gmail = fallba
 odpowiedzi wpadają do modułu (Resend Inbound → wfp_inbox), AI klasyfikuje (STOP = AUTO
 opt-out, wymóg prawny) i proponuje odpowiedź → Tomek akceptuje → wysyłka w wątku.
 **SSOT: `docs/stworze/PROSPEKTOR-PLAN.md` (sekcje STAN WDROŻENIA cz. I i II.6 = prawda)
-+ katalog `docs/stworze/PROSPEKTOR-WERTYKALE.md` — CZYTAĆ przed pracą.**
++ katalog `docs/stworze/PROSPEKTOR-WERTYKALE.md` + pozyskiwanie bazy
+`docs/stworze/PROSPEKTOR-BAZA.md` (CEIDG+enrichment=rdzeń; Panorama/pkt/Oferteo/Maps=ZAKAZ
+masowego zbioru; zgody z kupionych baz NIE przechodzą) — CZYTAĆ przed pracą.**
 Tabele `wfp_*` (RLS team-only), edge `wfp-engine` (research/idea/mail/send/reply_*/
 classify_reply/vertical_research/gmail_draft/status_change/save_setting/domain; gate
 verifyTeamMember, service-role tylko classify/suggest; limity `wfp_daily_cap` AI
