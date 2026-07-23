@@ -34,7 +34,12 @@ Przed czymkolwiek sprawdź `bud_tt_products.ali_snapshot->>'source'`:
 Agent-kurator orzeka per kadr galerii detail; werdykty zapisuje w
 **`bud_tt_products.gallery_curated jsonb`** (migracja 20260717) + czytelna kopia
 `FABRYKA-*/<slug>/GALERIA.md` dla Tomka. Kształt: `{source_ok, product_id, curated_at,
-items:[{url, klasa, werdykt, role, class:'R', keep, crop_bbox?, kolejnosc?, alt_pl, powod}]}`.
+items:[{url, klasa, werdykt, role, class:'R', keep, crop_bbox?, kolejnosc?, alt_pl, powod,
+dowodzi_zastosowania?}]}`. **Pole `dowodzi_zastosowania` (OPCJONALNE, 23.07 — zasila MAPĘ
+ZASTOSOWAŃ F0.6b):** gdy kadr POKAZUJE konkretne użycie (nie tylko packshot), kurator adnotuje
+„dowodzi zastosowania: <użycie>" (np. „czyszczenie klawiatury"). To DOWÓD wizualny zastosowania
+— trafia do `## ZASTOSOWANIA` mapy jako klasa `[WIDEO]`/`[OPIS]` z kotwicą w realnym kadrze,
+a do SHOWCASE jako gotowy nośnik (siła wizualna). Pusto = kadr nie dowodzi konkretnego użycia.
 Konsumpcja: **F1** planuje z inwentarza `keep` (role/alt_pl) — nie z surowych images;
 **F3** każdy `keep` = pełnoprawny asset klasy **R**; **F4** sekcja galerii/karta budują się
 z `gallery_curated`, NIGDY z generacji.

@@ -150,6 +150,12 @@ otwórz właściwy playbook
 na grafice), primary_text 2–3 zdania,
 rolę produktu w kompozycji (ZG8 — dla `problem` produkt POZA strefą bólu). Brief = INTENCJA +
 REFERENCJE-OBRAZY + ZAKAZY, bez recytacji anatomii (ZG2).
+**📌 NOTA (opcjonalny konsument `MAPA-ZASTOSOWAN.md` F0.6b; bez zmiany `ad-forge.py`):** dla produktu
+wieloużytkowego kąty kreacji MOGĄ brać RÓŻNE ZASTOSOWANIA z mapy — **1 kąt = 1 zastosowanie**
+(jedna obietnica na grafikę: ZG6 — tekst-na-grafice = ryzyko #1 nienaruszone), a **szerokość gra
+MIĘDZY kreacjami, nie wewnątrz** jednej (breadth między kątami zasila ZG3 „3 kąty = 3 byty",
+nie upycha kilku użyć w jednym kadrze). Mapa jest tylko ŹRÓDŁEM doboru zastosowań per kąt —
+mechanika G1→G8 bez zmian.
 **Bramka G1 (T/N):** [T] 3 różne kąty · [T] każdy headline ≤6 słów, PL, korzyściowy · [T] brief
 `problem` jawnie WYKLUCZA nasz produkt ze strefy bólu · [T] każda liczba ma kotwicę w karcie ·
 [T] każdy badge prawdziwy. → dowód: `BRIEF-ADS.md` (repo/desktop).

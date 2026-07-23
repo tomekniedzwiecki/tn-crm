@@ -111,6 +111,13 @@ Sprzedawca Allegro = **trzecia persona** (obok AWE i prezesów). Osobny landing,
 - **Mapowanie ~85% 1:1 lub lepiej:** zdjęcia czystsze (zakaz watermarków na Allegro), **EAN/GTIN** (Ali często nie ma), opinie **natywnie PL** (zero tłumaczenia), `stock.sold` 30 dni (realna sprzedaż), parametry produktu bogatsze. Eliminuje klasę błędu „Latarek" (dane z autoryzowanej oferty = z definicji autentyczne).
 - **Do zbudowania:** OAuth flow (M) + edge `bud-allegro-snapshot` mapujący do kształtu `ali_snapshot` z `source='allegro'` (M) + rozszerzenie gate F0 o zaufane źródło (S). Pipeline F0.5→F8 (kuracja, KARTA PRAWDY, makiety, landing) = **reuse bez zmian**.
 - **Największa niewiadoma = ekonomia, nie technika:** silnik CENY 3.0 / kalkulacja marży zaprojektowane pod dropship Ali (koszt USD, cło, narzut). U allegrowicza cena i koszt są JEGO → w tym torze silnik cen wyłączony lub przeprojektowany (decyzja produktowa, L).
+- **KLIENT = NAJLEPSZY PRODUCENT MAPY ZASTOSOWAŃ (F0.6b; roadmap).** Sprzedawca Allegro zna REALNE
+  użycia swojego produktu lepiej niż jakikolwiek snapshot — sprzedaje go od lat, czyta pytania
+  kupujących, zna nieoczywiste zastosowania. W torze Allegro `MAPA-ZASTOSOWAN.md` zyskuje idealne
+  źródło: **zadanie portalowe „potwierdź / uzupełnij zastosowania"** (klient waliduje wygenerowaną
+  mapę i dokłada użycia, których dane nie pokazały) — element toru onboardingu, zasila zakres
+  landingu u samego źródła i domyka anty-zawężenie bez zgadywania. Do zaprojektowania po GO
+  (portal /twoj-biznes, krok mapy zastosowań).
 - **Otwarte pytania techniczne:** ToS API co do użycia pobranych treści poza Allegro (przeczytać przed wdrożeniem); czy rejestracja aplikacji produkcyjnej wymaga weryfikacji; zdjęcia w opiniach przez API; rozróżnienie zdjęcie własne vs katalogowe (jak nie — klauzula gwarancji praw w regulaminie usługi).
 
 ---

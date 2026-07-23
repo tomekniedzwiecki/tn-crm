@@ -37,6 +37,14 @@ nie zgadywanką. **Brak pliku ICP = osąd agenta jak dotąd** (artefakt opcjonal
    - ≥2 ŚWIATŁA: studio miękkie + naturalne (okno/poranek/wieczór/noc)
    - CZŁOWIEK w ≥30% grafik (dłoń/model bez twarzy — realizm)
    - ≥2 PERSPEKTYWY
+   **🎯 OŚ ROZŁĄCZNA — POKRYCIE ZASTOSOWAŃ (23.07, F0.6b `MAPA-ZASTOSOWAN.md`).** Osie wyżej mierzą
+   SCENOGRAFIĘ (miejsce/światło/skala/kadr) — to NIE to samo, co pokrycie UŻYĆ. **Sceny landingu
+   obejmują ≥N RÓŻNYCH ZASTOSOWAŃ z mapy — inny JOB / przypadek użycia, NIE inne miejsce/światło
+   tej samej czynności** (kominek w dzień i kominek wieczorem = JEDNO zastosowanie w dwóch światach;
+   to nie liczy się do pokrycia). **N bierze się z MAPY** (liczba zastosowań w `SPEKTRUM`/
+   `## ZASTOSOWANIA`). **Produkty 1-funkcyjne (Rozmrozik/Drapek): oś NIE obowiązuje** — słusznie
+   wąskie. Powód: audyt — różnorodność scenografii dawała „różne zdjęcia tej samej czynności",
+   a produkt wieloużytkowy dalej czytał się jako jednozadaniowy (ssawka → wszędzie kominek).
    REGUŁA RYTMU: dwie SĄSIEDNIE sekcje NIE dzielą tego samego kontekst+skala.
    **⛔ ANTY-SZEW PEŁNOKADROWY (21.07, Tomek na macie problem↔prawda: „te dwie sekcje źle wyglądają,
    bo zdjęcia się łączą między sekcjami"):** dwie SĄSIEDNIE sekcje z pełnokadrową sceną (typ B/C —
@@ -127,6 +135,11 @@ Format bloku w przewodniku landingu:
   nie jest przycięty krawędzią), zero tekstu wpieczonego w strefie ruchu, kompozycja znosi
   delikatny dryf pętli (first=last).
 - F6 generuje klipy Kling i2v dla wszystkich trzech (budżet +2 klipy ~0,35 $/szt. poza hero).
+- **⚠️ POKRYCIE ZASTOSOWAŃ w ruchu (F0.6b): gdy mapa ma ≥2 funkcje, trzy sceny ANIM (hero/problem/
+  final) NIE MOGĄ WSZYSTKIE orbitować jednego świata/zastosowania** — ruch podkreśla to, co się
+  animuje, więc trzy klipy w jednym użyciu betonują wąski przekaz produktu wieloużytkowego. Krytyk
+  F1.7: wszystkie trzy w jednym świecie przy ≥2 funkcjach = **WARN** (rozrzuć nośnik ruchu po
+  różnych zastosowaniach). Produkt 1-funkcyjny: nie dotyczy.
 
 ## WYJĄTKI OD REGUŁY ŚWIATA (świadome)
 - Opinie (klasa U): surowe UGC, ramkowane — autentyczność > spójność świata.
@@ -144,7 +157,11 @@ soft morning window light" gdy poprzedni landing grał tym światem), nie ogóln
 ## GATE (krytyk ocenia SAM przewodnik, przed makietami)
 „Czy z samych opisów ujęć widać RÓŻNORODNOŚĆ i CIĄG?" — matryca osi wypełniona,
 reguła rytmu spełniona (żadna para sąsiadów kontekst+skala), człowiek ≥30%,
-motyw przewodni obecny w ≥2 klatkach. **CROSS-LANDING (pkt 2b): czy ten przewodnik różni się
+motyw przewodni obecny w ≥2 klatkach. **🎯 POKRYCIE ZASTOSOWAŃ (F0.6b): czy sceny obejmują ≥N
+RÓŻNYCH ZASTOSOWAŃ z `MAPA-ZASTOSOWAN.md` (inny JOB, nie inne miejsce tej samej czynności)?
+Czy pokryte są RÓŻNE FUNKCJE mapy, nie jedno użycie w kilku światach?** Produkt wieloużytkowy
+(≥2 funkcje) pokazany tylko w jednym zastosowaniu = FAIL przewodnika (przeprojektuj karty scen);
+produkt 1-funkcyjny — oś nie obowiązuje. **CROSS-LANDING (pkt 2b): czy ten przewodnik różni się
 od przewodnika poprzedniego landingu na ≥3 z 5 osi — wymienionych po nazwie?**
 „Inny produkt" ≠ oś; <3 osie = przeprojektuj partyturę (F2.5), nie pojedyncze karty sekcji. **EMOCJA↔PRODUKT: żadna karta nie łączy naszego
 produktu z negatywną emocją; seed sceny PROBLEM jawnie WYKLUCZA nasz produkt (stary

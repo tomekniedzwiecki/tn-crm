@@ -247,9 +247,35 @@ AliExpress/obce marki/off-topic = odrzut), WIDEO (poster/klatka — off-product 
 = sekcję pominąć, nawet przy milionach wyświetleń). Cena = półka rynkowa kategorii PL +
 zdrowa marża (nie sztywny mnożnik); końcówki: <150 → ,90; ≥150 → pełne/9,00. Mini-marka:
 USP-first zdrobnienie korzyści (Zmieścik/Świtek/Blasik…), slug lowercase bez znaków.
+**⚠️ Dla produktu z ≥2 funkcjami (MAPA F0.6b) nazwa NIE koduje jednego zastosowania (anty-Popiołek;
+rubryka nazwy w F2.5) — od korzyści rdzeniowej/mechanizmu (Ugniatek/Skrolik), nie od kontekstu.**
 **REZERWACJA w `bud_brand_names`** (INSERT-or-fail per `product_id`, `scripts/mockup-tools/
 brand-forge.py` albo REST): kolizja (0 wierszy) = następna kandydatka (pętla). Nazwa zajęta
 dla innego usera/landingu TEGO produktu NIE wraca. Rezerwacja PRZED generacją favicona (F2.5).
+
+**F0.6b — MAPA ZASTOSOWAŃ (BRAMKOWANY dla nowych; 23.07, dyrektywa Tomka — SSOT
+`docs/zbuduje/MAPA-ZASTOSOWAN.md`).** Między Kartą a ICP: **kolejność `Karta → Mapa → ICP`**
+(ICP pisze się ZNAJĄC spektrum — persona może ważyć KOLEJNOŚĆ zastosowań, nigdy wyciąć zdolności).
+Domyka lukę „co produkt POTRAFI vs co POKAZUJEMY", która nie miała właściciela: fabryka
+systematycznie zawężała produkty wieloużytkowe (ssawki → tylko kominek; koszyk → tylko smażenie
+mimo kategorii „durszlak"). Producent mapy (Sonnet/Haiku, osąd ZAMKNIĘTY) czyta KARTĘ +
+`ali_snapshot` (**`reviews.text_pl` — WSZYSTKIE opinie, nie próbka**; `description`; `categories`
+— kategoria to twardy sygnał pominiętej funkcji!; `properties`) + pola K1 z
+`bud_sessions.product_input` (`problem_wow`/`kat_wow`/`pomysl_landing` — dziś porzucane, REUŻYĆ
+gdy istnieją) + tytuły `videos_curated`. Zapis `FABRYKA-*/<slug>/MAPA-ZASTOSOWAN.md`, nagłówki
+kanoniczne **`## FUNKCJE` · `## ZASTOSOWANIA` (tabela z klasą dowodu) · `## SHOWCASE` ·
+`## SELEKCJA` (`**PRIMARY:**` · `**SPEKTRUM:**` — światy po `·`)**. Proces 4-krokowy A→D
+(FUNKCJE → ZASTOSOWANIA z klasą dowodu `[OPINIE]/[SPEC]/[OPIS]/[KATEGORIA]/[WIDEO]/[WNIOSEK]` →
+SHOWCASE → SELEKCJA) w SSOT. **⛔ TWARDA ZASADA ANTY-ZAWĘŻENIA: ICP steruje CASTINGIEM · TONEM ·
+JĘZYKIEM · AKCENTAMI — NIGDY ZAKRESEM ZASTOSOWAŃ. Zakres wyprowadza MAPA z FAKTÓW+OPINII
+niezależnie od persony; persona może ważyć KOLEJNOŚĆ, nie może wycinać zdolności.** Konflikt
+MAPA↔KARTA → wygrywa KARTA (jak ICP). **Produkty jednozadaniowe (Rozmrozik/Drapek) słusznie
+wąskie — doktryna NIE wymusza sztucznej szerokości** (SZEROKOŚĆ obowiązkowa dopiero przy ≥2
+RÓŻNYCH FUNKCJACH). `[WNIOSEK]` wolno pokazać w scenie zgodnej z funkcją, **NIGDY jako claim
+liczbowy w copy** (ANTY-MISMATCH F1). Gate `mapa_zastosowan` (`gate-check.py`): brak pliku dla
+kodu dotkniętego od 23.07 = FAIL (starsze = SKIP); `## ZASTOSOWANIA` < 6 wierszy z klasą dowodu
+= FAIL; `SPEKTRUM` < 4 światów = FAIL TYLKO gdy mapa ma ≥2 funkcje. Chip do panelu additywnie
+(`panel-sync.py doc`, niebramkowany).
 
 **F0.6a — ICP / GRUPA DOCELOWA (OPCJONALNY, NIEBRAMKOWANY artefakt; 20.07).** Obok Karty
 powstaje `FABRYKA-*/<slug>/ICP-GRUPA-DOCELOWA.md` — JEDNO źródło persony, z którego wyprowadza
@@ -273,7 +299,10 @@ Schemat (pod realnych konsumentów — F1 kierunek, F1.7 casting, F2.5 partytura
 - **7. Akcenty sekcji** — które sekcje wzmocnić dla tej persony.
 **⛔ GRANICA TWARDA:** ICP steruje **ŚWIATEM · CASTINGIEM · TONEM · AKCENTAMI**, NIGDY danymi
 produktu. Nie nadpisuje Karty (fakty) ani Paszportu (wygląd); konflikt ICP↔Karta/Paszport →
-**wygrywa Karta/Paszport**. Konsumenci: **F1** (briefing czyta ICP → uzasadnienia partytury +
+**wygrywa Karta/Paszport**. **⛔ ANTY-ZAWĘŻENIE (F0.6b): ICP steruje CASTINGIEM · TONEM · JĘZYKIEM ·
+AKCENTAMI — NIGDY ZAKRESEM ZASTOSOWAŃ. Zakres wyprowadza MAPA ZASTOSOWAŃ z FAKTÓW+OPINII
+niezależnie od persony; persona może ważyć KOLEJNOŚĆ zastosowań, nie może wycinać zdolności**
+(wybór jednej persony NIE zwęża spektrum — to był mechanizm zawężenia ssawek→kominek). Konsumenci: **F1** (briefing czyta ICP → uzasadnienia partytury +
 hero-sub „dla kogo"), **F1.7** (casting/świat/rekwizyty/anty-casting per sekcja z §5), **F2.5**
 (rodzina tła/świat z §3), **copy** (ton z §6). Chip do panelu additywnie: `panel-sync.py doc`
 (bucket `wf2-docs`) na `lp_dane`/`lp_plan` — niebramkowany.
@@ -296,6 +325,13 @@ wszystkich makiet.
 demografię/kontekst/casting zamiast free-textu, więc uzasadnienia „ten produkt/persona prowadzi
 do…" oraz hero-sub „dla kogo" wychodzą z JEDNEGO źródła (spójne z reklamą, gdy ICP zasiane z
 `dla_kogo`). Brak pliku = agent wnioskuje personę inline jak dziś (zero regresji).
+**PLAN DEKLARUJE ZASIĘG ZASTOSOWAŃ (F0.6b):** z `MAPA-ZASTOSOWAN.md` plan bierze **PRIMARY →
+hero** (jeden kąt komercyjny, message-match Z1) i **SECONDARY → które sekcje** niosą pozostałe
+zastosowania (hero-sub spektrum / sekcja `zastosowania` / toggle / mozaika — wzorce dystrybucji
+w SSOT). ⛔ Gdy mapa ma ≥2 RÓŻNE FUNKCJE, plan NIE MOŻE upchnąć całej szerokości w jednej
+sekcji-dodatku „nie tylko X". **Biblioteka sekcji — nowy typ `zastosowania`** (scenowa; wariant
+mozaika/toggle/per-użycie; alias grupy `benefits/korzysci/06`, gdzie mieszka `06-zastosowania`) —
+wpisywany do MANIFESTU SEKCJI jako `zastosowania | scenowa | build`, gdy mapa niesie ≥2 funkcje.
 FILTR PLANU (my): zakazy, formularz→CTA checkout_url,
 esencja produktu na scenach kluczowych, jasne tła, **ANTY-MISMATCH ROZSZERZONY (GALERIA-ALI §5):
 tabela CLAIM→ŹRÓDŁO ∈ {tytuł detail, specs, galeria detail, opinie, opis-FAKTY po destylacji};
@@ -576,6 +612,13 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    lockupy na tłach — do wf2_artifacts)**, brand.json (SSOT: nazwa/paleta/font/pliki),
    (OG 1200×630 opcjonalnie). Znak jako `{type:'logo'}` ref do makiet z topbarem (wordmark
    w makiecie = tekst; kod odtwarza live-text). Każdy plik obejrzany (Read) przed użyciem.
+   **📛 RUBRYKA NAZWY (anty-Popiołek; 23.07, F0.6b): dla produktu z ≥2 RÓŻNYMI FUNKCJAMI
+   (wg `MAPA-ZASTOSOWAN.md`) mini-marka NIE MOŻE kodować JEDNEGO zastosowania** — nazwa „Popiołek"
+   (koduje popiół/kominek) zamyka ssawkę w jednym użyciu i sama napędza zawężenie. **WARN w rubryce
+   marki** (weryfikuj przy rezerwacji `bud_brand_names` w F0.6 — reserve-before-favicon): nazwa
+   zakresowo szeroka LUB od korzyści rdzeniowej, nie od pojedynczego kontekstu. Wzór: **Ugniatek**
+   (funkcja rdzeniowa „ugniata" — otwarta na wiele użyć), **Skrolik** (mechanizm, nie miejsce).
+   Produkt 1-funkcyjny (Rozmrozik/Drapek) — nazwa od zastosowania OK (szerokości nie ma).
 2. **HERO-MAKIETA** (pełny 1. ekran: topbar, nagłówek PL, scena z produktem, karta wtopiona
    w scenę, pay-row; gate WOW — iterować max 3, wybrać najlepszą).
 
@@ -1807,6 +1850,28 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-23 (MAPA ZASTOSOWAŃ — doktryna anty-zawężenia; dyrektywa Tomka, klasa DOKTRYNALNA;
+  synteza 3 analiz: architektura + audyt pipeline + audyt dowodowy 9 landingów).** Fabryka
+  systematycznie zawężała produkty wieloużytkowe (5/7: ssawki→tylko kominek; koszyk→tylko smażenie
+  mimo kategorii „durszlak"). Mechanizm był ROZPROSZONY i BEZ WŁAŚCICIELA: Karta niosła szerokie
+  fakty, ale mapowała je na cecha→korzyść + JEDNO „użycie→demo"; ICP wybierało jedną personę, PLAN
+  jedną metaforę, oś przewodnika „≥3 konteksty" mierzyła SCENOGRAFIĘ nie użycia, nazwa marki kodowała
+  jedno zastosowanie. **Nowy krok `F0.6b MAPA ZASTOSOWAŃ` między Kartą a ICP** (kolejność
+  `Karta → Mapa → ICP` — ICP pisze się ZNAJĄC spektrum), SSOT `docs/zbuduje/MAPA-ZASTOSOWAN.md`
+  (proces A→D: FUNKCJE → ZASTOSOWANIA z klasą dowodu → SHOWCASE → SELEKCJA PRIMARY+SPEKTRUM).
+  Twarda zasada: **ICP steruje CASTINGIEM·TONEM·JĘZYKIEM·AKCENTAMI, NIGDY ZAKRESEM ZASTOSOWAŃ;
+  zakres wyprowadza MAPA z FAKTÓW+OPINII niezależnie od persony**. Konflikt MAPA↔KARTA → KARTA.
+  Produkty 1-funkcyjne (Rozmrozik/Drapek) słusznie wąskie — SZEROKOŚĆ obowiązkowa dopiero przy ≥2
+  RÓŻNYCH FUNKCJACH. Kontrwzorce-wzór: **Skrolik** (hero-sub wymienia spektrum + sekcja per użycie),
+  **Ugniatek** (szerokość rdzeniem + toggle). Nowy typ sekcji `zastosowania` (scenowa), rubryka nazwy
+  anty-Popiołek (F2.5). Nośnik gate: `gate-check.py` blok **`mapa_zastosowan`** (per-produkt
+  `MAPA-ZASTOSOWAN.md`; brak dla nowych = FAIL po mtime 23.07; `## ZASTOSOWANIA` <6 wierszy z klasą
+  dowodu = FAIL; `SPEKTRUM` <4 światów = FAIL tylko przy ≥2 funkcjach; `[OPINIE]`/`PRIMARY`/proxy =
+  WARN) + `gate-manifest.json` (progi DANE) + `test-gate-check.py` (`TestMapaZastosowan`). Odnośnik do
+  audytu 9 landingów: `LEKCJE-LANDINGI.md` (wiersz ssawek/Popiołek + koszyk/durszlak). Konsumenci
+  doktryny: F1 (PLAN deklaruje zasięg primary→hero/secondary→sekcje), F1.7 (oś POKRYCIE ZASTOSOWAŃ
+  `PRZEWODNIK-GRAFICZNY.md`), G1 kreacje (kąt=zastosowanie), PARTIALE (MAPA = część ZMIENNA po prefiksie).
 
 - **2026-07-23 (KOREKTA polityki kosztów — praca agentów Claude NIE jest kosztem; dyrektywa Tomka
   „korzystamy z abonamentu, tego nie liczę"):** wycofuje TREŚCIOWO wpis niżej (`kind='claude'`).

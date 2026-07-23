@@ -206,3 +206,10 @@ w kadrze = ta sama wada, o której mówił Tomek, o krok subtelniejsza.
 | 3 | doktryna paszportu + ZASADA NADRZĘDNA + „CZEGO NIE MA" | tabela K „Cechy dyskryminujące" produktu | `PASZPORT.md` |
 | 4 | tabela typów A/B/C + reguła twarda fade/fullframe | litera A/B/C + `#HEX` pola treści sceny | orzeczenie per grafika |
 | 5 | reguły seeda (fade · avoid · anty-szew · CTA · casting) | casting ICP §5, świat, „avoid: …", strona L/P | `PRZEWODNIK-GRAFICZNY.md` / `ICP-GRUPA-DOCELOWA.md` |
+| 6 | *(brak — MAPA jest w całości ZMIENNA)* | ZASTOSOWANIA + SPEKTRUM + PRIMARY danego produktu (co pokazać, w jakim zakresie) | `MAPA-ZASTOSOWAN.md` (F0.6b) |
+
+> **⛔ MAPA ZASTOSOWAŃ = część ZMIENNA, doklejana PO statycznym prefiksie — NIGDY do bloku KANON.**
+> Zakres zastosowań jest per-produkt (inny dla każdego landingu), więc wstawienie go do `## KANON`
+> (statyczny prefiks, ten sam wszędzie) **rozbiłoby prompt-caching Fazy 0**. MAPA wchodzi tam, gdzie
+> PARTYTURA/PASZPORT/ICP — jako zmienna doklejka. Konsument: brief F1 (zasięg primary/secondary),
+> seedy F1.7 (pokrycie zastosowań scen), G1 kreacje (kąt = zastosowanie).

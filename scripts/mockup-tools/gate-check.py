@@ -1925,6 +1925,115 @@ def check_reuse_preflight(res, M, ctx):
     res.add("reuse_preflight", "PLAN deklaruje wzorce (%s)" % marker, status_for(ok, m.get("severity", "WARN")),
             "marker obecny" if ok else m.get("brak_msg", "PLAN nie deklaruje wzorcow z EXEMPLARY-INDEX"))
 
+# ================================================================== F0.6b MAPA ZASTOSOWAN (anty-zawezenie zakresu produktu wielouzytkowego)
+def _md_h2_section(md, marker):
+    """Blok od naglowka `marker` (H2) do NASTEPNEGO naglowka '## '. None gdy markera brak.
+       Do parsowania kanonicznych sekcji MAPA-ZASTOSOWAN.md (## FUNKCJE / ## ZASTOSOWANIA / ## SELEKCJA)."""
+    if not md or marker not in md:
+        return None
+    after = md.split(marker, 1)[1]
+    out = []
+    for ln in after.splitlines():
+        if re.match(r"^\s*##\s", ln):
+            break
+        out.append(ln)
+    return "\n".join(out)
+
+def _md_table_data_rows(block):
+    """Wiersze DANYCH tabeli markdown w bloku (pomija naglowek i separator |---|). Lista linii."""
+    rows = []
+    seen_header = False
+    for ln in (block or "").splitlines():
+        s = ln.strip()
+        if not s.startswith("|"):
+            continue
+        core = s.replace("|", "").replace(" ", "")
+        if core and set(core) <= set(":-"):   # separator |---|:--:|
+            continue
+        if not seen_header:                    # pierwszy wiersz pipe = naglowek tabeli
+            seen_header = True
+            continue
+        rows.append(ln)
+    return rows
+
+def check_mapa_zastosowan(res, M, ctx):
+    """F0.6b — MAPA ZASTOSOWAN = wlasciciel luki 'co produkt POTRAFI vs co POKAZUJEMY'. Per-produkt
+       `MAPA-ZASTOSOWAN.md` w archiwum (doktryna+szablon: docs/zbuduje/MAPA-ZASTOSOWAN.md).
+       Brak pliku: NOWY landing (mtime kodu >= wymagany_od_data) = FAIL; starszy = SKIP (retro przy dotknieciu,
+       wzor check_sekcje_plan). Kontrole: ## ZASTOSOWANIA >= min_zastosowania wierszy z KLASA DOWODU (FAIL);
+       SPEKTRUM >= min_swiaty swiatow (FAIL) TYLKO gdy mapa deklaruje >= prog ROZNYCH FUNKCJI (produkt
+       1-funkcyjny: SKIP — doktryna NIE wymusza sztucznej szerokosci); [OPINIE]/PRIMARY/nosnik-szerokosci = WARN."""
+    m = M.get("mapa_zastosowan")
+    if not m:
+        res.add("mapa_zastosowan", "(config)", "SKIP", "brak mapa_zastosowan w manifescie")
+        return
+    sev = m["severity"]; arch = ctx.get("archiwum")
+    plik = m.get("plik", "MAPA-ZASTOSOWAN.md")
+    md = read_text(os.path.join(arch, plik.replace("/", os.sep))) if arch else None
+    if md is None:
+        # dyskryminator po mtime kodu (jak sekcje_plan): kod dotkniety >= wymagany_od_data BEZ mapy = FAIL
+        cutoff = m.get("wymagany_od_data"); code_path = ctx.get("code"); new = False
+        if cutoff and code_path:
+            try:
+                new = os.path.getmtime(code_path) >= datetime.strptime(cutoff, "%Y-%m-%d").timestamp()
+            except Exception:
+                new = False
+        if new:
+            res.add("mapa_zastosowan", "MAPA-ZASTOSOWAN.md wymagana (nowy landing)",
+                    status_for(False, m.get("brak_nowy_severity", "FAIL")),
+                    "kod po %s bez MAPA-ZASTOSOWAN.md — F0.6b wymagany (szablon: docs/zbuduje/MAPA-ZASTOSOWAN.md)" % cutoff)
+        else:
+            res.add("mapa_zastosowan", "(brak MAPA-ZASTOSOWAN.md)", "SKIP", "landing sprzed reguly (23.07)")
+        return
+    # --- FUNKCJE: ile ROZNYCH funkcji deklaruje mapa (decyduje o obowiazku SZEROKOSCI) ---
+    funkcje_block = _md_h2_section(md, m.get("funkcje_marker", "## FUNKCJE"))
+    n_funkcje = len(_md_table_data_rows(funkcje_block)) if funkcje_block is not None else 0
+    multi = n_funkcje >= m.get("funkcje_wielofunkcyjny_prog", 2)
+    # --- ZASTOSOWANIA: >= min wierszy z tagiem klasy dowodu (FAIL) ---
+    zas_block = _md_h2_section(md, m.get("zastosowania_marker", "## ZASTOSOWANIA"))
+    klasa_rx = re.compile(m.get("klasa_dowodu_regex", r"\[(OPINIE|SPEC|OPIS|KATEGORIA|WIDEO|WNIOSEK)\]"))
+    zas_rows = _md_table_data_rows(zas_block) if zas_block is not None else []
+    zas_tagged = [ln for ln in zas_rows if klasa_rx.search(ln)]
+    min_zas = m.get("min_zastosowania", 6)
+    ok_zas = len(zas_tagged) >= min_zas
+    res.add("mapa_zastosowan", "## ZASTOSOWANIA >= %d (z klasa dowodu)" % min_zas,
+            status_for(ok_zas, sev),
+            "%d/%d wierszy z tagiem klasy dowodu  ·  funkcje=%d" % (len(zas_tagged), min_zas, n_funkcje))
+    # --- SELEKCJA: SPEKTRUM swiatow (FAIL tylko przy >=2 funkcjach) ---
+    sel_block = _md_h2_section(md, m.get("selekcja_marker", "## SELEKCJA")) or ""
+    sep = m.get("swiat_separator", "·")  # srodkowa kropka '·'
+    spm = re.search(m.get("spektrum_regex", r"\*\*SPEKTRUM:?\*\*") + r"(.*)", sel_block)
+    worlds = [w.strip(" *`") for w in spm.group(1).split(sep) if w.strip(" *`:-")] if spm else []
+    min_sw = m.get("min_swiaty", 4)
+    if not multi:
+        res.add("mapa_zastosowan", "SPEKTRUM >= %d swiatow" % min_sw, "SKIP",
+                "produkt 1-funkcyjny (funkcje=%d) — doktryna NIE wymusza sztucznej szerokosci" % n_funkcje)
+    else:
+        res.add("mapa_zastosowan", "SPEKTRUM >= %d swiatow (mapa >=2 funkcje)" % min_sw,
+                status_for(len(worlds) >= min_sw, m.get("swiaty_severity", sev)),
+                "%d/%d swiatow (separator '%s')" % (len(worlds), min_sw, sep))
+    # --- WARN: [OPINIE] jako klasa dowodu w ZASTOSOWANIACH ---
+    opinie_tag = m.get("opinie_tag", "[OPINIE]")
+    has_opinie = opinie_tag in (zas_block or "")
+    res.add("mapa_zastosowan", "klasa dowodu %s obecna" % opinie_tag,
+            "PASS" if has_opinie else status_for(False, m.get("opinie_severity", "WARN")),
+            "opinie zasilaja mape" if has_opinie else "brak wiersza z %s — rozwaz cytat z opinii kupujacych" % opinie_tag)
+    # --- WARN: PRIMARY (jeden kat komercyjny — hero prowadzi nim) ---
+    has_primary = bool(re.search(m.get("primary_regex", r"\*\*PRIMARY:?\*\*"), sel_block))
+    res.add("mapa_zastosowan", "PRIMARY (kat komercyjny hero)",
+            "PASS" if has_primary else status_for(False, m.get("primary_severity", "WARN")),
+            "primary zadeklarowany" if has_primary else "brak **PRIMARY:** w ## SELEKCJA (hero prowadzi jednym katem)")
+    # --- WARN proxy: przy >=2 funkcjach landing ma NOSNIK SZEROKOSCI (sekcja zastosowan / hero-sub spektrum / toggle) ---
+    if multi:
+        tokeny = [t.lower() for t in m.get("manifest_proxy_tokeny", ["zastosowania", "toggle", "spektrum", "hero-sub"])]
+        plan = read_text(os.path.join(arch, "PLAN.md")) if arch else None
+        hay = (" ".join(ctx.get("sections", [])) + " " + (plan or "") + " " + (ctx.get("html") or "")).lower()
+        has_carrier = any(t in hay for t in tokeny)
+        res.add("mapa_zastosowan", "nosnik SZEROKOSCI w landingu (proxy)",
+                "PASS" if has_carrier else status_for(False, m.get("manifest_proxy_severity", "WARN")),
+                "sekcja zastosowan / hero-sub spektrum / toggle obecne" if has_carrier
+                else "mapa >=2 funkcje, brak nosnika szerokosci (sekcja 'zastosowania' / toggle / hero-sub spektrum)")
+
 # ================================================================== F7 COPY-GATE (task#2): kotwiczenie liczb w KARCIE + jedna cena
 def _num_tokens(text):
     """Zbior znormalizowanych liczb z tekstu (przecinek->kropka; wariant bez zbednych zer)."""
@@ -2174,6 +2283,7 @@ CHECK_ORDER = [
     ("dopasowanie", check_dopasowanie),
     ("sekcje_plan", check_sekcje_plan),
     ("reuse_preflight", check_reuse_preflight),
+    ("mapa_zastosowan", check_mapa_zastosowan),
     ("cta", check_cta),
     ("interakcje", check_interakcje),
     ("grep_forbidden", check_grep_forbidden),

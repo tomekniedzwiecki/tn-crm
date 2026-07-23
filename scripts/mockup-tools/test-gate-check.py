@@ -225,6 +225,107 @@ class TestReusePreflight(unittest.TestCase):
         self.assertNotIn("WARN", statuses(res, "reuse_preflight"))
 
 
+def _map_md(n_funkcje=2, n_zas=6, tagged=True, tag="[SPEC]", opinie=True, n_swiaty=4, primary=True):
+    """Buduje MAPA-ZASTOSOWAN.md z kanonicznymi naglowkami (## FUNKCJE / ## ZASTOSOWANIA /
+       ## SHOWCASE / ## SELEKCJA) — parametryzowalna pod poszczegolne asercje gate'u."""
+    out = "# MAPA ZASTOSOWAN — foo\n\n## FUNKCJE\n| # | Parametr | Funkcja |\n|---|---|---|\n"
+    for i in range(1, n_funkcje + 1):
+        out += "| %d | param%d | funkcja%d |\n" % (i, i, i)
+    out += "\n## ZASTOSOWANIA\n| # | Zastosowanie | Klasa dowodu | Kotwica |\n|---|---|---|---|\n"
+    for i in range(1, n_zas + 1):
+        cls = "-" if not tagged else ("[OPINIE]" if (opinie and i == 1) else tag)
+        out += "| %d | uzycie%d | %s | kotwica%d |\n" % (i, i, cls, i)
+    out += "\n## SHOWCASE\n| Zastosowanie | Jak pokazac | Sila |\n|---|---|---|\n| uzycie1 | scena | 4 |\n"
+    out += "\n## SELEKCJA\n"
+    if primary:
+        out += "**PRIMARY:** jeden kat komercyjny\n"
+    out += "**SPEKTRUM:** " + " · ".join("swiat%d" % i for i in range(1, n_swiaty + 1)) + "\n"
+    return out
+
+
+class TestMapaZastosowan(unittest.TestCase):
+    """F0.6b MAPA ZASTOSOWAN — anty-zawezenie zakresu produktu wielouzytkowego.
+       Per-produkt MAPA-ZASTOSOWAN.md w archiwum; dyskryminator mtime kodu (nowy bez mapy=FAIL,
+       stary=SKIP); ## ZASTOSOWANIA>=6 z klasa dowodu; SPEKTRUM>=4 tylko przy >=2 funkcjach."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = self.tmp.name
+        self.M = load_manifest()
+        self.assertIn("mapa_zastosowan", self.M, "brak bloku mapa_zastosowan w gate-manifest.json")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _code(self, ts=None):
+        """Tworzy fikcyjny index.html i (opcjonalnie) ustawia mtime; zwraca sciezke."""
+        p = os.path.join(self.d, "index.html")
+        write(p, "<html></html>")
+        if ts is not None:
+            os.utime(p, (ts, ts))
+        return p
+
+    def _run(self, md=None, code=None, sections=None):
+        if md is not None:
+            write(os.path.join(self.d, "MAPA-ZASTOSOWAN.md"), md)
+        ctx = {"archiwum": self.d, "code": code, "html": "", "sections": sections or []}
+        res = GC.Results()
+        GC.check_mapa_zastosowan(res, self.M, ctx)
+        return res
+
+    def test_nowy_bez_mapy_fail(self):
+        """Nowy landing (mtime kodu >= wymagany_od_data) BEZ mapy = FAIL."""
+        code = self._code(ts=None)  # swiezy plik = mtime teraz (dzis 2026-07-23 >= cutoff)
+        res = self._run(md=None, code=code)
+        self.assertIn("FAIL", statuses(res, "mapa_zastosowan"))
+
+    def test_stary_bez_mapy_skip(self):
+        """Landing sprzed reguly (mtime kodu < wymagany_od_data) BEZ mapy = SKIP (zero regresji)."""
+        import datetime as _dt
+        stary = _dt.datetime(2026, 7, 1).timestamp()
+        code = self._code(ts=stary)
+        res = self._run(md=None, code=code)
+        self.assertIn("SKIP", statuses(res, "mapa_zastosowan"))
+        self.assertNotIn("FAIL", statuses(res, "mapa_zastosowan"))
+
+    def test_pelna_mapa_pass(self):
+        """Mapa kompletna (>=2 funkcje, 6 zastosowan z klasa dowodu, 4 swiaty, PRIMARY, [OPINIE],
+           sekcja zastosowan w kodzie) = zero FAIL; ZASTOSOWANIA i SPEKTRUM = PASS."""
+        res = self._run(md=_map_md(), sections=["hero", "zastosowania", "zamow"])
+        self.assertNotIn("FAIL", statuses(res, "mapa_zastosowan"))
+        zas = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "ZASTOSOWANIA" in nm]
+        self.assertEqual(zas[0][0], "PASS")
+        spk = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "SPEKTRUM" in nm]
+        self.assertEqual(spk[0][0], "PASS")
+
+    def test_za_malo_swiatow_fail(self):
+        """Mapa >=2 funkcje ale SPEKTRUM < min_swiaty = FAIL (produkt wielofunkcyjny musi pokazac swiaty)."""
+        res = self._run(md=_map_md(n_funkcje=2, n_swiaty=2), sections=["hero", "zastosowania"])
+        spk = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "SPEKTRUM" in nm]
+        self.assertEqual(spk[0][0], "FAIL")
+
+    def test_jednofunkcyjny_waski_pass_skip(self):
+        """Produkt 1-funkcyjny waski (1 funkcja, 2 swiaty, 6 zastosowan) = SPEKTRUM SKIP, zero FAIL."""
+        res = self._run(md=_map_md(n_funkcje=1, n_swiaty=2))
+        spk = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "SPEKTRUM" in nm]
+        self.assertEqual(spk[0][0], "SKIP")
+        self.assertNotIn("FAIL", statuses(res, "mapa_zastosowan"))
+
+    def test_brak_tagow_klasy_dowodu_fail(self):
+        """ZASTOSOWANIA bez tagow klasy dowodu = 0 wierszy kwalifikowanych = FAIL."""
+        res = self._run(md=_map_md(n_funkcje=1, n_zas=6, tagged=False))
+        zas = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "ZASTOSOWANIA" in nm]
+        self.assertEqual(zas[0][0], "FAIL")
+
+    def test_brak_opinie_warn(self):
+        """Mapa kompletna ale bez klasy [OPINIE] = WARN (nie FAIL) — miekkie przypomnienie."""
+        res = self._run(md=_map_md(n_funkcje=1, n_zas=6, opinie=False, tag="[SPEC]"))
+        opn = [(st, det) for (st, nm, det) in rows_of(res, "mapa_zastosowan") if "OPINIE" in nm]
+        self.assertTrue(opn)
+        self.assertEqual(opn[0][0], "WARN")
+        self.assertNotIn("FAIL", statuses(res, "mapa_zastosowan"))
+
+
 class TestRegistration(unittest.TestCase):
 
     def test_checki_zarejestrowane_blisko_panel_sync(self):
@@ -235,6 +336,17 @@ class TestRegistration(unittest.TestCase):
         self.assertEqual(names[names.index("panel_sync") + 1], "kapitalizacja_deposit")
         # preflight = F1 -> tuz po sekcje_plan
         self.assertEqual(names[names.index("sekcje_plan") + 1], "reuse_preflight")
+
+    def test_mapa_zastosowan_zarejestrowany(self):
+        names = [n for (n, _fn) in GC.CHECK_ORDER]
+        self.assertIn("mapa_zastosowan", names)
+        self.assertIs(dict(GC.CHECK_ORDER)["mapa_zastosowan"], GC.check_mapa_zastosowan)
+        # mapa_zastosowan tuz po reuse_preflight, PRZED cta
+        self.assertEqual(names[names.index("reuse_preflight") + 1], "mapa_zastosowan")
+        self.assertEqual(names[names.index("mapa_zastosowan") + 1], "cta")
+        # asercje adjacency zachowane mimo wstawki
+        self.assertEqual(names[names.index("sekcje_plan") + 1], "reuse_preflight")
+        self.assertEqual(names[names.index("panel_sync") + 1], "kapitalizacja_deposit")
 
     def test_funkcje_zmapowane(self):
         d = dict(GC.CHECK_ORDER)
