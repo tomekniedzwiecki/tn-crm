@@ -1095,6 +1095,10 @@
         const pr = P.project || {};
         $('sn-logo').textContent = ((pr.name || pr.customer_name || '?').trim()[0] || '?').toUpperCase();
         $('sn-brand').textContent = pr.name || pr.customer_name || 'Wasz sklep';
+        // nav przebudowany od zera → przywróć podświetlenie aktywnego widoku (inaczej gubi się,
+        // gdy renderNav wywoła np. asynchroniczne onHistory czatu po applyView)
+        const cv = lastAppliedView || viewHashGet();
+        document.querySelectorAll('.sn-item[data-v], .bn-item[data-v]').forEach(b => b.classList.toggle('active', b.dataset.v === cv));
     }
 
     // ── Kafle-skróty na widoku START ───────────────────────────────────────────
