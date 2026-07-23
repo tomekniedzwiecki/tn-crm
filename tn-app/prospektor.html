@@ -1718,9 +1718,15 @@
                 if (nips.length){ const { data } = await supabaseClient.from('wfp_prospects').select('nip').in('nip', nips); (data||[]).forEach(r => existing.nip.add(String(r.nip||'').replace(/\D/g,''))); }
                 if (wwws.length){ const { data } = await supabaseClient.from('wfp_prospects').select('www').in('www', wwws); (data||[]).forEach(r => existing.www.add(normWww(r.www))); }
             } catch(e){ console.warn('dedup query', e); }
+            // Suppression (lista wykluczeń) — adres, który poprosił o STOP / odbił / zgłosił spam,
+            // NIE wraca importem (compliance: opt-out obejmuje przyszłe importy). Porównanie po lower(email).
+            const suppressed = new Set();
+            try {
+                if (emails.length){ const { data } = await supabaseClient.from('wfp_suppression').select('email_lower').in('email_lower', emails.map(e=>e.toLowerCase())); (data||[]).forEach(r => suppressed.add((r.email_lower||'').toLowerCase())); }
+            } catch(e){ console.warn('suppression query', e); }
             const seen = { email:new Set(), nip:new Set(), www:new Set() };
             rows.forEach(r => {
-                if (r.email){ if (existing.email.has(r.email)||seen.email.has(r.email)){ r.dup=true; r.dupReason='e-mail'; } seen.email.add(r.email); }
+                if (r.email){ const el=r.email.toLowerCase(); if (suppressed.has(el)){ r.dup=true; r.dupReason='wykluczony (STOP)'; } else if (existing.email.has(el)||seen.email.has(el)){ r.dup=true; r.dupReason='e-mail'; } seen.email.add(el); }
                 if (!r.dup && r.nip){ if (existing.nip.has(r.nip)||seen.nip.has(r.nip)){ r.dup=true; r.dupReason='NIP'; } seen.nip.add(r.nip); }
                 if (!r.dup && r.www){ if (existing.www.has(r.www)||seen.www.has(r.www)){ r.dup=true; r.dupReason='www'; } seen.www.add(r.www); }
             });

@@ -123,16 +123,21 @@ function hasForwardHeader(headers: unknown): boolean {
   return false;
 }
 
-// ── PROSPEKTOR (wfp): adres wysyłkowy z settings.wfp_from_email (cache 60 s) ──
-// Mail na ten adres = odpowiedź na cold outreach → tor wfp_inbox (NIE wfa_inbox).
+// ── PROSPEKTOR (wfp): adres ODBIORCZY z settings.wfp_reply_to (fallback wfp_from_email; cache 60 s) ──
+// From maila = ceo@ (domena główna, MX→Gmail, Resend NIE odbiera), a Reply-To = subdomena odbiorcza
+// (MX→Resend). Odpowiedzi trafiają na Reply-To → Resend Inbound → tu → wfp_inbox. Dlatego match
+// robimy po adresie ODBIORCZYM (wfp_reply_to), nie po From. (Odpowiedzi wprost na ceo@ idą do
+// Gmaila i tu nie docierają — świadomy koszt rozdzielenia From/Reply-To.)
 let _wfpFromCache: { val: string; at: number } | null = null;
 // deno-lint-ignore no-explicit-any
 async function getWfpFromEmail(sb: any): Promise<string> {
   const now = Date.now();
   if (_wfpFromCache && now - _wfpFromCache.at < 60_000) return _wfpFromCache.val;
   try {
-    const { data } = await sb.from("settings").select("value").eq("key", "wfp_from_email").maybeSingle();
-    const val = ((data?.value as string) || "").toLowerCase().trim();
+    const { data } = await sb.from("settings").select("key,value").in("key", ["wfp_reply_to", "wfp_from_email"]);
+    const rows = (data as Array<{ key: string; value: string }> | null) || [];
+    const byKey = (k: string) => ((rows.find((r) => r.key === k)?.value as string) || "").toLowerCase().trim();
+    const val = byKey("wfp_reply_to") || byKey("wfp_from_email");
     _wfpFromCache = { val, at: now };
     return val;
   } catch {

@@ -171,6 +171,54 @@ Deno.serve(async (req) => {
       console.error('[resend-webhook] bud_emails stamp error:', budErr)
     }
 
+    // Prospektor (wfp): twarde odbicia i skargi. Do 2026-07-23 webhook ignorował wfp_* →
+    // spalony adres wracał do wysyłki i psuł reputację świeżej subdomeny. Własny try/catch —
+    // NIGDY nie może przerwać ACK 200 (Resend by retry'ował). Mapowanie resend_id → wfp_outbox.
+    try {
+      if (payload.type === 'email.bounced' || payload.type === 'email.complained') {
+        const recipient = Array.isArray(payload.data?.to) && payload.data.to.length
+          ? String(payload.data.to[0]).trim().toLowerCase() : ''
+        const { data: ob } = await supabase.from('wfp_outbox')
+          .select('id, prospect_id, to_email').eq('resend_id', resendId).maybeSingle()
+        const prospectId = ob?.prospect_id || null
+        const emailLower = recipient || (ob?.to_email ? String(ob.to_email).trim().toLowerCase() : '')
+
+        if (payload.type === 'email.bounced') {
+          const bounceType = String(payload.data?.bounce?.type || '')
+          // Brak typu → traktuj jak twardy (bezpieczniej wykluczyć adres niż palić reputację).
+          const permanent = !bounceType || /permanent|hard/i.test(bounceType)
+          if (prospectId && permanent) {
+            await supabase.from('wfp_prospects')
+              .update({ bounced_at: new Date().toISOString(), email_check: 'bad' })
+              .eq('id', prospectId)
+            await supabase.from('wfp_events').insert({
+              prospect_id: prospectId, actor: 'auto', kind: 'bounce',
+              description: `Twardy bounce (${bounceType || 'permanent'}) — adres wykluczony z wysyłki`,
+              payload: { resend_id: resendId, bounce_type: bounceType },
+            })
+          }
+        } else {
+          // Skarga na spam = sprzeciw: suppression + auto opt-out (wymóg prawny, jak „STOP").
+          if (emailLower) {
+            await supabase.from('wfp_suppression')
+              .upsert({ email_lower: emailLower, reason: 'complaint' }, { onConflict: 'email_lower', ignoreDuplicates: true })
+          }
+          if (prospectId) {
+            await supabase.from('wfp_prospects')
+              .update({ opted_out: true, opted_out_at: new Date().toISOString(), status: 'opt_out' })
+              .eq('id', prospectId)
+            await supabase.from('wfp_events').insert({
+              prospect_id: prospectId, actor: 'auto', kind: 'opt_out',
+              description: 'Skarga na spam (complaint) — auto opt-out + suppression',
+              payload: { resend_id: resendId },
+            })
+          }
+        }
+      }
+    } catch (wfpErr) {
+      console.error('[resend-webhook] wfp bounce/complaint error:', wfpErr)
+    }
+
     // Always return 200 to acknowledge receipt
     return new Response(
       JSON.stringify({ success: true, processed: payload.type }),
