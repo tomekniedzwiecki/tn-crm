@@ -153,3 +153,36 @@
   mis-scope Rozgrzewka (Fraunces) tu NIE występuje.
 - **Rezydualne FAIL-e gate (nie-naprawialne w zakresie finiszu, udokumentowane):** cta checkout-root (⛔ strefa checkout);
   finalny_pass ×2 (zc-fallback hidden + crossfade TOR-I intencjonalny); panel_sync artefakty-kompozyty (rejestracja poniżej).
+
+## HERO v3 — JEDEN KADR (23.07; feedback Tomka: „nie jestem przekonany do dwóch zdjęć w hero — trzeba dać JEDNO zdjęcie pokazujące dwie sytuacje; zależy nam bardzo na efekcie animacji zdjęcia w hero")
+- **Powód:** STANDARD F1.7c „⛔ JEDEN KADR = JEDNA SCENA". Dyptyk (2 osobne grafiki sc-hero-frozen | sc-hero-thawed
+  obok siebie) rozbijał kompozycję i zabijał i2v — pętla żyła TYLKO w prawej połowie (para z kubka), lewa martwa.
+  Przebudowa na jedną ciągłą rzeczywistość kuchenną z kontrastem przed/po WEWNĄTRZ jednego kadru.
+- **Nowa grafika sc-hero-v3** (genimg.py → wf2-gen, 3:2 = 1536×1024; refy: `product:packshot-alpha` + `ref:sc-hero-thawed`
+  (świat/światło/produkt-w-scenie, przeszedł gate F3A) + `ref:sc-hero-frozen` (szron)): JEDEN blat, locked-off camera,
+  po LEWEJ zamrożony stek w szronie na desce (zimne błękitne światło z okna + mgła mrozu), po PRAWEJ Rozmrozik z kopułą
+  + 4 rozmrożone porcje + ciepła para, patelnia/kubek/roślina; gradient „linii odwilży" zimno→ciepło w obrębie jednego
+  kadru. Produkt WIERNY packshotowi (kratka wentylacyjna + panel LED + moduł, czarna taca + kopuła) — zero morfowania.
+- **Pętla i2v** (`scripts/mockup-tools/regen-hero-v3-rozmrozik-jeden-kadr.py`; Kling v2.1 PRO przez bud-fal-proxy,
+  cfg 0.65, ruch zawężony = dwa nośniki pary: mgła mrozu L + ciepła para R + delikatna zasłona; NEG LOCK
+  produkt/mięso/blat/deska/kubek/kolory + „split screen, collage, seam, color shift"). Ping-pong ffmpeg.
+  **GATE AMPLITUDY: diff(0↔5 s) = 11.86, diff(0↔2.5) = 10.20 — PASS (próg 8.0; w klasie wzorca-dobrego Brzuszek-crunch 11.9).**
+  Inspekcja klatek 0/2,5/5 s: produkt/mięso/deska/blat/KOLORY stabilne → amplituda z realnej pary, NIE z przebarwień →
+  WIERNOŚĆ PASS (amplituda nie zastąpiła wierności — obie zweryfikowane, LL-060/062).
+- **Markup** (`sklepy/patryk-skrzypniak/rozmrozik/index.html`): `.hr-diptych` (2 ramy) → `.hr-stage` (JEDNA rama
+  edytorialna, `aspect-ratio:3/2`, medium = gwiazda, grid `align-items:center`); JS-mount JEDEN slot `.hr-stage-vid`
+  (poster = sc-hero-v3 = klatka 0 pętli ⇒ zero skoku; autoplay muted playsinline, IO play/pause, reduced-motion/save-data
+  = sam poster, LL-049). Etykiety ZAMROŻONE (lewy-dolny) / ROZMROŻONE (prawy-dolny) jako subtelne nakładki NA JEDNYM
+  kadrze (backdrop-blur, poza strefą ruchu = górna połowa). Mobile: pełnokadrowy 3/2 dominujący. Copy/CTA/cena BEZ zmian.
+  **Backup: `index.html.bak-hero-v3`. Sekcja #zamow NIETKNIĘTA (twardy pre-flight kasy w publish przeszedł).**
+- **Assety v3** (Storage `bud-assets/rozmrozik/`, NOWE nazwy — stare pliki NIETKNIĘTE): `assets/sc-hero-v3.webp` (119 KB)
+  + `sc-hero-v3-800.webp` (35 KB) + `hero-video-v3.mp4`; `video/hero-loop-pp-v3.mp4` (1749 KB) + `hero-loop-poster-v3.webp`
+  + `hero-src-v3.jpg`. og:image + preload (1 desktop + 1 mobile, zamiast 4 dyptykowych) → v3.
+- **Home** (`sklepy/tomek-niedzwiecki/home-ulepszek/index.html`): kafel Rozmrozika poster+video → v3 (center-square crop
+  przetestowany — obie sytuacje czytelne w kwadratowym kaflu). `platform-sync home` → HTTP 200; live ref = hero-video-v3.
+- **Publish + LIVE:** `platform-sync publish` → https://ulepszek.pl/rozmrozik HTTP 200 · 228009 B · runtime TAK · noindex
+  zdjęty · kasa inline OK. **visual-verify 6/6 PASS** (1280 + prawdziwe 390 przez CDP): jeden kadr (hr-frame=1, hr-diptych=0),
+  wideo gra oba viewporty (paused=false, currentTime>0, readyState 4, klasa `on`), h-scroll 0/0, checkout inline
+  (Razem 298,99 zł; `.zc-fallback` hidden, brak „Zamówienie chwilowo niedostępne"), console.error 0. Screenshoty obejrzane.
+- **Koszty:** scena wf2-gen ~$0.25 (1× high) + Kling PRO i2v $0.49 (saldo fal 67.34→66.85). Razem ~$0.74 (budżet ≤$5).
+  **Fal $0.49 do zalogowania w `wf2_costs` przez główną sesję (wzorzec jak v2 regen — runner drukuje billing, DB loguje główna).**
