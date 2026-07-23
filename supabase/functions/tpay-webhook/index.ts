@@ -907,6 +907,12 @@ Deno.serve(async (req) => {
       try {
         const descB = (order.description || '').toLowerCase()
         const isBudReservation = descB.includes('rezerwacj') && (descB.includes('zbuduj') || descB.includes('sklep') || descB.includes('biznes online'))
+        // Zakup budowy sklepu z lejka /rozmowa (oferta „Budowa sklepu pełen pakiet")
+        // — klient NIE ma bud_session, ale projekt wf2 MUSI powstać (2026-07-23,
+        // incydent hen.mir@o2.pl: pełna płatność wpadała do workflow v1, a w
+        // /tn-sklepy nie pojawiała się wcale; trigger v1 wyłączony dla sklepów
+        // migracją 20260723_skip_classic_workflow_for_sklep)
+        const isSklepBuild = descB.includes('budowa sklepu')
         const amt = parseFloat(String(order.amount)) || 0
         const isFull = amt >= 1000 // rezerwacja = 100 zł (do 21.07: 500); pełna budowa ≫ 1000
         const sid = order.spar_session_id || null
@@ -1017,6 +1023,80 @@ Deno.serve(async (req) => {
           if (leadId) {
             if (isFull) await supabase.from('leads').update({ status: 'won' }).eq('id', leadId).neq('status', 'won')
             else await supabase.from('leads').update({ status: 'negotiation' }).eq('id', leadId).not('status', 'in', '("won","negotiation")')
+          }
+        } else if (isFull && isSklepBuild) {
+          // WORKFLOW V2 bez bud_session: pełna płatność za budowę sklepu z lejka
+          // /rozmowa (oferta „Budowa sklepu…"). Idempotentne: (1) po
+          // reservation_order_id (retry webhooka), (2) po lead_id/e-mailu —
+          // aktywny projekt = dopisz tylko ratę do harmonogramu, nie dubluj.
+          try {
+            const { data: exByOrder } = await supabase.from('wf2_projects').select('id').eq('reservation_order_id', order.id).maybeSingle()
+            let projId: string | null = exByOrder?.id || null
+            if (!projId) {
+              // deno-lint-ignore no-explicit-any
+              let exProj: any = null
+              if (order.lead_id) {
+                const { data } = await supabase.from('wf2_projects').select('id').eq('lead_id', order.lead_id).neq('lifecycle', 'cancelled').order('created_at', { ascending: false }).limit(1).maybeSingle()
+                exProj = data || null
+              }
+              if (!exProj && order.customer_email) {
+                const { data } = await supabase.from('wf2_projects').select('id').ilike('customer_email', order.customer_email.trim()).neq('lifecycle', 'cancelled').order('created_at', { ascending: false }).limit(1).maybeSingle()
+                exProj = data || null
+              }
+              if (exProj) {
+                // kolejna rata za budowę → tylko pozycja harmonogramu
+                const { data: exPay } = await supabase.from('wf2_payments').select('id').eq('project_id', exProj.id).eq('order_id', order.id).maybeSingle()
+                if (!exPay) {
+                  const { count } = await supabase.from('wf2_payments').select('id', { count: 'exact', head: true }).eq('project_id', exProj.id)
+                  await supabase.from('wf2_payments').insert({
+                    project_id: exProj.id, sort: count || 0, label: 'Płatność za budowę (kolejna rata)',
+                    amount: amt, order_id: order.id, paid_at: paidAt,
+                  })
+                  console.log('[tpay-webhook] WF2 (bez bud_session): dopisana rata do projektu', exProj.id)
+                }
+              } else {
+                // deno-lint-ignore no-explicit-any
+                const consentCols: Record<string, any> = {
+                  customer_nip: order.customer_nip || null,
+                  customer_company: order.customer_company || null,
+                }
+                if (order.consent_digital_service === true && order.consented_at) {
+                  consentCols.work_consent_at = order.consented_at
+                  consentCols.work_consent_version = 'v2-2026-07-21'
+                  consentCols.work_consent_source = 'checkout'
+                }
+                const { data: proj, error: projErr } = await supabase.from('wf2_projects').insert({
+                  customer_name: order.customer_name || null,
+                  customer_email: order.customer_email || null,
+                  customer_phone: order.customer_phone || null,
+                  lead_id: order.lead_id || null,
+                  bud_session_id: null,
+                  reservation_order_id: order.id,
+                  status: 'start',
+                  ...consentCols,
+                }).select('id').single()
+                if (projErr) {
+                  console.error('[tpay-webhook] WF2 (bez bud_session): insert projektu padł (nieblokujące):', projErr.message)
+                } else if (proj) {
+                  projId = proj.id
+                  await supabase.rpc('wf2_ensure_steps', { p_project: proj.id })
+                  await supabase.from('wf2_payments').insert({
+                    project_id: proj.id, sort: 0, label: 'Pełna płatność za budowę',
+                    amount: amt, order_id: order.id, paid_at: paidAt,
+                  })
+                  await supabase.from('wf2_activities').insert({
+                    project_id: proj.id, actor: 'auto', action: 'created',
+                    description: 'Projekt utworzony automatycznie po pełnej płatności za budowę (zakup z lejka /rozmowa, bez sesji /sklep)',
+                  })
+                  console.log('[tpay-webhook] WF2 (bez bud_session): utworzony projekt', proj.id, 'dla order', order.id)
+                }
+              }
+            }
+          } catch (wf2Err) {
+            console.error('[tpay-webhook] WF2 (bez bud_session) create error (nieblokujące):', wf2Err)
+          }
+          if (order.lead_id) {
+            await supabase.from('leads').update({ status: 'won' }).eq('id', order.lead_id).neq('status', 'won')
           }
         } else if (isBudReservation) {
           console.error('[tpay-webhook] [ALERT] Rezerwacja budowania bez dopasowanej bud_session — przypnij ręcznie. order:', order.id, 'lead:', order.lead_id, 'email:', order.customer_email)
