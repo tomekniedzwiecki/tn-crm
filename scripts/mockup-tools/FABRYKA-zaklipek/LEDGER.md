@@ -70,3 +70,56 @@
   ocena ★4,6/5 · 26 ocen, zdjecia_keep 4, wideo_keep 0, karta_url, paszport_url} · checklista 6/7 VERBATIM.
 - Doki → wf2-docs/zaklipek/: KARTA-PRAWDY, PASZPORT, GALERIA, WIDEO, ICP-GRUPA-DOCELOWA, LEDGER.
 - Artefakty gallery: 4 keep (g1/g2/g3/g5) + gallery_curated zapisane.
+
+---
+
+# LEDGER — ZAKLIPEK (F2.5) · styl-master + mini-marka + TOKENS-MAKIETY · 2026-07-24
+
+## Faza F2.5 — wykonane
+- **STYL-MASTER ×1 = plansza DNA** (`brand/00-styl-master.png`, 1536×1024) generowana Z PARTYTURY
+  (nie z nawyku): jawne hexy palety + kroje (Bricolage Grotesque / Figtree) + sygnatura S3
+  „linia krawędzi" + ticki 5–28 mm + świat aluminium/platyna. Kanał: **lokalny OpenAI HIGH**
+  (`/v1/images/generations` gpt-image-2, quality=high, 1536×1024) — 1 blip 520 na 1. próbie,
+  sukces na 2. (retry w skrypcie). BEZ referencji (produkt achromatyczny; ⛔ {type:'product'}).
+  **Vision-gate DNA-kompletności (Sonnet) = PASS w 1 próbie:** paleta 3+ ról · 2 fonty z kontrastem
+  (display≠text) · jeden radius 14px · ikony outline ink · trust-pill · chłodna warstwowa głębia+grain;
+  scope akcentu (azure tylko CTA/sygnatura) trzymany, produkt wierny PASZPORTOWI (srebrna listwa,
+  4× USB-A blue, klips+śruba, DC 5V — zero czytnika/HDMI/10Gbps/czerni).
+- **MINI-MARKA „Zaklipek"** — **zarezerwowana w `bud_brand_names`** (product_id 1ededa68…,
+  INSERT-or-fail; id 55460518…). Favicon: 3 metafory (klips-C / wtyczka USB / litera-Z-zacisk) × 2 =
+  6 kandydatów (lokalny OpenAI medium). Selektor @32px odrzucił WSZYSTKICH twardo (tylko „za mały
+  fill" 0.20–0.30 + kilka „za dużo kolorów") — koncept dobry → **finalizacja kandydata `fav-m0-1`**
+  (C-clamp/zacisk chwytający krawędź + śruba; czyta się też jako „C") przez reużycie funkcji
+  brand-forge (`finalize-zaklipek.py`; export_favicons crop-to-bbox naprawia fill). **Rubryka
+  6×T/N = 6×T (PASS):** @32 T · @16 oba tła T · metafora=klips na krawędzi (USP) T · flat 1 kolor T ·
+  zero liter T · mono T. Najsłabsza rzecz: @16px wewnętrzny detal śruby prawie się domyka
+  (mark opiera się na sylwetce clamp-C).
+- **WORDMARK z fontu landingu** (nie gpt-image): Bricolage Grotesque nie było lokalnie (Google =
+  font zmienny). Pobrano `BricolageGrotesque[opsz,wdth,wght].ttf` i **zinstancjonowano statyczny
+  ExtraBold (wght 800, opsz 96)** przez `fontTools.varLib.instancer` → `fonts/BricolageGrotesque-
+  ExtraBold.ttf` (glify „Zaklipek" OK). Wordmark ink #1C2530 + wariant dark; lockup favicon LEWA +
+  wordmark PRAWA; brand-context.png (dowód @16/32/64 + lockupy na jasnym/ciemnym/platyna).
+- **TOKENS-MAKIETY.md** — `## KANON` (1:1 z SSOT) + `## PARTYTURA` (8 pozycji z uzasadnieniem) +
+  `:root{}` z hexami (--font-display Bricolage · --font-text Figtree · --cta #0A6EBD · --paper
+  #F7F8FA/#EEF0F4/#E1E5EC · --ink #1C2530 · --body #38424E · --line #D5DAE2 · radius 14/8 · cień łupkowy).
+- **CROSS-LANDING MASZYNOWY** `gate-check.py zaklipek --cross-only`: **0 FAIL** (font Bricolage ≠
+  Gabarito/Quicksand/Barlow; akcent #0A6EBD ΔE ≥ 41,7 vs home-ulepszek/home-zaradek/ssawek; archetyp
+  B i sekwencja = SKIP bo pre-build/poprzednik=strona główna). ⚠️ gotcha: `read_text(code)` wywala
+  się OSError na globie `sklepy/*/zaklipek/...` gdy kod nie istnieje → uruchamiać z `--code`
+  wskazującym literalną (nieistniejącą) ścieżkę, wtedy fallback czyta `:root` z TOKENS-MAKIETY.md.
+- **Panel (lp_styl_marka)**: step=done (8/8 checklista VERBATIM, fields {marka_nazwa, slug, font,
+  paleta, styl_master_url, tokens_url, brand_dir}); artefakty: styl_master (00-styl-master.png),
+  doc (TOKENS-MAKIETY.md → wf2-docs), 3× branding (logo-combo, favicon, brand-context). **Domknięto
+  poz.7 lp_dane** („Slug + mini-marka w bud_brand_names") → lp_dane 7/7.
+
+## Koszty F2.5
+- 1× styl-master (OpenAI gpt-image-2 HIGH 1536×1024) + 6× favicon (OpenAI gpt-image-2 medium 1024²)
+  = 7 generacji lokalnym kanałem OpenAI. Zero edge/Manus.
+
+## Odstępstwa (świadome)
+- Paleta do brand-forge podana w kolejności `#1C2530,#0A6EBD,#1C2530,#E1E5EC,#5B6B7A` (nie
+  accent-first z briefu) — brand-forge sprzęga pozycje: [0]→kolor wordmarku (ink), [2]→ink mono,
+  [3]→tło brand-context. Accent-first („#0A6EBD,#1B2733,#F7F8FA,…") dałby AZUROWY wordmark (łamie
+  scope akcentu) i BIAŁE mono (niewidoczne). Zestaw kolorów ten sam, tylko mapowanie pod couplingi.
+- Font wordmarku = statyczny ExtraBold zinstancjonowany z Google variable Bricolage (Pillow renderuje
+  font zmienny w domyślnej, lekkiej instancji) — wierny partyturze display, glify „Zaklipek" pełne.
