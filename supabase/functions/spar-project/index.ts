@@ -57,6 +57,19 @@ const MAX_HISTORY_MESSAGES = 200
 // i liczenia limitu (action 'conversations'). NIE używać offer.name (edytowalne w DB).
 const CONVO_DESCRIPTION = 'Aplikacja — kolejna rozmowa'
 
+// ── ZGODA NA PUBLIKACJĘ W GALERII „INSPIRACJE" (opt-in, cofalna) ──────────────
+// Kanon prawny: https://tomekniedzwiecki.pl/aplikacja/regulamin/ §11
+// Wzór: data-private/prawne-aplikacja/ZGODA-PUBLIKACJA-INSPIRACJE-DRAFT.md (CZĘŚĆ A).
+// CONSENT_TEXT = skrót w stylu produktu; front sparingu pokazuje IDENTYCZNY tekst.
+// Podbicie wersji = zmiana treści → zawsze bump CONSENT_VERSION i tekstu w OBU miejscach.
+const INSPIRACJE_CONSENT_VERSION = 'v1-2026-07-23'
+const INSPIRACJE_CONSENT_TEXT =
+  'Zgadzam się, aby zanonimizowany przykład tego projektu (robocza nazwa, makiety, ogólny ' +
+  'opis funkcji — bez moich danych identyfikujących) był pokazywany w publicznej galerii ' +
+  '„Inspiracje" oraz w materiałach Tomka Niedźwieckiego. Wiem, że materiały mogą być oznaczone ' +
+  'jako wygenerowane z udziałem AI i że zgodę mogę cofnąć w każdej chwili (usunięcie z galerii ' +
+  'do 7 dni, ze skutkiem na przyszłość). Szczegóły w §11 Regulaminu.'
+
 // Konto z JWT w Authorization (Supabase Auth) — null gdy brak/nieważny token
 async function verifyAuthUser(
   req: Request,
@@ -260,7 +273,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, wniosek_status, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id')
+      .select('id, name, status, verdict, wniosek_status, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, inspiracje_consent_at, inspiracje_consent_version, inspiracje_consent_revoked_at')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -285,7 +298,11 @@ Deno.serve(async (req) => {
         .order('created_at', { ascending: false }).limit(1).maybeSingle()
       const protoMeta = (protoRow?.meta || null) as Record<string, unknown> | null
       const protoUrl = protoMeta && typeof protoMeta.url === 'string' ? protoMeta.url as string : null
-      if (session.verdict !== 'zielony' || session.is_test || session.hidden_from_feed || !session.landing_url || !protoUrl) {
+      // Twardy filtr zgody: publiczny głęboki widok galerii wymaga WAŻNEJ zgody na
+      // publikację (opt-in, niecofniętej) — 1:1 z feedem spar-public-feed. Bez tego
+      // ktoś z bezpośrednim linkiem ?sid= mógłby obejść bramkę galerii. Regulamin §11.
+      const consentOk = !!session.inspiracje_consent_at && !session.inspiracje_consent_revoked_at
+      if (session.verdict !== 'zielony' || session.is_test || session.hidden_from_feed || !session.landing_url || !protoUrl || !consentOk) {
         return jsonResponse({ error: 'niedostepny' }, 404, cors)
       }
       const pBrief = (session.preview_brief || {}) as Record<string, unknown>
@@ -371,6 +388,46 @@ Deno.serve(async (req) => {
     const ownerId = (session.auth_user_id as string | null) || null
     if (ownerId && (!authUser || authUser.id !== ownerId)) {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+    }
+
+    // ── action 'inspiracje_consent': zgoda na publikację w galerii „Inspiracje" ──
+    //    { consent: true }  → wyraź zgodę (opt-in): at=now, version+text=snapshot, source, revoked=NULL.
+    //    { consent: false } → cofnij zgodę: revoked_at=now (at/version zostają jako ślad).
+    //    Owner-gate wyżej już przepuścił tylko właściciela (JWT dla sesji przypiętej
+    //    do konta; sessionId dla anonimowej). Zapis service-role → RLS nie dotyczy.
+    //    Domyślnie BRAK zgody — dopóki front nie przyśle consent:true, sesja nie
+    //    trafia do Inspiracji (twardy filtr w spar-public-feed / action 'public').
+    if (action === 'inspiracje_consent') {
+      const consent = (body as Record<string, unknown>).consent === true
+      const nowIso = new Date().toISOString()
+      const patch: Record<string, unknown> = consent
+        ? {
+            inspiracje_consent_at: session.inspiracje_consent_at || nowIso, // pierwsza zgoda stempluje czas; ponowna po cofnięciu odświeża poniżej
+            inspiracje_consent_version: INSPIRACJE_CONSENT_VERSION,
+            inspiracje_consent_text: INSPIRACJE_CONSENT_TEXT,
+            inspiracje_consent_source: 'sparing_ui',
+            inspiracje_consent_revoked_at: null,
+          }
+        : {
+            // Cofnięcie: zostaw at/version/text (ślad), ustaw revoked_at jeśli była ważna zgoda.
+            inspiracje_consent_revoked_at: session.inspiracje_consent_at ? nowIso : null,
+          }
+      // Ponowna zgoda po cofnięciu = NOWY akt woli → odśwież at na teraz.
+      if (consent && session.inspiracje_consent_revoked_at) patch.inspiracje_consent_at = nowIso
+      const { error: cErr } = await supabase.from('spar_sessions').update(patch).eq('id', sessionId)
+      if (cErr) {
+        console.error('[spar-project] inspiracje_consent update error:', cErr)
+        return jsonResponse({ error: 'blad_serwera' }, 500, cors)
+      }
+      const at = (patch.inspiracje_consent_at as string | null) ?? (session.inspiracje_consent_at as string | null) ?? null
+      const revoked_at = (patch.inspiracje_consent_revoked_at as string | null | undefined)
+      const revoked = revoked_at !== undefined ? (revoked_at as string | null) : ((session.inspiracje_consent_revoked_at as string | null) || null)
+      return jsonResponse({ ok: true, inspiracje_consent: {
+        at,
+        version: consent ? INSPIRACJE_CONSENT_VERSION : (session.inspiracje_consent_version || null),
+        revoked_at: revoked,
+        active: !!at && !revoked,
+      } }, 200, cors)
     }
 
     // ── action 'seen_landing': lead obejrzał stronę sprzedażową (wszedł w panelu do
@@ -602,6 +659,13 @@ Deno.serve(async (req) => {
         reveals: revealsMap,
         imie: firstName,
         created_at: session.created_at,
+        // Stan zgody na publikację w Inspiracjach — front czyta z serwera (nie z LS).
+        inspiracje_consent: {
+          at: session.inspiracje_consent_at || null,
+          version: session.inspiracje_consent_version || null,
+          revoked_at: session.inspiracje_consent_revoked_at || null,
+          active: !!session.inspiracje_consent_at && !session.inspiracje_consent_revoked_at,
+        },
       },
       feedback: feedback || [],
       wspolpraca: collabMessages || [],

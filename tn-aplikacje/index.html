@@ -647,7 +647,7 @@ function visibleSessions() {
 // Config źródła danych lejka APLIKACJA (różnice spar_*/bud_* → PanelCore.loadSessions).
 const LOAD_CFG = {
   table: 'spar_sessions',
-  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, gen_error_count, wniosek_at, wniosek_status, wniosek_auto, wniosek_decided_at, raport_meta:market_report->_meta',
+  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, inspiracje_consent_at, inspiracje_consent_version, inspiracje_consent_revoked_at, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, gen_error_count, wniosek_at, wniosek_status, wniosek_auto, wniosek_decided_at, raport_meta:market_report->_meta',
   rpcCosts: 'spar_session_costs', rpcAvatars: 'spar_session_avatars', emailsTable: 'spar_emails',
 };
 async function loadAll() {
@@ -1687,8 +1687,9 @@ function leadAkcjeHTML() {
     ${stageBox}
     ${platnosciPtr}
     ${row(s.is_test, `toggleTest('${s.id}', this.checked)`, 'Sesja testowa (poza metrykami i follow-upami)', 'accent-blue-500')}
-    ${row(s.showcase, `toggleShowcase('${s.id}', this.checked)`, 'Pokazuj w przykładach mimo statusu testowego (showcase)', 'accent-blue-500')}
+    ${row(s.showcase, `toggleShowcase('${s.id}', this.checked)`, 'Pokazuj w przykładach mimo statusu testowego (showcase) — dla sesji TESTOWYCH; realną rozmowę klienta do galerii wpuszcza wyłącznie zgoda poniżej', 'accent-blue-500')}
     ${row(s.hidden_from_feed, `toggleHidden('${s.id}', this.checked)`, 'Ukryj z inspiracji i strony głównej', 'accent-red-500')}
+    ${inspiracjeConsentHTML(s)}
     ${grantBox}
   </div>`;
 }
@@ -1703,6 +1704,35 @@ async function grantConvos(authUserId, email) {
 function afterToggle(id) {
   const s = sessions.find((x) => x.id === id);
   if (s && leadData && leadData.s.id === id && !$('view-lead').classList.contains('hidden')) renderLeadHead(s);
+}
+// Status zgody na publikację w galerii „Inspiracje" (opt-in, cofalna; Regulamin §11).
+// Read-only — zgodę wyraża/cofa KLIENT w lejku sparingu (spar-project). Twardy filtr
+// feedu (spar-public-feed) wpuszcza realną rozmowę do galerii TYLKO z ważną zgodą.
+function inspiracjeConsentHTML(s) {
+  const d = (x) => { try { return new Date(x).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return ''; } };
+  let cls, ico, label, note;
+  if (s.inspiracje_consent_at && !s.inspiracje_consent_revoked_at) {
+    cls = 'border-emerald-500/30 bg-emerald-500/5';
+    ico = '<i class="ph ph-check-circle text-emerald-400"></i>';
+    label = '<span class="text-emerald-300">Zgoda na Inspiracje</span>';
+    note = `wyrażona ${d(s.inspiracje_consent_at)}${s.inspiracje_consent_version ? ' · ' + esc(s.inspiracje_consent_version) : ''} — projekt może być w galerii`;
+  } else if (s.inspiracje_consent_revoked_at) {
+    cls = 'border-amber-500/25 bg-amber-500/5';
+    ico = '<i class="ph ph-arrow-u-up-left text-amber-400"></i>';
+    label = '<span class="text-amber-300">Zgoda cofnięta</span>';
+    note = `cofnięta ${d(s.inspiracje_consent_revoked_at)} — usunięta z galerii Inspiracje`;
+  } else {
+    cls = 'border-white/5 bg-zinc-900/60';
+    ico = '<i class="ph ph-prohibit text-zinc-500"></i>';
+    label = '<span class="text-zinc-300">Brak zgody na Inspiracje</span>';
+    note = s.is_test
+      ? 'sesja testowa — do galerii tylko przez „showcase" powyżej'
+      : 'domyślnie NIE publikujemy tej rozmowy w galerii — czekamy na zgodę klienta';
+  }
+  return `<div class="p-3.5 rounded-xl border ${cls}">
+    <div class="text-sm">${ico} ${label}</div>
+    <div class="text-[11px] text-zinc-500 mt-1">${note}</div>
+  </div>`;
 }
 // ── Zakładka PŁATNOŚCI: rezerwacja 500 zł + pakiety budowy aplikacji ──
 function reservationBoxHTML(s) {

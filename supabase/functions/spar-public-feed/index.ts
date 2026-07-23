@@ -58,12 +58,16 @@ Deno.serve(async (req) => {
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-    // Wszystkie realne sesje z grafikami; testowe wykluczone CHYBA że showcase;
-    // hidden_from_feed pozwala ręcznie zdjąć projekt z publicznych inspiracji
+    // TWARDY FILTR ZGODY (opt-in, Regulamin §11). Realna rozmowa klienta trafia do
+    // Inspiracji WYŁĄCZNIE z ważną, niecofniętą zgodą (inspiracje_consent_at NOT NULL
+    // AND inspiracje_consent_revoked_at IS NULL) — NIEZALEŻNIE od kuracji (showcase
+    // nie obchodzi wymogu zgody dla realnych sesji). Treści testowe / seed Tomka
+    // (is_test=true + showcase=true) — bez wymogu zgody klienta (materiał Tomka).
+    // hidden_from_feed nadal pozwala ręcznie zdjąć cokolwiek z galerii.
     const { data, error } = await supabase
       .from('spar_sessions')
-      .select('id, verdict, landing_url, is_test, preview_brief, preview_images, created_at, full_paid_at')
-      .or('is_test.eq.false,showcase.eq.true')
+      .select('id, verdict, landing_url, is_test, preview_brief, preview_images, created_at, full_paid_at, inspiracje_consent_at, inspiracje_consent_revoked_at')
+      .or('and(is_test.eq.true,showcase.eq.true),and(is_test.eq.false,inspiracje_consent_at.not.is.null,inspiracje_consent_revoked_at.is.null)')
       .eq('hidden_from_feed', false)
       .not('preview_images', 'is', null)
       .order('created_at', { ascending: false })
