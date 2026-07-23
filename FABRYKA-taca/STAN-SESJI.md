@@ -82,3 +82,28 @@ Rozmrozik 60215ce4/59e53d40(TT) · Brzuszek 6dd560cf/a7b70e6a(TT) · Rozgrzewek 
   Adrianowi ×2 nieblokujące, NRB→COD/pl_test, prawne/dostawy, duplikat Trevio,
   gałąź Geowidget nietestowana).
 - LL-055..064 komplet; commity wypchnięte do 621133c0. Koszty ~7.14 + 30,32 PLN.
+
+## 🏁 RUNDA FEEDBACKÓW 23.07 (III) — aktualizacja 8, wszystkie DOMKNIĘTE
+1. **P0 KASA brzuszek+rozmrozik** — LIVE z wiecznym fallbackiem (klasa/config na <div>
+   dziecku zamiast section#zamow = LL-038 wariant 2; fallback-link też martwy). Fix do
+   kanonu section-root (+48/35 selektorów descendant→compound), publish, visual re-check
+   KASA-OK ×2. **SYSTEMOWO: `_checkout_preflight()` w platform-sync publish — złamany
+   kontrakt kasy = ODMOWA publikacji** (check bez wymuszenia = brak checku; test 5/5).
+   Commit fd0f1f10 + LL-070.
+2. **UGC 5★** — procedura selekcji (STANDARD F0 vision-gate: tylko stars==5 + ranking
+   vision + para zdjęcie↔tekst z tej samej recenzji); audyt wsteczny 6/6 landingów
+   perceptual-hashem: użyte wyłącznie 5★ (rozgrzewek miał 2×4★ z obrazkami — nieużyte).
+   LL-071.
+3. **KONSTRUKCJA Brzuszka** — obraz 421×280 vs ~950 px tekstu → grid 6/6 + stretch +
+   cover (teraz 510×768); visual PASS 3/3. STANDARD krytyk pkt (+12) RÓWNOWAGA
+   MEDIA↔TEKST (makieta ORAZ render kodu). LL-073.
+4. **HERO ROZMROZIKA: diptyk → JEDEN KADR** (dyrektywa: „jedno zdjęcie pokazujące dwie
+   sytuacje") — sc-hero-v3 jedna scena (szron→para na tym samym blacie), Kling PRO i2v
+   **amplituda 11.86 PASS** za 1. podejściem, wierność PASS, kafel home v3, visual 6/6.
+   STANDARD F1.7c „JEDEN KADR = JEDNA SCENA" (zakaz kolażu). Koszt $0.74 (wf2_costs ×2).
+   Commit f67953c0 + LL-072. Backup: index.html.bak-hero-v3; stare assety nietknięte.
+5. **ROZGRZEWEK sceny** — zweryfikowane świeżym okiem agenta: POKAZUJĄ funkcje (tryby
+   Ciepło/Wibracje/EMS close-up, makro 21 kulek, aplikacja kark/ramię/plecy/udo). Bez
+   regeneracji.
+- Push do f67953c0 + a4dade3e. Osobny wątek: OCHRONA landingów 4 warstwy (doktryna
+  docs/zbuduje/OCHRONA-LANDINGOW.md §7 runbook migracji assetów — czeka „go" Tomka).
