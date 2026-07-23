@@ -72,6 +72,28 @@ jako check w gate-check (dziś tylko runnery); (d) kamień „AKCEPT FINALNEGO R
 w panelu tn-sklepy (lustro akceptu makiet); (e) FABRYKA-ssawek 248 MB — produkt w toku
 czy do wyniesienia (decyzja Tomka); (f) gate UGC-5★ maszynowo (dziś procedura+vision).
 
+## 🏁 AKTUALIZACJA 10 (23.07 noc) — BACKLOG WYKONANY („zrób jak uważasz, bez żalu")
+WYKONANE: (a) **HERO 6/6 = kanon mata** (scena-tło full-bleed + scrim + gestalt świeżym
+okiem): rozmrozik 8.98 · ugniatek 13.08 (był DIPTYK!) · skrolik 8.21 (nowa scena
+feed-scroll) · rozgrzewek reuse v3 (7.75 — świadome odstępstwo, wierność>amplituda,
+gate flaguje) · brzuszek reuse v2 11.9 · wszystkie GESTALT PASS/CZYSTY; koszt $0.92.
+(c-częściowo) **check hero_amplituda w gate-check** (mp4 literal+JS-mount, kalibracja
+3/3 potwierdzona). (d-lite) **F7.4 GESTALT w checkliście lp_finisz panelu**.
+**TRIAŻ klipów „W akcji" zaradka:** ugniatek 4/4 klipy OFF-PRODUCT (2× obca marka
+„KAJUE", 2× pistolety=zła kategoria) → sekcja #wideo UKRYTA (display:none + powód;
+materiał WYCZERPANY — storage 404, baza 0 on-product; DO ODROBIENIA gdy realne UGC
+albo decyzja Tomka: przeramować ugc-1/2 na „demo dwóch form" bez atrybucji twórcy);
+callout-sierota w #final usunięty; #anatomia false-positive (count-up 22 300 OK);
+skrolik 1/1 klip ON-PRODUCT — bez zmian.
+NIE RUSZONE świadomie (ryzyko żalu): archiwa 1.5 GB/git-lfs, FABRYKA-ssawek,
+destrukcyjna migracja assetów ochrony (§7 — czeka jawne „go").
+ZNANE REZYDUA gate-check (nieblokujące, do przyszłej sesji): WIERNOSC.md bez wpisów
+sc-hero-v4 (rozmrozik); mapa_zastosowan retro-FAIL na landingach sprzed 23.07 (mtime
+odświeżony fixami); detail-lint P1 na rozmroziku (scrim-plateau/seam/kontrast — część
+false-positive na hidden elementach); baza: product-key KARTA↔bud_tt_products do
+wyrównania. Kosmetyka z gestalt brzuszka (decyzje Tomka): klipy UGC z ang. napisami,
+FAQ po #zamow.
+
 ## TWARDE ZASADY (bez zmian — nie łamać)
 NIE PSUJ TPAY · zero Meta publikacji · zero maili · E2E tylko sandbox/[Test] · marże tylko
 wf2-docs · NIE zmyślać · kamienie Tomka NIE samo-akceptowane · polskie znaki: pliki .py +
