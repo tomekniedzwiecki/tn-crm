@@ -770,35 +770,74 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     ? ok('migracja 20260722r_wf2_ads_guide: tabela + RLS team + bucket + kill-switch + storage select-policy')
     : bad('migracja 20260722r_wf2_ads_guide', 'brak tabeli/RLS/bucketu/kill-switcha/select-policy');
 
-  // ── CHAT-FIRST (22.07): asystent = komponent TNChat na całym widoku zadań ─────────
-  // Stary drawer gd-*/guide-card/GUIDE_STEPS ZASTĄPIONY montażem TNChat (components/tn-chat.js).
-  // Upload/rate/vision/gate = _shared/portal-chat.ts + tn-chat.js (repath asercji z portal.html).
+  // ── ROZMOWA = TREŚĆ ZADANIA (23.07): trwała instancja TNChat 'embedded' w miejscu instrukcji ─────
+  // Klient wchodzi w zadanie → osadzony komunikator (asystent SAM wita powitaniem per zadanie). pl_dane =
+  // wyjątek (formularz). Upload/rate/vision/gate = _shared/portal-chat.ts + tn-chat.js.
   const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
   const portalTs = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
   const chatJs = existsSync(join(ROOT, 'components', 'tn-chat.js')) ? readFileSync(join(ROOT, 'components', 'tn-chat.js'), 'utf8') : '';
+  const appPortalHtml = readFileSync(join(ROOT, 'tn-app', 'portal.html'), 'utf8');
 
-  // (d) portal montuje TNChat (drawer asystenta) + ładuje komponent z ?v= + BRAK reliktów starego drawera
-  (portalHtml.includes('components/tn-chat.js?v=') && portalHtml.includes('TNChat.mount(') && portalHtml.includes('mountAsystent')
+  // (c) trwała instancja TNChat layout 'embedded' + addLocalBubble + host + BRAK reliktów starego drawera
+  (portalHtml.includes('components/tn-chat.js?v=') && /TNChat\.mount\(/.test(portalHtml) && /layout:\s*'embedded'/.test(portalHtml)
+    && portalHtml.includes('addLocalBubble') && portalHtml.includes('asystent-host') && portalHtml.includes('ensureChatMounted')
     && !portalHtml.includes('gd-chat') && !portalHtml.includes('guide-card') && !portalHtml.includes('GUIDE_STEPS'))
-    ? ok('portal.html: mount TNChat (drawer asystenta) + tn-chat.js?v= + BRAK gd-chat/guide-card/GUIDE_STEPS')
-    : bad('portal.html mount asystenta', 'brak TNChat.mount/tn-chat.js?v=/mountAsystent albo pozostały relikty gd-chat/guide-card/GUIDE_STEPS');
-  // upload zrzutów przeniesiony do komponentu (tn-chat.js) — endpoint wf2-ads-guide nadal w portalu
+    ? ok("portal.html: trwała instancja TNChat layout 'embedded' (addLocalBubble/asystent-host/ensureChatMounted); BRAK gd-chat/guide-card/GUIDE_STEPS")
+    : bad('portal.html embedded chat', "brak TNChat.mount 'embedded'/addLocalBubble/asystent-host/ensureChatMounted albo relikty gd-chat/guide-card/GUIDE_STEPS");
+  // upload zrzutów przez komponent (tn-chat.js) — endpoint wf2-ads-guide nadal w portalu
   (chatJs.includes("action: 'upload_init'") && chatJs.includes("action: 'upload_done'") && portalHtml.includes('/functions/v1/wf2-ads-guide'))
     ? ok('portal.html: upload zrzutu przez komponent TNChat (upload_init/done) → endpoint wf2-ads-guide')
     : bad('portal.html upload', 'brak upload_init/done w tn-chat.js lub endpointu wf2-ads-guide w portalu');
-  // (d) wejścia asystenta chowane przy kill-switch OFF (asystentEnabled) — topbar + FAB + inline
-  (portalHtml.includes('asystentEnabled !== false') && portalHtml.includes('updateAsystentEntries') && portalHtml.includes('asystent-fab'))
-    ? ok('portal.html: wejścia asystenta znikają przy kill-switch OFF (asystentEnabled/updateAsystentEntries/FAB)')
-    : bad('portal.html kill-switch', 'brak asystentEnabled/updateAsystentEntries/asystent-fab');
-  // trzy wejścia UX: przycisk w topbarze + FAB + inline-link (wszystkie wołają openAsystent)
-  (portalHtml.includes("openAsystent('topbar')") && portalHtml.includes("openAsystent('fab')") && portalHtml.includes("openAsystent('inline')"))
-    ? ok('portal.html: 3 wejścia asystenta (topbar + FAB + inline) → openAsystent')
-    : bad('portal.html wejścia asystenta', 'brak któregoś z wejść openAsystent(topbar/fab/inline)');
 
-  // (e) akordeon „Pełna instrukcja krok po kroku" zwija ściany tekstu guide'ów
-  (portalHtml.includes('instr-acc') && portalHtml.includes('Pełna instrukcja') && portalHtml.includes('ACCORDION_STEPS'))
-    ? ok('portal.html: akordeon „Pełna instrukcja krok po kroku" (instr-acc/ACCORDION_STEPS)')
-    : bad('portal.html akordeon', 'brak akordeonu „Pełna instrukcja"/instr-acc/ACCORDION_STEPS');
+  // (a) CHAT_TASKS = 4 zadania czatowe (ads_strona/ads_konto/ads_budzet/firma); pl_dane wyłączone
+  {
+    const m = portalHtml.match(/const CHAT_TASKS = \[([^\]]*)\]/);
+    const keys = m ? [...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]) : [];
+    const want = ['ads_strona', 'ads_konto', 'ads_budzet', 'firma'];
+    (keys.length === 4 && want.every((k) => keys.includes(k)) && !keys.includes('pl_dane'))
+      ? ok('portal.html: CHAT_TASKS = [ads_strona, ads_konto, ads_budzet, firma] (pl_dane poza czatem)')
+      : bad('portal.html CHAT_TASKS', `oczekiwane 4 klucze ${want.join('/')} (bez pl_dane), jest [${keys.join(', ')}]`);
+  }
+
+  // (b) chatIntro obecne dla 4 zadań czatowych (fragment charakterystyczny w bloku KAŻDEGO zadania)
+  {
+    const block = (key, next) => { const s = portalHtml.indexOf(key + ': {'); const e = portalHtml.indexOf(next + ': {', s); return s >= 0 && e > s ? portalHtml.slice(s, e) : ''; };
+    const cases = [
+      ['ads_strona', 'ads_budzet', 'pages/create'],
+      ['ads_konto', 'ads_strona', 'business_home'],
+      ['ads_budzet', 'pl_domena', 'billing_hub'],
+      ['firma', 'pl_dane', 'NIP w polu'],
+    ];
+    const miss = cases.filter(([k, nx, frag]) => { const b = block(k, nx); return !(b.includes('chatIntro:') && b.includes(frag)); }).map(([k]) => k);
+    miss.length ? bad('portal.html chatIntro', 'brak chatIntro/fragmentu w: ' + miss.join(', ')) : ok('portal.html: chatIntro (z pierwszym krokiem) dla ads_strona/ads_konto/ads_budzet/firma');
+  }
+
+  // (d) stary UX usunięty: 0 referencji FAB / akordeonu / wejść openAsystent
+  (!portalHtml.includes('asystent-fab') && !portalHtml.includes('instr-acc') && !portalHtml.includes('openAsystent')
+    && !portalHtml.includes('ACCORDION_STEPS') && !portalHtml.includes('watchFabOverlap'))
+    ? ok('portal.html: BRAK asystent-fab/instr-acc/openAsystent/ACCORDION_STEPS/watchFabOverlap (stary UX usunięty)')
+    : bad('portal.html relikty UX', 'pozostały asystent-fab/instr-acc/openAsystent/ACCORDION_STEPS/watchFabOverlap');
+
+  // (e) fallback kill-switch: gdy asystentEnabled===false, zadanie czatowe renderuje pełną instrukcję ws.guide
+  (/CHAT_TASKS\.includes\(d\.key\) && \(asystentEnabled !== false\)/.test(portalHtml) && /String\(ws\.guide\)\.replace/.test(portalHtml))
+    ? ok('portal.html: fallback kill-switch → pełna instrukcja ws.guide (isChat gated na asystentEnabled)')
+    : bad('portal.html fallback', 'brak gate isChat(asystentEnabled) / renderu ws.guide w fallbacku');
+
+  // (f) prompt asystenta: zasada „NIE witaj się od nowa" (portal sam wita powitaniem zadania)
+  src.includes('NIE witaj się od nowa')
+    ? ok('wf2-ads-guide prompt: zasada „NIE witaj się od nowa" (portal wita, asystent kontynuuje)')
+    : bad('wf2-ads-guide prompt powitanie', 'brak zasady „NIE witaj się od nowa" w promptcie');
+
+  // (g) komponent TNChat: API addLocalBubble (dymek lokalny) + obsługa height (--tnc-chat-h) na embedded
+  (chatJs.includes('addLocalBubble') && chatJs.includes('--tnc-chat-h'))
+    ? ok('tn-chat.js: API addLocalBubble + cfg.height (--tnc-chat-h) na embedded')
+    : bad('tn-chat.js API', 'brak addLocalBubble / obsługi height (--tnc-chat-h)');
+
+  // (h) bump ?v=2026072301 tn-chat.* w OBU portalach (tn-sklepy + tn-app)
+  (portalHtml.includes('tn-chat.js?v=2026072301') && portalHtml.includes('tn-chat.css?v=2026072301')
+    && appPortalHtml.includes('tn-chat.js?v=2026072301') && appPortalHtml.includes('tn-chat.css?v=2026072301'))
+    ? ok('bump ?v=2026072301: tn-chat.js/css w tn-sklepy + tn-app portal')
+    : bad('bump ?v tn-chat', 'brak ?v=2026072301 na tn-chat.js/css w obu portalach');
 
   // (a) prompt zawiera kotwice bloku firma (WIEDZA-FIRMA-DG wklejona do §4)
   (src.includes('10 813,50') && src.includes('infakt.pl/polecam/tomekniedzwiecki') && src.includes('nierejestrowana'))

@@ -12,8 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/tn-sklepy/panel.css?v=2026072102">
     <script src="/tn-sklepy/panel-core.js?v=2026072103"></script>
-    <link rel="stylesheet" href="/components/tn-chat.css?v=2026072202">
-    <script src="/components/tn-chat.js?v=2026072202"></script>
+    <link rel="stylesheet" href="/components/tn-chat.css?v=2026072301">
+    <script src="/components/tn-chat.js?v=2026072301"></script>
     <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }</script>
     <style>
         /* Portal = jedna wąska, wyśrodkowana kolumna. Ciemny motyw Geist (spójny z panelem). */
@@ -131,8 +131,6 @@
         .tv-why-l { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#6ba7e8; margin-bottom:4px; }
         .tv-why p { color:#cfe0f5; font-size:13.5px; line-height:1.55; }
         .tv-cta-row { margin-top:28px; padding-top:22px; border-top:1px solid #161616; }
-        /* FAB asystenta jest fixed w prawym-dolnym rogu — na mobile zostaw pod CTA pas, żeby nie zasłaniał tapnięcia */
-        @media (max-width:640px){ .tv-cta-row { padding-bottom:84px; } }
         .tv-cta { display:inline-flex; align-items:center; justify-content:center; gap:9px; background:#45a557; color:#fff; border:none;
             border-radius:9px; padding:14px 26px; font-size:14.5px; font-weight:600; cursor:pointer; transition:background .15s; }
         .tv-cta:hover:not(:disabled) { background:#3d9850; }
@@ -225,43 +223,18 @@
         .sd-overlay { position:absolute; inset:0; background:rgba(0,0,0,.6); }
         .sd-panel { position:absolute; right:0; top:0; bottom:0; width:100%; max-width:560px; background:#0a0a0a; border-left:1px solid #333; display:flex; flex-direction:column; }
         @media (max-width:640px){ .sd-panel { max-width:100%; } }
-        /* ── Asystent AI (chat-first, komponent TNChat) ── */
-        /* Host wf2: dymek użytkownika = akcent Geist (zamiast domyślnego granatu komponentu) */
-        #asystent-root .tnc-wrap { --tnc-me-bg:#0070f3; --tnc-me-border:#0070f3; --tnc-me-text:#fff; }
-        /* przycisk „Asystent" w topbarze widoku zadań */
-        .tv-asystent-btn { margin-left:auto; display:inline-flex; align-items:center; gap:7px; background:#0070f3; border:1px solid #0070f3; color:#fff;
-            border-radius:8px; padding:8px 15px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; transition:background .15s; }
-        .tv-asystent-btn:hover { background:#2b86ff; }
-        .tv-asystent-btn i { font-size:16px; }
-        /* pływający okrągły przycisk (FAB) — prawy dolny róg widoku zadań (mobile + desktop) */
-        .asystent-fab { position:fixed; right:22px; bottom:22px; z-index:40; width:58px; height:58px; border-radius:50%;
-            background:#0070f3; color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:26px;
-            box-shadow:0 10px 30px -8px rgba(0,112,243,.6), 0 2px 8px rgba(0,0,0,.5); transition:background .15s, transform .1s; }
-        .asystent-fab:hover { background:#2b86ff; }
-        .asystent-fab:active { transform:scale(.94); }
-        .asystent-fab.pulse-once { animation:asystentPulse 1.3s ease 1; }
-        @keyframes asystentPulse { 0%{ box-shadow:0 10px 30px -8px rgba(0,112,243,.6), 0 0 0 0 rgba(0,112,243,.55); } 70%{ box-shadow:0 10px 30px -8px rgba(0,112,243,.6), 0 0 0 16px rgba(0,112,243,0); } 100%{ box-shadow:0 10px 30px -8px rgba(0,112,243,.6), 0 0 0 0 rgba(0,112,243,0); } }
-        @media (prefers-reduced-motion:reduce){ .asystent-fab.pulse-once { animation:none; } }
-        @media (max-width:640px){ .asystent-fab { right:16px; bottom:16px; width:54px; height:54px; font-size:24px; } }
-        .asystent-fab.fab-dodge { opacity:0; pointer-events:none; transform:translateY(8px); }
-        /* inline-link „Nie wiesz jak? Zapytaj asystenta" pod tytułem zadania */
-        .asystent-inline { display:inline-flex; align-items:center; gap:8px; background:rgba(0,112,243,.08); border:1px solid rgba(0,112,243,.3);
-            color:#7cbcff; border-radius:8px; padding:8px 13px; font-size:13px; font-weight:500; cursor:pointer; margin:0 0 18px; transition:background .15s, border-color .15s; }
-        .asystent-inline:hover { background:rgba(0,112,243,.14); border-color:rgba(0,112,243,.5); color:#a9d0ff; }
-        .asystent-inline i:first-child { font-size:15px; }
-        .asystent-inline i:last-child { font-size:13px; opacity:.8; }
-        /* akordeon „Pełna instrukcja krok po kroku" (zwija ściany tekstu guide'ów) */
-        .instr-summary { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
-        .instr-summary p { color:#c8c8cd; font-size:14px; line-height:1.6; margin:0; flex:1 1 auto; min-width:200px; }
-        .instr-time { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:#8a8a93; background:#0d0d0d; border:1px solid #1f1f1f; border-radius:99px; padding:4px 11px; white-space:nowrap; flex-shrink:0; }
-        .instr-acc { border:1px solid #1f1f1f; border-radius:10px; background:#0a0a0a; margin-bottom:4px; overflow:hidden; }
-        .instr-acc > summary { list-style:none; cursor:pointer; user-select:none; display:flex; align-items:center; gap:9px;
-            padding:13px 16px; font-size:13.5px; font-weight:600; color:#d4d4d8; }
-        .instr-acc > summary::-webkit-details-marker { display:none; }
-        .instr-acc > summary:hover { color:#fff; }
-        .instr-acc > summary::after { content:'\25be'; margin-left:auto; color:#6b6b74; font-size:13px; transition:transform .15s; }
-        .instr-acc[open] > summary::after { transform:rotate(180deg); }
-        .instr-acc > summary + .guide { padding:2px 16px 16px; border-top:1px solid #161616; }
+        /* ── Asystent AI (rozmowa = treść zadania; trwała instancja TNChat embedded) ── */
+        /* dymek użytkownika = akcent Geist (host wf2 nadpisuje domyślny granat komponentu),
+           niezależnie od tego, gdzie chat.el aktualnie żyje (slot zadania / #asystent-host) */
+        .tnc-wrap { --tnc-me-bg:#0070f3; --tnc-me-border:#0070f3; --tnc-me-text:#fff; }
+        /* rozmowa osadzona w zadaniu = karta komunikatora (composer przyklejony na dole panelu) */
+        .task-chat-slot { margin:0 0 26px; }
+        .task-chat-slot .tnc-panel { border:1px solid #1f1f1f; border-radius:12px; background:#0a0a0a; overflow:hidden; padding-bottom:8px; }
+        /* sekcja „Twoje dane do tego zadania" pod rozmową */
+        .task-fields { margin-top:4px; }
+        .tv-fields-h { color:#fff; font-size:14px; font-weight:600; letter-spacing:-.01em; margin:0 0 10px; }
+        /* ukryty host trwałej instancji czatu — POZA #tv-work, żeby innerHTML renderów jej nie niszczył */
+        #asystent-host { display:none; }
         .preview-banner { position:sticky; top:0; z-index:60; background:#0070f3; color:#fff; font-size:12.5px; font-weight:500;
             padding:10px 16px; text-align:center; display:flex; align-items:center; justify-content:center; gap:8px; }
         .foot { margin-top:60px; color:#4c4c53; font-size:12.5px; line-height:1.7; border-top:1px solid #161616; padding-top:20px; }
@@ -446,7 +419,6 @@
     <div class="tv-topbar">
         <button class="tv-back" onclick="exitTasks()"><i class="ph ph-arrow-left"></i> Wróć do panelu</button>
         <span class="tv-brand" id="tv-brand"></span>
-        <button class="tv-asystent-btn" id="tv-asystent-btn" onclick="openAsystent('topbar')"><i class="ph ph-hand-heart"></i> Asystent</button>
     </div>
     <div class="tv-shell">
         <aside class="tv-side">
@@ -457,8 +429,6 @@
         </aside>
         <main class="tv-work" id="tv-work"></main>
     </div>
-    <!-- Pływający przycisk asystenta (kill-switch OFF → chowany) -->
-    <button class="asystent-fab hidden" id="asystent-fab" onclick="openAsystent('fab')" aria-label="Otwórz asystenta" title="Zapytaj asystenta"><i class="ph ph-hand-heart"></i></button>
 </div>
 
 <!-- Drawer read-only (podgląd kroku) -->
@@ -477,8 +447,9 @@
     </div>
 </div>
 
-<!-- Asystent AI (chat-first, cały widok zadań) — montowany JS-em przez TNChat (edge wf2-ads-guide) -->
-<div id="asystent-root"></div>
+<!-- Asystent AI (rozmowa = treść zadania) — trwała instancja TNChat (edge wf2-ads-guide) montowana RAZ tutaj;
+     chat.el jest przenoszony do slotu aktywnego zadania czatowego i z powrotem, bez re-mountu / refetchu historii -->
+<div id="asystent-host"></div>
 
 <!-- Lightbox (współdzielony z panel-core.js) -->
 <div id="lightbox" class="hidden fixed inset-0 z-[90] bg-black/90 flex items-center justify-center p-6" onclick="lbBgClose(event)">
@@ -553,6 +524,7 @@
             desc: 'Środowisko reklamowe masz gotowe — został ostatni fundament przed startem sprzedaży: Twoja własna firma. Poprowadzę Cię za rękę, rejestracja jest bezpłatna i zajmuje ok. 15 minut.',
             why: 'Sklep i kampanie są gotowe — firma domyka całość: wypłaty z zamówień na Twoje konto, faktury, dostęp do hurtowni i skalowanie bez limitów. Rejestracja kosztuje 0 zł, a przez pierwsze pół roku płacisz tylko ok. 433 zł miesięcznie (samą składkę zdrowotną) — państwo zwalnia nowe firmy z reszty składek.',
             time: 'ok. 15–40 min',
+            chatIntro: 'Cześć! 👋 Tu porozmawiamy o Twojej firmie — tak, żeby pieniądze ze sprzedaży mogły legalnie trafiać prosto do Ciebie.\n\nJeśli masz już działalność — super, wpisz po prostu NIP w polu pod naszą rozmową i gotowe. Jeśli nie masz — nic straconego: są dwie drogi (własna firma albo działalność nierejestrowana na start) i pomogę Ci wybrać spokojnie, bez żadnej presji.\n\nNapisz, jak to u Ciebie wygląda — masz firmę, czy dopiero się zastanawiasz?',
             guide: `<p><b>Wszystko po Twojej stronie jest już skonfigurowane — zostało domknięcie formalności, żeby pieniądze ze sprzedaży mogły trafiać do Ciebie.</b> Spokojnie, to prostsze, niż brzmi: firmę zakłada się dziś w całości przez internet, za darmo, w kwadrans. Wszystko masz tu przygotowane, a na końcu Ty tylko podpisujesz wniosek swoim Profilem Zaufanym. Nikt nie może zrobić tego za Ciebie — i dobrze, bo od pierwszego dnia wszystko należy do Ciebie i masz pełną kontrolę.</p>
                 <p style="margin-top:12px"><b>Krok 1 — przygotuj się (5 minut)</b></p>
                 <ol>
@@ -598,6 +570,7 @@
             desc: 'Zakładasz swoje konto reklamowe Meta i udostępniasz mi do niego dostęp — reklamy ruszają z Twojego konta, a Ty płacisz bezpośrednio do Meta. Prowadzę Cię przez to krok po kroku.',
             why: 'Reklamy ruszają z Twojego konta — Ty jesteś właścicielem i płacisz Meta bezpośrednio. Dostęp jest mi potrzebny, żeby ustawić i prowadzić kampanie.',
             time: 'ok. 10 min',
+            chatIntro: 'Cześć! 👋 Przed nami najważniejszy techniczny krok całej konfiguracji: konto reklamowe i dostęp dla Tomka. Spokojnie — przejdziemy przez to razem, krok po kroku, nic nie musisz znać z góry.\n\nKrok 1: wejdź na business.facebook.com/latest/business_home i utwórz portfolio biznesowe (przycisk „Utwórz").\n\nNapisz, co widzisz po wejściu — albo wklej zrzut ekranu (Ctrl+V), a poprowadzę Cię dalej.',
             guide: `<p><b>Konto reklamowe zakładasz i udostępniasz mi ręcznie w Menedżerze firmy (Meta Business Suite).</b> Przejdziesz 5 krótkich kroków — każdy ma bezpośredni link (otwiera się w nowej karcie). Meta sama przekieruje Cię do Twojego konta firmowego.</p>
 
                 <div class="step-manual">
@@ -644,6 +617,7 @@
             desc: 'Twoja strona marki na Facebooku (i profil na Instagramie) — tworzysz ją ręcznie i udostępniasz mi w tym samym kroku „Partnerzy" co konto reklamowe.',
             why: 'Reklamy na Facebooku muszą wychodzić ze strony marki. Bez niej nie wystartujemy.',
             time: 'ok. 10 min',
+            chatIntro: 'Cześć! 👋 W tym zadaniu założysz stronę swojej marki %NAME% na Facebooku (Instagram dopniemy przy okazji — jest opcjonalny na start). Poprowadzę Cię krok po kroku, jak na czacie.\n\nZacznij tak: wejdź na facebook.com/pages/create i utwórz stronę o nazwie „%NAME%" (kategoria: Sklep).\n\nDaj znać, gdy będzie gotowa — a jak coś będzie niejasne, po prostu napisz albo wklej zrzut ekranu (Ctrl+V).',
             guide: `<p>Reklamy muszą wychodzić z prawdziwej strony marki. Załóż ją ręcznie — to kilka minut:</p>
                 <ol style="margin:8px 0;padding-left:18px">
                 <li>Wejdź na <a href="https://www.facebook.com/pages/create" target="_blank" rel="noopener" onclick="track('link_click','facebook pages create')">facebook.com/pages/create</a>. Nazwa strony: <b>%NAME%</b>, kategoria: „Sklep".</li>
@@ -658,6 +632,7 @@
             desc: 'Zasilasz swoje konto reklamowe budżetem startowym 1000 zł. To pieniądze na pierwsze kampanie testowe.',
             why: '1000 zł to budżet na pierwsze kampanie testowe (500 zł na testy, 500 zł na skalowanie tego, co zadziała) — z niego Meta pobiera opłaty za wyświetlenia.',
             time: 'ok. 5 min',
+            chatIntro: 'Cześć! 👋 Ostatni krok środowiska reklamowego: budżet na Twoje reklamy. Ustawimy płatności ręczne (doładowanie z góry) — masz wtedy pełną kontrolę i żadnych automatycznych obciążeń.\n\nKrok 1: wejdź w Ustawienia płatności swojego NOWEGO konta reklamowego: business.facebook.com/billing_hub/payment_settings.\n\nNapisz, co widzisz na ekranie, to poprowadzę Cię dalej.',
             guide: `<p>Zasil konto reklamowe budżetem startowym <b>1000 zł</b> (500 zł na testy + 500 zł na skalowanie tego, co zadziała). To pieniądze na reklamy — wydawane bezpośrednio w Meta, na Twoim koncie.</p>
                 <p style="margin-top:10px"><b>Najprościej — płatności ręczne (doładowanie z góry):</b></p>
                 <ol>
@@ -779,7 +754,6 @@
         // deep-link #…v=zadania → od razu ekran zadań
         if (tasksHashOn()) { syncTasksView(); tasksScreenTracked = true; track('open_step', 'Twoje zadania'); }
         trackVisit();
-        mountAsystent();  // montuje asystenta (TNChat) — sam pobiera historię i stan kill-switcha (isEnabled)
     }
     // ── Bramka zgody na rozpoczęcie prac (jedna decyzja: potwierdzam) ──────────
     function buildConsent(prompt) {
@@ -1220,8 +1194,8 @@
         const s = p.toString();
         return location.pathname + location.search + (s ? '#' + s : '');
     }
-    function _showTasksDom() { $('tasks-view').classList.remove('hidden'); document.querySelector('.wrap').classList.add('hidden'); window.scrollTo(0, 0); pulseAsystentFab(); }
-    function _showHomeDom() { $('tasks-view').classList.add('hidden'); document.querySelector('.wrap').classList.remove('hidden'); }
+    function _showTasksDom() { ensureChatMounted(); $('tasks-view').classList.remove('hidden'); document.querySelector('.wrap').classList.add('hidden'); window.scrollTo(0, 0); }
+    function _showHomeDom() { parkChat(); $('tasks-view').classList.add('hidden'); document.querySelector('.wrap').classList.remove('hidden'); }
 
     // wejście na ekran zadań; key = zadanie do otwarcia (opcjonalnie)
     function enterTasks(key) {
@@ -1261,6 +1235,7 @@
     }
 
     function renderTasksView() {
+        ensureChatMounted();   // trwała instancja TNChat — montaż raz (idempotentny)
         const tasks = tvTasks();
         const unlocked = tasks.filter(taskUnlocked);
         const doneN = unlocked.filter(isTaskDone).length;
@@ -1291,6 +1266,7 @@
 
     function renderTaskWork() {
         const work = $('tv-work');
+        parkChat();  // ZAWSZE najpierw wyprowadź trwały czat z #tv-work, zanim podmienimy innerHTML (inaczej go zniszczy)
         if (tvActive === '__done__') {
             work.innerHTML = `<div class="tv-congrats">
                 <div class="tv-congrats-emoji">🎉</div>
@@ -1315,7 +1291,6 @@
             return;
         }
         const st = stepFor(d.key, null) || { status: 'pending', client_fields: {} };
-        const guide = ws.guide ? String(ws.guide).replace(/%NAME%/g, escapeHtml(P.project.name || 'Twojej marki')) : `<p>${escapeHtml(ws.desc || d.label)}</p>`;
         const timeChip = ws.time ? `<span class="tv-time"><i class="ph ph-clock"></i> ${escapeHtml(ws.time)}</span>` : '';
         let fieldsHtml = '';
         (ws.fields || []).forEach(f => {
@@ -1324,72 +1299,69 @@
                 <input type="${f.type || 'text'}" data-task="${d.key}" data-field="${f.k}" value="${escapeHtml(val)}" oninput="queueTaskSave('${d.key}')" ${previewMode ? 'disabled' : ''}>
                 <div class="fld-ok" id="ok-${d.key}-${f.k}"></div>`;
         });
-        const why = ws.why ? `<div class="tv-why"><i class="ph ph-info"></i><div><span class="tv-why-l">Po co to</span><p>${escapeHtml(ws.why)}</p></div></div>` : '';
-        // Inline-link do asystenta pod tytułem — na KAŻDYM zadaniu; znika przy kill-switch OFF.
-        const asystentLink = (asystentEnabled !== false)
-            ? `<button type="button" class="asystent-inline" onclick="openAsystent('inline')"><i class="ph ph-hand-heart"></i> Nie wiesz jak? Zapytaj asystenta <i class="ph ph-arrow-right"></i></button>`
-            : '';
-        // ŚCIANY TEKSTU: guide'y zadań reklamowych (i firma w podglądzie) zwinięte w akordeon.
-        // Domyślnie ZWINIĘTY gdy asystent działa; ROZWINIĘTY gdy kill-switch OFF (klient nie ma innej pomocy).
-        let guideBlock;
-        if (ACCORDION_STEPS.includes(d.key) && ws.guide) {
-            const accOpen = (asystentEnabled === false) ? ' open' : '';
-            guideBlock = `<div class="instr-summary"><p>${escapeHtml(ws.desc || d.label)}</p></div>
-                <details class="instr-acc"${accOpen}>
-                    <summary><i class="ph ph-book-open"></i> 📖 Pełna instrukcja krok po kroku</summary>
-                    <div class="guide">${guide}</div>
-                </details>`;
-        } else {
-            guideBlock = `<div class="guide">${guide}</div>`;
-        }
         const cta = done
             ? `<div class="tv-done-banner"><i class="ph ph-check-circle"></i> To zadanie masz zrobione${st.completed_at ? ' — ' + escapeHtml(relTime(st.completed_at)) : ''}</div>
                <button class="tv-undo" onclick="uncheckTask('${d.key}')"${previewMode ? ' disabled' : ''}>cofnij oznaczenie</button>`
             : `<button class="tv-cta" onclick="completeAndAdvance('${d.key}')"${previewMode ? ' disabled' : ''}><i class="ph ph-check"></i> Zrobione — przejdź do następnego</button>`;
+
+        // ROZMOWA = TREŚĆ ZADANIA: dla zadań czatowych (kill-switch ON) w miejscu instrukcji osadzamy komunikator.
+        // Kolejność: kicker → tytuł → CZAT (slot) → „Twoje dane do tego zadania" (pola) → CTA „Zrobione".
+        const isChat = CHAT_TASKS.includes(d.key) && (asystentEnabled !== false);
+        if (isChat) {
+            const fieldsBlock = fieldsHtml
+                ? `<div class="task-fields"><div class="tv-fields-h">Twoje dane do tego zadania</div>${fieldsHtml}</div>`
+                : '';
+            work.innerHTML = `<div class="tv-w-kicker">Zadanie ${idx + 1} z ${tasks.length} ${timeChip}</div>
+                <h2 class="tv-w-title">${escapeHtml(d.label)}</h2>
+                <div id="task-chat-slot" class="task-chat-slot"></div>
+                ${fieldsBlock}
+                <div class="tv-cta-row">${cta}</div>`;
+            const slot = $('task-chat-slot');
+            if (chat && chat.el && slot) slot.appendChild(chat.el);   // przenieś trwały czat do slotu (bez re-mountu)
+            maybeIntro(d.key);
+            return;
+        }
+
+        // FALLBACK (kill-switch OFF na zadaniu czatowym) LUB zadanie nieczatowe (pl_dane) → pełna instrukcja ws.guide.
+        // Bez akordeonu — po prostu treść (jak przed przebudową); „Po co to" (why) zostaje tylko poza czatem (pl_dane).
+        const guide = ws.guide ? String(ws.guide).replace(/%NAME%/g, escapeHtml(P.project.name || 'Twojej marki')) : `<p>${escapeHtml(ws.desc || d.label)}</p>`;
+        const why = ws.why ? `<div class="tv-why"><i class="ph ph-info"></i><div><span class="tv-why-l">Po co to</span><p>${escapeHtml(ws.why)}</p></div></div>` : '';
         work.innerHTML = `<div class="tv-w-kicker">Zadanie ${idx + 1} z ${tasks.length} ${timeChip}</div>
             <h2 class="tv-w-title">${escapeHtml(d.label)}</h2>
-            ${asystentLink}
             ${why}
-            ${guideBlock}
+            <div class="guide">${guide}</div>
             ${fieldsHtml}
             <div class="tv-cta-row">${cta}</div>`;
-        watchFabOverlap();
     }
 
-    // FAB nie może zasłaniać CTA „Zrobione": gdy wiersz CTA jest w kadrze, chowamy FAB (IO per render).
-    let fabObserver = null;
-    function watchFabOverlap() {
-        if (fabObserver) { fabObserver.disconnect(); fabObserver = null; }
-        const fab = $('asystent-fab'), row = document.querySelector('#tv-work .tv-cta-row');
-        if (!fab || !row || !('IntersectionObserver' in window)) return;
-        fabObserver = new IntersectionObserver((entries) => {
-            fab.classList.toggle('fab-dodge', entries.some(e => e.isIntersecting));
-        }, { root: null, threshold: 0 });
-        fabObserver.observe(row);
-    }
-
-    // ============ Asystent AI — chat-first (cały widok zadań; Etap 4+) ============
-    // Klient rozmawia z asystentem znającym wszystkie zadania i zakładki portalu, wgrywa zrzuty
-    // (vision) i pyta o firmę. Gate = token+hasło portalu (edge wf2-ads-guide). Front = komponent
-    // TNChat (components/tn-chat.js). Kill-switch OFF → wszystkie wejścia znikają, akordeony rozwinięte.
+    // ============ Asystent AI — rozmowa JEST treścią zadania (Etap 4+) ============
+    // JEDNA trwała instancja TNChat (layout 'embedded'), montowana RAZ do ukrytego #asystent-host.
+    // Przy wejściu w zadanie czatowe chat.el jest przenoszony do slotu zadania (bez re-mountu ani refetchu
+    // historii — komponent ładuje ją raz na mount). Asystent SAM wita klienta powitaniem per zadanie
+    // (lokalny dymek addLocalBubble, niezapisywany), potem prowadzi jak na czacie. Gate = token+hasło
+    // portalu (edge wf2-ads-guide). Kill-switch OFF → zamiast czatu pełna instrukcja ws.guide (fallback).
     const GUIDE_FN = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-ads-guide';
-    // Zadania, których „ściany tekstu" (guide) zwijamy w akordeon „Pełna instrukcja" (firma tylko w podglądzie).
-    const ACCORDION_STEPS = ['ads_konto', 'ads_strona', 'ads_budzet', 'firma'];
-    const ASYSTENT_INTRO = 'Cześć! Jestem Twoim asystentem — przeprowadzę Cię przez wszystko, co po Twojej stronie: konfigurację reklam, dane do sklepu, a jak zechcesz — pomogę też ogarnąć temat firmy. Napisz, co chcesz zrobić, albo po prostu zapytaj „co teraz?". Możesz też wkleić zrzut ekranu (Ctrl+V), jeśli gdzieś utkniesz.';
-    let asystent = null;        // instancja TNChat (drawer)
-    let asystentEnabled;        // undefined = jeszcze nieznane; false = kill-switch OFF (wejścia znikają)
+    // Zadania, w których rozmowa zastępuje instrukcję (pl_dane = wyjątek: zwykły formularz bez czatu).
+    const CHAT_TASKS = ['ads_strona', 'ads_konto', 'ads_budzet', 'firma'];
+    let chat = null;             // trwała instancja TNChat (embedded)
+    let asystentEnabled;         // undefined = jeszcze nieznane; false = kill-switch OFF (fallback na ws.guide)
+    let chatReady = false;       // historia załadowana (onHistory) — dopiero wtedy dokładamy powitania
+    let lastIntroTask = null;    // ostatnio pokazane powitanie (klucz zadania) — anty-duplikacja przy powrotach
+    const chatTaskTracked = new Set();  // dedup trackingu pierwszego pokazania czatu danego zadania
 
-    // Montaż asystenta (raz). Komponent sam pobiera historię — stan kill-switcha czytamy z onHistory.
-    function mountAsystent() {
-        if (asystent || !window.TNChat) return;
-        const root = $('asystent-root'); if (!root) return;
-        asystent = window.TNChat.mount(root, {
+    // Montaż trwałej instancji czatu (raz). Komponent sam pobiera historię — stan kill-switcha z onHistory.
+    function ensureChatMounted() {
+        if (chat || !window.TNChat) return;
+        const host = $('asystent-host'); if (!host) return;
+        chat = window.TNChat.mount(host, {
             endpoint: GUIDE_FN,
-            layout: 'drawer',
+            layout: 'embedded',
             title: 'Asystent',
-            subtitle: 'Twój przewodnik po całym portalu',
-            intro: ASYSTENT_INTRO,
-            placeholder: 'Napisz, co chcesz zrobić…',
+            subtitle: 'Napisz jak na czacie — poprowadzę Cię krok po kroku',
+            // BEZ cfg.intro — powitania wstawiamy sami per zadanie (addLocalBubble), żeby zależały od kontekstu.
+            placeholder: 'Napisz wiadomość albo wklej zrzut (Ctrl+V)…',
+            height: 'min(400px, 54svh)',   // okno rozmowy; z nagłówkiem+composerem cała karta ≈ 480–560px / mobile ~60svh
+
             auth: () => previewMode ? { token, preview: true } : { token, password: currentPw },
             authHeaders: authHeaders,
             readonly: previewMode,
@@ -1402,29 +1374,37 @@
             // żeby trafiło do body.context.task_key (edge wf2-ads-guide czyta z capem 4KB portal-chat.ts).
             context: () => ({ context: { task_key: (tvActive && tvActive !== '__done__') ? tvActive : null } }),
             track: (action, desc) => track('open_guide', desc),   // portal.track sam pilnuje previewMode
-            onHistory: (d) => { asystentEnabled = (d && d.enabled !== false); refreshAsystentUi(); },
+            onHistory: (d) => {
+                asystentEnabled = (d && d.enabled !== false);
+                chatReady = true;
+                lastIntroTask = null;   // renderMessages właśnie wyczyściło dymki → pozwól ponownie wstawić powitanie
+                refreshAsystentUi();
+            },
         });
-        updateAsystentEntries();
     }
-    // Otwarcie drawera asystenta (z dowolnego wejścia: topbar / FAB / inline). Kill-switch OFF → nie otwieramy.
-    function openAsystent() {
-        if (!asystent || asystentEnabled === false) return;
-        asystent.open();   // komponent emituje track('open',…) → nasz hook → track('open_guide',…)
+    // Odparkuj czat z powrotem do ukrytego hosta — zanim podmienimy innerHTML #tv-work albo wyjdziemy z widoku.
+    function parkChat() {
+        if (chat && chat.el) { const host = $('asystent-host'); if (host && chat.el.parentNode !== host) host.appendChild(chat.el); }
     }
-    // Widoczność wejść (topbar + FAB) wg kill-switcha; inline-link steruje renderTaskWork (asystentEnabled).
-    function updateAsystentEntries() {
-        const on = asystentEnabled !== false;
-        const tb = $('tv-asystent-btn'); if (tb) tb.classList.toggle('hidden', !on);
-        const fab = $('asystent-fab'); if (fab) fab.classList.toggle('hidden', !on);
+    // Powitanie per zadanie (lokalny dymek). Nie duplikuj: pokazuj tylko, gdy ostatnie powitanie ≠ to zadanie
+    // (re-render tego samego zadania / powrót bez zmiany → bez drugiego dymka).
+    function maybeIntro(key) {
+        if (!chat || !chatReady || asystentEnabled === false) return;
+        if (lastIntroTask === key) return;
+        const ws = clientWs(key);
+        const intro = ws.chatIntro ? String(ws.chatIntro).replace(/%NAME%/g, (P.project && P.project.name) || 'Twojej marki') : '';
+        if (intro) chat.addLocalBubble('ai', intro);   // %NAME% podmieniane surowo — komponent renderuje przez textContent
+        lastIntroTask = key;
+        trackChatTask(key);
     }
-    // Subtelny puls FAB 1× przy wejściu na widok zadań.
-    function pulseAsystentFab() {
-        const fab = $('asystent-fab'); if (!fab || asystentEnabled === false) return;
-        fab.classList.remove('pulse-once'); void fab.offsetWidth; fab.classList.add('pulse-once');
+    // Tracking: pierwsze pokazanie czatu danego zadania w sesji (zamiast dawnych wejść przyciskami).
+    function trackChatTask(key) {
+        if (previewMode || chatTaskTracked.has(key)) return;
+        chatTaskTracked.add(key);
+        track('open_guide', 'czat zadania — ' + key);
     }
-    // Po ustaleniu stanu kill-switcha: odśwież wejścia + (jeśli widoczny) widok zadań (akordeony/inline-link).
+    // Po ustaleniu stanu kill-switcha (onHistory): odśwież widok zadań (przełącza czat/fallback + dokłada powitanie).
     function refreshAsystentUi() {
-        updateAsystentEntries();
         if (!$('tasks-view').classList.contains('hidden')) renderTasksView();
     }
 

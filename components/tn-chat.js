@@ -11,6 +11,7 @@
 //   <script src="/components/tn-chat.js?v=RRRRMMDDNN"></script>
 //   const chat = TNChat.mount(rootEl, { endpoint, ... });
 //   chat.open(); chat.close(); chat.refresh(); chat.isEnabled(); chat.destroy();
+//   chat.addLocalBubble('ai', text);  // dymek LOKALNY (bez zapisu/sieci) — np. powitanie per zadanie
 // ════════════════════════════════════════════════════════════════════════════
 (function () {
     'use strict';
@@ -31,6 +32,7 @@
      * @property {string}   [title='Asystent']          Tytuł w nagłówku.
      * @property {string}   [subtitle='']               Podtytuł w nagłówku.
      * @property {string}   [intro='']                  Powitalny dymek AI, gdy historia pusta.
+     * @property {string}   [height]                    (embedded) Wysokość okna rozmowy — CSS string (np. '540px'/'60svh'); aplikowana jako --tnc-chat-h.
      * @property {string}   [placeholder='Napisz wiadomość…'] Placeholder pola wiadomości.
      * @property {string|null} [icon]                   HTML ikony nagłówka (statyczny). null = brak ikony; pominięte = domyślna.
      * @property {() => Object} [auth]                  Pola auth doklejane do KAŻDEGO body (np. {token, password} albo {token, preview:true}).
@@ -129,6 +131,7 @@
             title: cfg.title != null ? cfg.title : 'Asystent',
             subtitle: cfg.subtitle || '',
             intro: cfg.intro || '',
+            height: (typeof cfg.height === 'string' && cfg.height) ? cfg.height : '',
             placeholder: cfg.placeholder != null ? cfg.placeholder : 'Napisz wiadomość…',
             icon: cfg.icon === undefined ? IC.chat : cfg.icon,   // null = brak; pominięte = domyślna
             auth: typeof cfg.auth === 'function' ? cfg.auth : function () { return {}; },
@@ -184,6 +187,7 @@
         function build() {
             var wrap = el('div', 'tnc-wrap tnc-' + cfg.layout + (cfg.readonly ? ' tnc-readonly' : ''));
             if (cfg.layout === 'drawer') wrap.classList.add('tnc-hidden');
+            if (cfg.layout === 'embedded' && cfg.height) wrap.style.setProperty('--tnc-chat-h', cfg.height);
 
             var overlay = null;
             if (cfg.layout === 'drawer') { overlay = el('div', 'tnc-overlay'); wrap.appendChild(overlay); }
@@ -549,6 +553,12 @@
                 if (cfg.onClose) cfg.onClose();
             },
             refresh: function () { inst.loaded = false; return loadHistory(); },
+            // Dymek LOKALNY — renderuje jak zwykłą wiadomość (rola ai/user), BEZ zapisu i BEZ sieci; scroll na dół.
+            // Wygląda identycznie jak wiadomość z historii (te same style .tnc-b, white-space:pre-wrap → \n\n = akapity).
+            addLocalBubble: function (role, text) {
+                if (inst.destroyed) return;
+                append(role === 'user' ? 'user' : 'assistant', String(text == null ? '' : text), []);
+            },
             isEnabled: function () { return inst.enabled; },
             destroy: function () {
                 inst.destroyed = true;
