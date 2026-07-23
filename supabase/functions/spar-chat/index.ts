@@ -2111,7 +2111,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           const wn = (existingSession.wniosek_status as string | null) || null
           if (existingSession.verdict === 'zielony' && !existingSession.paid_at) {
             if (!wn) st.push('wniosek o współpracę: JESZCZE NIE ZGŁOSZONY — pierwszy krok to bezpłatne zgłoszenie projektu (przycisk w karcie), mów o nim jako o kroku bez ryzyka')
-            else if (wn === 'pending') st.push('wniosek o współpracę: ZGŁOSZONY, czeka na przegląd Tomka — nie ponaglaj płatności (karta 500 zł pojawi się po kwalifikacji); możesz spokojnie dopracowywać projekt')
+            else if (wn === 'pending') st.push('wniosek o współpracę: ZGŁOSZONY, kwalifikacja w toku (automat — wynik zwykle do ~2 h, przyjdzie mailem) — nie ponaglaj płatności i NIE mów, że Tomek ręcznie przegląda; możesz spokojnie dopracowywać projekt')
             else if (wn === 'accepted') st.push('wniosek o współpracę: ZAAKCEPTOWANY — projekt zakwalifikowany do rozmowy z Tomkiem; następny krok to rezerwacja 500 zł (w pełni zwrotna), prowadź do niej wg DRZEWA DOMYKANIA')
           }
         }
@@ -2395,6 +2395,46 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
             )
           }
 
+          // AUTO-KWALIFIKACJA (23.07, decyzja Tomka — zero ręcznych kroków po jego
+          // stronie): zielony werdykt + ocena „mocny" → zgłoszenie akceptowane OD RAZU,
+          // karta pokazuje rezerwację bez klikania bezpłatnego zgłoszenia (kwalifikacja
+          // i tak byłaby automatyczna; audyt 23.07: 3/6 mocnych sesji odpadło na tym
+          // kliknięciu). Nie-mocne zielone (legacy/pad re-gate) zostają na ścieżce
+          // zgłoszenie → auto-akcept cronem po ~2 h (spar-followups), z oknem na
+          // opcjonalne odrzucenie w panelu.
+          let wniosekMeta = (existingSession?.wniosek_status as string | null | undefined) ?? null
+          if (verdict.verdict === 'zielony' && !isKnowHowMode && !wniosekMeta) {
+            try {
+              const { data: freshA } = await supabase
+                .from('spar_sessions')
+                .select('assessment, wniosek_status')
+                .eq('id', sessionId)
+                .maybeSingle()
+              const oc = ((freshA?.assessment as Record<string, unknown> | null)?.ocena as string | undefined) || null
+              if (oc === 'mocny' && !freshA?.wniosek_status) {
+                const nowIso = new Date().toISOString()
+                const { error: wnErr } = await supabase
+                  .from('spar_sessions')
+                  .update({ wniosek_at: nowIso, wniosek_status: 'accepted', wniosek_auto: true, wniosek_decided_at: nowIso, updated_at: nowIso })
+                  .eq('id', sessionId)
+                  .is('wniosek_status', null)
+                if (!wnErr) {
+                  wniosekMeta = 'accepted'
+                  console.log('[spar-chat] auto-kwalifikacja mocny → accepted:', sessionId)
+                  if (existingSession?.is_test !== true) {
+                    postSlackSparing('spar_wniosek', {
+                      session_id: sessionId,
+                      name: existingSession?.name ?? null,
+                      email: effectiveEmail ?? null,
+                      project_name: (existingSession?.preview_brief as Record<string, unknown> | null)?.nazwa ?? null,
+                      auto: true,
+                    }).catch(() => {})
+                  }
+                }
+              }
+            } catch (e) { console.error('[spar-chat] auto-kwalifikacja error:', e) }
+          }
+
           // Zielony werdykt -> lead (id musi trafić do spar_meta, więc PRZED eventem).
           // Werdykt pada wiele tur po bramce, więc effectiveEmail praktycznie zawsze
           // istnieje — brak maila logujemy i pomijamy lead zamiast wywracać stream.
@@ -2465,7 +2505,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           // emailKnown: sesja ma już maila po stronie serwera — frontend przy
           // powrocie z linku ?id= nie zna go lokalnie i bez tej flagi pokazywałby
           // bramkę o imię/mail DRUGI raz.
-          const meta = { verdict: verdict.verdict, leadId, emailKnown: !!effectiveEmail, wniosek: (existingSession?.wniosek_status as string | null | undefined) ?? null }
+          const meta = { verdict: verdict.verdict, leadId, emailKnown: !!effectiveEmail, wniosek: wniosekMeta }
           controller.enqueue(
             encoder.encode(`event: spar_meta\ndata: ${JSON.stringify(meta)}\n\n`),
           )

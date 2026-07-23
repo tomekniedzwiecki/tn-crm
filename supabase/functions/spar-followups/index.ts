@@ -336,7 +336,11 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     reclose_1: { subject: `${n}: rozmowa wciąż czeka`, body: `Cześć${im}!\n\nProjekt ${n} jest gotowy i czeka w panelu — a pierwszy krok to po prostu niezobowiązująca wspólna rozmowa. 500 zł jest w pełni zwrotne, więc realnie nic nie ryzykujesz.\n\nGdy będziesz gotowy, [zarezerwuj rozmowę](LINK_RESERVE) — [projekt zobaczysz tutaj](LINK_VIEW).` },
     reclose_2: { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie chcę zawracać Ci głowy — projekt ${n} zostaje zapisany i czeka, kiedy będziesz gotowy. Rozmowa jest niezobowiązująca, a 500 zł w pełni zwrotne.\n\nJeśli zechcesz to ruszyć, [rezerwacja jest tutaj](LINK_RESERVE), a [projekt w panelu](LINK_VIEW).` },
     payment_rescue: { subject: 'Widzę, że rezerwacja nie doszła do końca', body: `Cześć${im}!\n\nZauważyłem, że zaczęła się Twoja rezerwacja wspólnej rozmowy, ale płatność nie doszła do końca — czasem przerwie ją bank albo połączenie. Nic straconego.\n\nGdyby coś przerwało, [dokończ rezerwację tutaj](LINK_VIEW). Przypominam: 500 zł jest w pełni zwrotne, więc nic nie ryzykujesz.` },
-    wniosek_accepted: { subject: `${n}: przejrzałem Twój projekt — wchodzę w rozmowę`, body: `Cześć${im}!\n\nOsobiście przejrzałem Twoje zgłoszenie — kartę projektu ${n} i wynik badania rynku. Kwalifikuję je do wspólnej rozmowy: chcę ten projekt z Tobą przegadać.\n\nNastępny krok to [rezerwacja rozmowy](LINK_RESERVE) — 500 zł, w pełni zwrotne (nie wejdziemy we współpracę → wraca w całości). Po rezerwacji przygotowuję plan przedsięwzięcia i odzywam się osobiście. [Projekt masz w panelu](LINK_VIEW).` },
+    // wniosek_auto=false (ręczny akcept Tomka w panelu) → „osobiście przejrzałem" jest PRAWDĄ;
+    // auto-kwalifikacja (spar-chat/cron) → uczciwe copy bez tej deklaracji.
+    wniosek_accepted: s.wniosek_auto === false
+      ? { subject: `${n}: przejrzałem Twój projekt — wchodzę w rozmowę`, body: `Cześć${im}!\n\nOsobiście przejrzałem Twoje zgłoszenie — kartę projektu ${n} i wynik badania rynku. Kwalifikuję je do wspólnej rozmowy: chcę ten projekt z Tobą przegadać.\n\nNastępny krok to [rezerwacja rozmowy](LINK_RESERVE) — 500 zł, w pełni zwrotne (nie wejdziemy we współpracę → wraca w całości). Po rezerwacji przygotowuję plan przedsięwzięcia i odzywam się osobiście. [Projekt masz w panelu](LINK_VIEW).` }
+      : { subject: `${n}: projekt przeszedł kwalifikację — zapraszam do rozmowy`, body: `Cześć${im}!\n\nTwój projekt ${n} przeszedł kwalifikację: karta projektu i wynik badania rynku na żywo bronią się na tyle, że chcę go z Tobą przegadać.\n\nNastępny krok to [rezerwacja rozmowy](LINK_RESERVE) — 500 zł, w pełni zwrotne (nie wejdziemy we współpracę → wraca w całości). Po rezerwacji osobiście przygotowuję plan przedsięwzięcia i odzywam się do Ciebie. [Projekt masz w panelu](LINK_VIEW).` },
   }
   let t = T[kind] || T.abandoned_chat
   // Dwustopniowy filtr: bez akceptu zgłoszenia CTA płatności podmieniamy na bezpłatne zgłoszenie
@@ -605,7 +609,20 @@ Deno.serve(async (req) => {
       const auth = req.headers.get('Authorization') || ''
       const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
       if (token && token !== SERVICE_KEY) {
-        try { const { data: u } = await supabase.auth.getUser(token); if (u?.user?.id) isAdmin = true } catch { /* nie-admin */ }
+        // SEC (23.07): sam ważny JWT to ZA MAŁO — konta zakłada każdy lead przy bramce
+        // lejka, a isAdmin odblokowuje m.in. preview_session dowolnej sesji. Admin =
+        // wyłącznie członek team_members (wzorzec verifyTeamMember z wfa-inbox-api).
+        try {
+          const { data: u } = await supabase.auth.getUser(token)
+          const uid = u?.user?.id
+          if (uid) {
+            const { data: tm } = await supabase.from('team_members').select('user_id').eq('user_id', uid).maybeSingle()
+            if (tm) isAdmin = true
+          }
+        } catch { /* nie-admin */ }
+      } else if (token && token === SERVICE_KEY) {
+        // Wywołanie wewnętrzne z service key (np. ręczny trigger operacyjny) = zaufane
+        isAdmin = true
       }
     }
 
@@ -1223,6 +1240,89 @@ Deno.serve(async (req) => {
             const msg = composeSms('Tomek przejrzal Twoj projekt i zaprasza na wspolna rozmowe. Zarezerwuj termin (500 zl, w pelni zwrotne):', code)
             await sendSmsOnce('wniosek_accepted_sms', s, msg)
           } catch (e) { console.error('[spar-followups] wniosek_accepted sms error:', e) }
+        }
+      }
+    }
+
+    // ── 4d) AUTO-KWALIFIKACJA (23.07, decyzja Tomka — zero kroków ręcznych) ──
+    //   Kwalifikacja zgłoszeń to AUTOMAT; panel służy wyłącznie do OPCJONALNEGO
+    //   odrzucenia. Dwie ścieżki:
+    //   (a) pending starsze niż 2 h → accepted + mail/SMS zaproszenia (2 h = okno
+    //       na ręczne odrzucenie; potem system decyduje sam — nikt nie wisi w kolejce,
+    //       bo Tomek świadomie NIE chce być wąskim gardłem tego kroku);
+    //   (b) DOSYP: zielony + ocena „mocny" + BRAK wniosku (sesje sprzed auto-akceptu
+    //       w spar-chat albo takie, które nie kliknęły bezpłatnego zgłoszenia) →
+    //       accepted + mail/SMS. Cap 10/przebieg, świeżość ≤30 dni, bramka
+    //       międzykanałowa ≥10 h. Idempotencja maila = spar_emails (sendOnce).
+    {
+      const acceptAndInvite = async (s: SessionRow, guard: 'pending' | 'null') => {
+        const nowIso = new Date().toISOString()
+        const upd: Record<string, unknown> = { wniosek_status: 'accepted', wniosek_auto: true, wniosek_decided_at: nowIso, updated_at: nowIso }
+        if (guard === 'null') upd.wniosek_at = nowIso
+        let q = supabase.from('spar_sessions').update(upd).eq('id', s.id)
+        q = guard === 'pending' ? q.eq('wniosek_status', 'pending') : q.is('wniosek_status', null)
+        const { data: claimed, error } = await q.select('id')
+        if (error) { console.error('[spar-followups] auto-kwalifikacja update error:', error); return }
+        if (!claimed || !claimed.length) return // ktoś inny zdecydował w międzyczasie
+        s.wniosek_status = 'accepted'; s.wniosek_auto = true
+        const mailed = await sendOnce('wniosek_accepted', s)
+        if (mailed && s.phone && s.sms_consent_at && !s.sms_opt_out) {
+          try {
+            const code = await getOrCreateShortCode(supabase, s.id)
+            const msg = composeSms('Twoj projekt przeszedl kwalifikacje - Tomek zaprasza na wspolna rozmowe. Zarezerwuj termin (500 zl, w pelni zwrotne):', code)
+            await sendSmsOnce('wniosek_accepted_sms', s, msg)
+          } catch (e) { console.error('[spar-followups] auto-kwalifikacja sms error:', e) }
+        }
+        if (mailed) {
+          await postSlackSparing('spar_wniosek', {
+            session_id: s.id, name: s.name ?? null, email: s.email ?? null,
+            project_name: (s.preview_brief && typeof s.preview_brief === 'object') ? (s.preview_brief as Record<string, unknown>).nazwa ?? null : null,
+            auto: true,
+          }).catch(() => {})
+        }
+      }
+
+      // (a) pending > 2 h
+      const { data: pendRows, error: pendErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .eq('wniosek_status', 'pending')
+        .is('paid_at', null)
+        .is('full_paid_at', null)
+        .is('sequence_cancelled_at', null)
+        .not('email', 'is', null)
+        .lte('wniosek_at', hoursAgo(2))
+        .limit(30)
+      if (pendErr) console.error('[spar-followups] auto-kwalifikacja pending fetch error:', pendErr)
+      for (const s of ((pendRows || []) as SessionRow[]).filter((x) => x.pipeline_override !== 'resigned' && x.pipeline_override !== 'lost')) {
+        await acceptAndInvite(s, 'pending')
+      }
+
+      // (b) dosyp: mocne zielone bez wniosku
+      const { data: dosypRows, error: dosypErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .eq('verdict', 'zielony')
+        .is('wniosek_status', null)
+        .is('paid_at', null)
+        .is('full_paid_at', null)
+        .is('sequence_cancelled_at', null)
+        .not('email', 'is', null)
+        .gte('created_at', hoursAgo(24 * 30))
+        .limit(60)
+      if (dosypErr) console.error('[spar-followups] auto-kwalifikacja dosyp fetch error:', dosypErr)
+      const dosyp = ((dosypRows || []) as SessionRow[])
+        .filter((x) => x.pipeline_override !== 'resigned' && x.pipeline_override !== 'lost')
+        .filter((x) => ((x.assessment as Record<string, unknown> | null)?.ocena) === 'mocny')
+        .slice(0, 10)
+      if (dosyp.length) {
+        const touches = await loadTouches(supabase, dosyp.map((x) => x.id))
+        for (const s of dosyp) {
+          const t = touches.get(s.id)
+          if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
+          await acceptAndInvite(s, 'null')
         }
       }
     }

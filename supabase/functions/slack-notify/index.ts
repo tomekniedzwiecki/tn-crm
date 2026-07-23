@@ -1775,9 +1775,11 @@ function formatSparGenErrorMessage(data: {
   return { blocks }
 }
 
-// Wniosek o współpracę (dwustopniowy filtr rezerwacji, 2026-07-22): zielony lead
-// zgłosił projekt. auto=true → zakwalifikowany automatycznie (ocena „mocny");
-// auto=false → czeka na decyzję Tomka w panelu tn-aplikacje.
+// Wniosek o współpracę (dwustopniowy filtr rezerwacji, 2026-07-22; od 23.07
+// kwalifikacja = PEŁNY AUTOMAT — decyzja Tomka „nie chcę być wąskim gardłem"):
+// auto=true → zakwalifikowany automatycznie; auto=false → zgłoszenie nie-mocne,
+// automat zaakceptuje je sam po ~2 h (spar-followups) — w tym oknie można
+// OPCJONALNIE odrzucić w panelu. Nic nigdy nie czeka na Tomka.
 function formatSparWniosekMessage(data: {
   session_id?: string
   name?: string
@@ -1788,8 +1790,8 @@ function formatSparWniosekMessage(data: {
 }) {
   const who = [data.name, data.email, data.phone].filter(Boolean).join(' · ') || '(bez danych)'
   const head = data.auto
-    ? '📝 Aplikacja — WNIOSEK o współpracę (zakwalifikowany automatycznie)'
-    : '📝 Aplikacja — WNIOSEK o współpracę (CZEKA NA TWOJĄ DECYZJĘ w panelu!)'
+    ? '📝 Aplikacja — projekt ZAKWALIFIKOWANY (automat)'
+    : '📝 Aplikacja — zgłoszenie projektu (auto-akcept za ~2 h; możesz odrzucić w panelu)'
   const blocks: unknown[] = [
     { type: 'header', text: { type: 'plain_text', text: head, emoji: true } },
     { type: 'section', text: { type: 'mrkdwn', text: `${who}${data.project_name ? `\nProjekt: *${data.project_name}*` : ''}` } },
