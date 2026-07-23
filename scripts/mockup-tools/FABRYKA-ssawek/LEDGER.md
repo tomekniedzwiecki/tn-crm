@@ -179,3 +179,46 @@
 ## Koszty F3
 - **openai-image: $2.74** (wf2_costs kind='openai-image', step lp_grafiki). Retusz galerii + gate F3A = $0
   (PIL + odczyty vision agenta). Bez wpisow 'claude' (abonament).
+
+## Faza F4/F7.1 (KOD per sekcja + dowody dopasowania) — WIP, WSTRZYMANE 2026-07-23
+> **STATUS: WIP — wstrzymane na doktryne MAPA-ZASTOSOWAN (dyrektywa Tomka).** Landing ssawka
+> zawezany do swiata KOMINKA; nowy proces „MAPA ZASTOSOWAN"; czesc makiet/scen/sekcji do wymiany.
+> NIE wykonano finalnego gate-check, NIE domkniete dowody dopasowania, NIE publikowano preview.
+### Stan kodu (index.html — sklepy/tomek-niedzwiecki/ssawek/index.html, 2540 linii)
+- **14 sekcji skodowane** (kompletny szkielet, spojny): hero(archetyp C) · zaufanie(COD) · problem
+  (BEZ produktu) · rozwiazanie(triada USP) · demo(TOR-I stepper 3 stany) · zastosowania(4 kafle) ·
+  zestaw(9 elem, g14) · porownanie(Popiolek vs domowy + 1 realny minus) · mid-cta · opinie(★4,72/
+  2458/650 POD foldem) · galeria(kadry R + lightbox) · faq(bez claimu antystatycznego) ·
+  zamow(checkout-inline@2 steps) · final.
+- **#zamow = checkout-inline@2** OSADZONY (engine wklejony), skorka --zc-* -> partytura Popiolka,
+  data-zc-product={{WF2_PRODUCT_ID}} PLACEHOLDER + data-zc-api. Produkt NIE istnieje na Trevio
+  (decyzja Tomka: tylko landing) -> buildConfig()=null -> showGuard()=uczciwy podglad nieaktywnej
+  kasy (bez fejkowania). CTA „Zamawiam i place", cena 119 zl [data-price]. Runtime snippet z
+  placeholderami ({{CHECKOUT_URL}}/{{PIXEL_ID}}/{{WF2_PRODUCT_ID}}/{{*_URL}}/{{CANONICAL_URL}}).
+- noindex OBECNY (preview). JSON-LD Product. Moduly: footer@1, sticky-buy@1, lightbox@1, faq-accordion@1.
+- Zakazy DOTRZYMANE: brak Lehmann/Haddo, brak claimu antystatycznego, brak „silnik 2000 W"
+  (tylko „moc maksymalna 2000 W" + znamionowa 1200 W), brak sold 547, brak ★/liczb opinii nad foldem.
+### Stan dowodow (dopasowanie/ — sekcja-diff.py wykonany, PARTIAL)
+- **Kompozyty wygenerowane**: 01-hero..16-final (1280) + *-m (390) dla WSZYSTKICH sekcji + DOPASOWANIE.md.
+- **DELTY POMIAROWE policzone** (render getComputedStyle vs IR makiety) — ujawniaja OTWARTE rozjazdy:
+  hero H1 +82% (za duzy), zaufanie H1 -86% (za maly), rozwiazanie tlo dE=4.9 (--paper #F2E7D6),
+  region-SSIM copy 0.25-0.37 (dryf ukladu/typografii wielu sekcji). **RUBRYKA vision 5xT/N = NIEWYPELNIONA
+  (wszystkie „?")** — werdykty per sekcja NIE domkniete.
+- **Petla korekt NIE wykonana** (deltы pozostaja otwarte). To PRZED wstrzymaniem — MAPA-ZASTOSOWAN
+  i tak wymieni czesc sekcji/scen, wiec petla dopasowania rusza po nowej doktrynie.
+- gate-check.py / manifest-check.py / detail-lint / copy-gate / capture-lint = NIE uruchamiane (per pauza).
+### Sekcje NIERUSZONE / do wymiany (po MAPA-ZASTOSOWAN)
+- Zawezenie do swiata KOMINKA: zastosowania (gruz/warsztat/dzialka) i szeroke claimy „na wiele robot"
+  = kandydaci do wymiany; hero/problem/rozwiazanie/final mozliwe re-sceny pod kominek. Zakres precyzuje
+  nowy proces MAPA-ZASTOSOWAN (poza ta sesja).
+### Odstepstwa / uwagi
+- **Kolizja rownolegla**: index.html zbudowany przez rownolegly przebieg F4 (BEM, JSON-LD, engine
+  wklejony) juz istnial; moja proba Write ODRZUCONA (plik istnial) — NIE nadpisano, zachowano
+  bardziej kompletna wersje. Zamykam czysto wokol istniejacego WIP.
+- Kod F4 = agent-authored (Z4 dopuszcza: „gate'y rozstrzygaja, nie autor"); BRAK wywolan gpt-5.6-sol
+  udokumentowanych (0 out-*.md, worklog loguje tylko sceny F3).
+### Koszty F4 (twarde API)
+- **0 USD** twardego API w tej fazie (kod agent-authored; sekcja-diff.py/mockup-ir = lokalny Python,
+  bez API; 0 generacji obrazow; 0 wywolan gpt-5.6-sol wykrytych). Zgodnie z dyrektywa: ZERO wpisow
+  kind='claude', ZERO markerow $0 w wf2_costs. Suma twardego API landingu do teraz = F2 $1.86 +
+  F2.5 $0.30 + F3 $2.74 = **$4.90** (bez zmian w F4).
