@@ -564,6 +564,9 @@ function buildContextBlock(ctx: Ctx, body: Any): string | null {
     const filled: string[] = [];
     for (const [k, v] of Object.entries(fieldsObj)) {
       if (v == null || String(v).trim() === "") continue;
+      // entity (pl_dane) = deklaracja firma|prywatna — pokazuj WARTOŚĆ (niewrażliwa, steruje
+      // doradztwem: osobie z firmą nie proponujemy jej zakładania)
+      if (k === "entity") { filled.push(`entity=${String(v)}`); continue; }
       filled.push(MASKED_FIELDS.has(k) ? `${k} (${maskTail(v)})` : k);
     }
     return `- ${d.key} (${d.label}): ${status}${filled.length ? `; wypełnione pola: ${filled.join(", ")}` : ""}`;

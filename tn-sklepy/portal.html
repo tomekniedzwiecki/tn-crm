@@ -406,6 +406,24 @@
         /* sekcja „Twoje dane do tego zadania" pod rozmową */
         .task-fields { margin-top:4px; }
         .tv-fields-h { color:#fff; font-size:14px; font-weight:600; letter-spacing:-.01em; margin:0 0 10px; }
+        /* ── pl_dane: wybór formy działalności (dwie karty-radio; formularz dopiero po wyborze) ── */
+        .ent-wrap { margin:20px 0 18px; }
+        .ent-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        @media (max-width:640px){ .ent-cards { grid-template-columns:1fr; } }
+        .ent-card { position:relative; text-align:left; background:#0f0f0f; border:1px solid #262626; border-radius:12px;
+            padding:16px 16px 14px; cursor:pointer; display:flex; flex-direction:column; gap:3px; font:inherit; color:inherit;
+            transition:border-color .15s, background .15s; }
+        .ent-card:hover { border-color:#3f3f3f; }
+        .ent-card.sel { border-color:#0070f3; background:rgba(0,112,243,.08); }
+        .ent-ic { width:32px; height:32px; border-radius:8px; background:#1c1c1c; display:flex; align-items:center; justify-content:center;
+            font-size:17px; color:#d4d4d4; margin-bottom:6px; transition:background .15s, color .15s; }
+        .ent-card.sel .ent-ic { background:#0070f3; color:#fff; }
+        .ent-t { color:#fff; font-weight:600; font-size:14.5px; letter-spacing:-.01em; }
+        .ent-s { color:#9a9aa2; font-size:12.5px; line-height:1.5; }
+        .ent-check { position:absolute; top:12px; right:12px; color:#0070f3; font-size:19px; opacity:0; transition:opacity .15s; }
+        .ent-card.sel .ent-check { opacity:1; }
+        .ent-note { margin-top:10px; color:#9a9aa2; font-size:12.5px; }
+        .ent-hint { color:#9a9aa2; font-size:13px; display:flex; align-items:center; gap:7px; }
         /* ukryty host trwałej instancji czatu — POZA #tv-work, żeby innerHTML renderów jej nie niszczył */
         #asystent-host { display:none; }
         .preview-banner { position:sticky; top:0; z-index:60; background:#0070f3; color:#fff; font-size:12.5px; font-weight:500;
@@ -758,22 +776,16 @@
             ],
         },
         pl_dane: {
-            desc: 'Podajesz dane firmy i numer konta — potrzebne do regulaminu sklepu oraz do wypłat i rozliczeń pobrań.',
-            why: 'Bez numeru konta nie wypłacimy Ci pieniędzy z zamówień, a dane firmy muszą być w regulaminie.',
+            desc: 'Najpierw zaznaczasz, czy prowadzisz sklep jako firma, czy jako osoba prywatna — potem podajesz dane do rozliczeń i dokumentów sklepu.',
+            why: 'Bez numeru konta nie wypłacimy Ci pieniędzy z zamówień, a dane sprzedawcy muszą znaleźć się w regulaminie sklepu.',
             time: 'ok. 5 min',
             guide: `<p>Zbieramy podstawowe dane, żeby przygotować regulamin sklepu i rozliczać pieniądze z zamówień. Wystarczy raz.</p>
                 <div class="note">Numer konta (NRB) służy do dwóch rzeczy: przekazujemy na niego pieniądze z Twoich zamówień, a przy płatności przy odbiorze (pobranie) to na to konto firma kurierska przelewa odebraną od klienta gotówkę.</div>
                 <div class="note">Te dane trafiają do dokumentów sklepu (regulamin, polityka prywatności, kontakt). Gdy je tutaj zmienisz, dokumenty na stronie sklepu zaktualizują się automatycznie w ciągu kilku minut.</div>`,
-            fields: [
-                { k: 'company', l: 'Nazwa firmy albo imię i nazwisko', type: 'text' },
-                { k: 'nip', l: 'NIP (jeśli masz firmę — opcjonalnie)', type: 'text' },
-                { k: 'regon', l: 'REGON (opcjonalnie)', type: 'text' },
-                { k: 'address', l: 'Adres', type: 'text' },
-                { k: 'nrb', l: 'Numer konta do wypłat i rozliczeń pobrania (NRB, 26 cyfr)', type: 'text' },
-                { k: 'email_kontakt', l: 'E-mail kontaktowy do dokumentów sklepu', type: 'email' },
-                { k: 'phone', l: 'Telefon kontaktowy (trafi do regulaminu i strony Kontakt — wymaga tego prawo konsumenckie)', type: 'text' },
-                { k: 'return_address', l: 'Adres do zwrotów (jeśli inny niż adres firmy — opcjonalnie)', type: 'text' },
-            ],
+            // Pola budowane dynamicznie wg zadeklarowanej formy działalności — patrz PL_DANE_FIELDS
+            // i wybór kart w renderTaskWork (decyzja Tomka 23.07: jawna deklaracja firma/prywatna,
+            // formularz dopiero PO wyborze, w kontekście wyboru).
+            fields: [],
         },
         ads_konto: {
             desc: 'Zakładasz swoje konto reklamowe Meta i udostępniasz mi do niego dostęp — reklamy ruszają z Twojego konta, a Ty płacisz bezpośrednio do Meta. Prowadzę Cię przez to krok po kroku.',
@@ -1154,13 +1166,17 @@
             id: a.id, product_id: a.product_id || null, step_key: a.step_key, kind: a.kind,
             url: a.url, meta: a.meta || {}, created_at: a.created_at,
         }));
-        // „Twoja firma" pojawia się DOPIERO po skonfigurowaniu kampanii (decyzja Tomka 22.07:
-        // „nie chcę ich przestraszyć") — wcześniej krok dla klienta NIE ISTNIEJE (nie „zablokowany
-        // z kłódką": znika z zadań, osi procesu, „Twojego ruchu" i paska postępu). Filtr u źródła
-        // stanu = jeden punkt prawdy dla wszystkich widoków. Podgląd admina widzi krok zawsze.
+        // „Twoja firma" pojawia się TYLKO gdy klient zadeklarował w pl_dane, że NIE ma firmy
+        // (entity='prywatna' — decyzja Tomka 23.07: nie namawiamy na założenie firmy kogoś, kto
+        // ją ma; NIP z kasy to poszlaka, deklaracja daje pewność) i DOPIERO po skonfigurowaniu
+        // kampanii (decyzja 22.07: „nie chcę ich przestraszyć"). Wcześniej krok dla klienta NIE
+        // ISTNIEJE (nie „zablokowany z kłódką": znika z zadań, osi procesu, „Twojego ruchu"
+        // i paska postępu). Filtr u źródła stanu = jeden punkt prawdy. Podgląd admina widzi zawsze.
         const FIRMA_AFTER = ['ads_strona', 'ads_konto', 'ads_budzet'];
         const stepDoneKey = k => P.steps.some(s => s.step_key === k && !s.product_id && s.status === 'done');
-        const firmaOn = previewMode || stepDoneKey('firma') || FIRMA_AFTER.every(stepDoneKey);
+        const plDaneStep = P.steps.find(s => s.step_key === 'pl_dane' && !s.product_id);
+        const bezFirmy = !!(plDaneStep && plDaneStep.client_fields && plDaneStep.client_fields.entity === 'prywatna');
+        const firmaOn = previewMode || stepDoneKey('firma') || (bezFirmy && FIRMA_AFTER.every(stepDoneKey));
         if (!firmaOn) {
             P.stepDefs = P.stepDefs.filter(d => d.key !== 'firma');
             P.steps = P.steps.filter(s => s.step_key !== 'firma');
@@ -1373,6 +1389,68 @@
         return true;
     }
     function plRzeczy(n) { return n === 1 ? 'rzecz' : 'rzeczy'; }
+
+    // ── pl_dane: deklaracja formy działalności (decyzja Tomka 23.07) ────────────
+    // Klient NAJPIERW zaznacza „mam firmę" / „nie mam firmy" (client_fields.entity), dopiero
+    // potem widzi formularz z polami w kontekście wyboru. NIP z kasy to tylko poszlaka — jawna
+    // deklaracja daje pewność; od niej zależy też, czy zadanie „Twoja firma" w ogóle się pojawi.
+    const PL_DANE_FIELDS = {
+        firma: [
+            { k: 'company', l: 'Pełna nazwa firmy (jak w CEIDG lub KRS)', type: 'text' },
+            { k: 'nip', l: 'NIP', type: 'text' },
+            { k: 'regon', l: 'REGON (opcjonalnie)', type: 'text' },
+            { k: 'address', l: 'Adres siedziby firmy', type: 'text' },
+            { k: 'nrb', l: 'Numer konta do wypłat i rozliczeń pobrania (NRB, 26 cyfr)', type: 'text' },
+            { k: 'email_kontakt', l: 'E-mail kontaktowy do dokumentów sklepu', type: 'email' },
+            { k: 'phone', l: 'Telefon kontaktowy (trafi do regulaminu i strony Kontakt — wymaga tego prawo konsumenckie)', type: 'text' },
+            { k: 'return_address', l: 'Adres do zwrotów (jeśli inny niż adres siedziby — opcjonalnie)', type: 'text' },
+        ],
+        prywatna: [
+            { k: 'company', l: 'Imię i nazwisko', type: 'text' },
+            { k: 'address', l: 'Adres zamieszkania', type: 'text' },
+            { k: 'nrb', l: 'Numer konta do wypłat i rozliczeń pobrania (NRB, 26 cyfr)', type: 'text' },
+            { k: 'email_kontakt', l: 'E-mail kontaktowy do dokumentów sklepu', type: 'email' },
+            { k: 'phone', l: 'Telefon kontaktowy (trafi do regulaminu i strony Kontakt — wymaga tego prawo konsumenckie)', type: 'text' },
+            { k: 'return_address', l: 'Adres do zwrotów (jeśli inny niż adres zamieszkania — opcjonalnie)', type: 'text' },
+        ],
+    };
+    let previewEntity = null;   // podgląd admina: lokalny wybór (bez zapisu), żeby obejrzeć oba formularze
+    function plDaneEntity() {
+        if (previewMode && previewEntity) return previewEntity;
+        const st = stepFor('pl_dane', null);
+        const v = st && st.client_fields && st.client_fields.entity;
+        return (v === 'firma' || v === 'prywatna') ? v : null;
+    }
+    async function setPlDaneEntity(val) {
+        if (val !== 'firma' && val !== 'prywatna') return;
+        if (previewMode) { previewEntity = val; renderTaskWork(); return; }
+        let st = stepFor('pl_dane', null);
+        if (st && st.client_fields && st.client_fields.entity === val) return;
+        if (!st) { st = { step_key: 'pl_dane', product_id: null, status: 'pending', completed_at: null, client_fields: {}, checklist: [] }; P.steps.push(st); }
+        st.client_fields = Object.assign({}, st.client_fields, { entity: val });
+        renderTaskWork();   // od razu pokaż formularz w kontekście wyboru (zapis w tle)
+        try {
+            const r = await api({ token, password: currentPw, action: 'task_save', step_key: 'pl_dane', fields: { entity: val } });
+            if (r.status >= 300) showToast('Nie udało się zapisać wyboru — spróbuj ponownie', 'error');
+        } catch (e) { showToast('Chwilowa przerwa techniczna — spróbuj za moment', 'error'); }
+    }
+    function renderEntityChooser(ent) {
+        const card = (val, icon, title, sub) => `
+            <button type="button" class="ent-card${ent === val ? ' sel' : ''}" onclick="setPlDaneEntity('${val}')">
+                <span class="ent-ic"><i class="ph ${icon}"></i></span>
+                <span class="ent-t">${title}</span>
+                <span class="ent-s">${sub}</span>
+                <span class="ent-check"><i class="ph ph-check-circle"></i></span>
+            </button>`;
+        return `<div class="ent-wrap">
+            <div class="tv-fields-h">Jak prowadzisz ten sklep?</div>
+            <div class="ent-cards">
+                ${card('firma', 'ph-buildings', 'Mam firmę', 'Sklep działa na moją firmę — podam jej dane do dokumentów i rozliczeń.')}
+                ${card('prywatna', 'ph-user', 'Nie mam firmy', 'Zaczynam jako osoba prywatna — podam swoje dane.')}
+            </div>
+            ${ent ? '' : '<div class="ent-note">Zaznacz jedną z opcji — pokażę Ci właściwy formularz.</div>'}
+        </div>`;
+    }
 
     // ── Strona główna: karta-CTA zamiast listy zadań ─────────────────────────
     function renderHomeCard() {
@@ -1760,8 +1838,12 @@
         }
         const st = stepFor(d.key, null) || { status: 'pending', client_fields: {} };
         const timeChip = ws.time ? `<span class="tv-time"><i class="ph ph-clock"></i> ${escapeHtml(ws.time)}</span>` : '';
+        // pl_dane: pola zależą od zadeklarowanej formy działalności — bez wyboru brak formularza i CTA
+        const plEnt = d.key === 'pl_dane' ? plDaneEntity() : null;
+        const entChooser = d.key === 'pl_dane' ? renderEntityChooser(plEnt) : '';
+        const taskFields = d.key === 'pl_dane' ? (plEnt ? PL_DANE_FIELDS[plEnt] : []) : (ws.fields || []);
         let fieldsHtml = '';
-        (ws.fields || []).forEach(f => {
+        taskFields.forEach(f => {
             const val = (st.client_fields && st.client_fields[f.k]) || '';
             fieldsHtml += `<label class="lbl">${escapeHtml(f.l)}</label>
                 <input type="${f.type || 'text'}" data-task="${d.key}" data-field="${f.k}" value="${escapeHtml(val)}" oninput="queueTaskSave('${d.key}')" ${previewMode ? 'disabled' : ''}>
@@ -1770,7 +1852,9 @@
         const cta = done
             ? `<div class="tv-done-banner"><i class="ph ph-check-circle"></i> To zadanie masz zrobione${st.completed_at ? ' — ' + escapeHtml(relTime(st.completed_at)) : ''}</div>
                <button class="tv-undo" onclick="uncheckTask('${d.key}')"${previewMode ? ' disabled' : ''}>cofnij oznaczenie</button>`
-            : `<button class="tv-cta" onclick="completeAndAdvance('${d.key}')"${previewMode ? ' disabled' : ''}><i class="ph ph-check"></i> Zrobione — przejdź do następnego</button>`;
+            : (d.key === 'pl_dane' && !plEnt)
+                ? `<div class="ent-hint"><i class="ph ph-arrow-up"></i> Najpierw zaznacz powyżej, jak prowadzisz sklep.</div>`
+                : `<button class="tv-cta" onclick="completeAndAdvance('${d.key}')"${previewMode ? ' disabled' : ''}><i class="ph ph-check"></i> Zrobione — przejdź do następnego</button>`;
 
         // ROZMOWA = TREŚĆ ZADANIA: dla zadań czatowych (kill-switch ON) w miejscu instrukcji osadzamy komunikator.
         // Kolejność: kicker → tytuł → CZAT (slot) → „Twoje dane do tego zadania" (pola) → CTA „Zrobione".
@@ -1799,6 +1883,7 @@
             <h2 class="tv-w-title">${escapeHtml(d.label)}</h2>
             ${why}
             <div class="guide">${guide}</div>
+            ${entChooser}
             ${fieldsHtml}
             <div class="tv-cta-row">${cta}</div>`;
     }
@@ -1918,7 +2003,9 @@
         try {
             const r = await api({ token, password: currentPw, action: 'task_save', step_key: key, fields });
             if (r.status < 300) {
-                const st = stepFor(key, null); if (st) st.client_fields = fields;
+                // MERGE, nie nadpisanie — DOM ma tylko widoczne pola (np. pl_dane bez `entity`,
+                // po zmianie formy bez pól drugiego wariantu); serwer też merguje
+                const st = stepFor(key, null); if (st) st.client_fields = Object.assign({}, st.client_fields, fields);
                 Object.keys(fields).forEach(k => { const ok = $('ok-' + key + '-' + k); if (ok) { ok.textContent = 'Zapisano ✓'; setTimeout(() => { if (ok) ok.textContent = ''; }, 1800); } });
             } else { showToast('Nie udało się zapisać — spróbuj ponownie', 'error'); }
         } catch (e) { showToast('Chwilowa przerwa techniczna — spróbuj za moment', 'error'); }

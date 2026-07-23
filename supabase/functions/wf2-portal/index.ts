@@ -95,7 +95,9 @@ function isViewableMedia(url: string): boolean {
 // krok przeszedl na owner='admin', klient nie podaje juz e-maila konta.
 const CLIENT_FIELD_WHITELIST: Record<string, string[]> = {
   firma:           ["nip", "data_rejestracji"],
-  pl_dane:         ["company", "nip", "regon", "address", "nrb", "email_kontakt", "phone", "return_address"],
+  // entity = deklaracja formy działalności (firma|prywatna, decyzja Tomka 23.07): od niej zależą
+  // pola formularza w portalu i to, czy zadanie „Twoja firma" w ogóle pokaże się klientowi.
+  pl_dane:         ["entity", "company", "nip", "regon", "address", "nrb", "email_kontakt", "phone", "return_address"],
   // ads_konto: JEDNO pole (ad_account_id) — ŚWIADOME przywrócenie pod ŚCIEŻKĘ RĘCZNĄ (równorzędną
   // wobec Leadsie, decyzja Tomka 22.07). Pętla bez webhooka: klient wkleja act_ konta reklamowego →
   // task_save normalizuje i (gdy meta_ad_account_id PUSTE) propaguje na projekt → weryfikator
@@ -567,6 +569,9 @@ Deno.serve(async (req: Request) => {
     }
     if (step_key === "pl_dane" && cleaned.email_kontakt && !EMAIL_RE.test(cleaned.email_kontakt)) {
       errs.push("Podaj poprawny adres e-mail kontaktowy.");
+    }
+    if (step_key === "pl_dane" && cleaned.entity && !["firma", "prywatna"].includes(cleaned.entity)) {
+      errs.push("Nieprawidłowy wybór formy działalności.");
     }
     if (errs.length) return json({ error: "validation", messages: errs }, 400);
     if (!Object.keys(cleaned).length) return json({ error: "empty" }, 400);
