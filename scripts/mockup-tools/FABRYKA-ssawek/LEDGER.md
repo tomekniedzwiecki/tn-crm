@@ -132,3 +132,50 @@
   retry + 14 mobile + 2 regen). wf2_costs kind='openai-image', step lp_makiety.
 - **claude (praca agenta): $36.00** — ~4,0 MTok sesji (Opus 4.8) x $9,00/MTok (blend 80/20),
   SZACUNEK SESJI wg liczby wywolan (dyrektywa Tomka 23.07). wf2_costs kind='claude', step lp_makiety.
+
+## Faza F3 (retusz white-label + sceny produkcyjne + F3A gate wiernosci) — wykonane 2026-07-23
+### F3.0 RETUSZ WHITE-LABEL galerii (tor Allegro->Marka)
+- **g07 + g11** — nadruk „LEHMANN TOOLS" na czole zbiornika USUNIETY pionowym klonem stali (feather;
+  odbicie na cylindrze ~ funkcja x -> pionowy shift zachowuje profil) — po powiekszeniu brak czytelnej
+  marki, stal naturalna. **g09** — pole tekstowe tabliczki znamionowej (marka/model) SPIXELOWANE do
+  nieczytelnosci (mozaika + blur, 2 rzedy tekstu), symbol CE zostawiony. **g05** advisory ROZSTRZYGNIETE:
+  ssawka podlogowa + reflektujaca sciana zbiornika BEZ czytelnego nadruku (czolo z logo odwrocone) ->
+  retusz NIE wymagany. Zretuszowane webp NADPISANE w bud-assets/ssawek/galeria/ (retusz=ten sam uklad ->
+  x-upsert dozwolony, STANDARD F3 pkt6). gallery_curated: retusz_done + noty; ZADEN kadr on-page z czytelnym LEHMANN.
+### F3.1-3.5 SCENY PRODUKCYJNE (scene-from-mockup)
+- **14 scen** klasa S (13 produkt + 1 problem S-kontekst bez produktu): hero d/m/t (typ A), problem/
+  rozwiazanie (B), demo-01/02/03 (C), zastosowania kominek/gruz/warsztat/dzialka (C), mid-cta/final (A).
+- **Doktryna prompt=wizja, produkt=referencja (LL-005):** prompt CZYSTO scenowy (prompt-lint 14/14 OK;
+  13 z prefiksem „Image 1 is the EXACT product... single source of truth", problem bez — S-kontekst).
+  Ref wiernosci = **prod-clean** (crop produktu z ZRETUSZOWANEGO g11 = logo-free) jako image1 typ product;
+  ref kompozycji = makieta / crop foto sekcji (image2). ZERO opisu cech w prompcie.
+- **Typ osadzenia (F3A#2):** A (hero/mid-cta/final) = strefa gladkiego foto-fade do #F3EDE4; B/C = pelny
+  kadr (crop foto z makiety jako ref, by model NIE reprodukowal kolumny tekstu). 0 martwy-panel/twardy-scrim.
+### F3A GATE WIERNOSCI (DO SKUTKU) — dopasowanie/WIERNOSC.md
+- **14/14 WIERNOSC: ZGODNA.** DWIE niezalezne pary oczu: pass-1 = generator (Opus, cecha-po-cesze K=8 vs
+  PASZPORT + realny g11/g07/g09); pass-2 = **SWIEZY Sonnet** (subagent, bez promptu generacji i bez
+  werdyktu-1; tylko obrazy + tabela cech + realny kadr) = **14/14 TAK, 0 FAIL, brak rozjazdu**.
+- Osadzenie 5xA gladki fade + 9xB/C pelny kadr (0 defekt). Uzycie zgodne z modelem KARTY (wpiecie do
+  kroca, ssanie popiolu/gruzu, dmuchawa=liscie, wytrzep filtra koszowego) — 0 zle-uzycie. Anatomia 5 scen
+  z dlonia = OK. EMOCJA<->PRODUKT: problem BEZ produktu (obie pary potwierdzily). 13 distinct views (>>5),
+  brak klonow pozy. Noty nieblokujace: rozwiazanie (rura nie stykana z wezem), zast-dzialka (strumien lekko wodnisty).
+### Panel + koszty F3
+- Upload 14 scen -> bud-assets/ssawek/assets/*.webp (100-220 KB; hero-d 103 KB <= 350 KB waga 1. ekranu OK).
+  14 artefaktow kind='scena' (meta section/viewport/klasa/osadzenie/wiernosc). doc WIERNOSC + MAPA-ASSETOW
+  -> wf2-docs. lp_grafiki DONE (checklista VERBATIM 7/7, force_kolejnosc — kalkulacja N/D Allegro).
+- **openai-image: $2.74** (deliverable 14 scen: 10x local HIGH @ $0.25 + 4x edge MEDIUM @ $0.06).
+  **ZERO wpisu kind='claude'** (dyrektywa Tomka 23.07 — praca agentow = abonament, nie koszt API).
+## Odstepstwa F3 (swiadome)
+- **Local HIGH DZIALA w tej sesji** (api.openai.com /v1/images/edits gpt-image-2 quality=high, ~160 s/obraz)
+  — F2 „Cloudflare 520 niezawodnie" NIE wystapil; 10/14 scen HIGH. Pojedyncze 520 -> fallback edge MEDIUM
+  (hero-t, demo-02 + 2) per genlib. (Obserwacja infry, nie lekcja systemowa — nosnik = ten LEDGER.)
+- **Pad batcha w tle**: pierwszy przebieg `gen-scenes.py all` w tle zostal przerwany po ~6 scenach;
+  brakujace dogenerowane synchronicznie (bez background-watcherow, wg korekty koordynatora). Batch
+  ostatecznie ukonczyl 14/14; kilka scen wygenerowanych 2x — re-runy = overhead operacyjny, NIE bilowane 2x
+  (koszt = FINALNY deliverable 14 scen).
+- Sceny bazuja na makietach, ktorych **retro-akcept Tomka = PENDING** (kamien lp_makiety) — F3 wykonane
+  na makietach as-is zgodnie ze zleceniem; ewentualna zmiana makiety = regen dotknietych scen.
+
+## Koszty F3
+- **openai-image: $2.74** (wf2_costs kind='openai-image', step lp_grafiki). Retusz galerii + gate F3A = $0
+  (PIL + odczyty vision agenta). Bez wpisow 'claude' (abonament).
