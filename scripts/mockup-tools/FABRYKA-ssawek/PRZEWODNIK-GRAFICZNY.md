@@ -25,6 +25,17 @@ zbiornik zjada gorący popiół) → mechanizm z bliska (demo 1-2-3, filtr) → 
 - **PERSPEKTYWY (≥2):** eye-level lifestyle · top-down/close makro · lekko od dołu (hero, bohater
   produktu). ✓
 
+## OŚ POKRYCIE ZASTOSOWAŃ (z `MAPA-ZASTOSOWAN.md` — F1.7 egzekwuje szerokość, nie tylko scenografię)
+Mapa niesie **≥2 RÓŻNE FUNKCJE** (sucho · mokro · nadmuch) ⇒ szerokość OBOWIĄZKOWA. Przewodnik pilnuje,
+by każda z 3 funkcji miała NOŚNIK WIZUALNY (nie tylko etykietę w copy):
+- **Ssanie na sucho** → hero (popiół) · rozwiązanie · demo · kafle kominek/pellet/gruz/warsztat-auto.
+- **Ssanie na MOKRO (woda)** → **kafel „Woda i zalania — tryb mokro" (scena sc-zast-mokro)** + triada USP
+  „zbierze wodę" + hero-sub („woda po zalaniu") + FAQ. ⛔ To OSOBNA funkcja — musi mieć własny kadr WET,
+  nie tylko wzmiankę.
+- **Nadmuch (dmuchawa)** → kafel „Działka — dmuchawa na liście" + pas „zamiast wciągać — zdmuchuje" + FAQ.
+- **Pokrycie ≥5 światów w mozaice** (kominek · pellet/kotłownia · gruz · warsztat/auto · **woda/mokro** ·
+  działka). ⛔ ZAKAZ 4 kafle jednej funkcji (suche ssanie) — to zawężenie, które doktryna zamyka.
+
 ## REGUŁA RYTMU + ANTY-SZEW (strony obrazu zapisane OD RAZU)
 Sąsiednie sceny nie dzielą kontekst+skala. Pełnokadrowe sceny (fullframe/typ B) sąsiadujące =
 ZIG-ZAG L/P (na granicy zawsze foto↔papier). Sekcje kodowe/kontenerowane (zaufanie, zestaw,
@@ -85,11 +96,25 @@ węża/rury, (2) wciąganie popiołu/gruzu/wody, (3) wytrzepanie filtra koszoweg
 (osobny kadr per krok). Emocja: „proste, ja to zrobię". DETAL UI: numeracja krokowa WEWNĄTRZ sekcji
 (01/02/03 — nie numeracja sekcji), sygnatura S6.
 
-**zastosowania** — rola: **szerokość zastosowań**. Ujęcie: split B, obraz LEWO; mozaika kontekstów:
-kominek/koza/pellet · gruz i gips po remoncie · warsztat/garaż + auto · działka (dmuchawa, liście).
-Emocja: „jeden sprzęt na wszystko". Seed: *„Wide workshop/garage scene, concrete floor, the vacuum
-next to rubble, wood shavings and a car; a separate hint of outdoor leaves for the blower function;
-practical, capable."* DETAL UI: ikony charcoal per zastosowanie.
+**zastosowania** — rola: **szerokość zastosowań (3 FUNKCJE)**. Ujęcie: **MOZAIKA 6 kafli-światów** (siatka
+3×2, każdy kafel = własna scena z produktem + chip-podpis). Nagłówek „JEDEN SPRZĘT ZAMIAST TRZECH".
+Kafle: **kominek/koza** (sucho) · **piec na pellet/kotłownia** (sucho — sc-zast-pellet) · **gruz/gips**
+(sucho) · **warsztat/garaż/auto** (sucho) · **woda/mokro** (MOKRO — sc-zast-mokro) · **działka/dmuchawa**
+(nadmuch). Emocja: „jeden sprzęt na wszystko — trzy roboty". Pas pod mozaiką: „Ssawka 2w1 mokro/sucho +
+funkcja dmuchawy". DETAL UI: ikony charcoal per zastosowanie, S6 rożek na kaflach.
+
+**zastosowania › KAFEL WODA/MOKRO (sc-zast-mokro)** — rola: **nowa FUNKCJA (mokro) — dowód WET**. Ujęcie:
+pełny kadr, ssawka podłogowa 2w1 wciąga rozlaną WODĘ z posadzki (kałuża, odbicia, mokro), pomieszczenie
+gospodarcze/pralnia po zalaniu; chłodne czyste światło. Emocja: „to nie tylko na sucho — zbierze i wodę".
+Seed: *„The vacuum's 2-in-1 wet/dry floor nozzle sucking up a shallow water puddle on a tiled floor after
+a leak, glistening wet reflections; utility/laundry corner; clean cool daylight — clearly a WET pick-up,
+not dry dust."* Kotwica: op.10 „zbiera wodę" + zestaw „ssawka 2w1 mokro/sucho".
+
+**zastosowania › KAFEL PIEC NA PELLET (sc-zast-pellet)** — rola: świat wtórny (sucho, inny kontekst niż
+kominek). Ujęcie: pełny kadr, odkurzacz przy piecu na pellet/kotle w pomieszczeniu gospodarczym, wąż
+czyści szufladę popielnika; worek pelletu obok. Emocja: „ogarnie też kotłownię". Seed: *„The vacuum in a
+utility/boiler room cleaning grey ash from the ash drawer of a pellet stove; a sack of wood pellets
+nearby; plain practical light."* Kotwica: op.8/13 „piec na pellet", op.15 „popielnik pieca na pellet".
 
 **zestaw** (kodowa) — packshot g14 na jasnym jednolitym (klasa P, świadomie clean): 9 elementów
 podpisanych. S6 rożek na kaflu. Separator.

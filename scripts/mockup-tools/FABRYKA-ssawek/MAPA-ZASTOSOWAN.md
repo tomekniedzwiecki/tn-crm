@@ -6,15 +6,20 @@
 > świadomy PRIMARY (message-match sezon grzewczy), ale strona NIESIE pełne spektrum (sekcja zastosowań + dmuchawa + FAQ).
 
 ## FUNKCJE
-Każdy parametr specyfikacji → ZDOLNOŚĆ fizyczna (co produkt POTRAFI), nie zastosowanie:
-1. **Ssanie na sucho** (mocne, przemysłowe) — [SPEC: odkurzacz, HEPA, filtr koszowy].
-2. **Ssanie na mokro / zbieranie wody** — [SPEC: tryb mokro/sucho, ssawka 2w1] + [OPINIE: „zbiera wodę"].
-3. **Nadmuch (dmuchawa)** — odwrócony strumień, zdmuchuje zamiast wciągać — [SPEC: „funkcja dmuchawy"] + [OPINIE: „chcesz dmuchnąć liście? Pyk"].
-4. **Znoszenie GORĄCEGO popiołu** — [SPEC: zbiornik stal nierdzewna, żaroodporny] (plastik domowego odkurzacza odpada).
-5. **Bezworkowa filtracja wielorazowa** — [SPEC: bezworkowy, 3× filtr koszowy + HEPA] (0 zł eksploatacji).
-6. **Przyłącze do elektronarzędzi** — [SPEC: redukcja do elektronarzędzi w zestawie] (odciąg pyłu przy pracy).
+Każdy parametr specyfikacji → ZDOLNOŚĆ fizyczna (co produkt POTRAFI), nie zastosowanie. Liczba RÓŻNYCH
+funkcji decyduje o obowiązku SZEROKOŚCI (≥2 → „jedno zamiast trzech"):
 
-**≥2 RÓŻNE FUNKCJE (ssanie sucho · ssanie mokro · nadmuch)** ⇒ argument „jeden sprzęt zamiast trzech" = SZEROKOŚĆ obowiązkowa.
+| # | Parametr (spec) | Funkcja (zdolność) |
+|---|---|---|
+| 1 | odkurzacz przemysłowy, HEPA, filtr koszowy | **Ssanie na sucho** (mocne, przemysłowe) |
+| 2 | tryb mokro/sucho, ssawka 2w1 + op.10 „zbiera wodę" | **Ssanie na MOKRO / zbieranie wody** |
+| 3 | „funkcja dmuchawy" + op.3 „dmuchnąć liście? Pyk" | **Nadmuch (dmuchawa)** — odwrócony strumień |
+| 4 | zbiornik stal nierdzewna, żaroodporny | Znoszenie GORĄCEGO popiołu (plastik domowego odpada) |
+| 5 | bezworkowy, 3× filtr koszowy + HEPA | Bezworkowa filtracja wielorazowa (0 zł eksploatacji) |
+| 6 | redukcja do elektronarzędzi w zestawie | Przyłącze do elektronarzędzi (odciąg pyłu przy pracy) |
+
+**≥2 RÓŻNE FUNKCJE (ssanie sucho · ssanie mokro · nadmuch)** ⇒ argument „jeden sprzęt zamiast trzech" =
+SZEROKOŚĆ OBOWIĄZKOWA. Gate `mapa_zastosowan`: funkcje ≥ 2 ⇒ SPEKTRUM (6 światów) EGZEKWOWANE (nie SKIP).
 
 ## ZASTOSOWANIA
 Wyczerpująco, każde z KLASĄ DOWODU (KARTA §3/§5a; obowiązkowy przegląd 15 opinii):
@@ -37,12 +42,12 @@ Jak pokazać KAŻDE zastosowanie (scena / demo / liczba) + siła wizualna 1–5:
 
 | zastosowanie | nośnik prezentacji | siła |
 |---|---|---|
-| Popiół z kominka | **hero** (scena ssania popiołu, HERO-STAGE) + rozwiązanie + demo krok 02 | 5 |
-| Piec na pellet | kafel zastosowań „Kominek, koza i piec na pellet" + opinia Tomasz | 4 |
+| Popiół z kominka | **hero** (scena ssania popiołu, HERO-STAGE) + rozwiązanie + demo krok 02 + kafel „Kominek i koza" | 5 |
+| Piec na pellet | **kafel zastosowań „Piec na pellet i kotłownia"** (scena sc-zast-pellet) + opinie 8/13/15 | 4 |
 | Gruz/gips remont | kafel zastosowań „Gruz i gips po remoncie" | 4 |
 | Warsztat/garaż/auto | kafel zastosowań „Warsztat, garaż i auto" | 4 |
-| Woda (mokro) | USP „tryb mokro/sucho" + porównanie „Gruz i woda: mokro/sucho + dmuchawa" | 3 |
-| Dmuchawa/liście | kafel „Działka — dmuchawa na liście" + pas „zamiast wciągać — zdmuchuje" | 4 |
+| Woda (mokro) | **kafel zastosowań „Woda i zalania — tryb mokro"** (scena sc-zast-mokro, WET) + triada USP + hero-sub + FAQ | 4 |
+| Dmuchawa/liście | kafel „Działka — dmuchawa na liście" + pas „zamiast wciągać — zdmuchuje" + FAQ | 4 |
 | Elektronarzędzia | lista zestawu „Redukcja do elektronarzędzi" | 2 |
 | Bezworkowa filtracja | demo krok 03 (wytrzep filtr) + zestaw + FAQ „worki" | 4 |
 
@@ -51,10 +56,13 @@ Jak pokazać KAŻDE zastosowanie (scena / demo / liczba) + siła wizualna 1–5:
 
 **SZEROKOŚĆ:** OBOWIĄZKOWA (≥2 różne funkcje: ssanie sucho · ssanie mokro · nadmuch) — argument „jedno zamiast trzech".
 
-**SPEKTRUM:** kominek/koza · piec na pellet · remont (gruz/gips) · warsztat/garaż · auto · działka (dmuchawa) · woda (mokro)
+**SPEKTRUM:** kominek/koza · piec na pellet/kotłownia · remont (gruz/gips) · warsztat/garaż/auto · woda (mokro) · działka (dmuchawa)
 
-**MANIFEST:** hero=PRIMARY (popiół z kominka) · zastosowania=sekcja bento 4 kafle (kominek · gruz · warsztat/auto · działka) + pas dmuchawy · demo=FUNKCJE (wepnij → wciągnij popiół/gruz/wodę → wytrzep filtr) · porownanie=woda/gruz vs domowy · faq=pytania per zastosowanie (głośność, elektryzowanie, drobny pył, worki, gorący popiół).
+**MANIFEST:** hero=PRIMARY (popiół z kominka) + hero-sub wymienia SPEKTRUM (Skrolik: „popiół, gruz, woda po zalaniu — i dmuchawa w jednym") · zastosowania=**MOZAIKA 6 kafli-światów** (kominek · piec na pellet · gruz · warsztat/auto · **woda/mokro** · działka/dmuchawa) — nagłówek „JEDEN SPRZĘT ZAMIAST TRZECH" niesie 3 FUNKCJE (sucho · mokro · nadmuch) · rozwiazanie=triada USP „jedno zamiast trzech" (dociągnięta woda) · demo=FUNKCJE (wepnij → wciągnij popiół/gruz/wodę → wytrzep filtr) · porownanie=woda/gruz vs domowy · faq=pytania per zastosowanie (woda/mokro · dmuchawa · auto z uczciwym minusem op.9 · głośność · elektryzowanie · drobny pył · worki · gorący popiół).
 
-> Anty-zawężenie zrealizowane: mimo nazwy „Popiołek" (jedno użycie), strona pokazuje 6 światów w sekcji
-> zastosowań + tryb mokro + dmuchawę + odciąg elektronarzędzi. Hero trzyma PRIMARY (kominek) dla message-match,
-> reszta zdolności niesiona przez zastosowania/demo/porównanie/FAQ — wzór Ugniatek (szerokość w rdzeniu) + Skrolik (spektrum wymienione).
+> Anty-zawężenie zrealizowane: mimo nazwy „Popiołek" (jedno użycie), strona pokazuje **6 światów w mozaice
+> zastosowań (w tym MOKRO/woda jako osobny kafel + osobna funkcja)** + dmuchawę + odciąg elektronarzędzi,
+> a hero-sub wymienia spektrum. Hero trzyma PRIMARY (kominek) dla message-match; reszta zdolności niesiona
+> przez zastosowania (mozaika) / rozwiązanie (triada) / demo / porównanie / FAQ — wzór Ugniatek (szerokość
+> w rdzeniu) + Skrolik (spektrum wymienione w hero-sub). ⛔ Nie upchnięte w jednej sekcji-dodatku „nie tylko X"
+> (zakaz doktryny) — szerokość PROWADZONA przez mozaikę + hero-sub + triadę, nie markowana.

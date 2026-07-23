@@ -102,16 +102,20 @@ TASKS = {
     'a vermilion #C2381B CTA button "Zamawiam Popiolka — 119 zl".')),
 
  '06-zastosowania': ('prod', HEAD_D + PROD + (
-    'SECTION "zastosowania" — breadth of use, wider than just ash. Header: eyebrow ALL-CAPS "NIE '
-    'TYLKO POPIOL"; H2 in Barlow Semi Condensed ink "Kominek, gruz, warsztat, auto i dzialka." with '
-    'a soft vermilion swash under the single word "warsztat"; one Hanken line "Jeden sprzet na '
-    'brudna robote w calym domu i wokol niego." Then an ASYMMETRIC 2x2 photo mosaic (unequal tiles, '
-    'each with one chamfered S6 corner), always the RED-lidded stainless vacuum in '
-    'each, in a real practical setting, with a small ink caption chip: tile "Kominek, koza i piec na '
-    'pellet" (drawing ash by a hearth); tile "Gruz i gips po remoncie" (rubble/plaster dust on a '
-    'concrete floor); tile "Warsztat, garaz i auto" (wood shavings, a car nearby); tile "Dzialka — '
-    'dmuchawa na liscie" (blowing leaves outdoors). A small ink note under the mosaic "Funkcja '
-    'dmuchawy: zamiast wciagac — zdmuchuje." No CTA button.' + NEG_PERSON)),
+    'SECTION "zastosowania" — breadth of use across THREE functions (dry suction, WET pick-up, '
+    'blower), far wider than just ash. Header: eyebrow ALL-CAPS "JEDEN SPRZET ZAMIAST TRZECH"; H2 in '
+    'Barlow Semi Condensed ink "Popiol, gruz, woda po zalaniu — i dmuchawa." with a soft vermilion '
+    'swash under the single word "woda"; one Hanken line "Ssie na sucho i na mokro, a odwrocony — '
+    'zdmuchuje. Jeden sprzet na brudna robote w calym domu i wokol niego." Then a SIX-tile photo '
+    'MOSAIC (a tidy 3-column x 2-row grid of equal photo tiles, each with one chamfered S6 corner), '
+    'always the RED-lidded stainless vacuum in each, in a real practical setting, with a small ink '
+    'caption chip: tile 1 "Kominek i koza" (drawing ash by an open hearth); tile 2 "Piec na pellet i '
+    'kotlownia" (cleaning the ash drawer of a pellet stove in a utility room); tile 3 "Gruz i gips po '
+    'remoncie" (rubble/plaster dust on a concrete floor); tile 4 "Warsztat, garaz i auto" (wood '
+    'shavings, a car nearby); tile 5 "Woda i zalania — tryb mokro" (its wet/dry floor nozzle sucking '
+    'up a water puddle on a tiled floor, clearly WET); tile 6 "Dzialka — dmuchawa na liscie" (blowing '
+    'dry leaves outdoors). A small ink note under the mosaic "Ssawka 2w1 mokro/sucho + funkcja '
+    'dmuchawy — trzy roboty jednym sprzetem." No CTA button.' + NEG_PERSON)),
 
  '07-zestaw': ('zestaw', HEAD_D + (
     'SECTION "zestaw" — "co dostajesz w zestawie", code-style on an off-white card with a clean '

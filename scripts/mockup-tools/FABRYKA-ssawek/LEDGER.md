@@ -266,3 +266,45 @@ dostrojone; deliverable bez zmiany treści).
 ### Koszty F4–F7 (twarde API)
 - **0 USD** twardego API (kod agent-authored; sekcja-diff.py / mockup-ir / re-kompresja webp = lokalny Python;
   0 generacji obrazów; 0 wywołań gpt-5.6-sol). ZERO wpisów kind='claude'. Suma twardego API landingu = **$4.90** (bez zmian).
+
+---
+## F0.6b DELTA — MAPA ZASTOSOWAŃ (szerokość funkcji) — wykonane 2026-07-23 (sesja delty)
+> **Cel:** landing zawężony do świata KOMINKA (sekcja zastosowań = 4 kafle JEDNEJ funkcji, suche ssanie)
+> → dociągnięcie SZEROKOŚCI FUNKCJI. PRIMARY (popiół/sezon grzewczy) TRAFNY i ZOSTAJE; dodano MOKRO/woda
+> + kotłownia/pellet + wzmocnienie dmuchawy/auto. Doktryna: `docs/zbuduje/MAPA-ZASTOSOWAN.md` (F0.6b).
+
+### MAPA (F0.6b) — dociągnięta
+- `FABRYKA-ssawek/MAPA-ZASTOSOWAN.md`: **FUNKCJE przepisane z listy numerowanej na TABELĘ** (gate liczy
+  WIERSZE tabeli — lista dawała `funkcje=0` ⇒ SPEKTRUM cicho SKIP zamiast egzekucji szerokości; ⚠ lekcja
+  systemowa, RETRO §6). Teraz funkcje=6 ⇒ multi ⇒ SPEKTRUM (6 światów) EGZEKWOWANE. MANIFEST: zastosowania
+  = MOZAIKA 6 kafli-światów (kominek · pellet · gruz · warsztat/auto · **woda/mokro** · działka).
+- PRZEWODNIK-GRAFICZNY: oś **POKRYCIE ZASTOSOWAŃ** (3 funkcje = 3 nośniki wizualne) + karty scen woda/pellet.
+- PLAN/MANIFEST: hero-sub Skrolik (spektrum „popiół, gruz, woda po zalaniu — i dmuchawa"), zastosowania=mozaika,
+  FAQ +3 (woda/dmuchawa/auto z op.9), rozwiązanie triada „jedno zamiast trzech" (dociągnięta woda).
+
+### GRAFIKI DELTY
+- **2 nowe sceny** (local HIGH gpt-image-2): `sc-zast-mokro` (ssawka 2w1 WET zbiera wodę z posadzki, pralnia)
+  + `sc-zast-pellet` (czyści popielnik pieca na pellet, worek pelletu). **F3A 2 pary oczu** (pass-1 Opus
+  cecha-po-cesze + pass-2 ŚWIEŻY Sonnet bez promptu/werdyktu-1) = **ZGODNA/ZGODNA**, 0 FAIL, brak ludzi (0 anatomii).
+  Re-kompresja webp <120 KB (mokro 104 KB / pellet 102 KB) — budżet wag `inne` (LL-067).
+- **Makieta 06-zastosowania (desktop+mobile) REGEN** jako mozaika 6 kafli (KRYTYK: header „JEDEN SPRZĘT
+  ZAMIAST TRZECH", swash pod „woda", 6 kafli, kafel MOKRO WET czytelny, diakrytyki PL OK). Kopia do makiety/
+  + upload bud-assets/ssawek/makiety/. (1 regen mobile #1 na starym prompcie = overhead, nie bilowany.)
+
+### KOD + PĘTLA DOPASOWANIA
+- `sklepy/tomek-niedzwiecki/ssawek/index.html`: sekcja `zastosowania` → MOZAIKA 6 kafli (CSS `repeat(3,1fr)`
+  desktop / 2 kol tablet / 1 kol mobile); hero-sub (spektrum woda); rozwiązanie 3. USP (dociągnięta woda,
+  3 funkcje); FAQ +3 pytania (woda/dmuchawa/auto) + JSON-LD FAQPage zsynchronizowany (9 pytań); porównanie
+  „Gruz i woda" już obecne.
+- **sekcja-diff 1280 + 390:** LAYOUT-FAIL **0/14**; RUBRYKA 5×T/N wypełniona **14/14 TAK** (desktop) + **15/15
+  TAK** (mobile). Render side-by-side potwierdza 6 kafli + kafel MOKRO. Copy-only delty hero/rozwiązanie/faq:
+  **doktryna PIVOT „makieta święta dla UKŁADU"** — kod odtwarza copy 1:1, układ NIETKNIĘTY, regen makiet
+  01/04/14 zbędny (odnotowane w DOPASOWANIE.md).
+- **gate-check.py ssawek = PASS 135 / FAIL 0 / WARN 6 / SKIP 7** (mapa_zastosowan: ZASTOSOWANIA 8/6,
+  SPEKTRUM 6/4 PASS, OPINIE-wiersz PASS, PRIMARY PASS, proxy PASS). detail-lint = 30×P2 (0×P0/P1). copy-gate
+  PASS (2000W nieużyte, brak antystatyk, sold 547 nieużyte, ★ pod foldem). noindex ON (preview).
+
+### Koszty DELTY (twarde API)
+- **openai-image: $1.00** (4 deliverable local HIGH @ $0.25: sc-zast-mokro + sc-zast-pellet + makieta 06
+  desktop + makieta 06 mobile; 1 regen mobile-#1 wrong-prompt = overhead, nie bilowany). ZERO 'claude',
+  zero markerów $0. **Suma twardego API landingu = $4.90 + $1.00 = $5.90.**

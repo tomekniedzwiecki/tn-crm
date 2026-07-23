@@ -78,13 +78,16 @@ TASKS = {
     'legible on a clean vermilion button.')),
 
  '06-zastosowania': ('prod', PROD + (
-    'MOBILE editorial stack: eyebrow "NIE TYLKO POPIOL"; H2 in Barlow Semi Condensed "Kominek, '
-    'gruz, warsztat, auto i dzialka." with a vermilion swash under "warsztat"; Hanken line "Jeden '
-    'sprzet na brudna robote w calym domu i wokol niego." Then FOUR cards STACKED vertically (one '
-    'per row, photo + caption below — NEVER a 2x2 grid at 390px), always the red-lidded vacuum in a '
-    'real setting: "Kominek, koza i piec na pellet", "Gruz i gips po remoncie", "Warsztat, garaz i '
-    'auto", "Dzialka — dmuchawa na liscie". A small ink note "Funkcja dmuchawy: zamiast wciagac — '
-    'zdmuchuje." No CTA button.' + NEG_PERSON)),
+    'MOBILE editorial stack: eyebrow "JEDEN SPRZET ZAMIAST TRZECH"; H2 in Barlow Semi Condensed '
+    '"Popiol, gruz, woda po zalaniu — i dmuchawa." with a vermilion swash under "woda"; Hanken line '
+    '"Ssie na sucho i na mokro, a odwrocony — zdmuchuje." Then SIX cards STACKED vertically (one per '
+    'row, photo + caption below — NEVER a grid at 390px), always the red-lidded vacuum in a real '
+    'setting: "Kominek i koza" (ash by a hearth); "Piec na pellet i kotlownia" (cleaning a pellet '
+    'stove ash drawer); "Gruz i gips po remoncie" (rubble on concrete); "Warsztat, garaz i auto" '
+    '(wood shavings, a car); "Woda i zalania — tryb mokro" (its wet/dry floor nozzle sucking a water '
+    'puddle on a tiled floor, clearly WET); "Dzialka — dmuchawa na liscie" (blowing leaves). A small '
+    'ink note "Ssawka 2w1 mokro/sucho + funkcja dmuchawy — trzy roboty jednym sprzetem." No CTA '
+    'button.' + NEG_PERSON)),
 
  '07-zestaw': ('zestaw', (
     'MOBILE stack: the accessories packshot (image 1, faithful) on an off-white card on TOP (one '

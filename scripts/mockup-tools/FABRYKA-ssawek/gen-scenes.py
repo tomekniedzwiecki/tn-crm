@@ -122,6 +122,24 @@ SC = {
     'leaves across the pavement, garden greenery behind; natural daylight. Remove all text, caption '
     'chips and UI; full frame edge to edge.', False),
 
+ # ── SZEROKOSC FUNKCJI (delta MAPA-ZASTOSOWAN): mokro/woda (nowa FUNKCJA) + kotlownia/pellet ──
+ 'zast-mokro': ('zast-mokro', '3:2',
+    [(PRODL, PRODU, 'product'), (STYLL, STYLU, 'ref')],
+    PFX + 'Scene: the vacuum on a tiled or concrete floor after a spill or leak, its 2-in-1 wet/dry '
+    'floor nozzle drawing up a shallow puddle of WATER — a wet, glistening puddle being visibly '
+    'sucked toward the nozzle, a faint water trail behind it; a utility room / laundry / cellar '
+    'corner with a washing machine or pipes hinted in the background; clean cool daylight. This is '
+    'clearly a WET water clean-up, not dry dust. Reproduce the warm sand product-photo palette of '
+    'Image 2 for consistency but keep the water reflections realistic. Remove all text, caption '
+    'chips and UI; full frame edge to edge, no empty colour panel.', False),
+ 'zast-pellet': ('zast-pellet', '3:2',
+    [(PRODL, PRODU, 'product'), (STYLL, STYLU, 'ref')],
+    PFX + 'Scene: the vacuum in a home utility / boiler room beside a pellet stove (a compact boiler '
+    'with a small door and an ash pan), its hose cleaning grey ash out of the open ash drawer of the '
+    'pellet stove; a sack of wood pellets and a shovel resting nearby; plain practical indoor light. '
+    'Match the warm sand product-photo palette of Image 2. Remove all text, caption chips and UI; '
+    'full frame edge to edge, no empty colour panel.', False),
+
  'mid-cta': ('mid-cta', '3:2',
     [(PRODL, PRODU, 'product'), (ml('09-mid-cta'), mu('09-mid-cta'), 'ref')],
     PFX + 'Scene: the vacuum in warm workshop light with stacked firewood, a shovel and metal wands '

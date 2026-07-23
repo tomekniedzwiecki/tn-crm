@@ -101,12 +101,12 @@ Każda pozycja „ten produkt/persona prowadzi do…", nigdy „jak poprzednio".
 > Klasa DOWODOWA (wideo TikTok/UGC, zdjęcia od kupujących) — agent NIE MA prawa `SKIP`; po protokole
 > wyczerpania materiału → `blokada-tomek` (decyzja o „sekcji nie będzie" należy do Tomka).
 
-1. `hero | scenowa | build` — archetyp C; scena ssania popiołu + karta oferty (119 zł → CTA → pay-row) + trust nad foldem (COD/14 dni); HERO-STAGE pod hero-video.
+1. `hero | scenowa | build` — archetyp C; scena ssania popiołu + karta oferty (119 zł → CTA → pay-row) + trust nad foldem (COD/14 dni); HERO-STAGE pod hero-video. **hero-sub wymienia SPEKTRUM (wzór Skrolik): „…jeden sprzęt na popiół, gruz, wodę po zalaniu — i dmuchawa"** (PRIMARY = popiół z kominka prowadzi H1; sub niesie szerokość 3 funkcji, MAPA-ZASTOSOWAN F0.6b).
 2. `zaufanie | kodowa | build` — pas COD: płatność przy odbiorze · zwrot 14 dni · wysyłka z Polski (redukcja lęku #1; separator anty-szew hero↔problem).
 3. `problem | scenowa | build` — BÓL BEZ produktu: stary sposób (szufelka/domowy odkurzacz), chmura popiołu, syf; ⛔ zero naszego produktu w kadrze (EMOCJA↔PRODUKT).
-4. `rozwiazanie | scenowa | build` — produkt WCHODZI jako rozwiązanie: stalowy zbiornik zjada gorący popiół; triada USP (stal/bezworkowy/dmuchawa+mokro-sucho).
+4. `rozwiazanie | scenowa | build` — produkt WCHODZI jako rozwiązanie: stalowy zbiornik zjada gorący popiół; **triada USP „jedno zamiast trzech"** (stal/żar · bezworkowy 3 filtry · **ssie na sucho, zbiera WODĘ na mokro i zdmuchuje** — dociągnięta woda jako osobna funkcja).
 5. `demo | scenowa | build` — „jak działa" 1-2-3 (wepnij → wciągnij popiół/gruz/wodę → wytrzep filtr); **TOR-I** (demo = domyślnie interakcja, kwalifikacja na makietach F2, stany per krok).
-6. `zastosowania | scenowa | build` — kominek/koza/pellet · gruz i gips po remoncie · warsztat/garaż · auto · działka (dmuchawa) — szerokość rynku ponad sam popiół.
+6. `zastosowania | scenowa | build` — **MOZAIKA 6 kafli-światów** (kominek/koza · **piec na pellet/kotłownia** · gruz/gips po remoncie · warsztat/garaż/auto · **woda/mokro — tryb WET** · działka/dmuchawa) niosąca **3 FUNKCJE** (sucho · mokro · nadmuch); nagłówek „JEDEN SPRZĘT ZAMIAST TRZECH". ⛔ NIE 4 kafle jednej funkcji — szerokość PROWADZONA (mozaika + hero-sub + triada), nie markowana (MAPA-ZASTOSOWAN F0.6b).
 7. `zestaw | kodowa | build` — „9 elementów w zestawie" (packshot g14): 3 filtry, rury, wąż, HEPA, ssawki 2w1, redukcja do elektronarzędzi, instrukcja PL.
 8. `porownanie | kodowa | build` — uczciwie: Popiołek vs zwykły domowy odkurzacz; JEDEN realny minus (głośny; drobny pył gładzi = stukaj filtr) wg Z5.
 9. `mid-cta | scenowa | build` — DEDYKOWANA sekcja CTA z zaprojektowanym `.btn.cta` (szkielet CTA); scena w ciepłym świetle warsztatu, „Zamów Popiołka — 119 zł, przy odbiorze".
@@ -114,7 +114,7 @@ Każda pozycja „ten produkt/persona prowadzi do…", nigdy „jak poprzednio".
 11. `galeria | kodowa | build` — kurowane realne kadry (g05/g07/g11 po RETUSZU logo, g02/03/04/06/08/09/10, g14) + `lightbox@1`.
 12. `wideo | kodowa | blokada-tomek — protokół wyczerpania: oferta Allegro bez wideo (videos_curated=[]), brak kandydatów TT dla źródła Allegro (bud_tt_candidates 0) → materiał do pozyskania; kamień Tomka (KARTA §7).`
 13. `ugc-zdjecia | kodowa | blokada-tomek — protokół wyczerpania: bud-reviews/16214946166 puste + 15/15 recenzji snapshotu bez pól images/photos → brak zdjęć od kupujących; kamień Tomka (klasa dowodowa, agent bez prawa SKIP).`
-14. `faq | kodowa | build` — `faq-accordion@1` + slot media; uczciwie: głośność, elektryzowanie węża (bez claimu antystatycznego), drobny pył, worki (niepotrzebne), gorący popiół.
+14. `faq | kodowa | build` — `faq-accordion@1` + slot media; uczciwie: głośność, elektryzowanie węża (bez claimu antystatycznego), drobny pył, worki (niepotrzebne), gorący popiół. **+3 pytania SZEROKOŚCI:** „Czy zbiera wodę / na mokro?" (tak — ssawka 2w1 mokro/sucho, op.10 „zbiera wodę") · „Czy działa jako dmuchawa?" (tak — odwrócony nadmuch, op.3) · „Czy odkurzę auto?" (tak, wnętrze/bagażnik — op.4/6/10; UCZCIWIE: op.9 „samochodu się nie odkurzy" = do wąskich szczelin użyj ssawki szczelinowej).
 15. `zamow | kodowa | build` — **`#zamow` = moduł checkout-inline** (skórka tokenami; wrapper z `data-zc-product` ORAZ `data-zc-api`); cena 119 zł, COD, packshot; zaprojektowany CTA.
 16. `final | scenowa | build` — FINAL CTA: życie z produktem (porządek po każdym paleniu, ciepły salon z kominkiem), zaprojektowany CTA.
 

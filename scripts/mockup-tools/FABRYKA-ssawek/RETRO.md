@@ -5,11 +5,13 @@
 > KAPITALIZACJA-OPS §4 (miły dodatek, nie przymus). Materiał źródłowy: `LEDGER.md`
 > (wszystkie fazy + odstępstwa świadome) + raporty tej fabryki.
 
-**Meta:** 1. produkt ze źródła `allegro` (DEMO, OAuth-less test) · cena DANA 119 zł ·
-gate-check F7 = 0 FAIL · preview live `https://crm.tomekniedzwiecki.pl/sklepy/tomek-niedzwiecki/ssawek/`
+**Meta:** 1. produkt ze źródła `allegro` (DEMO, OAuth-less test) · **PIERWSZA APLIKACJA doktryny
+MAPA ZASTOSOWAŃ (F0.6b)** · cena DANA 119 zł · gate-check = **0 FAIL** (PASS 135, mapa_zastosowan PASS:
+funkcje=6, SPEKTRUM 6/4) · preview `https://crm.tomekniedzwiecki.pl/sklepy/tomek-niedzwiecki/ssawek/`
 · archetyp hero C (przemysłowy/warsztatowy) · akcent `#C2381B` (terakota z pokrywy) ·
-Barlow Semi Condensed + Hanken Grotesk · sygnatura S6 · koszt twardego API **$4.90**
-($0.30 favicony + $1.86 makiety + $2.74 sceny; kod $0; praca Claude = abonament, poza `wf2_costs`).
+Barlow Semi Condensed + Hanken Grotesk · sygnatura S6 · koszt twardego API **$5.90**
+($0.30 favicony + $1.86 makiety + $2.74 sceny F3 + $1.00 delta MAPA-ZASTOSOWAŃ; kod $0; praca Claude =
+abonament, poza `wf2_costs`).
 
 ---
 
@@ -68,10 +70,11 @@ Klasy SYSTEMOWE (tor Allegro). Wpisane wierszami do księgi głównej:
 | **LL-066** | PROCEDURA + NARZĘDZIE | Tor `source='allegro'`: krok `kalkulacja` N/D (cena DANA, brak marży/kosztu) — potrzebny wariant N/D pierwszej klasy zamiast wielokrotnego `force_kolejnosc` | ZGŁOSZONA · panel-sync `kalkulacja` rozpoznaje `allegro` + STANDARD §F0 tor Allegro |
 | **LL-067** | NARZĘDZIE | `wagi.klasy`/`phash.klasy_path` gubią warianty ścieżek uploadu (`/assets/`, `/galeria/`) → default 120 KB zamiast klasy scena/kafel | ZGŁOSZONA · gate-manifest.json (warianty ścieżek) LUB kanon uploadu assets/scenes+assets/gallery |
 | **LL-068** | DOKTRYNA + PROCEDURA | White-label retusz = OBOWIĄZKOWY krok kuracji przy `source='allegro'`, PRZED F3 (sceny biorą crop jako ref wierności); clone-stal na nadruku + pixelate tabliczki, CE zostaje | WDROŻONA · STANDARD §F0 Allegro („RETUSZ obowiązkowy") + doprecyzowanie kolejności (F0.5/F3.0) |
+| **LL-069** | NARZĘDZIE + DOKTRYNA | Gate `mapa_zastosowan` liczy `## FUNKCJE` jako **WIERSZE TABELI** markdown — sekcja pisana LISTĄ numerowaną = `funkcje=0` ⇒ produkt multi traktowany jak 1-funkcyjny ⇒ **SPEKTRUM cicho SKIP** (szerokość NIE egzekwowana dla dokładnie tego produktu, dla którego doktryna powstała). Fix: FUNKCJE MUSI być tabelą | WDROŻONA · nota w `docs/zbuduje/MAPA-ZASTOSOWAN.md` §GATE („FUNKCJE = tabela, nie lista") + ssawek MAPA przepisana na tabelę (funkcje=6, SPEKTRUM PASS) |
 
-> Doktryna **MAPA ZASTOSOWAŃ** (zawężenie ssawek→tylko kominek) NIE jest tu duplikowana —
-> została już zdeponowana jako **LL-065** + CHANGELOG STANDARD 23.07 (ssawek/Popiołek = wzór
-> „anty-Popiołek: nazwa ≥2 funkcji nie koduje 1 użycia"). Rework zakresu prowadzi równoległa sesja.
+> Doktryna **MAPA ZASTOSOWAŃ** (zawężenie ssawek→tylko kominek) zdeponowana jako **LL-065** +
+> CHANGELOG STANDARD 23.07 (ssawek/Popiołek = wzór „anty-Popiołek: nazwa ≥2 funkcji nie koduje
+> 1 użycia"). **Rework zakresu WYKONANY w tej sesji** (§6) — LL-069 to nowa lekcja z dogfoodingu doktryny.
 
 ## 4. DEPOSIT KAPITAŁU (KAPITALIZACJA-OPS §4)
 
@@ -92,6 +95,37 @@ Klasy SYSTEMOWE (tor Allegro). Wpisane wierszami do księgi głównej:
 
 ## 5. STAN PANELU
 
-- `lp_finisz` = DONE (kamień landingu domknięty w sesji kodu). F8 NIE zmienia statusu kroku —
-  dokłada TYLKO dokument RETRO do `wf2-docs/ssawek/` (klikalny chip przy `lp_finisz`).
-- Kamień **AKCEPT MAKIET** = nadal PENDING (bramka Tomka, retro-akcept) — poza zakresem F8.
+- `lp_finisz` = DONE (kamień landingu domknięty — gate-check REALNIE 0 FAIL z mapa_zastosowan PASS).
+  F8 dokłada RETRO do `wf2-docs/ssawek/` (klikalny chip przy `lp_finisz`).
+- Kamień **AKCEPT MAKIET** = nadal PENDING (bramka Tomka, retro-akcept) — **NOTA:** makiety zaktualizowane
+  o MOZAIKĘ ZASTOSOWAŃ (06-zastosowania desktop+mobile, 6 kafli-światów) — do retro-akceptu RAZEM z resztą.
+
+---
+
+## 6. DELTA MAPA ZASTOSOWAŃ — pierwsza aplikacja doktryny (top wnioski)
+
+Landing był zawężony do świata KOMINKA (sekcja zastosowań = 4 kafle JEDNEJ funkcji, suche ssanie).
+Doktryna F0.6b domknęła lukę „co produkt POTRAFI vs co POKAZUJEMY". PRIMARY (popiół/sezon grzewczy)
+TRAFNY i ZOSTAŁ; dołożona SZEROKOŚĆ FUNKCJI.
+
+**CO ZADZIAŁAŁO:**
+- **Makieta święta dla UKŁADU, nie dla COPY** (doktryna PIVOT): zmiany copy hero/rozwiązanie/faq bez regenu
+  makiet 01/04/14 (układ nietknięty), tylko sekcja STRUKTURALNA (zastosowania) → regen makiety 06. Oszczędność:
+  3 zbędne regeny makiet nie poszły. Render side-by-side potwierdził brak zmiany układu.
+- **2 nowe sceny za 1. rundą, 2 pary oczu ZGODNA** — mokro (WET, ssawka 2w1 + kałuża) czytelnie różni się od
+  suchego ssania; pellet = odrębny kontekst kotłowni. Prompt=wizja + produkt=ref (prod-clean) znów bez pętli.
+- **Gate egzekwuje szerokość PO fixie FUNKCJE→tabela** (funkcje=6 ⇒ SPEKTRUM 6/4 PASS zamiast SKIP). Sekcja
+  = 3 FUNKCJE (sucho/mokro/nadmuch) niesione WIZUALNIE (mozaika + hero-sub + triada), nie markowane.
+
+**CO POPRAWIĆ (→ lekcje):**
+- **LL-069 (nowa):** gate liczy FUNKCJE jako WIERSZE TABELI — mapa pisana LISTĄ = `funkcje=0` = cicha utrata
+  egzekucji SPEKTRUM dla multi-produktu. Trap tym groźniejszy, że gate świeci zielono (SKIP≠FAIL). Fix wdrożony
+  (nota doktryny + ssawek na tabelę). Do rozważenia twardsze: `manifest_proxy` łapie tylko ETYKIETY — realna
+  szerokość to krytyk F1.7 (nota już w doktrynie po ZADANIE 0d).
+- **Waga scen `/assets/` (LL-067 nadal żywa):** nowe sceny znów wpadły w klasę `inne` 120 KB → ręczna
+  re-kompresja <120 KB. Kanon uploadu assets/ do klasy scena wciąż niezałatwiony (zgłoszone LL-067).
+
+**FLYWHEEL DEPOSIT (KAPITALIZACJA-OPS §4):** EXEMPLARY-INDEX wiersz `ssawek` = już obecny (F8 poprzedni);
+NIE dubluję. **LL-069 → LEKCJE-LANDINGI.md** (klasa systemowa: narzędzie gate + doktryna). Koszt delty $1.00
+→ `wf2_costs` (openai-image). Ssawek pozostaje wzorem „anty-Popiołek" + teraz DOWÓD, że doktryna niesie
+szerokość end-to-end (mapa → makieta → sceny → kod → gate PASS).

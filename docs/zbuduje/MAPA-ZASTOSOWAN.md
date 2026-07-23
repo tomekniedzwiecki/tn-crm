@@ -68,6 +68,12 @@ Każdy PARAMETR specyfikacji → ZDOLNOŚĆ (co produkt fizycznie potrafi). To l
 zastosowań: „ssie sprężonym strumieniem" (funkcja) ≠ „czyści klawiaturę" (zastosowanie).
 Liczba RÓŻNYCH funkcji decyduje o obowiązku SZEROKOŚCI (≥2 → argument „jedno zamiast trzech").
 
+> **⛔ ZAPIS FUNKCJI = TABELA markdown (jak szablon niżej), NIGDY lista numerowana.** Gate
+> `mapa_zastosowan` liczy funkcje jako WIERSZE TABELI (`_md_table_data_rows`). FUNKCJE zapisane
+> listą `1. … 2. …` → gate widzi `funkcje=0` → produkt multi traktowany jak 1-funkcyjny →
+> **SPEKTRUM cicho SKIP** (szerokość NIE egzekwowana dla dokładnie tego produktu, dla którego
+> doktryna powstała; SKIP≠FAIL — gate świeci zielono). Lekcja **LL-069** (dogfooding ssawek 23.07).
+
 ### B. ZASTOSOWANIA — wyczerpująca lista, KAŻDE z KLASĄ DOWODU
 Wyczerpująco (nie „główne 2-3"). KAŻDE zastosowanie niesie klasę dowodu:
 
