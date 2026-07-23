@@ -85,9 +85,17 @@ Deno.serve(async (req) => {
         sameOrSub(srcHost, projDomain) ||
         sameOrSub(srcHost, "trevio.pl") || sameOrSub(srcHost, "trevio.shop") ||
         sameOrSub(srcHost, "tomekniedzwiecki.pl") ||
-        srcHost.endsWith(".vercel.app") ||
         srcHost === "localhost" || srcHost === "127.0.0.1";
-      if (!allowed) return json({ error: "forbidden_origin" }, 403);
+      // ⛔ USUNIĘTO `*.vercel.app` (2026-07-23, ochrona przed kopiami): darmowy
+      // wildcard-hosting dawał kopiście ŻYWĄ cenę+checkout na własnej domenie
+      // (red team potwierdził). Żaden nasz konsument tam nie hostuje — landingi =
+      // domeny Trevio, fabryka = localhost/curl (fail-open bez nagłówka).
+      if (!allowed) {
+        // TELEMETRIA: żywa kopia na obcej domenie SAMA się ujawnia w logach edge
+        // (Faza D: skaner + dashboard „obce hosty pukające do API").
+        console.warn(`[wf2-landing-api] forbidden_origin host=${srcHost} product=${id}`);
+        return json({ error: "forbidden_origin" }, 403);
+      }
     }
 
     // social-proof: ile zamówień z platformy zawiera ten produkt (mapowanie robi wf2-orders-sync).
