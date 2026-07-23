@@ -3920,8 +3920,62 @@
     .zc-checkout .zc-cta{min-height:58px}
   }
 
+  /* ── (@3) DOSTAWA PACZKOMATOWA: kontener punktu + mapa + wybrany punkt ──
+     SKÓRKA: --zc-map-h (wysokość mapy). Mapa w karcie z radiusem modułu; kontener
+     NIGDY nie łamie h-scroll (overflow:hidden, width:100%). Widżet ładowany lazy. */
+  .zc-checkout{ --zc-map-h:480px; }
+  .zc-checkout .zc-pickup{margin-top:10px;border:1px dashed var(--zc-border);border-radius:var(--zc-radius-sm);
+    background:var(--zc-bg);padding:12px;display:none}
+  .zc-checkout .zc-pickup.is-shown{display:block}
+  .zc-checkout .zc-pickup-intro{font-size:12.5px;color:var(--zc-muted);margin:0 0 10px;line-height:1.4}
+  .zc-checkout .zc-pickup-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    min-height:48px;width:100%;padding:12px 18px;border:1px solid var(--zc-accent);border-radius:var(--zc-radius-sm);
+    background:var(--zc-card);color:var(--zc-accent);font:inherit;font-weight:800;font-size:14.5px;cursor:pointer;
+    transition:filter .15s ease,background .15s ease}
+  .zc-checkout .zc-pickup-btn:hover{background:color-mix(in srgb,var(--zc-accent) 8%,var(--zc-card))}
+  .zc-checkout .zc-pickup-btn svg{width:19px;height:19px;flex:0 0 auto}
+  .zc-checkout .zc-pickup-btn[disabled]{opacity:.6;cursor:default}
+  /* mapa: pełna szerokość karty, radius modułu, wewnętrzny scroll odcięty (bez h-scroll strony) */
+  .zc-checkout .zc-pickup-map{position:relative;width:100%;max-width:100%;height:var(--zc-map-h);margin-top:2px;
+    border:1px solid var(--zc-border);border-radius:var(--zc-radius-sm);overflow:hidden;background:var(--zc-card);display:none}
+  .zc-checkout .zc-pickup.is-map .zc-pickup-map{display:block}
+  .zc-checkout .zc-pickup.is-map .zc-pickup-btn{display:none}
+  .zc-checkout .zc-pickup-map > *{width:100%;height:100%;max-width:100%}
+  .zc-checkout .zc-pickup-map inpost-geowidget{display:block;width:100%;height:100%}
+  .zc-checkout .zc-pickup-loading{position:absolute;inset:0;display:grid;place-items:center;gap:10px;
+    background:var(--zc-card);color:var(--zc-muted);font-size:13.5px;z-index:2;text-align:center;padding:16px}
+  .zc-checkout .zc-pickup-loading .zc-spin2{width:26px;height:26px;border-radius:50%;
+    border:3px solid color-mix(in srgb,var(--zc-accent) 25%,transparent);border-top-color:var(--zc-accent);animation:zc-rot .8s linear infinite}
+  /* wybrany punkt = karta zamiast mapy */
+  .zc-checkout .zc-pickup-chosen{display:none;gap:12px;align-items:flex-start;padding:12px;
+    border:1px solid var(--zc-accent);border-radius:var(--zc-radius-sm);
+    background:color-mix(in srgb,var(--zc-accent) 5%,var(--zc-card))}
+  .zc-checkout .zc-pickup.is-chosen .zc-pickup-chosen{display:flex}
+  .zc-checkout .zc-pickup.is-chosen .zc-pickup-btn,
+  .zc-checkout .zc-pickup.is-chosen .zc-pickup-map,
+  .zc-checkout .zc-pickup.is-chosen .zc-pickup-intro{display:none}
+  .zc-checkout .zc-pickup-pin{flex:0 0 auto;color:var(--zc-accent);margin-top:1px}
+  .zc-checkout .zc-pickup-pin svg{width:22px;height:22px;display:block}
+  .zc-checkout .zc-pickup-chosen-body{flex:1;min-width:0}
+  .zc-checkout .zc-pickup-chosen-name{font-weight:800;font-size:14.5px;color:var(--zc-text);line-height:1.3}
+  .zc-checkout .zc-pickup-chosen-addr{font-size:12.5px;color:var(--zc-muted);margin-top:3px;line-height:1.4;word-break:break-word}
+  .zc-checkout .zc-pickup-change{margin-top:8px;background:none;border:0;padding:0;color:var(--zc-accent);
+    font:inherit;font-weight:700;font-size:13px;cursor:pointer;text-decoration:underline}
+  .zc-checkout .zc-pickup-err{font-size:12.5px;color:var(--zc-error);margin:8px 0 0;line-height:1.4}
+  .zc-checkout .zc-pickup-err a{color:var(--zc-accent);font-weight:700}
+  /* opcja płatności wyłączona dla paczkomatu (COD off do czasu NRB) */
+  .zc-checkout .zc-opt.is-disabled{opacity:.5;pointer-events:none}
+  .zc-checkout .zc-pay-note{margin:10px 0 0;padding:11px 12px;border:1px solid var(--zc-border);
+    border-radius:var(--zc-radius-sm);background:var(--zc-bg);color:var(--zc-muted);font-size:13px;line-height:1.5}
+  .zc-checkout .zc-pay-note a{color:var(--zc-accent);font-weight:700}
+  @media (max-width:599px){
+    .zc-checkout{ --zc-map-h:60vh; }
+    .zc-checkout .zc-pickup{padding:10px}
+    .zc-checkout .zc-pickup-btn{min-height:52px}
+  }
+
   @media (prefers-reduced-motion:reduce){
-    .zc-checkout .zc-spin,.zc-checkout .zc-blik-wait .zc-pulse{animation:none}
+    .zc-checkout .zc-spin,.zc-checkout .zc-blik-wait .zc-pulse,.zc-checkout .zc-pickup-loading .zc-spin2{animation:none}
   }
 </style>
 
@@ -4179,8 +4233,13 @@
   var CFG = null;                 // { apiBase, websiteId, productVariantId, name, price, thumb, checkoutFallbackUrl, termsUrl, privacyUrl, merchant, deliveryDays }
   var clientId = resolveClientId();
   var payments = [];              // [{ id, name, kind:'blik'|'online' }]
-  var delivery = { methods: [], selectedId: null };  // methods: [{ id, name, price, priceGroupId, codPrice, codSupported }]
+  var delivery = { methods: [], selectedId: null };  // methods: [{ id, name, price, priceGroupId, codPrice, codSupported, requiresPickupPoint, deliveryMode, widgetToken }]
   var selectedPayment = null;     // { mode:'blik'|'cod'|'online', providerId }
+  // ── (@3) DOSTAWA PACZKOMATOWA ──
+  var pickupPoint = null;         // wybrany punkt: { id, name, line1, city, postalCode } | null
+  var brokerCfgCache = {};        // broker-config per deliveryMethodId (dedup fetch); wartość: obiekt albo Promise
+  var hasOnlinePay = false;       // czy dostępny provider online/BLIK (gate płatności paczkomatu)
+  var isSandbox = false;          // tryb sandbox → Geowidget inpost sandbox vs prod
   var cartAdded = false;          // czy /cart/item już wysłane w tej próbie
   var beginSent = false;          // eventy addToCart/beginCheckout — raz
   var purchaseSent = false;       // Purchase — raz
@@ -4222,7 +4281,8 @@
         checkoutFallbackUrl: ov.checkoutFallbackUrl || '',
         termsUrl: ov.termsUrl, privacyUrl: ov.privacyUrl,
         merchant: ov.merchant || '',
-        deliveryDays: (ov.deliveryDays != null ? parseInt(ov.deliveryDays, 10) : parseInt(root.getAttribute('data-zc-delivery-days') || '2', 10))
+        deliveryDays: (ov.deliveryDays != null ? parseInt(ov.deliveryDays, 10) : parseInt(root.getAttribute('data-zc-delivery-days') || '2', 10)),
+        isSandbox: (ov.isSandbox === true)  // (@3) Geowidget inpost: sandbox vs prod
       }));
     }
     // tryb produkcyjny: wf2-landing-api (blok platform)
@@ -4239,11 +4299,14 @@
           productVariantId: d.platform.variant_id,
           name: d.name || document.title,
           price: (d.price != null ? Number(d.price) : null),
+          // platforma nie przechowuje zdjec produktu (API: POST products = tylko name+price),
+          // wiec miniatura podsumowania = packshot ze skorki (LL-046)
           thumb: root.getAttribute('data-zc-thumb-src') || '',
           checkoutFallbackUrl: d.checkout_url || '',
           termsUrl: null, privacyUrl: null,
           merchant: '',
-          deliveryDays: parseInt(root.getAttribute('data-zc-delivery-days') || '2', 10)
+          deliveryDays: parseInt(root.getAttribute('data-zc-delivery-days') || '2', 10),
+          isSandbox: (d.platform.is_sandbox === true)  // (@3) Geowidget inpost: sandbox vs prod
         });
       })
       .catch(function () { return null; });
@@ -4324,6 +4387,7 @@
     list.forEach(function (m, idx) {
       var priceTxt = m.price > 0 ? fmtPln(m.price) : 'gratis';
       var id = 'zc-del-' + idx;
+      var sub = m.requiresPickupPoint ? 'Odbiór w paczkomacie — wybierz punkt na mapie' : ('Dostawa do ' + dateTxt);
       var lab = document.createElement('label');
       lab.className = 'zc-opt' + (idx === defIdx ? ' is-sel' : '');
       lab.setAttribute('for', id);
@@ -4331,21 +4395,245 @@
         '<input type="radio" name="zc-delivery" id="' + id + '" value="' + m.id + '"' + (idx === defIdx ? ' checked' : '') + '>' +
         '<span class="zc-opt-body"><span class="zc-opt-top"><span class="zc-opt-name">' + escapeHtml(m.name) + '</span>' +
         '<span class="zc-opt-price">' + priceTxt + '</span></span>' +
-        '<span class="zc-opt-sub">Dostawa do ' + dateTxt + '</span></span>';
+        '<span class="zc-opt-sub">' + escapeHtml(sub) + '</span></span>';
       box.appendChild(lab);
+      // (@3) metoda punktowa → kontener wyboru punktu POD kartą (mapa lazy przy kliknięciu)
+      if (m.requiresPickupPoint) box.appendChild(buildPickupContainer(m));
     });
     delivery.selectedId = list[defIdx].id;
     hideError('delivery');   // walidacja sprzed lazy-loadu mogła zostawić komunikat — default JEST wybrany
     $all('input[name="zc-delivery"]', box).forEach(function (r) {
       r.addEventListener('change', function () {
+        var prev = delivery.selectedId;
         delivery.selectedId = r.value;
         $all('.zc-opt', box).forEach(function (o) { o.classList.remove('is-sel'); });
         r.closest('.zc-opt').classList.add('is-sel');
         hideError('delivery');
+        // (@3) zmiana metody → punkt z innej metody nie obowiązuje
+        if (prev !== r.value) clearPickupPoint(false);
+        refreshDeliveryUI();
+        syncPaymentAvailability();
         recalcTotal();
       });
     });
+    refreshDeliveryUI();
+    syncPaymentAvailability();
     recalcTotal();
+  }
+
+  // ── (@3) DOSTAWA PACZKOMATOWA: kontener punktu, widżet mapy, wybrany punkt ──
+  function methodById(id) { for (var i = 0; i < delivery.methods.length; i++) if (delivery.methods[i].id === id) return delivery.methods[i]; return null; }
+  function isPickupSelected() { var dm = currentDelivery(); return !!(dm && dm.requiresPickupPoint); }
+  // pointsType → operator widżetu BliskaPaczka (fact #3)
+  function mapOperator(pt) {
+    var t = String(pt || 'INPOST').toUpperCase();
+    if (t === 'POCZTA' || t === 'POCZTEX') return 'POCZTA';
+    return t; // INPOST, DPD, UPS, DHL, ORLEN, GLS, FEDEX
+  }
+  function buildPickupContainer(m) {
+    var wrap = document.createElement('div');
+    wrap.className = 'zc-pickup';
+    wrap.setAttribute('data-zc-pickup', m.id);
+    wrap.innerHTML =
+      '<p class="zc-pickup-intro">Wybierz dogodny punkt odbioru — mapa pokaże pobliskie paczkomaty.</p>' +
+      '<button type="button" class="zc-pickup-btn" data-zc-pickup-open>' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>' +
+        '<span>Wybierz paczkomat na mapie</span>' +
+      '</button>' +
+      '<div class="zc-pickup-map" data-zc-pickup-map aria-label="Mapa punktów odbioru"></div>' +
+      '<div class="zc-pickup-chosen" data-zc-pickup-chosen>' +
+        '<span class="zc-pickup-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg></span>' +
+        '<span class="zc-pickup-chosen-body">' +
+          '<span class="zc-pickup-chosen-name" data-zc-pickup-name></span>' +
+          '<span class="zc-pickup-chosen-addr" data-zc-pickup-addr></span>' +
+          '<button type="button" class="zc-pickup-change" data-zc-pickup-change>Zmień punkt</button>' +
+        '</span>' +
+      '</div>' +
+      '<p class="zc-pickup-err" data-zc-pickup-err role="alert" hidden></p>';
+    // otwarcie mapy (lazy-load widżetu DOPIERO tutaj — nigdy na starcie strony)
+    wrap.querySelector('[data-zc-pickup-open]').addEventListener('click', function () { openPickupWidget(m, wrap); });
+    wrap.querySelector('[data-zc-pickup-change]').addEventListener('click', function () { clearPickupPoint(true); openPickupWidget(m, wrap); });
+    return wrap;
+  }
+  function pickupWrapForSelected() {
+    var dm = currentDelivery(); if (!dm) return null;
+    return $('[data-zc-pickup="' + dm.id + '"]');
+  }
+  // pokaż kontener punktu tylko dla aktualnie wybranej metody punktowej; ukryj resztę
+  function refreshDeliveryUI() {
+    $all('[data-zc-pickup]').forEach(function (w) { w.classList.remove('is-shown'); });
+    var w = pickupWrapForSelected();
+    if (w) { w.classList.add('is-shown'); paintPickupState(w); }
+    applyAddressRequirement();
+    // (@3) prefetch broker-config przy pierwszym zaznaczeniu metody punktowej (dedup; scripty NIE ładowane)
+    var dm = currentDelivery();
+    if (dm && dm.requiresPickupPoint && CFG) { try { ensureBrokerConfig(dm); } catch (e) {} }
+  }
+  // paczkomat: ulica/kod/miasto oznaczone jako opcjonalne (etykieta + aria), błędy wyczyszczone
+  function applyAddressRequirement() {
+    var optional = isPickupSelected();
+    ['street', 'postCode', 'city'].forEach(function (name) {
+      var fe = fieldEl(name); if (!fe) return;
+      if (optional) { hideError(name); fe.classList.remove('is-err'); }
+      var lbl = fe.querySelector('.zc-label');
+      if (lbl) {
+        var tag = lbl.querySelector('[data-zc-optional]');
+        if (optional && !tag) {
+          var s = document.createElement('span'); s.className = 'zc-opt-tag'; s.setAttribute('data-zc-optional', '');
+          s.textContent = '— opcjonalne przy paczkomacie'; lbl.appendChild(document.createTextNode(' ')); lbl.appendChild(s);
+        } else if (!optional && tag) { tag.remove(); }
+      }
+      var inp = fe.querySelector('input');
+      if (inp) { if (optional) inp.removeAttribute('aria-required'); else inp.setAttribute('aria-required', 'true'); }
+    });
+  }
+  // stan kontenera: mapa / wybrany punkt / przycisk startowy
+  function paintPickupState(w) {
+    if (!w) return;
+    w.classList.remove('is-chosen', 'is-map');
+    if (pickupPoint) {
+      w.classList.add('is-chosen');
+      var nm = w.querySelector('[data-zc-pickup-name]'); if (nm) nm.textContent = pickupPoint.name || pickupPoint.id || 'Wybrany punkt';
+      var ad = w.querySelector('[data-zc-pickup-addr]');
+      if (ad) {
+        var line = [pickupPoint.line1, [pickupPoint.postalCode, pickupPoint.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+        ad.textContent = (pickupPoint.id ? ('Nr ' + pickupPoint.id + (line ? ' · ' : '')) : '') + line;
+      }
+    }
+  }
+  function pickupErr(w, msg) {
+    var e = w && w.querySelector('[data-zc-pickup-err]'); if (!e) return;
+    if (msg) {
+      e.hidden = false;
+      if (CFG && CFG.checkoutFallbackUrl) e.innerHTML = escapeHtml(msg) + ' <a href="' + escapeHtml(CFG.checkoutFallbackUrl) + '" target="_blank" rel="noopener">Przejdź do bezpiecznej kasy</a>.';
+      else e.textContent = msg;
+    } else { e.hidden = true; e.textContent = ''; }
+  }
+  // broker-config (dedup per metodzie) — appId apaczki brany ZAWSZE runtime stąd
+  function ensureBrokerConfig(m) {
+    var cached = brokerCfgCache[m.id];
+    if (cached && !cached.then) return Promise.resolve(cached);
+    if (cached && cached.then) return cached;
+    var p = apiGet('/storefront/delivery-method/broker-config', { WebsiteId: CFG.websiteId, DeliveryMethodId: m.id, ClientId: clientId })
+      .then(function (cfg) { brokerCfgCache[m.id] = cfg || {}; return brokerCfgCache[m.id]; });
+    brokerCfgCache[m.id] = p;
+    return p;
+  }
+  function openPickupWidget(m, w) {
+    if (!w) return;
+    pickupErr(w, '');
+    // pokaż kontener mapy + loader
+    w.classList.remove('is-chosen');
+    w.classList.add('is-map');
+    var mapEl = w.querySelector('[data-zc-pickup-map]');
+    mapEl.innerHTML = '<div class="zc-pickup-loading" data-zc-pickup-loading><span class="zc-spin2" aria-hidden="true"></span><span>Ładujemy mapę punktów…</span></div>';
+    var onPick = function (pt) { onPickupChosen(pt, m, w); };
+    ensureBrokerConfig(m).then(function (cfg) {
+      var broker = String((cfg && cfg.brokerType) || '').toLowerCase();
+      var pointsType = (cfg && cfg.pointsType) || m.pointsType || 'INPOST';
+      if (broker === 'apaczka') return initBliskaPaczka(mapEl, cfg, pointsType, onPick);
+      if (broker === 'inpost') return initGeowidget(mapEl, cfg, m, onPick);
+      // nieznany/brak brokera → nie ryzykujemy pustej mapy: komunikat + bezpieczna kasa
+      throw new Error('Nieobsługiwany dostawca punktów odbioru.');
+    }).catch(function (err) {
+      w.classList.remove('is-map');
+      pickupErr(w, (err && err.message) ? err.message : 'Nie udało się załadować mapy punktów. Wybierz kuriera albo dokończ w bezpiecznej kasie.');
+    });
+  }
+  function onPickupChosen(pt, m, w) {
+    if (!pt || !pt.id) return;
+    pickupPoint = { id: pt.id, name: pt.name || pt.id, line1: pt.line1 || '', city: pt.city || '', postalCode: pt.postalCode || '' };
+    w.classList.remove('is-map');
+    paintPickupState(w);
+    pickupErr(w, '');
+    hideError('delivery');
+    syncPaymentAvailability();
+    recalcTotal();
+    // tryb steps: po wyborze punktu krok „Dostawa" jest kompletny → domknij i przejdź dalej
+    if (stepsOn && STEP_EL.delivery) {
+      if (STEP_EL.delivery.classList.contains('is-active') && stepComplete('delivery')) advanceFrom('delivery');
+      else if (STEP_EL.delivery.classList.contains('is-done')) setStepState('delivery', 'done');
+    }
+  }
+  function clearPickupPoint(repaint) {
+    pickupPoint = null;
+    if (repaint) { var w = pickupWrapForSelected(); if (w) { w.classList.remove('is-chosen', 'is-map'); } }
+    syncPaymentAvailability();
+    recalcTotal();
+  }
+
+  // ── (@3) WIDŻET APACZKA = BliskaPaczka (widget.bliskapaczka.pl) ──
+  function loadCssOnce(href) {
+    return new Promise(function (res) {
+      if (document.querySelector('link[data-zc-w="' + href + '"]')) return res();
+      var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.setAttribute('data-zc-w', href);
+      l.onload = function () { res(); }; l.onerror = function () { res(); }; // CSS niekrytyczne
+      document.head.appendChild(l);
+    });
+  }
+  function loadScriptOnce(src) {
+    return new Promise(function (res, rej) {
+      var ex = document.querySelector('script[data-zc-w="' + src + '"]');
+      if (ex) {
+        if (ex.getAttribute('data-zc-loaded') === '1') return res();
+        ex.addEventListener('load', function () { res(); });
+        ex.addEventListener('error', function () { rej(new Error('Nie udało się załadować widżetu mapy.')); });
+        return;
+      }
+      var s = document.createElement('script'); s.src = src; s.async = true; s.setAttribute('data-zc-w', src);
+      s.onload = function () { s.setAttribute('data-zc-loaded', '1'); res(); };
+      s.onerror = function () { rej(new Error('Nie udało się załadować widżetu mapy.')); };
+      document.head.appendChild(s);
+    });
+  }
+  function initBliskaPaczka(mapEl, brokerCfg, pointsType, onPick) {
+    return loadCssOnce('https://widget.bliskapaczka.pl/prod/main.css')
+      .then(function () { return loadScriptOnce('https://widget.bliskapaczka.pl/prod/main.js'); })
+      .then(function () {
+        if (!window.BPWidget || typeof window.BPWidget.init !== 'function') throw new Error('Widżet map niedostępny. Wybierz kuriera albo bezpieczną kasę.');
+        // appId apaczki ZAWSZE runtime z broker-config (NIGDY hardcode)
+        var appId = (brokerCfg && brokerCfg.apaczka && brokerCfg.apaczka.appId) || null;
+        var container = document.createElement('div');
+        container.style.width = '100%'; container.style.height = '100%';
+        mapEl.innerHTML = ''; mapEl.appendChild(container);
+        window.BPWidget.init(container, {
+          appId: appId,                 // runtime z broker-config
+          language: 'pl',
+          countryCodes: ['PL'],
+          posType: 'DELIVERY',
+          operatorMarkers: true,
+          codeSearch: true,
+          changeFiltersPosition: true,
+          operators: [{ operator: mapOperator(pointsType) }],
+          callback: function (e) {
+            if (!e) return;
+            var line1 = (e.address && e.address.line1) || [e.street, e.buildingNumber].filter(function (x) { return x; }).join(' ') || '';
+            onPick({ id: e.code, name: e.name || e.description || e.code, line1: line1, city: e.city || '', postalCode: e.postalCode || e.postCode || '' });
+          }
+        });
+      });
+  }
+  // ── (@3) WIDŻET INPOST = Geowidget v5 (gałąź na przyszłość; token z broker-config) ──
+  function initGeowidget(mapEl, brokerCfg, m, onPick) {
+    var base = isSandbox ? 'https://sandbox-easy-geowidget-sdk.easypack24.net/inpost-geowidget' : 'https://geowidget.inpost.pl/inpost-geowidget';
+    var token = (brokerCfg && brokerCfg.inpost && (brokerCfg.inpost.geoWidgetToken || brokerCfg.inpost.token)) || m.widgetToken || '';
+    if (!token) return Promise.reject(new Error('Brak tokenu widżetu InPost. Wybierz kuriera albo bezpieczną kasę.'));
+    return loadCssOnce(base + '.css')
+      .then(function () { return loadScriptOnce(base + '.js'); })
+      .then(function () {
+        mapEl.innerHTML = '';
+        var gw = document.createElement('inpost-geowidget');
+        gw.setAttribute('token', token);
+        gw.setAttribute('language', 'pl');
+        gw.setAttribute('config', 'parcelcollect');
+        gw.addEventListener('onpoint', function (ev) {
+          var p = (ev && ev.detail) || {};
+          var ad = p.address || {}, add = p.address_details || {};
+          var line1 = ad.line1 || [add.street, add.building_number].filter(function (x) { return x; }).join(' ') || '';
+          onPick({ id: p.name, name: p.name, line1: line1, city: add.city || '', postalCode: add.post_code || '' });
+        });
+        mapEl.appendChild(gw);
+      });
   }
 
   // ── RENDER: płatności ────────────────────────────────────────────────────
@@ -4383,6 +4671,9 @@
       if (o.mode === 'blik') box.appendChild(buildBlikBoxes());
     });
 
+    // (@3) czy istnieje płatność online/BLIK (gate paczkomatu bez COD)
+    hasOnlinePay = (online.length > 0) || !!blik;
+
     // BEZ domyślnego wyboru — selectedPayment=null aż do świadomego kliknięcia (CTA „Zamawiam i płacę", zero COD-copy)
     $all('input[name="zc-payment"]', box).forEach(function (r, i) {
       r.addEventListener('change', function () {
@@ -4391,6 +4682,8 @@
         selectPayment(opts[i]);
       });
     });
+    // (@3) uzgodnij dostępność COD z aktualną metodą dostawy (paczkomat bez COD)
+    syncPaymentAvailability();
   }
   function buildBlikBoxes() {
     var wrap = document.createElement('div');
@@ -4454,6 +4747,39 @@
         : 'Zapłacisz online — przekierujemy Cię do bezpiecznej płatności.';
     }
     recalcTotal();
+  }
+
+  // ── (@3) DOSTĘPNOŚĆ PŁATNOŚCI zależna od dostawy (paczkomat: COD off do NRB) ──
+  function safeCheckoutLinkHtml(text) {
+    if (CFG && CFG.checkoutFallbackUrl) return '<a href="' + escapeHtml(CFG.checkoutFallbackUrl) + '" target="_blank" rel="noopener">' + escapeHtml(text) + '</a>';
+    return escapeHtml(text);
+  }
+  function syncPaymentAvailability() {
+    var dm = currentDelivery();
+    // COD wyłączony TYLKO dla metody punktowej nie wspierającej COD; kurier = zachowanie @2
+    var pickupNoCod = !!(dm && dm.requiresPickupPoint && !dm.codSupported);
+    var codInput = $('input[name="zc-payment"][value="cod"]');
+    if (codInput) {
+      var codLab = codInput.closest('.zc-opt');
+      codInput.disabled = pickupNoCod;
+      if (codLab) codLab.classList.toggle('is-disabled', pickupNoCod);
+      if (pickupNoCod && selectedPayment && selectedPayment.mode === 'cod') {
+        codInput.checked = false;
+        if (codLab) codLab.classList.remove('is-sel');
+        selectedPayment = null;
+        var micro = $('[data-zc-microcopy]'); if (micro) micro.hidden = true;
+      }
+    }
+    var note = $('[data-zc-pay-note]');
+    if (note) {
+      if (pickupNoCod && !hasOnlinePay) {
+        // powrót na kuriera NIE blokowany — to tylko informacja + skrót do bezpiecznej kasy
+        note.innerHTML = 'Dla paczkomatu płatność online będzie dostępna wkrótce — wybierz dostawę kurierem albo ' + safeCheckoutLinkHtml('bezpieczną kasę') + '.';
+        note.hidden = false;
+      } else {
+        note.hidden = true;
+      }
+    }
   }
 
   // ── TOTAL live + podsumowanie ─────────────────────────────────────────────
@@ -4525,13 +4851,24 @@
     if (msg) { showError(name, msg); return false; }
     markOk(name); return true;
   }
+  // (@3) przy metodzie punktowej pola adresowe są opcjonalne (imię+telefon+e-mail nadal wymagane)
+  function addressOptional() { return isPickupSelected(); }
+  function isAddressField(name) { return name === 'street' || name === 'postCode' || name === 'city'; }
   function validateAll() {
     var firstBad = null, ok = true;
     Object.keys(RULES).forEach(function (name) {
+      // paczkomat: ulica/kod/miasto pomijane — wyczyść ewentualny błąd sprzed przełączenia
+      if (addressOptional() && isAddressField(name)) { hideError(name); return; }
       if (!validateField(name)) { ok = false; if (!firstBad) firstBad = name; }
     });
     // dostawa
     if (!delivery.selectedId) { showFieldNote('delivery', 'Wybierz sposób dostawy.'); ok = false; if (!firstBad) firstBad = 'delivery'; }
+    // (@3) metoda punktowa wymaga wybranego punktu (wzorzec bramki z natywnej kasy Trevio)
+    else if (isPickupSelected() && !pickupPoint) {
+      showFieldNote('delivery', 'Wybierz punkt odbioru dla zamówienia.');
+      pickupErr(pickupWrapForSelected(), 'Wybierz punkt odbioru dla zamówienia.');
+      ok = false; if (!firstBad) firstBad = 'pickup';
+    }
     // consent
     var consent = $('#zc-consent');
     if (!consent.checked) { $('[data-zc-consent-wrap]').classList.add('is-err'); ok = false; if (!firstBad) firstBad = 'consent'; }
@@ -4549,6 +4886,12 @@
   function focusField(name) {
     if (name === 'consent') { $('#zc-consent').focus(); return; }
     if (name === 'delivery') { var d = $('input[name="zc-delivery"]'); if (d) d.focus(); return; }
+    if (name === 'pickup') {
+      if (stepsOn && STEP_EL.delivery) openStep('delivery', false);
+      var w = pickupWrapForSelected();
+      if (w) { var ob = w.querySelector('[data-zc-pickup-open]'); if (ob) { try { ob.focus(); } catch (e) {} } try { w.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e2) {} }
+      return;
+    }
     if (name === 'payment') { var pp = $('input[name="zc-payment"]'); if (pp) { pp.focus(); try { pp.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} } return; }
     if (name === 'blik') { var b = $('input[data-blik-i="0"]'); if (b) b.focus(); return; }
     var i = $('#zc-f-' + fieldIdFrag(name)); if (i) { i.focus(); try { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }
@@ -4641,14 +4984,27 @@
         // 2) dane checkoutu
         var street = val('street');
         var split = splitStreet(street);
-        return apiPost('/storefront/cart/checkout-details', {
+        var details = {
           clientId: clientId, websiteId: CFG.websiteId,
           fullName: val('name'),
           street: split.street, houseNumber: split.houseNumber,
           postCode: normPost(val('postCode')), city: val('city'),
           countryCode: 'PL', phoneNumber: '+48' + normPhone(val('phone')), email: val('email'),
           invoice: false, deliveryMethodId: dm ? dm.id : null
-        });
+        };
+        // (@3) metoda punktowa: adres opcjonalny (puste → null) + pola pickupPoint*.
+        //      Metoda kurierska = payload IDENTYCZNY jak @2 (żadnych pól pickupPoint*).
+        if (dm && dm.requiresPickupPoint) {
+          if (!street) { details.street = null; details.houseNumber = null; }
+          if (!val('postCode')) details.postCode = null;
+          if (!val('city')) details.city = null;
+          details.pickupPointId = pickupPoint ? pickupPoint.id : null;
+          details.pickupPointName = pickupPoint ? (pickupPoint.name || null) : null;
+          details.pickupPointLine1 = pickupPoint ? (pickupPoint.line1 || null) : null;
+          details.pickupPointCity = pickupPoint ? (pickupPoint.city || null) : null;
+          details.pickupPointPostalCode = pickupPoint ? (pickupPoint.postalCode || null) : null;
+        }
+        return apiPost('/storefront/cart/checkout-details', details);
       })
       .then(function () {
         evShippingInfo();
@@ -4786,7 +5142,15 @@
         var raw = asArray(d);
         delivery.methods = raw.map(function (m) {
           var g = pickPlnGroup(m), cod = codInfo(m);
-          return { id: pickId(m), name: pickName(m), price: g.price, priceGroupId: g.id, codPrice: cod.codPrice, codSupported: cod.supported };
+          return {
+            id: pickId(m), name: pickName(m), price: g.price, priceGroupId: g.id,
+            codPrice: cod.codPrice, codSupported: cod.supported,
+            // (@3) pola dostawy punktowej — pointsType przychodzi z broker-config, nie z listy metod
+            requiresPickupPoint: (m.requiresPickupPoint === true),
+            deliveryMode: m.deliveryMode || m.deliveryModeName || '',
+            widgetToken: (m.widgetToken != null ? m.widgetToken : null),
+            pointsType: (m.pointsType || m.pointType || null)
+          };
         }).filter(function (m) { return m.id; });
         renderDelivery(delivery.methods);
       })
@@ -4803,6 +5167,7 @@
     root.setAttribute('data-zc-init', '1');
     if (!cfg) { showGuard(); return; }
     CFG = cfg;
+    isSandbox = !!CFG.isSandbox;   // (@3) Geowidget inpost: sandbox vs prod
     applyConfigToDom();
     setState('idle');
     recalcTotal();
@@ -4861,8 +5226,10 @@
   function fieldValidSilent(name) { return RULES[name] ? RULES[name](val(name)) === '' : true; }
   function stepComplete(key) {
     if (key === 'contact') return fieldValidSilent('email') && fieldValidSilent('phone');
-    if (key === 'address') return fieldValidSilent('name') && fieldValidSilent('street') && fieldValidSilent('postCode') && fieldValidSilent('city');
-    if (key === 'delivery') return !!delivery.selectedId;
+    // (@3) paczkomat: krok Adres kompletny na samym imieniu i nazwisku (adres opcjonalny)
+    if (key === 'address') return fieldValidSilent('name') && (addressOptional() || (fieldValidSilent('street') && fieldValidSilent('postCode') && fieldValidSilent('city')));
+    // (@3) krok Dostawa kompletny gdy metoda wybrana ORAZ (kurier LUB paczkomat z wybranym punktem)
+    if (key === 'delivery') return !!delivery.selectedId && !(isPickupSelected() && !pickupPoint);
     if (key === 'payment') return !!(selectedPayment && selectedPayment.mode);
     return false;
   }
@@ -4880,7 +5247,11 @@
       var loc = (normPost(val('postCode')) + ' ' + val('city')).trim();
       return [val('street').trim(), loc].filter(function (x) { return x; }).join(', ');
     }
-    if (key === 'delivery') { var dm = currentDelivery(); return dm ? dm.name : 'wybrano'; }
+    if (key === 'delivery') {
+      var dm = currentDelivery(); if (!dm) return 'wybrano';
+      if (dm.requiresPickupPoint && pickupPoint) return dm.name + ' · ' + (pickupPoint.name || pickupPoint.id);
+      return dm.name;
+    }
     if (key === 'payment') {
       var m = selectedPayment && selectedPayment.mode;
       return (m === 'blik' ? 'BLIK' : m === 'cod' ? 'Płatność przy odbiorze' : 'Płatność online');
@@ -4980,7 +5351,8 @@
     root.addEventListener('change', function (e) {
       var t = e.target;
       if (!t || t.name !== 'zc-delivery') return;
-      if (STEP_EL.delivery && STEP_EL.delivery.classList.contains('is-active')) advanceFrom('delivery');
+      // (@3) paczkomat: NIE zwijaj kroku dopóki punkt nie wybrany (mapa mieszka w tym kroku)
+      if (STEP_EL.delivery && STEP_EL.delivery.classList.contains('is-active') && stepComplete('delivery')) advanceFrom('delivery');
     });
     // pułapka E2E 21.07: klik w JUŻ zaznaczone radio nie emituje change — przechodź też po kliku
     root.addEventListener('click', function (e) {
@@ -4990,7 +5362,7 @@
       if (!el || !el.classList.contains('is-active')) return;
       setTimeout(function () {
         var r = lab.querySelector('input[name="zc-delivery"]');
-        if (r && r.checked && el.classList.contains('is-active')) advanceFrom('delivery');
+        if (r && r.checked && el.classList.contains('is-active') && stepComplete('delivery')) advanceFrom('delivery');
       }, 0);
     });
     // jawna affordancja „Dalej" w kroku dostawy (user zadowolony z domyślnej metody nie może utknąć)
@@ -5000,7 +5372,12 @@
       btn.type = 'button';
       btn.className = 'zc-step-next';
       btn.textContent = 'Dalej';
-      btn.addEventListener('click', function () { if (stepComplete('delivery')) advanceFrom('delivery'); else showFieldNote('delivery', 'Wybierz sposób dostawy.'); });
+      btn.addEventListener('click', function () {
+        if (stepComplete('delivery')) { advanceFrom('delivery'); return; }
+        if (!delivery.selectedId) { showFieldNote('delivery', 'Wybierz sposób dostawy.'); return; }
+        // (@3) paczkomat wybrany, brak punktu → skieruj do mapy
+        if (isPickupSelected() && !pickupPoint) { showFieldNote('delivery', 'Wybierz punkt odbioru dla zamówienia.'); focusField('pickup'); }
+      });
       el.querySelector('.zc-step-body').appendChild(btn);
     })();
 
