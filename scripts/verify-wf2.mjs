@@ -82,7 +82,7 @@ for (const [fn, body] of [['wf2-platform', { action: 'stores' }], ['wf2-orders-s
 }
 
 // ── 4. RLS: anon NIE widzi tabel wf2_* ─────────────────────────────────────
-for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2_artifacts', 'wf2_notes', 'wf2_merchant_accounts']) {
+for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2_artifacts', 'wf2_notes', 'wf2_merchant_accounts', 'wf2_feedback', 'wf2_feedback_messages']) {
   const r = await rest(`${t}?select=id&limit=1`, ANON);
   const leak = r.status < 300 && Array.isArray(r.data) && r.data.length > 0;
   leak ? bad(`RLS anon ${t}`, 'anon widzi wiersze!') : ok(`RLS: anon nie widzi ${t}`);

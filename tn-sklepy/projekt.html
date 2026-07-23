@@ -151,6 +151,7 @@
                     <div id="psec-tabs" class="flex">
                         <button class="ptab active" data-ptab="projekt" onclick="switchPsec('projekt')">Projekt</button>
                         <button class="ptab" data-ptab="uwagi" onclick="switchPsec('uwagi')">Uwagi <span id="tab-notes-count"></span></button>
+                        <button class="ptab" data-ptab="feedback" onclick="switchPsec('feedback')">Uwagi klienta <span id="tab-feedback-count"></span></button>
                         <button class="ptab" data-ptab="sprzedaz" onclick="switchPsec('sprzedaz')">Sprzedaż</button>
                         <button class="ptab" data-ptab="koszty" onclick="switchPsec('koszty')">Koszty <span id="tab-costs-sum"></span></button>
                         <button class="ptab" data-ptab="aktywnosc" onclick="switchPsec('aktywnosc')">Aktywność</button>
@@ -192,6 +193,23 @@
                             <button id="nf-all" onclick="setNoteFilter('all')" class="text-zinc-500 hover:text-zinc-300">Wszystkie</button>
                         </div>
                         <div id="notes-list" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- TAB: Uwagi klienta (wf2_feedback — zgłoszenia z portalu przez doradcę) -->
+                <div data-psec="feedback" class="hidden mb-10">
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
+                        <div class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+                            <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-chat-dots text-[#3291ff]"></i> Uwagi klienta <span class="text-zinc-500 font-normal text-xs">zebrane w portalu przez doradcę — z rekomendacją „co wdrożyć"</span></h3>
+                            <button onclick="loadFeedbackShots(true)" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] flex-shrink-0">Wczytaj zrzuty / transkrypt</button>
+                        </div>
+                        <div class="flex gap-2 mb-3 mt-3 text-[11px]">
+                            <button id="ff-open" onclick="setFbFilter('open')" class="text-[#52a8ff]">Otwarte</button>
+                            <span class="text-zinc-700">·</span>
+                            <button id="ff-all" onclick="setFbFilter('all')" class="text-zinc-500 hover:text-zinc-300">Wszystkie</button>
+                        </div>
+                        <div id="feedback-list" class="space-y-2.5"></div>
+                        <div id="feedback-transcript" class="mt-4"></div>
                     </div>
                 </div>
 
@@ -518,6 +536,11 @@
         let pendingTT = null;
         let genMap = {};         // bud_session_id -> generacje z lejka /sklep
         let noteFilter = 'open';
+        let feedback = [];       // wf2_feedback (uwagi klienta zebrane w portalu przez doradcę)
+        let feedbackShots = {};  // feedback.id -> [{path,url}] (signed URLs z edge feedback_admin)
+        let feedbackMsgs = [];   // transkrypt rozmowy z doradcą (edge feedback_admin)
+        let fbFilter = 'open';
+        let fbShotsLoaded = false;
 
         // STAN CYKLU ŻYCIA projektu (lifecycle) — NIEZALEŻNY od statusu pipeline (PROJECT_STATUSES).
         const LC_ORDER = ['active', 'paused', 'cancelled', 'completed'];
@@ -577,7 +600,7 @@
         async function loadAll() {
             // dosiej brakujące instancje kroków (nowe defs / nowe produkty)
             await supabaseClient.rpc('wf2_ensure_steps', { p_project: projectId });
-            const [projQ, defsQ, stepsQ, prodQ, actQ, salesQ, adsQ, artQ, notesQ, ordQ, costsQ] = await Promise.all([
+            const [projQ, defsQ, stepsQ, prodQ, actQ, salesQ, adsQ, artQ, notesQ, ordQ, costsQ, fbQ] = await Promise.all([
                 supabaseClient.from('wf2_projects').select('*').eq('id', projectId).single(),
                 supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
                 // GOTCHA PostgREST: default 1000 wierszy (35 defs × produkty — jawny range)
@@ -590,11 +613,12 @@
                 supabaseClient.from('wf2_notes').select('*').eq('project_id', projectId).order('created_at', {ascending:false}).range(0, 499),
                 supabaseClient.from('wf2_orders').select('id', { count:'exact', head:true }).eq('project_id', projectId),
                 supabaseClient.from('wf2_costs').select('*').eq('project_id', projectId).order('created_at', {ascending:false}).range(0, 1999),
+                supabaseClient.from('wf2_feedback').select('*').eq('project_id', projectId).order('seq', {ascending:false}).range(0, 499),
             ]);
             if (projQ.error || !projQ.data) { showToast('Nie znaleziono projektu','error'); location.href='index.html'; return; }
             project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; products = prodQ.data||[];
             sales = salesQ.data||[]; adStats = adsQ.data||[]; artifacts = artQ.data||[]; notes = notesQ.data||[];
-            ordersCount = ordQ.count || 0; costs = costsQ.data||[];
+            ordersCount = ordQ.count || 0; costs = costsQ.data||[]; feedback = fbQ.data||[];
             await getUsdRate();   // kurs do rollupów kosztów USD→PLN
             // generacje z lejka /sklep (typ A) — pokazywane w warsztatach kroków landingowych
             const genIds = [...new Set(products.map(p => p.gen_session_id).filter(Boolean))];
@@ -613,7 +637,7 @@
                 products.forEach(p => { p.tiktoks = buildTiktoks(p.tt_product_id ? ttm[p.tt_product_id] : null); });
             } else { products.forEach(p => { p.tiktoks = []; }); }
             syncP(); renderHeader(); renderConsentWarn(); renderLinks(); renderPortalChip(); renderPills(); renderNextStep(); renderStage();
-            renderActivity(actQ.data||[]); renderNotes(); renderSales(); renderCosts(); renderFields();
+            renderActivity(actQ.data||[]); renderNotes(); renderFeedback(); renderSales(); renderCosts(); renderFields();
         }
 
         // Pasek ostrzegawczy: fabryka NIE startuje bez zgody, DOPÓKI biegnie okno odstąpienia.
@@ -740,6 +764,7 @@
             document.querySelectorAll('[data-psec]').forEach(el => el.classList.toggle('hidden', el.dataset.psec !== name));
             document.querySelectorAll('#psec-tabs .ptab').forEach(b => b.classList.toggle('active', b.dataset.ptab === name));
             try { localStorage.setItem('wf2_psec_' + projectId, name); } catch(_) {}
+            if (name === 'feedback') loadFeedbackShots(false);   // zrzuty/transkrypt leniwie przy pierwszym wejściu
         }
 
         // ── TAB Projekt: pola z bindingiem do kolumn ──
@@ -813,6 +838,120 @@
             const { error } = await supabaseClient.from('wf2_notes').delete().eq('id', id);
             if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
             notes = notes.filter(x => x.id !== id); renderNotes();
+        }
+
+        // ── TAB Uwagi klienta (wf2_feedback — zebrane w portalu przez doradcę) ──
+        // Uwagi czyta panel wprost przez supabaseClient (RLS team_members); zrzuty (bucket private)
+        // + transkrypt rozmowy dokłada edge feedback_admin (gate team JWT). advisor_recommendation
+        // jest TYLKO dla Tomka (edge nigdy nie zwraca go klientowi). admin_note = odpowiedź do klienta.
+        const FN_FEEDBACK = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-feedback';
+        const FB_STATUS = {
+            new:         { l:'Nowe',        cls:'text-[#f5c977] border-[#4a3b1c] bg-[#1c1710]' },
+            reviewed:    { l:'Przeczytane', cls:'text-zinc-300 border-[#333]' },
+            in_progress: { l:'W toku',      cls:'text-[#7cc0ff] border-[#1f3c5c] bg-[#0c1826]' },
+            resolved:    { l:'Zrobione',    cls:'text-[#62c073] border-[#245038] bg-[#0e1c14]' },
+            dismissed:   { l:'Zostawiamy',  cls:'text-zinc-500 border-[#333]' },
+        };
+        const FB_SCOPE = { landing:'Strona sprzedażowa', kampania:'Kampania', wideo:'Wideo', materialy:'Materiały', ogolne:'Ogólne', inne:'Inne' };
+        const FB_SEV = { wazne:{l:'Ważne',cls:'text-[#f26d78] border-[#e5484d]/40'}, srednie:{l:'Średnie',cls:'text-[#f5c977] border-[#4a3b1c]'}, drobne:{l:'Drobne',cls:'text-zinc-400 border-[#333]'} };
+
+        function setFbFilter(f) {
+            fbFilter = f;
+            document.getElementById('ff-open').className = f==='open' ? 'text-[#52a8ff]' : 'text-zinc-500 hover:text-zinc-300';
+            document.getElementById('ff-all').className = f==='all' ? 'text-[#52a8ff]' : 'text-zinc-500 hover:text-zinc-300';
+            renderFeedback();
+        }
+        function fbNewCount() { return feedback.filter(f => f.status === 'new').length; }
+        function renderFeedback() {
+            const nw = fbNewCount();
+            const badge = document.getElementById('tab-feedback-count');
+            if (badge) { badge.textContent = nw ? `(${nw})` : ''; badge.style.color = nw ? '#f5a623' : ''; }
+            const box = document.getElementById('feedback-list'); if (!box) return;
+            const list = fbFilter === 'open' ? feedback.filter(f => !['resolved','dismissed'].includes(f.status)) : feedback;
+            box.innerHTML = list.map(f => {
+                const st = FB_STATUS[f.status] || FB_STATUS.new;
+                const sc = FB_SCOPE[f.scope] || 'Ogólne';
+                const sv = FB_SEV[f.severity] || FB_SEV.srednie;
+                const shots = (feedbackShots[f.id] || []).filter(s => s.url);
+                const shotsHtml = shots.length ? `<div class="flex gap-1.5 flex-wrap mt-2">${shots.map(s => `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener"><img src="${escapeHtml(s.url)}" class="w-14 h-14 object-cover rounded border border-[#2b2b30]" alt="zrzut"></a>`).join('')}</div>` : '';
+                return `<div class="bg-[#111] border border-[#232323] rounded-lg p-4">
+                    <div class="flex items-center gap-2 flex-wrap mb-2">
+                        <span class="text-[10px] font-mono text-zinc-500">UW-${f.seq}</span>
+                        <span class="text-[9.5px] uppercase tracking-wider text-zinc-400 border border-[#2b2b30] rounded px-1.5 py-0.5">${escapeHtml(sc)}</span>
+                        <span class="text-[9.5px] border rounded px-1.5 py-0.5 ${sv.cls}">${sv.l}</span>
+                        ${f.target_ref ? `<span class="text-[10px] text-zinc-500 truncate max-w-[180px]" title="${escapeHtml(f.target_ref)}"><i class="ph ph-target"></i> ${escapeHtml(f.target_ref)}</span>` : ''}
+                        <span class="ml-auto text-[10px] border rounded-full px-2.5 py-0.5 font-semibold ${st.cls}">${st.l}</span>
+                    </div>
+                    <div class="text-[13.5px] text-white font-semibold mb-1.5">${escapeHtml(f.title || '')}</div>
+                    <div class="text-[12.5px] text-zinc-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(f.remark || '')}</div>
+                    ${f.client_proposal ? `<div class="mt-2 text-[12px] text-zinc-300 bg-[#0d0d0d] border border-[#232323] rounded px-3 py-2"><span class="text-zinc-500">Propozycja klienta:</span> <span class="whitespace-pre-wrap">${escapeHtml(f.client_proposal)}</span></div>` : ''}
+                    ${f.advisor_recommendation ? `<div class="mt-2 text-[12px] text-[#cfe3ff] bg-[#0c1826] border border-[#1f3c5c] rounded px-3 py-2"><span class="text-[#7cc0ff] font-semibold"><i class="ph ph-lightbulb"></i> Rekomendacja doradcy (dla Ciebie):</span> <span class="whitespace-pre-wrap">${escapeHtml(f.advisor_recommendation)}</span></div>` : ''}
+                    ${shotsHtml}
+                    <div class="mt-3 pt-3 border-t border-[#1f1f1f]">
+                        <label class="text-[10px] text-zinc-500 block mb-1">Odpowiedź do klienta (zobaczy ją w portalu)</label>
+                        <div class="flex gap-2 flex-wrap">
+                            <input class="fld flex-1 min-w-[220px]" style="font-size:12px" id="fbn-${f.id}" value="${escapeHtml(f.admin_note || '')}" placeholder="Krótka odpowiedź / decyzja dla klienta…">
+                            <button onclick="fbSaveNote('${f.id}')" class="px-3 py-2 text-[11px] font-semibold bg-[#151519] text-zinc-200 border border-[#2b2b30] rounded-md hover:bg-[#1d1d22] flex-shrink-0">Zapisz odpowiedź</button>
+                        </div>
+                        <div class="flex gap-1.5 flex-wrap mt-2.5 items-center">
+                            ${['reviewed','in_progress','resolved','dismissed'].map(s => `<button onclick="fbSet('${f.id}','${s}')" class="px-2.5 py-1 text-[11px] rounded border ${f.status===s ? FB_STATUS[s].cls : 'text-zinc-400 border-[#2b2b30] hover:text-zinc-200'}">${FB_STATUS[s].l}</button>`).join('')}
+                            ${f.status !== 'new' ? `<button onclick="fbSet('${f.id}','new')" class="px-2.5 py-1 text-[11px] rounded border text-zinc-500 border-[#2b2b30] hover:text-zinc-300" title="Cofnij do Nowe">↩ Nowe</button>` : ''}
+                            <button onclick="fbDelete('${f.id}')" class="ml-auto p-1.5 text-zinc-600 hover:text-[#f26d78]" title="Usuń uwagę"><i class="ph ph-trash"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('') || `<div class="text-zinc-600 text-xs py-4">${feedback.length ? 'Brak uwag w tym filtrze.' : 'Klient nie zgłosił jeszcze żadnych uwag. Pojawią się tutaj, gdy napisze je w portalu (zakładka „Uwagi").'}</div>`;
+            const tbox = document.getElementById('feedback-transcript');
+            if (tbox) {
+                tbox.innerHTML = feedbackMsgs.length ? `<details class="text-[12px]"><summary class="cursor-pointer text-zinc-500 hover:text-zinc-300">Transkrypt rozmowy z doradcą (${feedbackMsgs.length})</summary>
+                    <div class="mt-2 space-y-1.5 max-h-80 overflow-y-auto bg-[#0a0a0a] border border-[#1f1f1f] rounded p-3">
+                    ${feedbackMsgs.map(m => `<div><span class="${m.role==='user'?'text-[#f5a623]':'text-[#7cc0ff]'} font-semibold">${m.role==='user'?'Klient':'Doradca'}:</span> <span class="text-zinc-300 whitespace-pre-wrap">${escapeHtml(m.content||'')}</span>${(m.attachments||[]).filter(a=>a.url).map(a=>` <a href="${escapeHtml(a.url)}" target="_blank" rel="noopener" class="text-[#52a8ff]">[zrzut]</a>`).join('')}</div>`).join('')}
+                    </div></details>` : '';
+            }
+        }
+        async function fbSet(id, status) {
+            const p = { status, updated_at: new Date().toISOString() };
+            if (['reviewed','in_progress','resolved','dismissed'].includes(status)) p.decided_at = new Date().toISOString();
+            if (status === 'resolved') p.resolved_at = new Date().toISOString();
+            const { error } = await supabaseClient.from('wf2_feedback').update(p).eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            const it = feedback.find(x => x.id === id); if (it) Object.assign(it, p);
+            renderFeedback();
+            logActivity('feedback_decision', `Uwaga [UW-${it ? it.seq : '?'}] → ${(FB_STATUS[status]||{}).l || status}`);
+        }
+        async function fbSaveNote(id) {
+            const el = document.getElementById('fbn-' + id);
+            const note = ((el && el.value) || '').trim() || null;
+            const patch = { admin_note: note, updated_at: new Date().toISOString() };
+            const it = feedback.find(x => x.id === id);
+            if (it && it.status === 'new' && note) { patch.status = 'reviewed'; patch.decided_at = new Date().toISOString(); }
+            const { error } = await supabaseClient.from('wf2_feedback').update(patch).eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            if (it) Object.assign(it, patch);
+            renderFeedback(); showToast('Odpowiedź zapisana — klient zobaczy ją w portalu', 'success');
+        }
+        async function fbDelete(id) {
+            if (!confirm('Usunąć tę uwagę klienta? Tej operacji nie da się cofnąć.')) return;
+            const { error } = await supabaseClient.from('wf2_feedback').delete().eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            feedback = feedback.filter(x => x.id !== id); renderFeedback();
+        }
+        // Zrzuty (bucket private) + transkrypt — przez edge feedback_admin (gate team JWT). Leniwie.
+        async function loadFeedbackShots(force) {
+            if (fbShotsLoaded && !force) return;
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) return;
+                const r = await fetch(FN_FEEDBACK, { method:'POST',
+                    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + session.access_token },
+                    body: JSON.stringify({ token: project.unique_token, preview: true, action: 'feedback_admin' }) });
+                if (!r.ok) { if (force) showToast('Nie udało się wczytać zrzutów (status ' + r.status + ')', 'error'); return; }
+                const d = await r.json();
+                feedbackShots = {}; (d.shots || []).forEach(s => { feedbackShots[s.id] = s.urls || []; });
+                feedbackMsgs = d.messages || [];
+                fbShotsLoaded = true;
+                renderFeedback();
+            } catch (e) { if (force) showToast('Błąd wczytywania zrzutów', 'error'); }
         }
 
         // ── TAB Sprzedaż ──

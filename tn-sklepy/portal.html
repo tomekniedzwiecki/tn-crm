@@ -372,6 +372,32 @@
         .lpb-go { flex-shrink:0; display:inline-flex; align-items:center; gap:6px; color:#e4e4e7; background:#151519; border:1px solid #2b2b30;
             border-radius:8px; padding:7px 12px; font-size:12px; font-weight:600; transition:background .15s, border-color .15s, color .15s; }
         .lpb-card:hover .lpb-go { background:#fff; color:#000; border-color:#fff; }
+        /* ── Landing: opakowanie karty + przycisk „Mam uwagę" (sibling, NIE w <a>) ── */
+        .lpb-wrap { display:flex; flex-direction:column; gap:8px; min-width:0; }
+        .lpb-uwaga { display:inline-flex; align-items:center; justify-content:center; gap:7px; width:100%;
+            background:#0d0d0f; border:1px solid #232327; border-radius:10px; padding:9px 12px; cursor:pointer;
+            color:#a1a1aa; font-size:12.5px; font-weight:600; font-family:inherit;
+            transition:background .15s, border-color .15s, color .15s; }
+        .lpb-uwaga i { font-size:15px; color:#f5a623; }
+        .lpb-uwaga:hover { background:#141417; border-color:#3a3a40; color:#f4f4f5; }
+        /* ── Uwagi klienta (widok #sec-uwagi): obudowa czatu + lista zgłoszonych uwag ── */
+        .uw-chat { border:1px solid #1f1f22; border-radius:16px; overflow:hidden; background:#0a0a0c; margin-top:18px; }
+        .uw-list { margin-top:22px; display:flex; flex-direction:column; gap:10px; }
+        .uw-h3 { color:#e4e4e7; font-size:14px; font-weight:600; margin:0 0 4px; letter-spacing:.01em; }
+        .uw-item { background:#0b0b0d; border:1px solid #1f1f22; border-radius:12px; padding:12px 14px; }
+        .uw-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:5px; }
+        .uw-scope { color:#8a8a93; font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+        .uw-status { font-size:10.5px; font-weight:700; letter-spacing:.04em; padding:2px 9px; border-radius:999px;
+            border:1px solid #2b2b30; color:#a1a1aa; background:#141417; white-space:nowrap; }
+        .uw-status.ok { color:#7fdba0; border-color:#245038; background:#0e1c14; }
+        .uw-status.work { color:#7cc0ff; border-color:#1f3c5c; background:#0c1826; }
+        .uw-status.seen { color:#cbcbd2; }
+        .uw-status.muted { color:#8a8a93; }
+        .uw-status.new { color:#f5c977; border-color:#4a3b1c; background:#1c1710; }
+        .uw-title { color:#f4f4f5; font-size:13.5px; font-weight:600; line-height:1.35; }
+        .uw-note { margin-top:8px; color:#c7c7cf; font-size:12.5px; line-height:1.5; background:#0e0e11;
+            border:1px solid #232327; border-left:2px solid #0070f3; border-radius:8px; padding:8px 11px; }
+        .uw-note i { color:#0070f3; }
         /* ── Postęp: karty kroków neutralne — status niosą węzeł i pill, nie tło całej karty ── */
         #steps-axis .sbx-done { border-color:#232327; background:#0a0a0a; }
         #steps-axis .sbx-done:hover { background:#0d0d0d; border-color:#333; }
@@ -599,6 +625,9 @@
 
         <!-- Panel Twojego sklepu — login + link + ustaw hasło (gdy konto merchanta = e-mail klienta) -->
         <section id="sec-merchant" class="hidden"></section>
+
+        <!-- Uwagi klienta — doradca (osobna instancja tn-chat + lista zgłoszonych uwag) -->
+        <section id="sec-uwagi" class="hidden"></section>
 
         <!-- Nawigacja etapami: pasek etapów (klik = przełącz etap; steruje osią i matrycą poniżej) -->
         <div id="stage-nav" class="card hidden" style="margin-top:44px;overflow:hidden">
@@ -986,6 +1015,7 @@
         strony: ['sec-landings'],
         postep: ['stage-nav', 'sec-process', 'sec-portfolio'],
         sklep:  ['sec-merchant'],
+        uwagi:  ['sec-uwagi'],
     };
     const ALL_VIEW_IDS = [...new Set(Object.values(VIEW_IDS).flat())];
     const viewTracked = new Set();
@@ -1022,6 +1052,7 @@
     function enterView(v) {
         if (v === 'zadania') { enterTasks(); return; }
         v = applyView(v);
+        if (v === 'uwagi') onEnterUwagi();
         const p = new URLSearchParams((location.hash || '').replace(/^#/, ''));
         if (v === 'start') p.delete('v'); else p.set('v', v);
         const s = p.toString();
@@ -1029,23 +1060,25 @@
         window.scrollTo(0, 0);
         if (v !== 'start' && !viewTracked.has(v)) {
             viewTracked.add(v);
-            const names = { strony: 'Twoje strony', postep: 'Postęp prac', sklep: 'Panel sklepu' };
+            const names = { strony: 'Twoje strony', postep: 'Postęp prac', sklep: 'Panel sklepu', uwagi: 'Uwagi' };
             track('open_step', 'Zakładka: ' + (names[v] || v));
         }
     }
 
     // ── Menu panelu: sidebar (desktop) + dolny pasek (mobile) ──────────────────
-    const BN_SHORT = { start: 'Start', strony: 'Strony', zadania: 'Zadania', postep: 'Postęp', sklep: 'Sklep' };
+    const BN_SHORT = { start: 'Start', strony: 'Strony', zadania: 'Zadania', postep: 'Postęp', sklep: 'Sklep', uwagi: 'Uwagi' };
     function navItems() {
         const tasks = tvTasks().filter(taskUnlocked);
         const todo = tasks.filter(d => !isTaskDone(d)).length;
         const landN = landingProducts().length;
+        const fbUnread = feedbackUnreadCount();
         const items = [
             { v: 'start',   icon: 'ph-house',                label: 'Start' },
             { v: 'strony',  icon: 'ph-globe-hemisphere-west', label: 'Twoje strony', count: landN, show: landN > 0 },
             { v: 'zadania', icon: 'ph-list-checks',          label: 'Twoje zadania', badge: todo, show: tasks.length > 0 },
             { v: 'postep',  icon: 'ph-steps',                label: 'Postęp prac' },
             { v: 'sklep',   icon: 'ph-storefront',           label: 'Panel sklepu', show: !!P.merchantPanel },
+            { v: 'uwagi',   icon: 'ph-chat-teardrop-dots',   label: 'Uwagi', badge: fbUnread },
         ];
         return items.filter(it => it.show !== false);
     }
@@ -1263,6 +1296,7 @@
         renderLandings();
         renderHomeCard();
         renderMerchantPanel();
+        renderUwagi();
         renderStageNav();
         renderCeny();
         renderNav();
@@ -1329,7 +1363,7 @@
             const cover = p.cover_url
                 ? `<img src="${escapeHtml(p.cover_url)}" alt="" loading="lazy">`
                 : `<div class="lp-cover-fallback">${escapeHtml(((p.platform_name || p.name || '?').trim()[0] || '?').toUpperCase())}</div>`;
-            return `<a class="lpb-card" href="${href}" target="_blank" rel="noopener" onclick="trackLanding('${p.id}')">
+            return `<div class="lpb-wrap"><a class="lpb-card" href="${href}" target="_blank" rel="noopener" onclick="trackLanding('${p.id}')">
                 <div class="lpb-bar">
                     <span class="lpb-dots"><span></span><span></span><span></span></span>
                     <span class="lpb-url">${escapeHtml(prettyUrl(p.platform_page_url))}</span>
@@ -1340,7 +1374,8 @@
                     <div class="lpb-tt"><div class="lpb-name">${landingTitleHtml(p)}</div></div>
                     <span class="lpb-go">Obejrzyj <i class="ph ph-arrow-up-right"></i></span>
                 </div>
-            </a>`;
+            </a>
+            <button type="button" class="lpb-uwaga" onclick="openUwagi('${p.id}')"><i class="ph ph-chat-teardrop-dots"></i> Mam uwagę do tej strony</button></div>`;
         }).join('');
         // strona główna sklepu — dopiero gdy krok „strona główna" jest domknięty (żadnych niedokończonych stron)
         const homeStep = stepFor('pl_glowna', null);
@@ -1886,6 +1921,95 @@
             ${fieldsHtml}
             <div class="tv-cta-row">${cta}</div>`;
     }
+
+    // ============ Uwagi klienta — DORADCA (osobny widok, wspólny komponent tn-chat) ============
+    // Klient zgłasza uwagi do WSZYSTKIEGO (strona/kampania/materiały/wideo). Doradca dopytuje
+    // o propozycję klienta, konstruktywnie kontruje i porządkuje; wszystko trafia do Tomka.
+    // Osobna, PROSTA instancja TNChat (embedded) w #sec-uwagi — bez parkowania między slotami
+    // (inaczej niż asystent zadań). Gate = token+hasło portalu (edge wf2-feedback).
+    const FEEDBACK_FN = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-feedback';
+    let feedbackChat = null;
+    let feedbackItems = [];
+    let pendingFeedbackRef = null;                 // z karty landingu → context.ref dla doradcy
+    const FB_SEEN_KEY = 'wf2_fb_seen_' + token;    // localStorage: ostatnio widziane statusy per uwaga
+
+    function fbSeen() { try { return JSON.parse(localStorage.getItem(FB_SEEN_KEY) || '{}'); } catch (e) { return {}; } }
+    function fbMarkSeen() {
+        const s = {}; feedbackItems.forEach(i => { s[i.seq] = i.status; });
+        try { localStorage.setItem(FB_SEEN_KEY, JSON.stringify(s)); } catch (e) {}
+    }
+    // Badge u klienta: uwaga, którą Tomek rozstrzygnął/odpowiedział, a klient jeszcze tego nie widział.
+    function feedbackUnreadCount() {
+        const seen = fbSeen();
+        return feedbackItems.filter(i => i.status !== 'new' && seen[i.seq] !== i.status).length;
+    }
+    function fbStatusClass(s) {
+        return s === 'resolved' ? 'ok' : s === 'dismissed' ? 'muted'
+            : s === 'in_progress' ? 'work' : s === 'reviewed' ? 'seen' : 'new';
+    }
+    function renderFeedbackList() {
+        const box = $('uwagi-list'); if (!box) return;
+        if (!feedbackItems.length) { box.innerHTML = ''; return; }
+        box.innerHTML = `<h3 class="uw-h3">Twoje zgłoszone uwagi</h3>` + feedbackItems.map(i => `
+            <div class="uw-item">
+                <div class="uw-row">
+                    <span class="uw-scope">${escapeHtml(i.scope_pl || 'Ogólne')}</span>
+                    <span class="uw-status ${fbStatusClass(i.status)}">${escapeHtml(i.status_pl || '')}</span>
+                </div>
+                <div class="uw-title">${escapeHtml(i.title || '')}</div>
+                ${i.admin_note ? `<div class="uw-note"><i class="ph ph-chat-circle-text"></i> <b>Tomek:</b> ${escapeHtml(i.admin_note)}</div>` : ''}
+            </div>`).join('');
+    }
+    function ensureFeedbackChatMounted() {
+        if (feedbackChat || !window.TNChat) return;
+        const host = $('uwagi-chat-host'); if (!host) return;
+        try {
+        feedbackChat = window.TNChat.mount(host, {
+            endpoint: FEEDBACK_FN,
+            layout: 'embedded',
+            title: 'Twój doradca',
+            subtitle: 'Napisz, co poprawić — zbieram i przekazuję Tomkowi',
+            intro: 'Cześć! Tu miejsce na Twoje uwagi do wszystkiego, co dla Ciebie przygotowaliśmy — strony, kampanii, materiałów czy wideo. Powiedz, co chciałbyś zmienić i jak Twoim zdaniem powinno być. Ja to poukładam i przekażę Tomkowi, żeby łatwiej było wprowadzić zmiany. Zrzut ekranu bardzo pomaga.',
+            placeholder: 'Napisz uwagę…',
+            height: 'min(400px, 54svh)',
+            auth: () => previewMode ? { token, preview: true } : { token, password: currentPw },
+            authHeaders: authHeaders,
+            readonly: previewMode,
+            accept: ['png', 'jpg', 'jpeg', 'webp'],
+            maxMB: 8, maxPerMsg: 4, imageField: 'images',
+            features: { paste: true, dnd: true, capture: true, fullscreen: false, timestamps: true },
+            context: () => ({ context: { source: 'portal', ref: pendingFeedbackRef || null } }),
+            track: (action, desc) => track('open_guide', desc),
+            onResponse: (d) => { if (d && Array.isArray(d.items)) { feedbackItems = d.items; renderFeedbackList(); renderNav(); } },
+            onHistory: (d) => { if (d && Array.isArray(d.items)) { feedbackItems = d.items; renderFeedbackList(); renderNav(); } },
+        });
+        } catch (e) { console.error('[uwagi] mount', e); }
+    }
+    function renderUwagi() {
+        const sec = $('sec-uwagi'); if (!sec) return;
+        if (!sec.dataset.built) {
+            sec.innerHTML = `
+                <div class="lp-kicker"><i class="ph ph-chat-teardrop-dots"></i> Twoje uwagi</div>
+                <h2 class="lp-h2">Zgłoś uwagi do projektu</h2>
+                <p class="sdesc" style="margin-bottom:14px">Masz uwagi do strony, kampanii, materiałów albo wideo? Napisz je tutaj. Doradca dopyta o szczegóły, pomoże je uporządkować i przekaże je Tomkowi — ten etap jest po to, żeby zebrać wszystko w jednym miejscu i łatwiej było wprowadzić zmiany.</p>
+                <div class="uw-chat"><div id="uwagi-chat-host"></div></div>
+                <div id="uwagi-list" class="uw-list"></div>`;
+            sec.dataset.built = '1';
+        }
+        sec.classList.remove('hidden');
+        ensureFeedbackChatMounted();
+    }
+    // Wejście z karty landingu: ustaw kontekst („do której strony") i przejdź do widoku Uwagi.
+    function openUwagi(productId) {
+        const p = (P.products || []).find(x => x.id === productId);
+        pendingFeedbackRef = p ? ((p.platform_name || p.name || 'strona produktu') + ' — strona sprzedażowa') : null;
+        enterView('uwagi');
+        if (pendingFeedbackRef && feedbackChat && feedbackChat.addLocalBubble) {
+            feedbackChat.addLocalBubble('ai', `Zgłaszasz uwagę do: ${pendingFeedbackRef}. Śmiało — co chciałbyś w niej zmienić?`);
+        }
+    }
+    // Wejście w widok Uwagi = „przeczytane": zeruj badge nieprzeczytanych odpowiedzi Tomka.
+    function onEnterUwagi() { fbMarkSeen(); renderNav(); }
 
     // ============ Asystent AI — rozmowa JEST treścią zadania (Etap 4+) ============
     // JEDNA trwała instancja TNChat (layout 'embedded'), montowana RAZ do ukrytego #asystent-host.

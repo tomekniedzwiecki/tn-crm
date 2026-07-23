@@ -91,6 +91,12 @@
         .pc-portlabel { font-size:12.5px; color:#8b8b94; white-space:nowrap; }
         .pc-orders { display:inline-flex; align-items:center; gap:4px; font:500 12px/1 'JetBrains Mono',monospace; color:#62c073;
             border:1px solid rgba(69,165,87,.3); background:rgba(69,165,87,.08); border-radius:6px; padding:4px 7px; }
+        /* nowe uwagi klienta — „świeci się" (bursztyn + delikatny puls) */
+        .pc-fb { display:inline-flex; align-items:center; gap:4px; font:600 12px/1 'JetBrains Mono',monospace; color:#f5a623;
+            border:1px solid rgba(245,166,35,.4); background:rgba(245,166,35,.1); border-radius:6px; padding:4px 7px;
+            animation:pcFbPulse 2.2s ease-in-out infinite; }
+        @keyframes pcFbPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(245,166,35,.35); } 50%{ box-shadow:0 0 0 4px rgba(245,166,35,0); } }
+        @media (prefers-reduced-motion: reduce){ .pc-fb { animation:none; } }
         .pc-act { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#6b6b74; white-space:nowrap; }
         /* pole wyszukiwania */
         .searchbox { display:flex; align-items:center; gap:8px; background:#0a0a0a; border:1px solid #1f1f1f; border-radius:8px; padding:7px 11px; }
@@ -379,13 +385,14 @@
         }
 
         async function loadAll() {
-            const [defsQ, projQ, prodQ, steps, actQ, ordQ] = await Promise.all([
+            const [defsQ, projQ, prodQ, steps, actQ, ordQ, fbQ] = await Promise.all([
                 supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
                 supabaseClient.from('wf2_projects').select('*').order('created_at', { ascending: false }).range(0, 999),
                 supabaseClient.from('wf2_products').select('id, project_id, name, slug, cover_url, sort, status').order('sort', { ascending: true }).range(0, 4999),
                 fetchAllSteps(),
                 supabaseClient.from('wf2_activities').select('project_id, created_at, action, description').order('created_at', { ascending: false }).range(0, 499),
                 supabaseClient.from('wf2_orders').select('project_id').range(0, 4999),
+                supabaseClient.from('wf2_feedback').select('project_id').eq('status', 'new').range(0, 4999),
             ]);
             stepDefs = defsQ.data || [];
             defByKey = {}; buildKeys = new Set(); maxStage = 1;
@@ -407,8 +414,11 @@
             // liczba zamówień per projekt
             const orders = {};
             (ordQ.data || []).forEach(o => { orders[o.project_id] = (orders[o.project_id] || 0) + 1; });
+            // liczba NOWYCH uwag klienta per projekt (badge „świeci się" na karcie)
+            const newFb = {};
+            (fbQ.data || []).forEach(f => { newFb[f.project_id] = (newFb[f.project_id] || 0) + 1; });
 
-            computeAgg(lastAct, orders);
+            computeAgg(lastAct, orders, newFb);
             buildSearchIndex();
             renderStages();
             renderLifecycleChips();
@@ -434,7 +444,7 @@
         }
 
         // Postęp, segmenty etapów, aktualny krok, licznik tempa — wszystko z jednego przebiegu.
-        function computeAgg(lastAct, orders) {
+        function computeAgg(lastAct, orders, newFb) {
             const defOrder = stepDefs.map(d => d.key);
             aggByProj = {};
             projects.forEach(p => {
@@ -470,6 +480,7 @@
                     currentStepLabel: cur ? cur.label : 'Wszystko ukończone',
                     segs,
                     orders: orders[p.id] || 0,
+                    newFeedback: (newFb && newFb[p.id]) || 0,
                     lastAct: lastAct[p.id] || null,
                     tempo: computeTempo(p, steps),
                 };
@@ -711,6 +722,7 @@
 
             const ordersHtml = agg.orders > 0 ? `<span class="pc-orders"><i class="ph ph-shopping-cart"></i>${agg.orders}</span>` : '';
             const actHtml = agg.lastAct ? `<span class="pc-act"><i class="ph ph-clock-countdown"></i>${escapeHtml(relDate(agg.lastAct.created_at))}</span>` : '';
+            const fbHtml = agg.newFeedback > 0 ? `<span class="pc-fb" title="${agg.newFeedback} ${agg.newFeedback === 1 ? 'nowa uwaga klienta' : 'nowych uwag klienta'}"><i class="ph ph-chat-dots"></i>${agg.newFeedback}</span>` : '';
 
             return `<div class="pcard${demo ? ' is-demo' : ''}${idle ? ' is-idle' : ''}" onclick="location.href='projekt.html?id=${p.id}'">
                 ${demo ? '<span class="demo-tag" style="right:38px">DEMO</span>' : ''}
@@ -736,7 +748,7 @@
 
                 <div class="pc-foot">
                     <div class="flex items-center gap-2.5 min-w-0">${portfel}</div>
-                    <div class="flex items-center gap-2.5 flex-shrink-0">${ordersHtml}${actHtml}</div>
+                    <div class="flex items-center gap-2.5 flex-shrink-0">${fbHtml}${ordersHtml}${actHtml}</div>
                 </div>
             </div>`;
         }
