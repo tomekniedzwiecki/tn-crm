@@ -124,3 +124,32 @@
 - **PUBLISH:** platform-sync publish (⛔ bez ensure_product) → https://ulepszek.pl/rozmrozik
   HTTP 200, 205566 B, runtime product_id TAK, hero-loop-pp.mp4 w live HTML, data-zc-api ×2,
   noindex ZDJĘTY, kasa 200. Wypchnięte razem: 27 poprawek F7.1 + hotfix kasy + F5 + F6 + UGC.
+
+## F8 FINISZ (23.07) — gate-check + manifest-check + naprawy
+- **manifest-check.py = exit 0** (PASS=33 FAIL=0): 11/11 sekcji build↔`<section id>` (alias
+  `zdjecia-kupujacych`→`zdjecia`), hero-video mp4 200, media dowodowe 200, JSON-LD bez Offer/Rating.
+  Pozycja 10b parsuje się poprawnie — PLAN.md bez zmian.
+- **gate-check przed:** PASS=81 FAIL=35 WARN=10. Naprawialne FAIL-e domknięte (patrz niżej).
+- **Kod (detail-lint P1: 8→2):** (1) kontrast hero-CTA — `.btn.cta` 17→19 px = AA-large (biały na `#E8590C`
+  3.58:1 przy progu 3:1); (2) crop hero ×2 + final → `object-position:50% 42%` (P1→P2, AR/hero-video nietknięte);
+  (3) touch-targety `.jd-link` + link „Przejdź do zamówienia →" → `min-height:44px inline-flex`;
+  (4) `<main id="main">` landmark; (5) leak marketplace `@aliexpress.us` → „Klient TikTok" (aria+data+etykieta).
+  Rezydualne P1 (udokumentowane, NIE naprawiane): `.zc-fallback` kontrast 1:1 (strefa checkout, `hidden`);
+  pojemnosc image-on-image (celowy crossfade TOR-I steki/ryba, MOTION-DNA).
+- **Wagi (6 assetów ≤ budżet):** packshot-alpha 290→66 KB (resize 760 + quantize P/tRNS, alfa soft zachowana,
+  BEZ progowania); sc-capacity-steak 188→87, sc-final 147→79, sc-problem 167→95 KB (WebP 1240px/q80);
+  tt3.mp4 4282→2154, tt5.mp4 4131→2329 KB (ffmpeg x264 crf33 + 30 fps + aac 80k). Re-upload x-upsert pod tymi
+  samymi nazwami. Backup: `packshot-alpha-BACKUP.png`. **Koszt finiszu: $0** (rekompresja/CV/dokumenty).
+  **Koszty wideo (fal.ai) zalogowane zbiorczo przez główną sesję** — finisz NIE loguje do wf2_costs.
+- **Archiwum wg konwencji gate (LL-057):** `brand/` (favicon-32/wordmark/logo-combo), `makiety/` 21 png
+  (styl-master + 10×d + 10×mobile; odzyskane ze Storage `bud-assets/rozmrozik/makiety/*.webp` → konwersja png,
+  koszt $0), `galeria-kuracja/GALERIA.md`, `dopasowanie/{DOPASOWANIE,WIERNOSC,SEMANTYKA}.md`, `ir/` 11×IR
+  (10 makiet + zdjecia z renderu przez mockup-ir OpenCV), `RETRO.md`. sekcja-diff.py: SSIM 0.34–0.63 desktop /
+  0.20–0.66 mobile (real-render vs AI-makieta, prog 0.85 nieosiągalny — decyduje RUBRYKA), **LAYOUT-FAIL 0/11**,
+  werdykty 11/11 desktop TAK + 12/12 mobile TAK.
+- **mobile-makieta-wyjatek:** `zdjecia-kupujacych` = sekcja DOWODOWA render-only (3 realne kadry UGC, brak makiety AI) →
+  komplet mobile makiet = 10/11 z wyjątkiem dla sekcji dowodowej (mobile-makieta-skip dla zdjecia).
+- **cross_landing PASS** (parasol Ulepszek vs tomek-niedzwiecki): Zilla Slab + `#E8590C` odróżnialne (dE≥15) —
+  mis-scope Rozgrzewka (Fraunces) tu NIE występuje.
+- **Rezydualne FAIL-e gate (nie-naprawialne w zakresie finiszu, udokumentowane):** cta checkout-root (⛔ strefa checkout);
+  finalny_pass ×2 (zc-fallback hidden + crossfade TOR-I intencjonalny); panel_sync artefakty-kompozyty (rejestracja poniżej).
