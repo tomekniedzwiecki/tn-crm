@@ -22,6 +22,7 @@
 //   <rezerwacja>                 — front pokazuje lekką kartę rezerwacji 100 zł
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { bumpLeadStage } from "../_shared/lead-stage.ts";
 
 // ── CORS — whitelist originów (wzorzec bud-chat) ─────────────────────────────
 const ALLOWED_ORIGINS = [
@@ -187,6 +188,10 @@ async function ensureOffer(session: any, ctx?: { lead?: any; history?: { role: s
   if (error) { console.error('[lead-talk] oferta fail', error); return null }
   await supabase.from('talk_sessions').update({ offer_token: token }).eq('id', session.id)
   session.offer_token = token
+  // Pipeline: oferta wystawiona z rozmowy → kolumna „Oferta" (qualified), monotonicznie
+  // (bez revive — ręcznie odrzuconego leada oferta nie wskrzesza). Uzupełnia lukę
+  // lejka /rozmowa (2026-07-23): statusy stały na „Nowy" mimo postępu w lejku.
+  await bumpLeadStage(supabase, session.lead_id, 'qualified', { channel: '/rozmowa' })
   return token
 }
 

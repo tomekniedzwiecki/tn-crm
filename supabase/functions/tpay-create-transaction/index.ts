@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { bumpLeadStage } from '../_shared/lead-stage.ts'
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
@@ -485,6 +486,15 @@ Deno.serve(async (req) => {
     }
 
     console.log('[tpay-create-transaction] SUCCESS - Payment URL generated')
+
+    // Pipeline: przejście do płatności = mocny sygnał „blisko zakupu" →
+    // „Zakwalifikowany" (proposal), monotonicznie + allowRevive (skoro płaci, żyje).
+    // Uzupełnia lukę lejka /rozmowa (2026-07-23): tam żaden krok nie bumpował
+    // statusów — pipeline stał na „Nowy" mimo oferty i płatności. Raty/upgrade'y
+    // pomijamy (klient dawno w won/negotiation — bump i tak nic nie zmieni).
+    if (order.lead_id && !order.installment_id) {
+      await bumpLeadStage(supabase, order.lead_id, 'proposal', { allowRevive: true, channel: '/checkout' })
+    }
 
     // For BLIK inline, we don't redirect - the payment is processed immediately
     // Frontend should poll for status

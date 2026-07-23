@@ -1,5 +1,6 @@
  
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { bumpLeadStage } from '../_shared/lead-stage.ts'
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts"
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts"
 
@@ -1099,7 +1100,20 @@ Deno.serve(async (req) => {
             await supabase.from('leads').update({ status: 'won' }).eq('id', order.lead_id).neq('status', 'won')
           }
         } else if (isBudReservation) {
-          console.error('[tpay-webhook] [ALERT] Rezerwacja budowania bez dopasowanej bud_session — przypnij ręcznie. order:', order.id, 'lead:', order.lead_id, 'email:', order.customer_email)
+          // Rezerwacja opłacona → kolumna „Rezerwacja" (negotiation) niezależnie od
+          // lejka; allowRevive — skoro płaci, żyje (luka /rozmowa 2026-07-23:
+          // Tymoteusz po wpłacie 100 zł stał w pipeline jako „Nowy").
+          if (order.lead_id) {
+            await bumpLeadStage(supabase, order.lead_id, 'negotiation', { allowRevive: true, channel: '/rozmowa' })
+          }
+          // Format /rozmowa = „Rezerwacja: <nazwa oferty>" — brak bud_session jest tam
+          // NORMALNY (klient nie przechodził przez /sklep AI); ALERT tylko dla reszty
+          // (rezerwacja z lejka /sklep bez dopasowanej sesji = realna anomalia).
+          if (descB.startsWith('rezerwacja:')) {
+            console.log('[tpay-webhook] Rezerwacja z lejka /rozmowa (bez bud_session — OK). order:', order.id)
+          } else {
+            console.error('[tpay-webhook] [ALERT] Rezerwacja budowania bez dopasowanej bud_session — przypnij ręcznie. order:', order.id, 'lead:', order.lead_id, 'email:', order.customer_email)
+          }
         }
       } catch (budErr) {
         console.error('[tpay-webhook] bud_session sync error:', budErr)
@@ -1121,6 +1135,12 @@ Deno.serve(async (req) => {
           const isBudResMail = amtR < 1000 && descR.includes('rezerwacj') &&
             (descR.includes('zbuduj') || descR.includes('sklep') || descR.includes('biznes online'))
           if (isBudResMail && order.customer_email) {
+            // Prefill WhatsApp z imieniem i nazwiskiem (życzenie Tomka 23.07 — żeby
+            // wiedział, kto pisze z obcego numeru). Zakodowany TUTAJ, bo
+            // replaceVariables w send-email podstawia zmienne 1:1 bez URL-encode.
+            const fullName = (order.customer_name || '').trim()
+            const waPrefill = encodeURIComponent(
+              `Cześć Tomek! Właśnie wpłaciłem/am rezerwację budowy sklepu${fullName ? ' — ' + fullName : ''}.`)
             const res = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseServiceKey}` },
@@ -1128,8 +1148,8 @@ Deno.serve(async (req) => {
                 type: 'bud_reservation_confirmed',
                 data: {
                   email: order.customer_email,
-                  clientName: (order.customer_name || '').split(' ')[0] || 'Cześć',
-                  leadId: order.lead_id || undefined,
+                  clientName: fullName.split(' ')[0] || 'Cześć',
+                  waPrefill,
                 },
               }),
             })

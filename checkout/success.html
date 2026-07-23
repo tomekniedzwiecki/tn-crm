@@ -265,7 +265,7 @@
 
                 <!-- Actions - Rezerwacja budowy sklepu -->
                 <div id="actions-bud-reservation" class="hidden space-y-3 fade-up fade-up-4">
-                    <a href="https://wa.me/48793113898?text=Cze%C5%9B%C4%87%20Tomek!%20W%C5%82a%C5%9Bnie%20wp%C5%82aci%C5%82em%2Fam%20rezerwacj%C4%99%20budowy%20sklepu."
+                    <a id="bud-wa-link" href="https://wa.me/48793113898?text=Cze%C5%9B%C4%87%20Tomek!%20W%C5%82a%C5%9Bnie%20wp%C5%82aci%C5%82em%2Fam%20rezerwacj%C4%99%20budowy%20sklepu."
                        target="_blank" rel="noopener"
                        style="background: linear-gradient(to bottom, #25D366, #128C7E); box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 4px 12px rgba(37, 211, 102, 0.3);"
                        class="block w-full text-white px-5 py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
@@ -357,7 +357,7 @@
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { 'x-order-id': orderId } } });
                 const { data: order } = await supabaseClient
                     .from('orders')
-                    .select('id, order_number, amount, description, status, installment_id, lead_id')
+                    .select('id, order_number, amount, description, status, installment_id, lead_id, customer_name')
                     .eq('id', orderId)
                     .single();
 
@@ -382,6 +382,13 @@
                     document.getElementById('whats-next-bud-reservation').classList.remove('hidden');
                     document.getElementById('actions-standard').classList.add('hidden');
                     document.getElementById('actions-bud-reservation').classList.remove('hidden');
+                    // Prefill WhatsApp z imieniem i nazwiskiem z zamowienia — Tomek od razu
+                    // wie, kto pisze z nieznanego numeru (statyczny href = fallback bez imienia)
+                    const waName = (order?.customer_name || '').trim();
+                    if (waName) {
+                        document.getElementById('bud-wa-link').href = 'https://wa.me/48793113898?text=' +
+                            encodeURIComponent('Cześć Tomek! Właśnie wpłaciłem/am rezerwację budowy sklepu — ' + waName + '.');
+                    }
                 }
 
                 // Check if this is an installment payment
