@@ -444,6 +444,20 @@ egzekwowany na swojej fazie):
    23.07: efekt „ożywionej miniaturki" zamiast wow) — dopuszczalne wyłącznie jako NAPRAWA
    istniejącego landingu, z notą LEDGER i jawną oceną, czy hero nie wymaga przeprojektowania
    slotu (powiększenie medium do rangi punktu centralnego).
+6. **⚡ GATE AMPLITUDY RUCHU (Tomek 23.07, CZWARTA eskalacja hero: „w tacy oraz rozgrzewek
+   to zdjęcie co miało się animować jest bardzo słabe, tam się nic nie dzieje praktycznie"):**
+   „brak morfingu" to ZA MAŁO — pętla hero MUSI mieć MIERZALNY ruch. Pomiar: klatki 0/2.5/5 s
+   z pętli pp, grayscale, `ImageChops.difference` mean; **próg: diff(0↔5 s) ≥ 8.0**
+   (kalibracja 23.07: wzorzec-dobry Brzuszek-crunch = 11.9; odrzucone przez Tomka:
+   Rozmrozik 6.8, Rozgrzewek 2.5). Poniżej progu = FAIL → mocniejszy beat w prompcie
+   (nośnik „the whole time", „clearly visible", cfg ~0.65), nie upload.
+   **⚠️ AMPLITUDA NIE ZASTĘPUJE WIERNOŚCI:** wysoki diff bywa FAŁSZYWY — z przebarwień
+   produktu/tła zamiast ruchu (przypadek Rozgrzewek v2: 8.97, ale display zmienił kolor
+   z biało-niebieskiego na czerwony, kubek na różowy = FAIL wierności mimo PASS amplitudy).
+   Gate amplitudy ZAWSZE w parze z inspekcją klatek na wierność (LL-060/F3A); elementy
+   ze stałym wyglądem (display/cyfry/kolory produktu i rekwizytów) LOCKOWAĆ w NEG wprost
+   („display changing color", „mug turning red"…). Runner wzorcowy:
+   `scripts/mockup-tools/regen-hero-v2-taca-rozgrzewek.py` (gate wbudowany przed uploadem).
 
 **F1.7a — ROLA PRODUKTU W ŁUKU NARRACYJNYM (EMOCJA↔PRODUKT; Drapek 18.07 — scena PROBLEM
 pokazywała psa KULĄCEGO SIĘ DEFENSYWNIE przy NASZEJ desce = przekaz „nasz produkt = źródło
