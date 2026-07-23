@@ -1,27 +1,40 @@
 # OCHRONA LANDINGÓW PRZED KOPIOWANIEM (decyzja Tomka 22.07)
 
 **Rama uczciwa:** HTML/CSS/JS wysyłany do przeglądarki NIE MOŻE być ukryty — każdy pobierze go
-curl-em/DevTools. „Ukrywanie kodu" (blokada prawego przycisku, anty-DevTools) to teatr: łatwe do
-obejścia, psuje UX/dostępność — NIE robimy. Zamiast tego trzy realne warstwy:
+curl-em/DevTools. „Ukrywanie kodu" (blokada prawego przycisku, anty-DevTools, obfuskacja) to teatr:
+łatwe do obejścia, psuje UX/dostępność, a obfuskacja dodatkowo złamałaby `manifest-check.py`/
+`gate-check.py` (czytają serwowany HTML regexem) — NIE robimy. Zamiast tego cztery realne warstwy:
 
 ## 1. Kopia jest MARTWA — origin-gate w `wf2-landing-api`
-Runtime landingu (cena, checkout, blok platform) odpowiada TYLKO gdy `Origin`/`Referer` należy do:
+Runtime landingu (cena, checkout) odpowiada TYLKO gdy `Origin`/`Referer` należy do:
 domeny projektu (`wf2_projects.domain` + subdomeny), `*.trevio.pl` / `*.trevio.shop` (preview),
-`*.tomekniedzwiecki.pl`, `*.vercel.app`, `localhost`. Jawnie obcy host → **403** → skopiowany
+`*.tomekniedzwiecki.pl`, `localhost`. Jawnie obcy host → **403** → skopiowany
 landing na cudzej domenie nie hydratyzuje ceny i nie ma działającej kasy (checkout i tak prowadzi
 do NASZEJ kasy — kopiujący musi przepisać całą warstwę sprzedażową). Brak nagłówka = fail-open
-(curl, file:// w fabryce, health-checki). Deploy: `npx supabase functions deploy wf2-landing-api
---no-verify-jwt --project-ref yxmavwkwnfuphjqbelws`.
+(curl, file:// w fabryce, health-checki). Loguje `console.warn forbidden_origin host=…` (telemetria
+→ §6.1). Deploy: `npx supabase functions deploy wf2-landing-api --no-verify-jwt --project-ref
+yxmavwkwnfuphjqbelws`.
+
+> **⛔ `*.vercel.app` USUNIĘTE z allowlisty (23.07).** Darmowy wildcard-hosting Vercela dawał
+> kopiście ŻYWĄ cenę+checkout na własnej domenie (red team potwierdził — klon sprzedawał w <1h).
+> Żaden nasz konsument tam nie hostuje (landingi = domeny Trevio, fabryka = localhost/curl). To samo
+> usunięcie w `wf2-asset` (§3). Blok `platform{}` (website/product/variant id) świadomie NIE
+> bramkowany — te id są jawne w publicznym storefroncie, a gate po Referer psułby kasę na landingach
+> z `Referrer-Policy: no-referrer`.
 
 ## 2. Kopia jest NIECZYTELNA i NAMIERZALNA — `_harden()` w `platform-sync.py publish`
 Domyślnie przy KAŻDYM publish (wyłączenie: `--no-harden`):
 - strip WSZYSTKICH komentarzy fabryki (markery sekcji, notki procesowe = know-how) + collapse
   wcięć/pustych linii poza `<script>/<pre>/<textarea>` (~−12% rozmiaru, czytelność znika);
-- **fingerprint deterministyczny** `md5('wf2:'+product_id)[:12]` → `<meta name="build">` +
-  `data-b` na `<body>` — odtwarzalny bez bazy, jednoznacznie wiąże KAŻDĄ kopię z naszym
-  produktem (dowód w sporze); 
+- **watermark kryptograficzny** `build_id()` = **HMAC-SHA256(sekret, 'wf2:'+product_id)[:16]**
+  (sekret = `WF2_WATERMARK_SALT` z .env lub fallback `SUPABASE_SERVICE_KEY`) w **4 loci**:
+  `<meta name="build">`, `data-b` na `<body>`, komentarz „Build <fp>", oraz **ukryty, ale
+  INDEKSOWALNY** `<span data-mk>wf2·<fp></span>` (clip-rect sr-only — nie psuje layoutu/h-scroll,
+  łapie go SERP → skaner §4). **Było `md5('wf2:'+product_id)[:12]` — WYWNIOSKOWALNE z jawnego
+  product_id; teraz bez sekretu nieodtwarzalne = twardy dowód własności (§5).**
 - nota © na szczycie dokumentu (deklaracja praw + informacja o identyfikowalności buildu).
-Źródła w repo zostają czytelne — harden działa tylko na publikowanym artefakcie.
+Źródła w repo zostają czytelne — harden działa tylko na publikowanym artefakcie. **Watermark wchodzi
+na LIVE dopiero przy re-publish** — po zmianie sekretu/kodu trzeba re-publikować (6/6 zrobione 23.07).
 Obejmuje też `home` (strona główna; fingerprint po **project_id**, nie product_id). Podstrony
 prawne (`page`) świadomie BEZ hardenu — boilerplate, zero know-how.
 
@@ -204,11 +217,12 @@ Signature: [SIGNATURE / ENTITY]
 
 | Warstwa | Gdzie | Co robi | Status |
 |---|---|---|---|
-| **Origin-gate 403 + telemetria** | edge `wf2-landing-api` (Faza A) | runtime (cena/checkout) odpowiada tylko dla naszych Origin/Referer; obcy host → 403; loguje `console.warn` | LIVE |
-| **Watermark 4-loci** | `platform-sync.py _harden()` (Faza B) | `build_id` HMAC w `<meta build>`, `<body data-b>`, komentarz ©, ukryty indeksowalny `<span data-mk>wf2·…` | LIVE |
-| **Bramka assetów** | edge / Storage | checkout i pliki sprzedażowe prowadzą do NASZEJ kasy — kopia musi przepisać całą warstwę sprzedażową | LIVE |
-| **Detekcja SERP** | `copy-scan.py` + `wf2_copy_signals` (Faza C) | przeczesuje wyszukiwarkę frazą `wf2·<build_id>`, zapisuje obce trafienia | skaner GOTOWY; czeka na klucz wyszukiwarki + aplikację migracji |
-| **Egzekucja** | ten playbook (§5) | recompute build_id → dowód → takedown białoetykietowy | procedura GOTOWA |
+| **Origin-gate 403 + telemetria** | edge `wf2-landing-api` (Faza A) | runtime (cena/checkout) odpowiada tylko dla naszych Origin/Referer; obcy host → 403; loguje `console.warn` | **LIVE** (vercel.app zamknięty 23.07) |
+| **Watermark HMAC 4-loci** | `platform-sync.py _harden()` (Faza B) | `build_id` HMAC w `<meta build>`, `<body data-b>`, komentarz ©, ukryty indeksowalny `<span data-mk>wf2·…` | **LIVE** (re-publish 6/6 23.07) |
+| **Kasa = nasza** | `checkout-inline@3` + `wf2-landing-api` | checkout składa zamówienie w NASZYM storefroncie Trevio — kopia musi przepisać całą warstwę sprzedażową | **LIVE** (inherentne) |
+| **Bramka assetów** | edge `wf2-asset` + `asset-gate.py` (Faza C) | referer-gate na obrazy/wideo (obcy→403, nasz/brak→302 signed-url, BEZ streamingu=LCP OK, hero-exempt) | **CZĘŚCIOWO** — edge deployed w trybie `public`/test, wpięcie za flagą `--gate` **OFF**; realna ochrona dopiero po migracji do prywatnego bucketa (**§7, ODROCZONE — nadzór Tomka**) |
+| **Detekcja SERP** | `copy-scan.py` + `wf2_copy_signals` (Faza D) | przeczesuje wyszukiwarkę frazą `wf2·<build_id>`, zapisuje obce trafienia | skaner GOTOWY; czeka na klucz wyszukiwarki (Google CSE) + aplikację migracji |
+| **Egzekucja DMCA** | ten playbook (§5) | recompute build_id → dowód → takedown białoetykietowy | procedura GOTOWA |
 
 ### 6.1 Podłączenie logów origin-gate 403 do `wf2_copy_signals` (do zrobienia przez główną sesję)
 Origin-gate (Faza A) loguje 403 przez `console.warn`. Żeby trafiały do tabeli sygnałów
@@ -227,6 +241,44 @@ Origin-gate (Faza A) loguje 403 przez `console.warn`. Żeby trafiały do tabeli 
   wrzucać do `wf2_copy_signals`. Wolniejsze, ale zero zmian w kodzie edge.
 
 Do czasu podłączenia 403 głównym źródłem sygnałów pozostaje skaner SERP (§4) i zgłoszenia `manual`.
+
+---
+
+## 7. DOKOŃCZENIE BRAMKI ASSETÓW — migracja do prywatnego bucketa (ODROCZONE, nadzór Tomka)
+
+**Dlaczego niedokończone.** Edge `wf2-asset` + `asset-gate.py` przepisują URL-e assetów na
+`…/functions/v1/wf2-asset?path=bud-assets/<slug>/<plik>` i bramkują po Referer. ALE dopóki oryginały
+leżą na **publicznym** buckecie (`…/object/public/attachments/bud-assets/…`), URL bramki JAWNIE
+zawiera oryginalną ścieżkę (`?path=bud-assets/…`) → kopista czyta ją i puka wprost w public URL,
+omijając bramkę. **Bramka ma realny sens dopiero, gdy oryginały są PRYWATNE**, a jedyną drogą do
+bajtów jest 302-signed-url z edge (który sprawdza Referer). Dlatego edge stoi w trybie `public`/test,
+a wpięcie w `cmd_publish` jest za flagą `--gate` **domyślnie OFF**.
+
+**Dlaczego to krok pod nadzorem (nie autopilot).** Dotyka LIVE ~23 assetów poza-hero × 6 landingów
+(+ home + og:image) na produkcyjnych domenach klientów. Błąd = znikające obrazy poniżej folda na
+żywych stronach sprzedażowych. Robić **kanarkowo, z weryfikacją wizualną po każdym kroku.**
+
+**Runbook (gdy Tomek da „go"):**
+1. **Backup mapy assetów** — wylistować obecne publiczne URL-e per landing (dry-run
+   `asset-gate.py --file <index.html>` pokazuje pełną listę „PRZEPISANE" vs „HERO-EXEMPT").
+2. **Nowy PRYWATNY bucket** `bud-assets-gated` (Storage, `public=false`, `allowed_mime` webp/png/jpg/
+   mp4/webm, limit rozmiaru jak `attachments`). Hero zostaje na starym public (LCP, exempt).
+3. **Kopia poza-hero assetów** z `attachments/bud-assets/<slug>/…` → `bud-assets-gated/bud-assets/
+   <slug>/…` (te same ścieżki-sufiksy, żeby `?path=` się zgadzał). Skrypt kopiujący server-side
+   (Storage copy API), **kanarek: najpierw JEDEN landing (rozgrzewek), zweryfikuj, potem reszta.**
+4. **Przełącz sekrety edge:** `WF2_ASSET_MODE=signed`, `WF2_ASSET_BUCKET=bud-assets-gated`
+   (`WF2_ASSET_SIGNED_TTL=300`). Re-deploy `wf2-asset --no-verify-jwt`.
+5. **Re-publish landingów Z flagą `--gate`** (`platform-sync.py publish … --gate`) — teraz URL-e
+   poza-hero idą przez bramkę, a bajty leżą prywatnie. Kanarek rozgrzewek → weryfikacja wizualna
+   (obrazy below-fold ładują się, LCP hero bez zmian, brak h-scroll, checkout żywy) → reszta 5.
+6. **Usuń/odetnij publiczne oryginały poza-hero** (dopiero po potwierdzeniu, że wszystkie 6 landingów
+   ciągną z bramki) — inaczej public URL wciąż otwarty. **To krok nieodwracalny → dopiero po zielonym
+   kanarku i backupie z pkt 1.**
+7. **Test kopisty:** `curl` assetu przez bramkę z obcym Referer → 403; bez nagłówka → 302 (fabryka/
+   crawler żyją); nasz Referer → 302 signed-url → 200 bajty.
+
+Do tego czasu warstwy 1-2-4 (origin-gate martwa kasa + watermark + detekcja) już utrudniają i
+namierzają kopię; bramka assetów to „docisk", nie warunek konieczny.
 
 ---
 
