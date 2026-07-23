@@ -234,24 +234,29 @@
   <!-- SEKCJA:01-hero START -->
 <section id="hero" class="hr-hero hero sect-pad">
   <div class="wrap hr-wrap">
-    <picture class="hr-scene reveal">
-      <source
-        media="(max-width:600px)"
-        srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/sc-hero-mobile.webp"
-      >
-      <source
-        media="(max-width:900px)"
-        srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/sc-hero-800.webp"
-      >
-      <img
-        src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/sc-hero.webp"
-        width="1536"
-        height="1024"
-        loading="eager"
-        fetchpriority="high"
-        alt="Kobieta ćwiczy brzuch na biało-różowej składanej maszynie w jasnym salonie"
-      >
-    </picture>
+    <div class="hr-scene reveal">
+      <picture class="hr-scene-pic">
+        <source
+          media="(max-width:600px)"
+          srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/sc-hero-mobile.webp"
+        >
+        <source
+          media="(max-width:900px)"
+          srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/sc-hero-800.webp"
+        >
+        <img
+          src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/sc-hero.webp"
+          width="1536"
+          height="1024"
+          loading="eager"
+          fetchpriority="high"
+          alt="Kobieta ćwiczy brzuch na biało-różowej składanej maszynie w jasnym salonie"
+        >
+      </picture>
+      <!-- HERO-VIDEO: slot pod pętlę hero-loop-pp (JS montuje <video>; NIE dostaje .reveal/transform).
+           Poster = statyczne sc-hero (widoczne od 1. paintu) → zero CLS, zero FOUC. -->
+      <div class="hr-video-inject" aria-hidden="true"></div>
+    </div>
 
     <article class="hr-card reveal" aria-labelledby="hr-title">
       <div class="eyebrow">TWOJA DOMOWA SERIA</div>
@@ -340,6 +345,7 @@
     }
 
     .hr-hero .hr-scene {
+      position: relative;
       display: block;
       width: calc(100% - var(--s5));
       margin-left: auto;
@@ -349,6 +355,12 @@
       box-shadow: var(--shadow-md);
     }
 
+    .hr-hero .hr-scene-pic {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
     .hr-hero .hr-scene img {
       display: block;
       width: 100%;
@@ -356,6 +368,36 @@
       object-fit: cover;
       object-position: center;
       border-radius: var(--radius-lg);
+    }
+
+    /* HERO-VIDEO: pętla nakłada się na scenę (poster = obraz sc-hero pod spodem); fade-in po 'playing' */
+    .hr-hero .hr-video-inject {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    .hr-hero .hr-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      opacity: 0;
+      transition: opacity .8s var(--ease-out);
+      pointer-events: none;
+    }
+
+    .hr-hero .hr-video.on {
+      opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hr-hero .hr-video { transition: none; }
     }
 
     .hr-hero .hr-card {
@@ -557,7 +599,8 @@
         border-radius: 0;
         box-shadow: none;
       }
-      .hr-hero .hr-scene img {
+      .hr-hero .hr-scene img,
+      .hr-hero .hr-video {
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -2505,6 +2548,196 @@
   </script>
 </section>
 <!-- SEKCJA:05-wideo END -->
+
+  <!-- SEKCJA:05b-zdjecia-kupujacych START -->
+<section id="zdjecia-kupujacych" class="zk-ugc sect-pad">
+  <div class="wrap">
+    <header class="zk-header reveal">
+      <div class="zk-kicker">
+        <p class="eyebrow">POZA PACKSHOTEM</p>
+        <span class="reps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+      </div>
+
+      <h2 class="h2 display">Zdjęcia od <span class="swash">kupujących</span>.</h2>
+      <p class="lead">
+        Prawdziwe domowe kadry biało-różowego Brzuszka — bez ocen, gwiazdek i liczników popularności.
+      </p>
+    </header>
+
+    <div class="zk-gallery reveal">
+      <figure class="zk-card">
+        <img
+          class="zk-image"
+          src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/ugc/ugc-1.webp"
+          width="540"
+          height="560"
+          loading="lazy"
+          alt="Zdjęcie od kupującego: konsola z licznikiem LCD i kierownica biało-różowej maszyny"
+        >
+        <figcaption class="zk-caption">Licznik LCD w kadrze kupującego</figcaption>
+      </figure>
+
+      <figure class="zk-card">
+        <img
+          class="zk-image"
+          src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/ugc/ugc-2.webp"
+          width="282"
+          height="500"
+          loading="lazy"
+          alt="Zdjęcie od kupującego: pogrubiony U-kształtny wałek piankowy z bliska"
+        >
+        <figcaption class="zk-caption">U-kształtny wałek z bliska</figcaption>
+      </figure>
+
+      <figure class="zk-card">
+        <img
+          class="zk-image"
+          src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/assets/ugc/ugc-3.webp"
+          width="282"
+          height="500"
+          loading="lazy"
+          alt="Zdjęcie od kupującego: biało-różowe elementy maszyny w kartonie po dostawie"
+        >
+        <figcaption class="zk-caption">Prosto z przesyłki</figcaption>
+      </figure>
+    </div>
+
+    <div class="zk-link-wrap reveal">
+      <a class="zk-link" data-checkout href="#zamow">Zamawiam biało-różowego Brzuszka</a>
+    </div>
+  </div>
+
+  <style>
+    #zdjecia-kupujacych.zk-ugc {
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    #zdjecia-kupujacych .zk-header {
+      max-width: 940px;
+      margin-inline: auto;
+      text-align: center;
+    }
+
+    #zdjecia-kupujacych .zk-kicker {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--s2);
+      margin-bottom: var(--s3);
+    }
+
+    #zdjecia-kupujacych .zk-kicker .eyebrow {
+      margin: 0;
+    }
+
+    #zdjecia-kupujacych .zk-header .h2 {
+      margin: 0;
+      color: var(--ink);
+      font-size: var(--h2-d);
+      line-height: 1.08;
+    }
+
+    #zdjecia-kupujacych .zk-header .lead {
+      max-width: 60ch;
+      margin: var(--s3) auto 0;
+      color: var(--body);
+      font-size: 17px;
+      text-wrap: balance;
+    }
+
+    #zdjecia-kupujacych .zk-gallery {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--s4);
+      margin-top: var(--s5);
+    }
+
+    #zdjecia-kupujacych .zk-card {
+      min-width: 0;
+      margin: 0;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    #zdjecia-kupujacych .zk-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    #zdjecia-kupujacych .zk-caption {
+      padding: var(--s3);
+      color: var(--body);
+      font-family: var(--font-text);
+      font-size: 13px;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    #zdjecia-kupujacych .zk-link-wrap {
+      display: flex;
+      justify-content: center;
+      margin-top: var(--s5);
+    }
+
+    #zdjecia-kupujacych .zk-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      color: var(--ink);
+      font-family: var(--font-text);
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.4;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.22em;
+    }
+
+    #zdjecia-kupujacych .zk-link:hover,
+    #zdjecia-kupujacych .zk-link:focus-visible {
+      color: var(--ink);
+      text-decoration-thickness: 2px;
+    }
+
+    #zdjecia-kupujacych .zk-link:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 4px;
+      border-radius: var(--radius-sm);
+    }
+
+    @media (max-width: 767px) {
+      #zdjecia-kupujacych .zk-header .h2 {
+        font-size: var(--h2-m);
+      }
+
+      #zdjecia-kupujacych .zk-gallery {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--s3);
+      }
+
+      #zdjecia-kupujacych .zk-card:first-child {
+        grid-column: 1 / -1;
+      }
+
+      #zdjecia-kupujacych .zk-card:not(:first-child) .zk-image {
+        aspect-ratio: 1 / 1;
+      }
+
+      #zdjecia-kupujacych .zk-caption {
+        padding: var(--s2);
+      }
+    }
+  </style>
+</section>
+<!-- SEKCJA:05b-zdjecia-kupujacych END -->
 
   <!-- SEKCJA:06-wiele-partii START -->
 <section id="wiele-partii" class="mp-partie sect-pad">
@@ -5958,6 +6191,36 @@
 })();
 </script>
 
+
+  <script>
+  /* HERO-VIDEO — pętla hero-loop-pp montowana w slot sceny; poster = obraz sc-hero (już widoczny → zero FOUC/CLS).
+     reduced-motion / save-data → zostaje sam poster/obraz. IO pauzuje wideo poza viewportem. */
+  (function(){try{
+    var mm=window.matchMedia; if(!mm)return;
+    if(mm('(prefers-reduced-motion: reduce)').matches)return;
+    var conn=navigator.connection||{}; if(conn.saveData)return;
+    var slot=document.querySelector('#hero .hr-video-inject');
+    if(!slot)return;
+    var SB='https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/brzuszek/video/';
+    var v=document.createElement('video');
+    v.muted=true;v.defaultMuted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.preload='metadata';
+    v.setAttribute('muted','');v.setAttribute('loop','');v.setAttribute('playsinline','');
+    v.setAttribute('preload','metadata');v.setAttribute('aria-hidden','true');
+    v.className='hr-video';
+    v.setAttribute('poster',SB+'hero-loop-poster-v2.webp');
+    v.innerHTML='<source src="'+SB+'hero-loop-pp-v2.mp4" type="video/mp4">';
+    v.addEventListener('playing',function(){v.classList.add('on');});
+    slot.appendChild(v);
+    var p=v.play(); if(p&&p.catch)p.catch(function(){});
+    var hero=document.getElementById('hero');
+    if(hero&&'IntersectionObserver'in window){
+      new IntersectionObserver(function(es){es.forEach(function(en){
+        if(en.isIntersecting){ var q=v.play(); if(q&&q.catch)q.catch(function(){}); }
+        else { v.pause(); }
+      });},{threshold:0}).observe(hero);
+    }
+  }catch(e){}})();
+  </script>
 
   <script>
   /* MOTION-DNA — współdzielony scroll-reveal + sygnatura .reps.

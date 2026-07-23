@@ -110,3 +110,46 @@
   final 1-kolumna; mid-cta karta z białym boxem (packshot residue-safe); topbar solid.
   Dowody: FABRYKA-merach/dopasowanie/ + contact-sheet w panelu (artefakt ad77f8e6).
   **lp_dopasowanie done** (checklista 5/6 — progi SSIM false z doktryną).
+
+## Naprawa 23.07 (F5 ŻYCIE + hero-video + sekcja dowodowa)
+- **F5 MOTION-DNA** wdrożone wg FABRYKA-merach/MOTION-DNA.md: tokeny `--dur/--ease`,
+  scroll-reveal (guard `html.mo` — bez JS/IO/reduced-motion nic nie ukryte; once;
+  stagger 70/90 cap 270), count-upy `5/2` (650/560 ms, +90 ms) i `≈200 kg` (1100 ms) —
+  tabular-nums + hidden-tab→finał, sygnatura `.reps` (5 seg, 60 ms, raz), sticky-buy
+  (spring/standard, debounce 120 ms, chowany od `#zamow` przez checkout+final),
+  akordeon FAQ (natywny `<details>` — wysokość NATYCHMIAST; usunięta animacja height;
+  chevron/opacity/tap-scale w CSS), toggle regulacji (thumb `translateX` + overlay stanu
+  przez `:has()`), hero-card `clip-path` bez transform (scena LCP widoczna od 1. paintu).
+  Reduced-motion = pełna treść bez ruchu. **TEST-PLAN (Playwright 1280+390): 0 błędów
+  konsoli, 0 h-scroll, reveal notIn=0, county dokładne (5/2/200), sticky OK, LL-052
+  `.zc-form` inView, reduced=statyka.** SSIM stanów: toggle-ctrl 0.68–0.71 (<0.90 PASS);
+  stepper „jak-cwiczysz" to single-image tablist → SSIM zdominowane niezmienną strukturą
+  (informacyjne wg doktryny F7.1); gate = semantyka: dokładnie 1 aktywny krok + 1 callout
+  w każdym stanie (zweryfikowane 1280+390).
+- **HERO-VIDEO** `hero-loop-pp.mp4` (1070 KB) w slocie `.hr-video-inject`; poster=`sc-hero`
+  (zero CLS/FOUC), fade-in po `playing`, IO pauza poza viewportem, reduced-motion/save-data
+  → sam poster. Scena: `<picture>` → `.hr-scene`(div)+slot; wideo bez `.reveal`/transform.
+- **SEKCJA `zdjecia-kupujacych` (5b)** — dowodowa, między `wideo` a `wiele-partii`.
+  Vision-gate 9 klatek `bud-reviews/1005010132139175`: `0-0`,`1-1` = wariant NIEBIESKI
+  (odrzut — niezgodny z paszportem biało-róż); `2-0` = OK, ale już użyta w składaniu (bez
+  duplikatu); `3-1` = pełny produkt, ale widoczne MERACH (retusz smużył → odrzut);
+  `4-2` = konsola LCD (OK po kadrze bez logo MERACH); `5-0` = rozpakowanie (OK); `6-1` =
+  części (OK, rezerwa); `7-2` = U-wałek makro (OK); `8-3` = zarysowany wspornik (słaby →
+  pominięty). Wybrane 3 różnorodne: `ugc-1`=LCD(4-2 crop), `ugc-2`=U-wałek(7-2),
+  `ugc-3`=rozpakowanie(5-0) → rehost `bud-assets/brzuszek/assets/ugc/` (WebP q80, 12–14 KB).
+  Skórka wg TOKENS (lila-mgła, radius 24/12), podpisy bez ocen/gwiazdek/liczb.
+
+## Naprawa 23.07 — HERO-LOOP v2 (feedback Tomka #4: klasa produktu AKTYWNY)
+- Tomek: „w hero zupełnie inaczej działa ten produkt i nie wziąłeś tego pod uwagę
+  podczas animacji" — v1 (cinemagraph: kobieta zamrożona w pół-ruchu, żyła firanka)
+  = martwa scena + fałszywy przekaz o maszynie do ćwiczeń.
+- Doktryna: STANDARD F1.7b (KLASA PRODUKTU STERUJE BEATEM) + LL-060. Brzuszek = AKTYWNY
+  → beat pokazuje DZIAŁANIE: jedno wolne kontrolowane powtórzenie crunch (wózek z różowym
+  U-wałkiem sunie po pochyłej belce, tułów się składa i wraca), rama A-frame rigid w NEG.
+- Generacja: Kling v2.1 PRO i2v (`regen-hero-brzuszek-v2.py`), src = brzuszek-src.jpg;
+  ping-pong ffmpeg crf27 = rytm powtórzeń; 1506 KB / 10 s + poster v2 (101 KB).
+- Gate klatkowy (0/1.2/2.4/3.6/4.8 s): cykl ćwiczenia realny, rama sztywna bez morfingu,
+  konsola/kolory stabilne, anatomia OK, twarz niewidoczna = PASS.
+- Wdrożenie: `bud-assets/brzuszek/video/hero-loop-pp-v2.mp4` + `hero-loop-poster-v2.webp`
+  (nowe nazwy — CDN cache), `assets/hero-video.mp4` nadpisane v2 (kafel home). Landing:
+  podmiana w slocie `.hr-video-inject` + re-publish (200, 215947 B, noindex zdjęty).

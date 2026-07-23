@@ -36,6 +36,7 @@
 3. `jak-cwiczysz | kodowa | build` — TOR-I tłumaczy mechanikę bez pseudonauki i bez zmuszania użytkowniczki do oglądania całego filmu.  
 4. `regulacja | kodowa | build` — typograficzne `5` i `2` odpowiadają na obiekcję „czy nie będzie za trudne?”.  
 5. `wideo | kodowa | build` — pionowe klipy 9:16 pokazują biało-różowy produkt w ruchu i są najmocniejszym materiałem demonstracyjnym (liczba kart = liczba klipów, które przejdą gate; min. 2).  
+5b. `zdjecia-kupujacych | scenowa | build` — sekcja dowodowa: 3 realne kadry biało-różowego produktu od kupujących (konsola LCD, U-kształtny wałek, rozpakowanie z kartonu), tokeny lila-mgła + radius 24/12, podpis „zdjęcia od kupujących”, ZERO ocen/gwiazdek/liczb; wpięta między `wideo` a `wiele-partii`. **Dodana 23.07 po feedbacku Tomka — sekcja dowodowa obowiązkowa, wpięta bez makiety jako naprawa post-hoc (manifest ją pomijał).**  
 6. `wiele-partii | scenowa | build` — pokazuje, że sprzęt obsługuje ćwiczenia brzucha, talii, pośladków, ramion i nóg.  
 7. `wytrzymalosc | scenowa | build` — trójkątna konstrukcja, pogrubione rurki i udźwig odpowiadają na pytanie, czy produkt jest stabilnym sprzętem, a nie lekkim gadżetem.  
 8. `mid-cta | kodowa | build` — przechwytuje decyzję po najważniejszych dowodach, bez rabatu, timera i sztucznej pilności.  
