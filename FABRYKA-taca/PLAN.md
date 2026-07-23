@@ -50,8 +50,9 @@
 6. `wideo | kodowa | build — materiał pięciu self-hosted klipów istnieje i może dostarczyć natywnego dla TikToka dowodu sposobu użycia`
 7. `mid-cta | kodowa | build — powtarza ofertę po zbudowaniu wartości, zachowując kolejność cena→CTA→redukcja ryzyka`
 8. `faq | kodowa | build — odpowiada uczciwie na pytania o czas, wodę, funkcje, pojemność, kolory, płatność i zwrot`
-9. `galeria | scenowa | SKIP — dostępny jest tylko jeden czysty packshot, więc nie ma materiału na wiarygodną galerię dowodową`
-10. `opinie | kodowa | SKIP — pięć generycznych opinii EN bez zdjęć nie stanowi wystarczającego materiału do publikacji`
+9. `galeria | scenowa | SKIP — dostępny jest tylko jeden czysty packshot; klasę dowodową pokrywa sekcja „zdjęcia od kupujących" (poz. 10b)`
+10. `opinie | kodowa | SKIP — pięć generycznych opinii EN (sam tekst) nie publikowane; klasę dowodową realizuje sekcja zdjęć od kupujących`
+10b. `zdjecia-kupujacych | build — dodana 23.07 (feedback Tomka; klasa dowodowa; materiał: 6 klatek bud-reviews); 3 kadry czarnego produktu (moduł / taca+perforacja / kabel USB-C; KAYUSO wycięty crop-em); po sekcji wideo (06), przed mid-cta; ZERO ocen/liczb`
 11. `zamow | kodowa | build — checkout na stronie obsługuje COD, BLIK/online, wariant tekstowy koloru i obowiązkowe podsumowanie zamówienia`
 12. `final | scenowa | build — zamyka historię spokojną sceną gotowania i ostatnią ofertą bez presji, przeceny ani fałszywej pilności`
 

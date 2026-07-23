@@ -94,3 +94,33 @@
   - Klipy: Storage bud-assets/rozmrozik/video/ + lokalnie FABRYKA-rozmrozik/video/.
     Klatki źródłowe (JPG ze scen) w video-factory/rozmrozik-anim/.
     Koszt fal: **$1.61** (3× standard + 1× pro + 1 nieudany standard; saldo 71.89→70.28).
+
+## F5 życie + F6 hero-video + Naprawa 23.07 (wdrożenie w index.html)
+- **F5 ŻYCIE (MOTION-DNA 1:1):** guard `.rmz-motion` (klasa startowa reveal TYLKO gdy JS +
+  brak reduced-motion; head-script) — bez JS / reduced-motion strona w 100% czytelna; tokeny
+  MOTION-DNA (ease-out/in-out/spring, dur-xs..l, enter-y 16/24); jeden współdzielony IO
+  (once + will-change tylko na czas animacji, zdejmowany po transitionend); count-up „4,2 L"
+  (locale pl, threshold 0.45, 1200 ms, ≤30 akt./s, tabular-nums, kończy DOKŁADNIE „4,2 L";
+  reduced-motion = statyczne). Guard `display:contents` (pj-media na mobile) → add .in (brak
+  boxa, IO nie obserwuje). Hero diptych BEZ reveal (ochrona LCP — MOTION-DNA: media dyptyku
+  widoczne od 1. klatki). Sticky-buy: dual-gate hero+#zamow (chowany na checkoucie).
+- **F6 HERO-VIDEO:** pętla `hero-loop-pp.mp4` (486 KB) wpięta JS-em w PRAWĄ połowę dyptyku
+  (.hr-thaw-vid nad statycznym posterem sc-hero-thawed.webp; fade-in po 'playing'; IO
+  play/pause; reduced-motion/save-data = sam poster). Lewa połowa (zamrożone) statyczna —
+  kontrast zimno|ciepło. Zero CLS (aspect kontenera bez zmian). Klamra #zamow POMINIĘTA
+  świadomie (ochrona czytelności checkoutu — opcjonalna w brief).
+- **NAPRAWA 23.07 — błędna diagnoza F0 naprawiona:** „SKIP opinii/galeria" był błędem — materiał
+  UGC LEŻAŁ w bud-reviews/1005011774118215/ (6 klatek). Dorobiona sekcja „zdjęcia od kupujących"
+  (STANDARD §F1a, klasa dowodowa) po sekcji wideo (06), przed mid-cta. Vision-gate 6/6:
+  PASS 5-0 (moduł czarny) + 2-0 (taca+perforacja top-down) + 4-0 (kabel USB-C); ODRZUT 0-0
+  (wariant BIAŁY — sprzedajemy czarny), 1-0 (ściana brandu KAYUSO/warehouse), 3-1 (pudełko
+  z claimem „PLASMA LOCK FRESHNESS"). Rehost 3 kadrów → bud-assets/rozmrozik/assets/ugc/
+  ugc-{1,2,3}.webp (WebP q80, 11.9/15.7/9.6 KB; KAYUSO wycięty crop-em; ZERO ocen/liczb).
+- **TEST-PLAN 10/10 PASS** (1280+390): TOR-I SSIM 0.41–0.62 (<0.9); reveal-audyt 0; count-up
+  „4,2 L"; sticky bez CLS; hero-video gra (paused=false, oba viewporty) + poster przy
+  reduced-motion; nowa sekcja renderuje; 0 konsoli; 0 h-scroll (rail wideo = kontrolowany
+  overflow wewn.); CLS=0; LL-052 CTA→.zc-form; checkout NIETKNIĘTY (data-zc-api ×2, kasa 200).
+  Dowody: FABRYKA-taca/zycie/.
+- **PUBLISH:** platform-sync publish (⛔ bez ensure_product) → https://ulepszek.pl/rozmrozik
+  HTTP 200, 205566 B, runtime product_id TAK, hero-loop-pp.mp4 w live HTML, data-zc-api ×2,
+  noindex ZDJĘTY, kasa 200. Wypchnięte razem: 27 poprawek F7.1 + hotfix kasy + F5 + F6 + UGC.

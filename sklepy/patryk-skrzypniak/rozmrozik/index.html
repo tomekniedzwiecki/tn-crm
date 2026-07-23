@@ -66,6 +66,9 @@
       --price-fs:clamp(30px,3.6vw,46px);
       --body-fs:17px;--body-lh:1.55;
       --mo-dur-s:.24s;--mo-dur-m:.38s;--mo-dur-l:.58s;--mo-ease:cubic-bezier(.22,1,.36,1);--mo-dist:16px;
+      /* MOTION-DNA (F5) — ruch „spokojnego odmrażania" */
+      --ease-out:cubic-bezier(.22,1,.36,1);--ease-in-out:cubic-bezier(.65,0,.35,1);--ease-spring:cubic-bezier(.20,1.24,.32,1);
+      --dur-xs:120ms;--dur-s:220ms;--dur-m:420ms;--dur-l:680ms;--enter-y-m:16px;--enter-y-d:24px;
     }
 
     *,*::before,*::after{box-sizing:border-box}
@@ -116,9 +119,13 @@
     .band::before{position:absolute;z-index:-1;inset:0;content:"";pointer-events:none;
       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.03'/%3E%3C/svg%3E")}
 
-    .reveal{opacity:0;transform:translateY(var(--mo-dist))}
-    .reveal.in{opacity:1;transform:none;
-      transition:opacity var(--mo-dur-l) var(--mo-ease),transform var(--mo-dur-l) var(--mo-ease)}
+    /* ── SCROLL-REVEAL (MOTION-DNA): stan startowy TYLKO gdy JS działa i brak reduced-motion.
+         Klasa .rmz-motion nadawana w <head> jedynie gdy ruch dozwolony → brak JS / reduced-motion
+         ⇒ .reveal pozostaje w pełni widoczny (strona czytelna bez ruchu). ── */
+    .rmz-motion .reveal{opacity:0;transform:translateY(var(--enter-y-m))}
+    .rmz-motion .reveal.in{opacity:1;transform:none;
+      transition:opacity var(--dur-m) var(--ease-out),transform var(--dur-m) var(--ease-out)}
+    @media (min-width:768px){.rmz-motion .reveal{transform:translateY(var(--enter-y-d))}}
 
     .topbar{position:sticky;z-index:100;top:0;border-bottom:1px solid var(--line);
       background:rgba(242,247,250,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
@@ -152,6 +159,7 @@
       .btn,.btn.cta{transition:none}
     }
   </style>
+  <script>try{if(window.matchMedia&&!matchMedia('(prefers-reduced-motion:reduce)').matches)document.documentElement.classList.add('rmz-motion');}catch(e){}</script>
 </head>
 
 <body>
@@ -247,7 +255,7 @@
       </div>
     </div>
 
-    <div class="hr-diptych reveal" aria-label="Porównanie produktu przed i po rozmrożeniu">
+    <div class="hr-diptych" aria-label="Porównanie produktu przed i po rozmrożeniu">
       <figure class="hr-frame">
         <picture>
           <source
@@ -280,6 +288,8 @@
             alt="Rozmrozik z porcjami mięsa pod kopułą obok patelni"
           >
         </picture>
+        <!-- F6 hero-video: ambient loop (para z kubka + zasłona żyją, produkt statyczny) wpinany JS; poster=obraz sceny (zero CLS) -->
+        <div class="hr-thaw-vid" aria-hidden="true"></div>
         <figcaption class="hr-chip">ROZMROŻONE</figcaption>
       </figure>
     </div>
@@ -442,7 +452,34 @@
       border-radius: var(--radius-sm);
     }
 
+    /* F6 hero-video: pętla nad statycznym posterem-obrazem prawej połowy dyptyku
+       (fade-in po 'playing' — zero CLS: kontener = .hr-frame, aspect bez zmian). */
+    .hr-hero .hr-thaw-vid {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+      border-radius: var(--radius-sm);
+      pointer-events: none;
+    }
+
+    .hr-hero .hr-thaw-vid video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      opacity: 0;
+      transition: opacity .8s var(--mo-ease);
+    }
+
+    .hr-hero .hr-thaw-vid video.on {
+      opacity: 1;
+    }
+
     .hr-hero .hr-chip {
+      z-index: 2;
       position: absolute;
       left: 12px;
       bottom: 12px;
@@ -2801,6 +2838,135 @@
   </script>
 </section>
 <!-- SEKCJA:06-wideo END -->
+
+  <!-- SEKCJA:06b-zdjecia-kupujacych START -->
+<!-- Klasa dowodowa (STANDARD §F1a) — naprawa 23.07 po feedbacku Tomka: 3 kadry rozpakowania
+     czarnego produktu wybrane z 6 klatek bud-reviews/1005011774118215/ (KAYUSO wycięty crop-em;
+     odrzut: wariant biały 0-0, ściany brandu 1-0/4-0, pudełko z claimem 3-1). ZERO ocen/liczb. -->
+<section id="zdjecia" class="ug-section sect-pad">
+  <div class="wrap">
+    <header class="ug-header reveal">
+      <p class="eyebrow">POZA PACKSHOTEM</p>
+      <span class="thaw" aria-hidden="true"></span>
+      <h2 class="h2">Zdjęcia od <span class="swash">kupujących</span>.</h2>
+      <p class="lead">Prawdziwe kadry rozpakowania czarnego Rozmrozika — bez ocen, gwiazdek i liczników.</p>
+    </header>
+
+    <div class="ug-gallery reveal">
+      <figure class="ug-card">
+        <img
+          class="ug-image"
+          src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/rozmrozik/assets/ugc/ugc-1.webp"
+          width="800"
+          height="1000"
+          loading="lazy"
+          alt="Zdjęcie od kupującego: czarny moduł Rozmrozika z okrągłą kratką wentylatora i panelem dotykowym LED"
+        >
+        <figcaption class="ug-caption">Wariant czarny</figcaption>
+      </figure>
+
+      <figure class="ug-card">
+        <img
+          class="ug-image"
+          src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/rozmrozik/assets/ugc/ugc-2.webp"
+          width="800"
+          height="1000"
+          loading="lazy"
+          alt="Zdjęcie od kupującego: rozpakowanie — aluminiowa płyta z perforacją i przezroczysta kopuła"
+        >
+        <figcaption class="ug-caption">Wariant czarny</figcaption>
+      </figure>
+
+      <figure class="ug-card">
+        <img
+          class="ug-image"
+          src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/rozmrozik/assets/ugc/ugc-3.webp"
+          width="800"
+          height="1000"
+          loading="lazy"
+          alt="Zdjęcie od kupującego: dołączony kabel do ładowania USB-C"
+        >
+        <figcaption class="ug-caption">Wariant czarny</figcaption>
+      </figure>
+    </div>
+
+    <div class="ug-link-wrap reveal">
+      <a class="ug-link" href="#zamow">Zamawiam Rozmrozik</a>
+    </div>
+  </div>
+
+  <style>
+    #zdjecia.ug-section { background: var(--paper); color: var(--ink); }
+
+    #zdjecia .ug-header { max-width: 920px; margin-inline: auto; text-align: center; }
+    #zdjecia .ug-header .eyebrow { margin: 0; }
+    #zdjecia .ug-header .thaw { display: block; width: 76px; margin: 12px auto 0; }
+    #zdjecia .ug-header .h2 { margin: var(--s3) 0 0; }
+    #zdjecia .ug-header .lead { max-width: 60ch; margin: var(--s3) auto 0; color: var(--body); font-size: 17px; }
+
+    #zdjecia .ug-gallery {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--s4);
+      margin-top: var(--s5);
+    }
+
+    #zdjecia .ug-card {
+      min-width: 0;
+      margin: 0;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    #zdjecia .ug-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    #zdjecia .ug-caption {
+      padding: var(--s3);
+      color: var(--body);
+      font-size: 13px;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    #zdjecia .ug-link-wrap { display: flex; justify-content: center; margin-top: var(--s5); }
+
+    #zdjecia .ug-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.4;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.22em;
+    }
+
+    #zdjecia .ug-link:hover,
+    #zdjecia .ug-link:focus-visible { color: var(--cta); text-decoration-thickness: 2px; }
+    #zdjecia .ug-link:focus-visible { outline: 3px solid var(--cta); outline-offset: 3px; border-radius: var(--radius-sm); }
+
+    @media (max-width: 767px) {
+      #zdjecia .ug-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
+      #zdjecia .ug-card:first-child { grid-column: 1 / -1; }
+      #zdjecia .ug-card:not(:first-child) .ug-image { aspect-ratio: 1 / 1; }
+      #zdjecia .ug-caption { padding: var(--s2); }
+    }
+  </style>
+</section>
+<!-- SEKCJA:06b-zdjecia-kupujacych END -->
 
   <!-- SEKCJA:07-mid-cta START -->
 <section id="mid-cta" class="mc-section band">
@@ -5545,11 +5711,16 @@
   </div>
 </div>
 <script>
+/* MOTION-DNA sticky-buy: chowaj gdy .hero LUB #zamow w viewport (nie zasłaniać checkoutu). */
 (function(){try{
-  var stickyEl=document.querySelector('.sticky-buy'),heroEl=document.querySelector('.hero');
-  if(stickyEl&&heroEl&&'IntersectionObserver'in window){
-    new IntersectionObserver(function(es){es.forEach(function(en){en.isIntersecting?stickyEl.classList.remove('show'):stickyEl.classList.add('show');});},{threshold:0}).observe(heroEl);
-  }else if(stickyEl){stickyEl.classList.add('show');}
+  var st=document.querySelector('.sticky-buy'),hero=document.querySelector('.hero'),zamow=document.getElementById('zamow');
+  if(!st)return;
+  if(!('IntersectionObserver'in window)){st.classList.add('show');return;}
+  var hide={hero:true,zamow:false};
+  function apply(){var h=hide.hero||hide.zamow;st.classList.toggle('show',!h);st.setAttribute('aria-hidden',h?'true':'false');st.style.pointerEvents=h?'none':'';}
+  if(hero){new IntersectionObserver(function(es){es.forEach(function(en){hide.hero=en.isIntersecting;apply();});},{threshold:0}).observe(hero);}else{hide.hero=false;}
+  if(zamow){new IntersectionObserver(function(es){es.forEach(function(en){hide.zamow=en.isIntersecting;apply();});},{threshold:0.12}).observe(zamow);}
+  apply();
 }catch(e){try{document.querySelector('.sticky-buy').classList.add('show');}catch(_e){}}
 })();
 </script>
@@ -5568,18 +5739,103 @@
 </script>
 
 
+  <!-- F6 HERO-VIDEO (F5.2): ambient loop wpięty w PRAWĄ połowę dyptyku (sc-hero-thawed).
+       Para z kubka + zasłona żyją, produkt statyczny. Poster/fallback = obraz sceny pod spodem
+       (picture, zero CLS); wideo fade-in po 'playing'. reduced-motion/save-data → sam poster. -->
+  <script>
+  (function(){try{
+    var mm=window.matchMedia; if(!mm)return;
+    if(mm('(prefers-reduced-motion: reduce)').matches)return;   // reduced-motion = statyczny poster
+    var conn=navigator.connection||{}; if(conn&&conn.saveData)return;  // save-data = statyczny poster
+    var slot=document.querySelector('#hero .hr-thaw-vid'); if(!slot)return;
+    var SB="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/rozmrozik/";
+    var v=document.createElement('video');
+    v.muted=true;v.defaultMuted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.preload='metadata';
+    v.setAttribute('muted','');v.setAttribute('loop','');v.setAttribute('playsinline','');
+    v.setAttribute('preload','metadata');v.setAttribute('aria-hidden','true');
+    v.setAttribute('poster',SB+'assets/sc-hero-thawed.webp');
+    v.innerHTML='<source src="'+SB+'video/hero-loop-pp.mp4" type="video/mp4">';
+    v.addEventListener('playing',function(){v.classList.add('on');});
+    slot.appendChild(v); v.load();
+    var p=v.play(); if(p&&p.catch)p.catch(function(){});
+    var hero=document.getElementById('hero');
+    if('IntersectionObserver'in window&&hero){
+      new IntersectionObserver(function(es){es.forEach(function(en){
+        if(en.isIntersecting){var q=v.play();if(q&&q.catch)q.catch(function(){});}else{v.pause();}
+      });},{threshold:0,rootMargin:'150px 0px'}).observe(hero);
+    }
+  }catch(e){}})();
+  </script>
+
+  <!-- GLOBAL MOTION (MOTION-DNA F5): scroll-reveal (jeden współdzielony IO, once,
+       will-change tylko na czas animacji) + count-up „4,2 L" (locale pl, threshold 0.45, raz). -->
   <script>
   (function(){
-    if(!('IntersectionObserver' in window)){
-      document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in');});
-      return;
-    }
-    var io=new IntersectionObserver(function(es){
-      es.forEach(function(en){
-        if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}
+    var reduce = !window.matchMedia || matchMedia('(prefers-reduced-motion:reduce)').matches;
+    var hasIO = ('IntersectionObserver' in window);
+    var els = document.querySelectorAll('.reveal');
+
+    // ── SCROLL-REVEAL ──
+    if(!hasIO || reduce){
+      els.forEach(function(el){ el.classList.add('in'); });
+    } else {
+      var reveal=function(el){
+        el.style.willChange='transform, opacity';
+        el.classList.add('in');
+        var clr=function(){ el.style.willChange=''; el.removeEventListener('transitionend',clr); };
+        el.addEventListener('transitionend',clr);
+        setTimeout(clr,1200);
+      };
+      var io=new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          var el=e.target;
+          if(!e.isIntersecting){
+            if(e.boundingClientRect.bottom<0){ io.unobserve(el); el.classList.add('in'); }
+            return;
+          }
+          if(e.intersectionRatio<0.16 && e.boundingClientRect.height<=window.innerHeight) return;
+          io.unobserve(el); reveal(el);
+        });
+      },{ rootMargin:'0px 0px -8% 0px', threshold:[0,0.18,0.5,1] });
+      els.forEach(function(el){
+        var d=getComputedStyle(el).display;
+        if(d==='none'||d==='contents'){ el.classList.add('in'); return; } // brak boxa → IO nie obserwuje; treść widoczna
+        io.observe(el);
       });
-    },{rootMargin:'0px 0px -8% 0px',threshold:.08});
-    document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+    }
+
+    // ── COUNT-UP „4,2 L" (JEDYNY akcent liczbowy): 0,0 → 4,2 L, 1200 ms, ease-out, threshold 0.45, raz ──
+    var cu = document.querySelector('[data-countup]');
+    if(cu){
+      var TARGET=4.2;
+      var fmt=function(v){
+        var s;
+        try{ s=v.toLocaleString('pl-PL',{minimumFractionDigits:1,maximumFractionDigits:1}); }
+        catch(e){ s=v.toFixed(1).replace('.',','); }
+        return s+' L';
+      };
+      cu.style.fontVariantNumeric='tabular-nums';
+      if(reduce || !hasIO){ cu.textContent=fmt(TARGET); }
+      else {
+        cu.textContent=fmt(0);
+        var cio=new IntersectionObserver(function(es){
+          es.forEach(function(e){
+            if(!e.isIntersecting || e.intersectionRatio<0.45) return;
+            cio.disconnect();
+            var dur=1200, t0=null, last=0;
+            var eo=function(x){ return 1-Math.pow(1-x,3); };
+            var step=function(ts){
+              if(t0===null){ t0=ts; last=0; }
+              var p=Math.min(1,(ts-t0)/dur);
+              if(ts-last>=33 || p>=1){ cu.textContent=fmt(TARGET*eo(p)); last=ts; }  // ≤30 aktualizacji/s
+              if(p<1) requestAnimationFrame(step); else cu.textContent=fmt(TARGET);
+            };
+            requestAnimationFrame(step);
+          });
+        },{ threshold:[0,0.45] });
+        cio.observe(cu);
+      }
+    }
   })();
   </script>
 
