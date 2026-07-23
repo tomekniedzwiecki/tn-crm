@@ -2373,8 +2373,10 @@ function validateForm() {
 
     // Implicit consent — klik 'Zaplac' = akceptacja regulaminu (statement pod buttonem w pay bar)
     // Stworzę: dodatkowo WYMAGANY checkbox zgody na usługę cyfrową przed upływem 14 dni.
+    // Aplikacja/rozmowa (49 zł): WYMAGANY checkbox art. 38 pkt 1 u.p.k. (blokuje jak Stworzę).
     // Sklep: checkbox OPCJONALNY (nie blokuje — patrz consentSnapshot), więc bez walidacji tu.
     if (!validateStworzeConsent()) valid = false;
+    if (!validateAplikacjaConsent()) valid = false;
     return valid;
 }
 
@@ -2718,8 +2720,10 @@ function setupOfferDisplay(offer) {
         $('v-installments-monthly').textContent = formatPrice(calculateInstallment(offer.price));
     }
 
+    routeRegulaminLinks(offer);   // jedno źródło routingu linku „regulamin" (PRZED setupami)
     setupStworzeConsent(offer);
     setupSklepConsent(offer);
+    setupAplikacjaConsent(offer);
     updatePayButton();
 }
 
@@ -2743,7 +2747,7 @@ function resvEventOpts() {
 function setupStworzeConsent(offer) {
     if (offer.id !== STWORZE_OFFER_ID) return;
     stworzeConsentRequired = true;
-    document.querySelectorAll('.v-link-regulamin').forEach(a => a.href = STWORZE_REGULAMIN);
+    // Link „regulamin" pod przyciskiem ustawia routeRegulaminLinks() (jedno źródło).
     const payBtn = $('v-pay-desktop');
     if (!payBtn || $('stworze-consent')) return;
     // UWAGA: checkbox MUSI stać POZA .v-form-cta — ta sekcja na mobile ma
@@ -2826,10 +2830,8 @@ function setupSklepConsent(offer) {
     const { shop, service } = detectSklepPayment(offer);
     if (!shop) return; // nie sklep → nic nie ruszamy (Stworzę/aplikacja/inne oferty bez zmian)
 
-    // Kontekst sklepowy → link „regulamin" pod przyciskiem wskazuje regulamin SKLEPU
-    // (dla rezerwacji ORAZ płatności za usługę). Polityka prywatności bez zmian.
-    document.querySelectorAll('.v-link-regulamin').forEach(a => a.href = SKLEP_REGULAMIN);
-
+    // Link „regulamin" pod przyciskiem (regulamin SKLEPU dla rezerwacji ORAZ usługi)
+    // ustawia routeRegulaminLinks() — jedno źródło. Polityka prywatności bez zmian.
     if (!service) return; // rezerwacja 100 zł (w pełni zwrotna) → checkbox zbędny
 
     sklepConsentRequired = true;
@@ -2853,15 +2855,92 @@ function setupSklepConsent(offer) {
     ctaWrap.parentNode.insertBefore(alt, ctaWrap);
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// APLIKACJA (/aplikacja) — wspólny regulamin aplikacji dla: rozmowy 49 zł
+// (usługa cyfrowa), rezerwacji aplikacji (Stworzę), budowy STANDARD + rat.
+//  • ROZMOWA (49 zł): checkbox WYMAGANY (art. 38 ust. 1 pkt 1 u.p.k.) — blokuje
+//    płatność jak Stworzę; po pełnym wykonaniu usługi konsument traci prawo odstąpienia.
+//  • BUDOWA STANDARD (6d88d636) + raty custom „budowa aplikacji": BEZ checkboxa —
+//    zgodę na start prac reguluje podpisywana umowa QES, nie checkout.
+// ═══════════════════════════════════════════════════════════════════
+const APLIKACJA_ROZMOWA_OFFER_ID = '2a1fbbfe-32fe-4aa3-9f96-3a812da103d4'; // „Aplikacja — kolejna rozmowa" (49 zł)
+const APLIKACJA_OFFER_IDS = [APLIKACJA_ROZMOWA_OFFER_ID, '6d88d636-b1b3-40c2-ba5b-12bdbfe07b4d']; // + „Budowa aplikacji — STANDARD"
+const APLIKACJA_REGULAMIN = STWORZE_REGULAMIN; // ten sam regulamin aplikacji — nie duplikuj literału URL
+let aplikacjaConsentRequired = false;
+
+// Rozpoznanie płatności aplikacyjnej. Sygnały (addytywne):
+//  • offer-mode: id ∈ APLIKACJA_OFFER_IDS (rozmowa / budowa STANDARD) lub === STWORZE_OFFER_ID (rezerwacja aplikacji).
+//  • custom-payment / rata: id === null i opis/nazwa zawiera „budowa aplikacji" (case-insensitive) —
+//    spójnie z heurystyką tpay-webhook (raty budowy niosą nazwę oferty w opisie).
+// Zwrot: { aplikacja, rozmowa } — rozmowa=true tylko dla oferty 49 zł (usługa cyfrowa → checkbox WYMAGANY).
+function detectAplikacjaPayment(offer) {
+    if (!offer) return { aplikacja: false, rozmowa: false };
+    const isCustom = !offer.id; // custom payment / rata mają id === null
+    const text = ((offer.name || '') + ' ' + (offer.description || '')).toLowerCase();
+    const isKnownOffer   = APLIKACJA_OFFER_IDS.includes(offer.id) || offer.id === STWORZE_OFFER_ID;
+    const isCustomBudowa = isCustom && text.includes('budowa aplikacji');
+    return { aplikacja: isKnownOffer || isCustomBudowa, rozmowa: offer.id === APLIKACJA_ROZMOWA_OFFER_ID };
+}
+
+function setupAplikacjaConsent(offer) {
+    const { aplikacja, rozmowa } = detectAplikacjaPayment(offer);
+    if (!aplikacja) return;  // nie aplikacja → nic (routing linku robi routeRegulaminLinks)
+    if (!rozmowa)   return;  // budowa STANDARD / raty → tylko link, checkbox reguluje umowa QES
+
+    aplikacjaConsentRequired = true;
+    const payBtn = $('v-pay-desktop');
+    if (!payBtn || $('aplikacja-consent')) return;
+    // checkbox POZA .v-form-cta (na mobile display:none — płatność ze sticky bara),
+    // żeby zgoda była widoczna i zaznaczalna także na telefonie
+    const ctaWrap = payBtn.closest('.v-form-cta') || payBtn;
+    const box = document.createElement('label');
+    box.id = 'aplikacja-consent-box';
+    box.style.cssText = 'display:flex;gap:10px;align-items:flex-start;margin:14px 0 4px;font-size:12.5px;line-height:1.55;color:#a1a1aa;cursor:pointer;';
+    box.innerHTML = '<input type="checkbox" id="aplikacja-consent" style="margin-top:2.5px;accent-color:#4d9fff;flex-shrink:0;">' +
+        '<span>Żądam wykonania usługi (rozmowy) niezwłocznie po zapłacie i przyjmuję do wiadomości, że po pełnym wykonaniu usługi utracę prawo odstąpienia od umowy (art. 38 ust. 1 pkt 1 ustawy o prawach konsumenta). Akceptuję <a href="' + APLIKACJA_REGULAMIN + '" target="_blank" style="color:#4d9fff;">Regulamin</a>.</span>';
+    ctaWrap.parentNode.insertBefore(box, ctaWrap);
+    const err = document.createElement('div');
+    err.id = 'aplikacja-consent-err';
+    err.style.cssText = 'display:none;color:#f87171;font-size:12px;margin:-2px 0 8px;';
+    err.textContent = 'Zaznacz zgodę, żeby przejść do płatności.';
+    ctaWrap.parentNode.insertBefore(err, ctaWrap);
+}
+
+function validateAplikacjaConsent() {
+    if (!aplikacjaConsentRequired) return true;
+    const cb = $('aplikacja-consent');
+    const ok = !!(cb && cb.checked);
+    const err = $('aplikacja-consent-err');
+    if (err) err.style.display = ok ? 'none' : 'block';
+    if (!ok && cb) cb.closest('label').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return ok;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ROUTING LINKÓW „regulamin" — jedno źródło prawdy (wołane PRZED setupami consentów).
+// Setupy Stworzę/Sklep/Aplikacja NIE ruszają już .v-link-regulamin — tylko checkboxy.
+//  • sklep (usługa/rezerwacja/custom)                                → regulamin sklepu
+//  • aplikacja (rozmowa/budowa/Stworzę/custom „budowa aplikacji")    → regulamin aplikacji
+//  • inne oferty                                                     → domyślny (setLegalLinks(), bez zmian)
+// ═══════════════════════════════════════════════════════════════════
+function routeRegulaminLinks(offer) {
+    let url = null;
+    if (detectSklepPayment(offer).shop) url = SKLEP_REGULAMIN;
+    else if (detectAplikacjaPayment(offer).aplikacja) url = APLIKACJA_REGULAMIN;
+    if (url) document.querySelectorAll('.v-link-regulamin').forEach(a => a.href = url);
+}
+
 // Snapshot zgody w momencie płatności (zapis do orders.consent_digital_service/consented_at):
 //  • STWORZĘ: checkbox WYMAGANY (walidacja blokuje) → gdy tu jesteśmy, jest zaznaczony → TAK + data.
 //  • SKLEP: checkbox OPCJONALNY do płatności → zaznaczony = TAK + data; niezaznaczony = FALSE (bez daty)
 //    — klient dobierze wariant „start po 14 dniach" przez portal klienta / kontakt.
-//  • Brak kontekstu zgody (zwykłe oferty, raty) → null (kolumny puste, jak dotąd).
+//  • APLIKACJA/ROZMOWA (49 zł): checkbox WYMAGANY (walidacja blokuje) → gdy tu jesteśmy, zaznaczony → TAK + data.
+//  • Brak kontekstu zgody (zwykłe oferty, budowa aplikacji, raty) → null (kolumny puste, jak dotąd).
 function consentSnapshot() {
     let cb = null;
     if (stworzeConsentRequired) cb = $('stworze-consent');
     else if (sklepConsentRequired) cb = $('sklep-consent');
+    else if (aplikacjaConsentRequired) cb = $('aplikacja-consent');
     if (!cb) return { value: null, at: null };
     const checked = !!cb.checked;
     return { value: checked, at: checked ? new Date().toISOString() : null };

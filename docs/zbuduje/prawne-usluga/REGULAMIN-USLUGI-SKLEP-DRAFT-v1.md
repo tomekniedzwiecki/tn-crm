@@ -1,29 +1,32 @@
-# Regulamin usługi „Budowa i rozkręcenie sklepu internetowego"
+# Regulamin usługi budowy i rozwoju sklepu internetowego
 
-**Wersja robocza v1 — DRAFT do akceptacji.**
-Data sporządzenia: 21 lipca 2026 r.
-
----
-
-## W skrócie — najważniejsze zasady
-
-To streszczenie ma pomóc Ci szybko zrozumieć, na co się umawiamy. Nie zastępuje treści regulaminu — w razie wątpliwości wiążą postanowienia dalszych paragrafów.
-
-1. **Co kupujesz.** Buduję dla Ciebie gotowy do sprzedaży sklep internetowy z portfelem około 3 produktów, rozkręcam sprzedaż kampaniami reklamowymi, wdrażam Cię do prowadzenia biznesu i przekazuję Ci stery, gdy sklep okrzepnie.
-2. **Ile to kosztuje.** Budowa i rozkręcenie: 4900 zł brutto. Najpierw rezerwacja 100 zł, potem 4800 zł przy zawarciu umowy — jednorazowo albo w nieoprocentowanych ratach 0%. Do tego dochodzi prowizja 5% od sprzedaży (pkt 7) i budżet reklamowy (pkt 5).
-3. **Rezerwacja jest w pełni zwrotna.** Do chwili zawarcia umowy właściwej możesz się wycofać i oddaję Ci 100 zł w całości, bez potrąceń i bez pytań. Jeśli wchodzimy we współpracę — 100 zł pomniejsza cenę.
-4. **Bezpiecznik po pierwszym etapie.** Po zbudowaniu fundamentu biznesu każdy z nas może powiedzieć „nie idziemy dalej". Wtedy zwracam Ci **całość** tego, co wpłaciłeś.
-5. **Budżet reklamowy jest osobno.** Reklamy opłacasz Ty (na start orientacyjnie ok. 1000 zł), z Twojego konta reklamowego. Ja prowadzę kampanie w Twoim imieniu.
-6. **Czyja jest infrastruktura.** Sklep działa na mojej platformie, a domenę rejestruję na siebie. Marka, strony, grafiki, wideo i teksty są moim dziełem — dostajesz do nich licencję na czas współpracy. Możesz je wykupić na własność odrębną umową — cena to 24 miesiące średniej prowizji (min. 1900 zł), w tym transfer domeny.
-7. **Prowizja 5%.** Od uruchomienia sprzedaży pobieram 5% od przychodu sklepu. To wynagrodzenie za utrzymanie sklepu, licencję, wsparcie i doradztwo — bezterminowo, dopóki trwa współpraca.
-8. **Sprzedawcą jesteś Ty.** Wobec kupujących to Ty jesteś sprzedawcą — Twoje dane są w regulaminie sklepu, Ty odpowiadasz za podatki i reklamacje. Ja Cię w tym wspieram.
-9. **Jak można zakończyć współpracę.** Po zbudowaniu sklepu możesz ją wypowiedzieć w każdej chwili z miesięcznym wyprzedzeniem, **bez żadnych kar**. Uczciwie uprzedzam: koniec współpracy oznacza koniec działania sklepu na mojej platformie i domenie — wtedy wydaję Ci Twoje dane (klientów i zamówienia). Możesz też wykupić markę i materiały na własność (pkt 6).
-10. **Bez gwarancji wyników.** Robię swoją robotę najlepiej, jak potrafię, ale to biznes — nikt uczciwy nie zagwarantuje Ci przychodu ani zysku. Liczby w ofercie to ilustracja, nie obietnica.
-11. **Możesz odstąpić od umowy.** Jako konsument (lub przedsiębiorca na prawach konsumenta) masz 14 dni na odstąpienie. Prace ruszają dopiero, gdy sam o to poprosisz — do tego czasu rezygnacja jest całkowicie bezkosztowa.
+**Wersja 2.0**
+Data wejścia w życie: {{DATA_WEJSCIA}}
+Wersja poprzednia (1.0) dostępna w archiwum pod adresem: /sklep/regulamin/v1/
 
 ---
 
-## §1. Kto świadczy usługę i jak się kontaktować
+## Podsumowanie najważniejszych postanowień
+
+*(charakter informacyjny — wiążąca jest treść paragrafów)*
+
+Poniższe podsumowanie służy przejrzystości i ma charakter wyłącznie informacyjny. Nie zastępuje treści Regulaminu — w razie wątpliwości wiążące są postanowienia poszczególnych paragrafów.
+
+1. **Przedmiot usługi.** Usługodawca buduje dla Klienta gotowy do sprzedaży sklep internetowy z portfelem około 3 produktów, rozwija sprzedaż kampaniami reklamowymi, wdraża Klienta do prowadzenia działalności i przekazuje mu bieżące prowadzenie Sklepu po osiągnięciu ustalonego poziomu sprzedaży.
+2. **Wynagrodzenie.** Na wynagrodzenie składa się jednorazowa opłata za zbudowanie i rozwój Sklepu — w wysokości wskazanej w aktualnej ofercie Usługodawcy w chwili zamówienia (płatna najpierw jako opłata rezerwacyjna, a następnie jako pozostała część ceny przy zawarciu Umowy Głównej, jednorazowo albo w nieoprocentowanych ratach 0%) — oraz prowizja 5% od Przychodu (§14). Budżet reklamowy Klient finansuje odrębnie (§7).
+3. **Zwrotność opłaty rezerwacyjnej.** Do chwili zawarcia Umowy Głównej Klient może się wycofać, a Usługodawca zwraca opłatę rezerwacyjną w całości, bez potrąceń. W razie zawarcia Umowy Głównej opłata rezerwacyjna pomniejsza cenę (§8).
+4. **Umowne prawo rezygnacji po Etapie 1 (bezpiecznik).** Po zbudowaniu fundamentu biznesu (Etap 1) każda ze Stron może zrezygnować z dalszej współpracy; w takim przypadku Usługodawca zwraca Klientowi **całość** wpłaconych kwot (§10).
+5. **Budżet reklamowy.** Budżet reklamowy Klient finansuje odrębnie, ze środków własnych i ze swojego konta reklamowego. Usługodawca prowadzi kampanie w imieniu Klienta (§7 ust. 5).
+6. **Infrastruktura i Materiały.** Sklep działa na Platformie Usługodawcy, a domenę Usługodawca rejestruje na siebie. Marka, strony, grafiki, materiały wideo i teksty stanowią Materiały Usługodawcy; Klient otrzymuje do nich licencję na czas współpracy. Klient może je wykupić na własność na podstawie odrębnej umowy — cena wykupu wynosi 24-krotność średniej miesięcznej prowizji (nie mniej niż 1900 zł netto, powiększane o VAT) i obejmuje transfer domeny (§13).
+7. **Prowizja 5%.** Od uruchomienia sprzedaży Usługodawcy przysługuje prowizja 5% od Przychodu Sklepu (kwota netto powiększana o VAT), stanowiąca wynagrodzenie za utrzymanie Sklepu, licencję, wsparcie i doradztwo, należne przez czas trwania współpracy (§14).
+8. **Rola sprzedawcy.** Sprzedawcą wobec kupujących jest Klient — jego dane figurują w regulaminie Sklepu, a on odpowiada za podatki i reklamacje. Usługodawca wspiera Klienta w tym zakresie (§12).
+9. **Zakończenie współpracy.** Po zbudowaniu Sklepu Klient może wypowiedzieć fazę ciągłą w każdym czasie, z miesięcznym wyprzedzeniem, bez żadnych opłat. Zakończenie współpracy oznacza zakończenie działania Sklepu na Platformie i domenie Usługodawcy; Usługodawca wydaje wówczas Klientowi jego dane (kupujących i zamówienia). Klient może też wykupić markę i Materiały na własność (§13, §16).
+10. **Brak gwarancji wyników.** Usługa stanowi zobowiązanie starannego działania. Usługodawca nie gwarantuje osiągnięcia przychodu, zysku ani liczby zamówień; dane liczbowe prezentowane w ofercie mają charakter wyłącznie ilustracyjny (§19).
+11. **Prawo odstąpienia (Konsument i PNPK).** Klientowi będącemu Konsumentem albo Przedsiębiorcą na prawach konsumenta przysługuje prawo odstąpienia od umowy w terminie 14 dni. Usługodawca rozpoczyna prace dopiero na żądanie Klienta — do tego czasu rezygnacja jest bezkosztowa (§18).
+
+---
+
+## §1. Usługodawca i dane kontaktowe
 
 1. Usługę świadczy **Tomasz Niedźwiecki**, prowadzący jednoosobową działalność gospodarczą pod firmą **„Tomasz Niedźwiecki AI"**, ul. Grawerska 30L, 51-180 Wrocław, NIP 6972240255, REGON 302211341 (dalej: **Usługodawca**).
 2. Kontakt: e-mail **ceo@tomekniedzwiecki.pl**, telefon **+48 533 308 623**.
@@ -44,9 +47,11 @@ Ilekroć w Regulaminie mowa jest o:
 - **Sklepie** — rozumie się przez to sklep internetowy zbudowany przez Usługodawcę dla Klienta, wraz z portfelem produktów, stronami sprzedażowymi i konfiguracją.
 - **Platformie** — rozumie się przez to platformę sklepową Usługodawcy, dostępną w ramach usługi niedzwiecki.ai, na której działa Sklep.
 - **Portalu (Portalu Klienta)** — rozumie się przez to panel dostępny pod adresem crm.tomekniedzwiecki.pl/twoj-biznes, w którym Klient komunikuje się z Usługodawcą, wykonuje swoje zadania i śledzi postępy prac. Dostęp zabezpieczony jest indywidualnym tokenem oraz hasłem.
+- **Serwisie** — rozumie się przez to strony internetowe Usługodawcy w domenie tomekniedzwiecki.pl (w tym lejek sprzedażowy „/sklep"), za pośrednictwem których Usługodawca świadczy usługi elektroniczne oraz umożliwia zawarcie Umowy Rezerwacyjnej i Umowy Głównej.
+- **Koncie** — rozumie się przez to indywidualne konto Klienta w Serwisie, zakładane w celu korzystania z usług elektronicznych, dokonania rezerwacji oraz dostępu do statusu współpracy (§3 ust. 5–6).
 - **Materiałach** — rozumie się przez to wszelkie utwory stworzone przez Usługodawcę w ramach usługi: markę i nazwę, logo i identyfikację wizualną, strony sprzedażowe i stronę główną, grafiki, materiały wideo oraz teksty.
 - **Umowie Rezerwacyjnej** — rozumie się przez to umowę zawieraną z chwilą wniesienia opłaty rezerwacyjnej, opisaną w §8.
-- **Umowie Głównej** — rozumie się przez to umowę o budowę i rozkręcenie Sklepu, opisaną w §9, obejmującą także fazę ciągłą (prowadzenie Sklepu i prowizję).
+- **Umowie Głównej** — rozumie się przez to umowę o budowę i rozwój Sklepu, opisaną w §9, obejmującą także fazę ciągłą (prowadzenie Sklepu i prowizję).
 - **Przychodzie** — rozumie się przez to podstawę naliczania prowizji, zdefiniowaną w §14 ust. 4.
 - **Trwałym nośniku** — rozumie się przez to materiał lub narzędzie umożliwiające przechowywanie i odtwarzanie informacji skierowanych osobiście do Klienta przez czas odpowiedni do celów, jakim informacje te służą, w szczególności wiadomość e-mail oraz plik PDF.
 
@@ -58,11 +63,14 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 1. Usługodawca świadczy drogą elektroniczną następujące usługi, **nieodpłatnie**:
    a) **Strona internetowa** — udostępnienie treści na stronach tomekniedzwiecki.pl (w tym /zbuduje, /zapisy) oraz w powiązanych podstronach ofertowych;
-   b) **Asystent AI** — możliwość prowadzenia rozmowy z asystentem opartym na sztucznej inteligencji, działającym w imieniu Usługodawcy i **wyraźnie oznaczonym jako AI**. Asystent zbiera informacje o potrzebach Klienta i przedstawia założenia współpracy. Rozmowa ma charakter informacyjny i przygotowawczy;
-   c) **Formularz zapisu i rezerwacji** — możliwość pozostawienia danych kontaktowych oraz dokonania rezerwacji.
+   b) **Asystent AI** — możliwość prowadzenia **nieodpłatnej** rozmowy z asystentem opartym na sztucznej inteligencji, działającym w imieniu Usługodawcy i **wyraźnie oznaczonym jako AI**. Asystent zbiera informacje o potrzebach Klienta i przedstawia założenia współpracy. Rozmowa z Asystentem ma charakter wyłącznie informacyjno-przygotowawczy i nie wiąże się z żadną odpłatnością;
+   c) **Formularz zapisu i rezerwacji** — możliwość pozostawienia danych kontaktowych oraz dokonania rezerwacji;
+   d) **Konto** — założenie i prowadzenie indywidualnego Konta Klienta w Serwisie, umożliwiającego m.in. dokonanie rezerwacji, dostęp do statusu współpracy i komunikację z Usługodawcą (ust. 5–6).
 2. Usługodawca świadczy ponadto, w ramach zawartej Umowy Głównej, usługę **Portalu Klienta** — środowiska komunikacji, przydzielania i odbioru zadań Klienta oraz podglądu postępów prac.
 3. Korzystanie z asystenta AI jest dobrowolne. Klient jest informowany, że rozmawia z systemem AI, a jego wypowiedzi mogą być przetwarzane w celu przygotowania oferty i planu współpracy.
-4. Umowa o świadczenie nieodpłatnych usług elektronicznych, o których mowa w ust. 1, zawierana jest z chwilą rozpoczęcia korzystania z danej usługi i rozwiązywana z chwilą zaprzestania korzystania (np. opuszczenia strony). Usługi te Klient może w każdej chwili zakończyć bez podania przyczyny.
+4. Umowa o świadczenie nieodpłatnych usług elektronicznych, o których mowa w ust. 1 lit. a–c, zawierana jest z chwilą rozpoczęcia korzystania z danej usługi i rozwiązywana z chwilą zaprzestania korzystania (np. opuszczenia strony). Usługi te Klient może w każdej chwili zakończyć bez podania przyczyny.
+5. **Konto.** Prowadzenie Konta jest nieodpłatne. Umowa o prowadzenie Konta zostaje zawarta na czas nieoznaczony z chwilą rejestracji Konta (pierwszego zalogowania) i rozwiązuje się z chwilą usunięcia Konta. Klient może w każdym czasie zrezygnować z Konta i żądać jego usunięcia — wysyłając wiadomość na adres wskazany w §1 ust. 2 albo korzystając z odpowiedniej funkcji w Serwisie, o ile została udostępniona. Usunięcie Konta następuje bez zbędnej zwłoki i nie wpływa na umowy już wykonane ani na obowiązki wynikające z przepisów prawa. **W terminie 30 dni od usunięcia Konta Klient może zwrócić się o wydanie materiałów powstałych w rozmowach z Asystentem** (w szczególności ustaleń i założeń współpracy); po upływie tego terminu dane te mogą zostać nieodwracalnie usunięte.
+6. **Sankcje wobec Konta stosuje się stopniowo.** W razie naruszenia Regulaminu lub przepisów prawa Usługodawca w pierwszej kolejności **wzywa Klienta do zaprzestania naruszeń i wyznacza odpowiedni termin**; dopiero jego bezskuteczny upływ uprawnia do zablokowania lub usunięcia Konta. **Natychmiastowe zablokowanie Konta bez uprzedniego wezwania jest dopuszczalne wyłącznie ze względów bezpieczeństwa albo w razie rażącego naruszenia** — Usługodawca podaje wówczas przyczynę, o ile jest to możliwe i prawnie dopuszczalne. Od zablokowania lub usunięcia Konta Klientowi przysługuje reklamacja (§20). Postanowienie to nie ogranicza praw Konsumenta i PNPK wynikających z przepisów.
 
 ---
 
@@ -78,16 +86,16 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 ---
 
-## §5. Czym jest usługa główna
+## §5. Przedmiot usługi głównej
 
-1. Usługa główna polega na **zbudowaniu Sklepu i rozkręceniu w nim sprzedaży**, a następnie na przekazaniu Klientowi jego bieżącego prowadzenia. W ramach usługi Usługodawca:
+1. Usługa główna polega na **zbudowaniu Sklepu i rozwinięciu w nim sprzedaży**, a następnie na przekazaniu Klientowi jego bieżącego prowadzenia. W ramach usługi Usługodawca:
    a) dobiera portfel około 3 produktów oraz buduje markę i podstawy techniczne;
    b) projektuje i tworzy strony sprzedażowe produktów;
    c) konfiguruje Sklep na Platformie, przygotowuje dokumenty Sklepu, dostawy i płatności oraz publikuje Sklep;
    d) przygotowuje środowisko reklamowe (konto reklamowe, strony firmowe, pomiar konwersji) — z zastrzeżeniem, że część zadań w tym zakresie wykonuje Klient;
    e) tworzy materiały reklamowe i prowadzi kampanie;
    f) prowadzi testy i skalowanie sprzedaży;
-   g) wdraża Klienta i przekazuje mu stery.
+   g) wdraża Klienta i przekazuje mu bieżące prowadzenie Sklepu.
 2. Celem operacyjnym współpracy jest doprowadzenie Sklepu do poziomu około **1000 zamówień**, po którym Usługodawca przekazuje Klientowi bieżące prowadzenie Sklepu. **Liczba ta jest celem operacyjnym, a nie gwarantowanym rezultatem.** Usługodawca zobowiązuje się do starannego działania (zobowiązanie starannego działania, nie zobowiązanie rezultatu) — szczegóły w §19.
 3. Usługa jest przygotowywana indywidualnie, w oparciu o ustalenia poczynione w rozmowie z Klientem po zawarciu Umowy Rezerwacyjnej.
 
@@ -102,7 +110,7 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
    - **Etap 4 — Środowisko reklamowe:** konto reklamowe, strony firmowe, pomiar konwersji (część zadań po stronie Klienta).
    - **Etap 5 — Materiały reklamowe i kampanie.**
    - **Etap 6 — Testy i skalowanie.**
-   - **Etap 7 — Wdrożenie i przekazanie sterów.**
+   - **Etap 7 — Wdrożenie i przekazanie prowadzenia Sklepu.**
 2. Dla potrzeb rozliczeń (w szczególności rozliczenia proporcjonalnego przy odstąpieniu — §18 — oraz zwrotu przy skorzystaniu z bezpiecznika — §10) Strony przyjmują następujący **harmonogram wartości etapów**, wyrażony jako procent ceny usługi:
 
    | Etap | Wartość |
@@ -120,12 +128,12 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 ## §7. Cena i płatności
 
-1. **Jednorazowe wynagrodzenie za zbudowanie i rozkręcenie Sklepu (Etapy 1–7) wynosi 4900 zł brutto.** Nie jest to całkowity koszt współpracy: od uruchomienia sprzedaży Klient płaci dodatkowo prowizję 5% od Przychodu (§14), której łącznej wysokości nie da się obliczyć z góry, bo zależy od przyszłej sprzedaży, oraz finansuje budżet reklamowy (ust. 5).
+1. **Jednorazowe wynagrodzenie za zbudowanie i rozwój Sklepu (Etapy 1–7) należne jest w wysokości wskazanej w aktualnej ofercie Usługodawcy w chwili zamówienia.** Nie stanowi ono całkowitego kosztu współpracy: od uruchomienia sprzedaży Klient płaci dodatkowo prowizję 5% od Przychodu (§14), której łącznej wysokości nie da się ustalić z góry, ponieważ zależy ona od przyszłej sprzedaży, oraz finansuje budżet reklamowy (ust. 5).
 2. Cena płatna jest dwuetapowo:
-   a) **opłata rezerwacyjna 100 zł** — wnoszona przy rezerwacji (§8);
-   b) **pozostała część ceny 4800 zł** — płatna przy zawarciu Umowy Głównej (§9), jednorazowo albo w ratach.
+   a) **opłata rezerwacyjna** — w wysokości wskazanej w aktualnej ofercie, wnoszona przy rezerwacji (§8);
+   b) **pozostała część ceny** — płatna przy zawarciu Umowy Głównej (§9), jednorazowo albo w ratach.
 3. Płatność pozostałej części ceny może nastąpić w **nieoprocentowanych, bezkosztowych ratach 0%** albo według indywidualnego harmonogramu uzgodnionego przez Strony. Rozłożenie na raty nie zwiększa ceny — Klient nie ponosi z tego tytułu żadnych dodatkowych kosztów, odsetek ani prowizji.
-4. Opłata rezerwacyjna **zaliczana jest na poczet ceny** — po zawarciu Umowy Głównej do zapłaty pozostaje 4800 zł (albo pierwsza rata według uzgodnionego harmonogramu).
+4. Opłata rezerwacyjna **zaliczana jest na poczet ceny** — po zawarciu Umowy Głównej do zapłaty pozostaje pozostała część ceny (albo pierwsza rata według uzgodnionego harmonogramu).
 5. **Budżet reklamowy nie wchodzi w cenę usługi.** Kampanie reklamowe finansuje Klient ze środków własnych (na start orientacyjnie ok. 1000 zł), a kampanie prowadzone są **na koncie reklamowym Klienta**. Usługodawca zarządza kampaniami w imieniu Klienta, nie pobiera i nie rozlicza budżetu reklamowego jako części swojego wynagrodzenia.
 6. Na żądanie Klienta Usługodawca wystawia fakturę.
 
@@ -133,11 +141,11 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 ## §8. Umowa Rezerwacyjna
 
-1. Umowa Rezerwacyjna zawierana jest **z chwilą wniesienia opłaty rezerwacyjnej w wysokości 100 zł**, po uprzedniej akceptacji Regulaminu.
+1. Umowa Rezerwacyjna zawierana jest **z chwilą wniesienia opłaty rezerwacyjnej**, po uprzedniej akceptacji Regulaminu.
 2. W ramach Umowy Rezerwacyjnej Usługodawca:
    a) rezerwuje dla Klienta miejsce w kolejce współpracy;
    b) przeprowadza z Klientem rozmowę i ustala plan współpracy oraz szczegółowe warunki Umowy Głównej.
-3. **Opłata rezerwacyjna jest w pełni zwrotna do chwili zawarcia Umowy Głównej.** Jeżeli Strony nie zawrą Umowy Głównej — niezależnie od tego, która Strona i z jakiego powodu podejmie taką decyzję — Usługodawca zwraca Klientowi 100 zł **w całości**, w terminie do 7 dni, tym samym kanałem płatności. Termin 7 dni obowiązuje także wtedy, gdy Klient korzysta z ustawowego prawa odstąpienia od Umowy Rezerwacyjnej (§18).
+3. **Opłata rezerwacyjna jest w pełni zwrotna do chwili zawarcia Umowy Głównej.** Jeżeli Strony nie zawrą Umowy Głównej — niezależnie od tego, która Strona i z jakiego powodu podejmie taką decyzję — Usługodawca zwraca Klientowi opłatę rezerwacyjną **w całości**, w terminie do 7 dni, tym samym kanałem płatności. Termin 7 dni obowiązuje także wtedy, gdy Klient korzysta z ustawowego prawa odstąpienia od Umowy Rezerwacyjnej (§18).
 4. **Opłata rezerwacyjna nie jest zadatkiem w rozumieniu art. 394 Kodeksu cywilnego.** Strony wyłączają stosowanie art. 394 Kodeksu cywilnego do opłaty rezerwacyjnej. Opłata nie podlega przepadkowi ani zwrotowi w podwójnej wysokości; ma charakter zaliczki w pełni zwrotnej.
 5. Zawarcie Umowy Rezerwacyjnej nie zobowiązuje żadnej ze Stron do zawarcia Umowy Głównej.
 6. Usługodawca nie żąda wynagrodzenia za czynności rezerwacyjne. W razie odstąpienia przez Klienta od Umowy Rezerwacyjnej albo niezawarcia Umowy Głównej zwrotowi podlega całość wpłaty, bez potrąceń.
@@ -150,13 +158,13 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
    a) akceptuje Regulamin oraz ustalony plan;
    b) wybiera sposób płatności (jednorazowo albo w ratach);
    c) potwierdza zamówienie przyciskiem oznaczonym słowami **„zamówienie z obowiązkiem zapłaty"** lub równoważnym jednoznacznym sformułowaniem (art. 17 ustawy o prawach konsumenta).
-2. **Umowa Główna zostaje zawarta z chwilą dokonania płatności pozostałej części ceny (4800 zł) albo pierwszej raty** — w zależności od wybranego sposobu płatności.
+2. **Umowa Główna zostaje zawarta z chwilą dokonania płatności pozostałej części ceny albo pierwszej raty** — w zależności od wybranego sposobu płatności.
 3. Po zawarciu Umowy Głównej Usługodawca potwierdza jej treść oraz treść zaakceptowanego Regulaminu na **Trwałym nośniku** (wiadomość e-mail).
-4. Umowa Główna obejmuje: **Usługę Wdrożeniową** — zbudowanie i rozkręcenie Sklepu (Etapy 1–7, §5–§6) — oraz **fazę ciągłą** — utrzymanie i prowadzenie Sklepu, licencję na Materiały i prowizję (§13–§15). Faza ciągła zawierana jest na czas nieoznaczony i może zostać wypowiedziana zgodnie z §16.
+4. Umowa Główna obejmuje: **Usługę Wdrożeniową** — zbudowanie i rozwój Sklepu (Etapy 1–7, §5–§6) — oraz **fazę ciągłą** — utrzymanie i prowadzenie Sklepu, licencję na Materiały i prowizję (§13–§15). Faza ciągła zawierana jest na czas nieoznaczony i może zostać wypowiedziana zgodnie z §16.
 
 ---
 
-## §10. Bezpiecznik po Etapie 1
+## §10. Umowne prawo rezygnacji po Etapie 1 (bezpiecznik)
 
 1. Po zakończeniu **Etapu 1 (Fundament biznesu)** Usługodawca informuje o tym Klienta w Portalu lub e-mailem. W terminie **7 dni** od tej informacji każda ze Stron może podjąć decyzję o niekontynuowaniu współpracy. Brak decyzji w tym terminie oznacza kontynuację współpracy.
 2. W razie skorzystania z bezpiecznika przez którąkolwiek ze Stron Usługodawca **zwraca Klientowi całość wpłaconych kwot** (opłatę rezerwacyjną oraz zapłaconą część ceny), w terminie do 14 dni, tym samym kanałem płatności.
@@ -172,7 +180,7 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
    c) dostarczenia przez Klienta wymaganego współdziałania (§12).
 2. Terminy Etapów 4–7 zależą od współdziałania Klienta oraz od wyników testów rynkowych i nie są sztywno oznaczone. Ich tempo sterowane jest wynikami, a nie kalendarzem.
 3. **Brak współdziałania Klienta wstrzymuje bieg terminów** na czas trwania przeszkody. Termin, o którym mowa w ust. 1, jest orientacyjny.
-4. Jeżeli Klient będący Konsumentem lub PNPK nie zażąda wcześniejszego rozpoczęcia prac (§18 ust. 4), Usługodawca rozpoczyna wykonywanie usługi po upływie terminu odstąpienia (nie wcześniej niż 15. dnia od zawarcia Umowy Głównej). Brak żądania nie wpływa na ważność umowy.
+4. Jeżeli Klient będący Konsumentem lub PNPK nie zażąda wcześniejszego rozpoczęcia prac (§18 ust. 4), Usługodawca rozpoczyna wykonywanie usługi po upływie terminu odstąpienia (nie wcześniej niż 15. dnia od zawarcia Umowy Głównej).
 
 ---
 
@@ -196,10 +204,10 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
    a) korzystanie z Materiałów w ramach prowadzenia Sklepu;
    b) publiczne udostępnianie Materiałów w internecie w ramach Sklepu oraz jego promocji;
    c) zwielokrotnianie cyfrowe Materiałów w zakresie niezbędnym do celów, o których mowa w lit. a) i b).
-4. Licencja jest niewyłączna, obowiązuje na czas trwania współpracy i wygasa z chwilą jej zakończenia (§16) — niezależnie od tego, jak długo współpraca trwała.
+4. Licencja jest niewyłączna, obowiązuje na czas trwania współpracy i wygasa z chwilą jej zakończenia (§16).
 5. Usługodawca zobowiązuje się do **niewykonywania autorskich praw osobistych** do Materiałów w zakresie potrzebnym do normalnego korzystania z nich przez Klienta w ramach Sklepu.
 6. **Przeniesienie autorskich praw majątkowych** do Materiałów albo udzielenie **licencji wyłącznej** możliwe jest wyłącznie na podstawie **odrębnej umowy zawartej w formie pisemnej.** Wypowiedzenie umowy nie jest uzależnione od wykupu i nie wiąże się z żadną opłatą za zakończenie współpracy — **wykup jest odrębnym, dobrowolnym nabyciem praw i aktywów Usługodawcy**, dostępnym w każdym czasie na następujących, z góry określonych zasadach:
-   a) **cena wykupu** (brutto) wynosi **24-krotność średniej miesięcznej prowizji (§14) z ostatnich 12 pełnych miesięcy sprzedaży** — a jeżeli sprzedaż trwała krócej, z całego okresu pełnych miesięcy sprzedaży — **nie mniej jednak niż 1900 zł**; miesiące bez sprzedaży uwzględnia się ze średnią równą zero; jeżeli nie upłynął żaden pełny miesiąc sprzedaży, cena wykupu wynosi 1900 zł; za zgodą Stron cena może zostać rozłożona na raty;
+   a) **cena wykupu** wynosi **24-krotność średniej miesięcznej prowizji (§14) z ostatnich 12 pełnych miesięcy sprzedaży** — a jeżeli sprzedaż trwała krócej, z całego okresu pełnych miesięcy sprzedaży — **nie mniej jednak niż 1900 zł netto**; wszystkie kwoty wskazane w niniejszej literze są kwotami **netto** i są powiększane o podatek VAT według stawki obowiązującej w dniu wystawienia faktury; miesiące bez sprzedaży uwzględnia się ze średnią równą zero; jeżeli nie upłynął żaden pełny miesiąc sprzedaży, cena wykupu wynosi 1900 zł netto; za zgodą Stron cena może zostać rozłożona na raty;
    b) wykup obejmuje: przeniesienie autorskich praw majątkowych do Materiałów na polach eksploatacji wymienionych w ust. 3, **transfer domeny** na Klienta (o ile pozwalają na to zasady rejestratora; w razie obiektywnej niemożliwości transferu — dalsze utrzymywanie domeny na rzecz Klienta albo inne uzgodnione rozwiązanie zastępcze) oraz wydanie konfiguracji Sklepu;
    c) z chwilą wykupu **prowizja przestaje być naliczana**;
    d) po wykupie Klient może kontynuować korzystanie z Platformy na jej standardowych zasadach komercyjnych, na podstawie odrębnej umowy z Platformą;
@@ -211,51 +219,50 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 ## §14. Faza ciągła — prowadzenie Sklepu i prowizja
 
-1. Od chwili **uruchomienia sprzedaży** w Sklepie (tj. od opublikowania Sklepu w sposób umożliwiający składanie zamówień) Usługodawcy przysługuje wynagrodzenie prowizyjne w wysokości **5% od Przychodu** ze sprzedaży. Prowizja jest kwotą brutto i zawiera należny podatek VAT.
+1. Od chwili **uruchomienia sprzedaży** w Sklepie (tj. od opublikowania Sklepu w sposób umożliwiający składanie zamówień) Usługodawcy przysługuje wynagrodzenie prowizyjne w wysokości **5% od Przychodu** ze sprzedaży. Prowizja stanowi kwotę **netto** i jest powiększana o podatek VAT według stawki obowiązującej w dniu wystawienia faktury.
 2. Prowizja należna jest **na czas nieoznaczony (bezterminowo)**, dopóki trwa Umowa Główna w fazie ciągłej, o ile Strony nie uzgodnią indywidualnie inaczej.
 3. Prowizja rozliczana jest **miesięcznie**. Usługodawca wystawia fakturę do **10. dnia** miesiąca następującego po miesiącu rozliczeniowym, z terminem płatności **7 dni**.
 4. **Przychód** oznacza kwoty brutto faktycznie otrzymane od kupujących za zamówienia złożone w Sklepie, pomniejszone o koszty dostawy oraz o zwroty (w tym częściowe), anulowania i obciążenia zwrotne (chargebacki). Zamówienie za pobraniem uwzględnia się w miesiącu faktycznego otrzymania zapłaty. Korekty dotyczące wcześniejszych miesięcy uwzględnia się w najbliższym rozliczeniu.
 5. Prowizja stanowi wynagrodzenie za **świadczenia ciągłe** Usługodawcy: udzieloną licencję na Materiały, utrzymanie Sklepu na Platformie i domenie oraz bieżące wsparcie i doradztwo.
-6. Cena z §7 obejmuje zbudowanie i rozkręcenie Sklepu (Etapy 1–7); prowizja jest odrębnym wynagrodzeniem za świadczenia ciągłe z ust. 5 i nie pomniejsza ceny ani jej nie zastępuje.
+6. Cena z §7 obejmuje zbudowanie i rozwój Sklepu (Etapy 1–7); prowizja jest odrębnym wynagrodzeniem za świadczenia ciągłe z ust. 5 i nie pomniejsza ceny ani jej nie zastępuje.
 7. W razie zwłoki Klienta w zapłacie prowizji przekraczającej 30 dni Usługodawca — po uprzednim wezwaniu do zapłaty z dodatkowym terminem nie krótszym niż 7 dni — może zawiesić świadczenia fazy ciągłej do czasu uregulowania zaległości. Zawieszenie nie pozbawia Klienta prawa do eksportu danych Sklepu.
 
 ---
 
-## §15. Faza po zbudowaniu — rozkręcanie sprzedaży i przekazanie sterów
+## §15. Faza rozwoju sprzedaży i przekazanie prowadzenia Sklepu
 
-1. Po zbudowaniu Sklepu rozpoczyna się **faza rozkręcania sprzedaży**. W tej fazie Usługodawca:
+1. Po zbudowaniu Sklepu rozpoczyna się **faza rozwoju sprzedaży**. W tej fazie Usługodawca:
    a) prowadzi i optymalizuje kampanie reklamowe;
    b) podejmuje decyzje o cenach detalicznych i asortymencie (mandat operacyjny);
    c) informuje Klienta o działaniach i wynikach w Portalu.
-2. Mandat operacyjny, o którym mowa w ust. 1, służy skutecznemu rozkręceniu sprzedaży i trwa do przekazania sterów. Usługodawca wykonuje go w oparciu o obiektywne przesłanki (rentowność, popyt, koszty, wyniki testów), z uwzględnieniem uzasadnionego interesu Klienta i z bieżącym informowaniem go w Portalu; decyzje cenowe nie mogą służyć wyłącznie zwiększeniu prowizji Usługodawcy. Na uzasadniony wniosek Klienta (w szczególności ze względów prawnych lub bezpieczeństwa) Usługodawca wycofa produkt ze sprzedaży. Usługodawca **nie zwiększa łącznego budżetu reklamowego ponad kwoty uzgodnione z Klientem** — zwiększenie wymaga zgody Klienta (środki wydatkowane są z konta reklamowego Klienta). Po przekazaniu sterów decyzje o cenach i asortymencie podejmuje Klient, a Usługodawca pełni rolę doradczą.
+2. Mandat operacyjny, o którym mowa w ust. 1, służy skutecznemu rozwojowi sprzedaży i trwa do przekazania Klientowi prowadzenia Sklepu. Usługodawca wykonuje go w oparciu o obiektywne przesłanki (rentowność, popyt, koszty, wyniki testów), z uwzględnieniem uzasadnionego interesu Klienta i z bieżącym informowaniem go w Portalu; decyzje cenowe nie mogą służyć wyłącznie zwiększeniu prowizji Usługodawcy. Na uzasadniony wniosek Klienta (w szczególności ze względów prawnych lub bezpieczeństwa) Usługodawca wycofa produkt ze sprzedaży. Usługodawca **nie zwiększa łącznego budżetu reklamowego ponad kwoty uzgodnione z Klientem** — zwiększenie wymaga zgody Klienta (środki wydatkowane są z konta reklamowego Klienta). Po przekazaniu prowadzenia Sklepu decyzje o cenach i asortymencie podejmuje Klient, a Usługodawca pełni rolę doradczą.
 3. Po osiągnięciu poziomu **około 1000 zamówień** Usługodawca przekazuje Klientowi **bieżące prowadzenie Sklepu** (zmiana ról). Umowa trwa dalej — Usługodawcy przysługuje nadal prowizja (§14), a jego rola przechodzi we wsparcie i doradztwo, w tym comiesięczne omówienia wyników.
-4. Poziom około 1000 zamówień jest celem operacyjnym; moment przekazania sterów Strony mogą uzgodnić indywidualnie, stosownie do gotowości Klienta. **Na wniosek Klienta przekazanie sterów może nastąpić wcześniej** — z chwilą przekazania wygasa mandat operacyjny Usługodawcy.
+4. Poziom około 1000 zamówień jest celem operacyjnym; moment przekazania prowadzenia Sklepu Strony mogą uzgodnić indywidualnie, stosownie do gotowości Klienta. **Na wniosek Klienta przekazanie prowadzenia Sklepu może nastąpić wcześniej** — z chwilą przekazania wygasa mandat operacyjny Usługodawcy.
 
 ---
 
 ## §16. Wypowiedzenie fazy ciągłej i jego skutki
 
-1. **Klient może wypowiedzieć fazę ciągłą w każdym czasie**, z zachowaniem **jednomiesięcznego okresu wypowiedzenia ze skutkiem na koniec miesiąca kalendarzowego**, **bez żadnych kar i opłat**.
+1. **Klient może wypowiedzieć fazę ciągłą w każdym czasie**, z zachowaniem **jednomiesięcznego okresu wypowiedzenia ze skutkiem na koniec miesiąca kalendarzowego**, **bez żadnych opłat i bez obowiązku zapłaty jakiegokolwiek świadczenia z tytułu zakończenia współpracy**.
 2. Usługodawca może wypowiedzieć fazę ciągłą **wyłącznie z ważnych przyczyn**, z zachowaniem jednomiesięcznego okresu wypowiedzenia. Katalog ważnych przyczyn jest zamknięty i obejmuje:
    a) naruszenie Regulaminu przez Klienta, nieusunięte mimo wezwania;
    b) zaległości płatnicze Klienta utrzymujące się mimo wezwania do zapłaty z dodatkowym terminem;
    c) utratę możliwości świadczenia z przyczyn niezależnych od Usługodawcy (np. trwałe zaprzestanie działania zewnętrznej infrastruktury, na której opiera się Platforma) — z wyłączeniem dobrowolnej decyzji biznesowej Usługodawcy o zaprzestaniu świadczenia; w takim przypadku Usługodawca umożliwia Klientowi wykup na zasadach §13 ust. 6 oraz zwraca odpowiednią część ceny za niewykonane etapy;
    d) trwały brak współdziałania Klienta uniemożliwiający prowadzenie Sklepu.
-3. **Skutki wypowiedzenia (uczciwie i wprost):**
-   a) **wygasa licencja** na Materiały (§13);
-   b) **kończy się prowadzenie Sklepu** — Klient traci możliwość korzystania ze Sklepu, domeny i Materiałów udostępnianych na Platformie;
-   c) Usługodawca **wydaje Klientowi jego dane** — w szczególności dane kupujących oraz historię zamówień — w formie eksportu, w terminie 14 dni od zakończenia współpracy; eksport jest dostępny na żądanie Klienta, bezpłatnie, **także w trakcie trwania umowy**;
-   d) Usługodawca rozlicza należną prowizję do dnia zakończenia współpracy;
-   e) Klient zachowuje wszystko, co znajduje się na jego kontach i co sam dostarczył — w szczególności konto reklamowe wraz z pikselami i grupami odbiorców, strony w mediach społecznościowych, materiały własne oraz wersje dokumentów Sklepu potrzebne do celów podatkowych, dowodowych i obsługi reklamacji kupujących;
-   f) w okresie wypowiedzenia Sklep działa normalnie (**okno migracyjne**).
+3. **Skutki wypowiedzenia:**
+   a) Usługodawca **wydaje Klientowi jego dane** — w szczególności dane kupujących oraz historię zamówień — w formie eksportu, w terminie 14 dni od zakończenia współpracy; eksport jest dostępny na żądanie Klienta, bezpłatnie, **także w trakcie trwania umowy**;
+   b) Klient **zachowuje wszystko, co znajduje się na jego kontach** i co sam dostarczył — w szczególności konto reklamowe wraz z pikselami i grupami odbiorców, strony w mediach społecznościowych, materiały własne oraz wersje dokumentów Sklepu potrzebne do celów podatkowych, dowodowych i obsługi reklamacji kupujących;
+   c) w okresie wypowiedzenia **Sklep działa normalnie** (okno migracyjne);
+   d) **wygasa licencja** na Materiały (§13);
+   e) **kończy się prowadzenie Sklepu** — Klient traci możliwość korzystania ze Sklepu, domeny i Materiałów udostępnianych na Platformie;
+   f) Usługodawca rozlicza należną prowizję do dnia zakończenia współpracy.
 4. Przed zakończeniem lub w związku z nim Klient może skorzystać z **wykupu** Materiałów lub uzyskania licencji wyłącznej na zasadach z §13 ust. 6, aby zachować markę i aktywa Sklepu.
 5. Wypowiedzenie wymaga formy dokumentowej (co najmniej wiadomości e-mail).
-6. **Rezygnacja przed przekazaniem sterów (Etapy 1–7).** Do chwili przekazania sterów (§15 ust. 3) Klient może zakończyć współpracę w każdym czasie, bez okresu wypowiedzenia. W takim przypadku rozliczenie następuje według harmonogramu wartości etapów (§6 ust. 2) — Klient płaci za etapy wykonane do dnia rezygnacji (oraz odpowiednią część etapu w toku), a nadwyżka wpłaconych kwot podlega zwrotowi w terminie 14 dni; jeżeli w Sklepie uruchomiono już sprzedaż, prowizję (§14) rozlicza się do dnia zakończenia współpracy. Po przekazaniu sterów zakończenie współpracy następuje w trybie ust. 1. Postanowienie to nie ogranicza bezpiecznika (§10) ani prawa odstąpienia (§18).
-7. **Ciągłość współpracy.** W razie śmierci Usługodawcy lub jego trwałej niezdolności do świadczenia usług Klient ma prawo do niezwłocznego otrzymania eksportu wszystkich danych Sklepu (ust. 3 lit. c) oraz — w miarę możliwości prawnych — do nabycia Materiałów i przejęcia domeny na zasadach §13 ust. 6. Usługodawca podejmuje rozsądne działania w celu zapewnienia ciągłości świadczenia, w tym w ramach instytucji zarządu sukcesyjnego przewidzianej przepisami prawa.
+6. **Rezygnacja przed przekazaniem prowadzenia Sklepu (Etapy 1–7).** Do chwili przekazania prowadzenia Sklepu (§15 ust. 3) Klient może zakończyć współpracę w każdym czasie, bez okresu wypowiedzenia. W takim przypadku rozliczenie następuje według harmonogramu wartości etapów (§6 ust. 2) — Klient płaci za etapy wykonane do dnia rezygnacji (oraz odpowiednią część etapu w toku), a nadwyżka wpłaconych kwot podlega zwrotowi w terminie 14 dni; jeżeli w Sklepie uruchomiono już sprzedaż, prowizję (§14) rozlicza się do dnia zakończenia współpracy. Po przekazaniu prowadzenia Sklepu zakończenie współpracy następuje w trybie ust. 1. Postanowienie to nie ogranicza bezpiecznika (§10) ani prawa odstąpienia (§18).
 
 ---
 
-## §17. Uczciwe korzystanie ze Sklepu (prowizja)
+## §17. Zakaz obchodzenia prowizji
 
 1. Klient zobowiązuje się nie prowadzić sprzedaży produktów wchodzących w skład portfela Sklepu **z pominięciem Sklepu, w celu uniknięcia prowizji** należnej Usługodawcy.
 2. Postanowienie ust. 1 nie ogranicza prawa Klienta do prowadzenia innej, niezależnej działalności ani do sprzedaży innych produktów; dotyczy wyłącznie obchodzenia prowizji w odniesieniu do portfela Sklepu w czasie trwania współpracy.
@@ -272,7 +279,7 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 4. **Zgoda na rozpoczęcie świadczenia przed upływem terminu odstąpienia.** Usługodawca **nie rozpoczyna prac** przed złożeniem przez Klienta zgody na rozpoczęcie świadczenia. Zgodę tę Klient składa w Portalu Klienta (albo przy składaniu zamówienia) jako oświadczenie zawierające:
    a) **żądanie rozpoczęcia** świadczenia przed upływem terminu odstąpienia;
    b) **przyjęcie do wiadomości skutków** rozpoczęcia, opisanych w ust. 6–7.
-   Do czasu złożenia zgody rezygnacja jest w pełni bezkosztowa — Klient odzyskuje 100% wpłaconych kwot. Klient może też zamiast zgody wybrać rozpoczęcie prac po upływie terminu odstąpienia (§11 ust. 4) — złożenie zgody jest dobrowolne i nie warunkuje ważności umowy.
+   Do czasu złożenia zgody rezygnacja jest w pełni bezkosztowa — Klient odzyskuje 100% wpłaconych kwot. Klient może też zamiast zgody wybrać rozpoczęcie prac po upływie terminu odstąpienia (§11 ust. 4); złożenie zgody jest dobrowolne.
 5. Usługodawca potwierdza otrzymanie zgody oraz treść umowy na **Trwałym nośniku** (e-mail).
 6. **Skutki odstąpienia w odniesieniu do usług (art. 35 ustawy o prawach konsumenta):**
    a) prawo odstąpienia **wygasa dopiero z chwilą pełnego wykonania Usługi Wdrożeniowej (Etapy 1–7)**, jeżeli Klient wcześniej wyraził zgodę z ust. 4 i przyjął do wiadomości utratę prawa odstąpienia po pełnym wykonaniu; niezależnie od tego Klientowi przysługuje prawo wypowiedzenia fazy ciągłej (§16);
@@ -325,7 +332,7 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
    e) **Kategorie danych:** dane identyfikacyjne i kontaktowe, dane adresowe, dane zamówień i płatności oraz inne dane niezbędne do realizacji zamówień.
    f) **Obowiązki Usługodawcy jako procesora:** przetwarzanie wyłącznie na udokumentowane polecenie Klienta (poleceniem jest także niniejszy Regulamin i konfiguracja Sklepu); zapewnienie poufności; stosowanie odpowiednich środków bezpieczeństwa; pomoc Klientowi w realizacji praw osób, których dane dotyczą, oraz w obowiązkach z art. 32–36 RODO; zgłaszanie Klientowi bez zbędnej zwłoki naruszeń ochrony danych osobowych; umożliwienie audytów i inspekcji w zakresie przewidzianym w art. 28 ust. 3 lit. h RODO; udostępnianie informacji niezbędnych do wykazania zgodności.
    g) **Podpowierzenie:** Klient udziela **ogólnej zgody** na korzystanie z dalszych podmiotów przetwarzających niezbędnych do działania Sklepu — w szczególności dostawcy Platformy, hostingu, operatorów płatności oraz brokerów przesyłek. Usługodawca **informuje** Klienta o zamierzonych zmianach dotyczących dodania lub zastąpienia podmiotów podprzetwarzających, umożliwiając wyrażenie sprzeciwu; na dalsze podmioty nakłada obowiązki analogiczne do własnych.
-   h) **Zakończenie:** po zakończeniu współpracy Usługodawca — zależnie od decyzji Klienta — **zwraca lub usuwa** dane kupujących oraz ich kopie, chyba że obowiązek dalszego przechowywania wynika z przepisów prawa. Wydanie danych następuje w trybie §16 ust. 3 lit. c).
+   h) **Zakończenie:** po zakończeniu współpracy Usługodawca — zależnie od decyzji Klienta — **zwraca lub usuwa** dane kupujących oraz ich kopie, chyba że obowiązek dalszego przechowywania wynika z przepisów prawa. Wydanie danych następuje w trybie §16 ust. 3 lit. a).
 
 4. Operatorzy płatności, przewoźnicy i platformy reklamowe mogą działać jako **samodzielni administratorzy** danych — w takim zakresie nie są podprocesorami Usługodawcy; ich role opisują ich własne polityki prywatności.
 
@@ -353,8 +360,9 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
    c) zmiany technologiczne lub infrastrukturalne;
    d) względy bezpieczeństwa;
    e) zmianę danych Usługodawcy.
-2. O zmianie Regulaminu Usługodawca powiadamia na **Trwałym nośniku** z wyprzedzeniem co najmniej **1 miesiąca** przed jej wejściem w życie. Do dnia wejścia zmian w życie Klient może **wypowiedzieć umowę bez żadnych kar.**
+2. O zmianie Regulaminu Usługodawca powiadamia na **Trwałym nośniku** z wyprzedzeniem co najmniej **1 miesiąca** przed jej wejściem w życie. Do dnia wejścia zmian w życie Klient może **wypowiedzieć umowę bez żadnych opłat.**
 3. **Zmiany nie działają wstecz** i nie mogą zmieniać ceny ani wysokości prowizji ustalonych w zawartej już Umowie Głównej. W zakresie świadczeń ciągłych zmieniony Regulamin wiąże Klienta od dnia wejścia zmian w życie, o ile przed tym dniem Klient nie wypowiedział umowy zgodnie z ust. 2.
+4. **Umowy zawarte pod rządami wcześniejszej wersji Regulaminu wykonuje się na warunkach wersji obowiązującej w chwili ich zawarcia.** Wersja 1.0 Regulaminu dostępna jest w archiwum pod adresem /sklep/regulamin/v1/. Zmiana Regulaminu wobec umów pozostających w mocy następuje wyłącznie w trybie określonym w niniejszym paragrafie (ważne przyczyny, uprzednie powiadomienie i prawo wypowiedzenia bez opłat).
 
 ---
 
@@ -362,10 +370,10 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 1. W sprawach nieuregulowanych stosuje się przepisy prawa polskiego, w szczególności Kodeksu cywilnego, ustawy o świadczeniu usług drogą elektroniczną, ustawy o prawach konsumenta oraz RODO.
 2. Umowy zawierane na podstawie Regulaminu są **umowami o świadczenie usług**. Nie tworzą spółki cywilnej ani innej formy wspólnego przedsięwzięcia; żadna ze Stron nie jest umocowana do zaciągania zobowiązań w imieniu drugiej, a każda ponosi wyłączną odpowiedzialność za własne zobowiązania, w tym podatkowe. Prowizja (§14) stanowi wynagrodzenie za usługi Usługodawcy, a nie udział w zysku.
-3. Usługodawca może przenieść prawa i obowiązki z umowy na następcę prawnego (w tym na spółkę powstałą z przekształcenia działalności), powiadamiając Klienta na Trwałym nośniku; Klient, który nie akceptuje tej zmiany, może wypowiedzieć umowę bez okresu wypowiedzenia i bez żadnych kar.
+3. Usługodawca może przenieść prawa i obowiązki z umowy na następcę prawnego (w tym na spółkę powstałą z przekształcenia działalności), powiadamiając Klienta na Trwałym nośniku; Klient, który nie akceptuje tej zmiany, może wypowiedzieć umowę bez okresu wypowiedzenia i bez żadnych opłat.
 4. Jeżeli którekolwiek postanowienie Regulaminu okaże się nieważne lub bezskuteczne, pozostałe postanowienia zachowują moc.
 5. Załącznikiem do Regulaminu jest **Załącznik nr 1 — wzór formularza odstąpienia od umowy.**
-6. Regulamin obowiązuje od dnia jego opublikowania.
+6. Regulamin w wersji 2.0 obowiązuje od dnia wejścia w życie wskazanego na wstępie ({{DATA_WEJSCIA}}).
 
 ---
 
@@ -399,6 +407,49 @@ Status Konsumenta, PNPK albo Przedsiębiorcy ocenia się na chwilę zawarcia dan
 
 Poniżej lista miejsc, w których przyjąłem założenie wymagające decyzji Tomka. Każdy punkt to świadomy wybór wypełniający lukę w faktach — proszę zweryfikować i potwierdzić lub zmienić.
 
+> ⚠️ **Wersja renderowana na stronę (/sklep/regulamin/) NIE zawiera sekcji „NOTATKI ROBOCZE" — cała ta sekcja jest usuwana przed publikacją.**
+
+---
+
+### Rewizja 2.0 (23.07.2026)
+
+Rewizja zastosowała trzy standardy przyjęte 22.07 przy dokumentach aplikacji (rejestr prawniczy · kwoty ofertowe → oferta · triaż sprzedażowy), rozszerzone o okablowanie bramki logowania lejka /sklep oraz korektę VAT Tomka — **bez zmiany ekonomiki modelu**. Wartości modelu nietknięte: prowizja **5%**, wykup **24× śr. mies. prowizji / min. 1900 zł**, harmonogram etapów **15/30/20/10/20/5%**, terminy zwrotów (7/14 dni), progi ustawowe (14 dni odstąpienia).
+
+**A. Rejestr prawniczy (3. osoba, terminy zdefiniowane):**
+- Ramka „W skrócie — najważniejsze zasady" → „Podsumowanie najważniejszych postanowień" (charakter informacyjny; funkcja przejrzystości zachowana). Cała treść przepisana z 1./2. osoby („Buduję / dostajesz / możesz / Twoje") na 3. osobę po terminach zdefiniowanych („Usługodawca / Klient"). Wewnętrzne odesłania „(pkt X)" zamieniono na odesłania do paragrafów.
+- Usunięto wtręty perswazyjne i kolokwializmy: „bez pytań", „Uczciwie uprzedzam", „Robię swoją robotę najlepiej, jak potrafię", „(uczciwie i wprost)" (§16 ust. 3).
+- Neutralizacja tytułów: §1 „Kto świadczy usługę i jak się kontaktować" → „Usługodawca i dane kontaktowe"; §5 „Czym jest usługa główna" → „Przedmiot usługi głównej"; §10 → „Umowne prawo rezygnacji po Etapie 1 (bezpiecznik)"; §15 → „Faza rozwoju sprzedaży i przekazanie prowadzenia Sklepu"; §17 „Uczciwe korzystanie ze Sklepu (prowizja)" → „Zakaz obchodzenia prowizji".
+- Kolokwializmy operacyjne ujednolicone: „rozkręcenie/rozkręcanie sprzedaży" → „rozwój sprzedaży"; „przekazanie sterów / przekazuje stery" → „przekazanie (bieżącego) prowadzenia Sklepu". UWAGA: „sterowane wynikami" w §11 ust. 2 to inne słowo — pozostawione. Tytuł dokumentu: „Budowa i rozkręcenie sklepu…" → „budowy i rozwoju sklepu internetowego".
+- Pouczenia konsumenckie i Załącznik nr 1 (wzór ustawowy) — bez zmian.
+
+**B. Kwoty ofertowe → oferta (mechanika bez zmian):**
+- Usunięto z treści operatywnej kwoty cennikowe: **4900 zł** (§7 ust. 1), **100 zł** (Podsumowanie, §7 ust. 2 lit. a, §8 ust. 1, §8 ust. 3), **4800 zł** (Podsumowanie, §7 ust. 2 lit. b, §7 ust. 4, §9 ust. 2) → „w wysokości wskazanej w aktualnej ofercie Usługodawcy w chwili zamówienia".
+- Zachowana cała mechanika: zwrotność rezerwacji, zaliczenie na poczet ceny, raty 0%, dwuetapowość płatności, harmonogram wartości etapów.
+- ZOSTAJĄ liczbowo (wyjątki): prowizja 5% (stawka modelu), wykup 24× / min. 1900 zł (warunek umowny), harmonogram etapów, terminy/progi ustawowe. Budżet reklamowy „orientacyjnie ok. 1000 zł" pozostawiony w §7 ust. 5 (koszt własny Klienta, nie cena usługi).
+- 🚩 **FLAGA 1900 zł:** przy zmianie ceny standardowej budowy rozważyć zastąpienie sztywnego minimum 1900 zł formułą powiązaną z aktualną ceną (np. równowartość ceny budowy) — dziś 1900 zł ≈ ok. 40% ceny referencyjnej; twardy minimalny próg trzyma sens tylko przy obecnym poziomie cen. (Por. notatka 9a — świadome odrzucenie górnego limitu kwotowego wykupu.)
+
+**C. Triaż sprzedażowy — cięcia (odwracalne):**
+1. **§16 ust. 7 (śmierć / trwała niezdolność Usługodawcy) — WYCIĘTE.** Uzasadnienie: sukcesja aktywów następuje z mocy prawa (spadek + zarząd sukcesyjny), a substancja ochronna dla Klienta już istnieje niezależnie — bezpłatny eksport danych „zawsze, także w trakcie umowy" (§16 ust. 3 lit. a) oraz wykup „w każdym czasie" (§13 ust. 6). Klauzula restatująca default + wprowadzająca scenariusz morbidalny („płoszy"). Przywracalna 1:1.
+2. **§11 ust. 4, zdanie „Brak żądania nie wpływa na ważność umowy" — WYCIĘTE** jako oczywistość (skutek ustawowy).
+3. **§18 ust. 4, ogon „i nie warunkuje ważności umowy" — WYCIĘTE** jako oczywistość; zachowano istotne „złożenie zgody jest dobrowolne".
+4. **§13 ust. 4, ogon „— niezależnie od tego, jak długo współpraca trwała" — WYCIĘTE** (redundantny wobec „na czas trwania współpracy", lekko „straszący").
+- **„Kara umowna": w dokumencie nie występowała** żadna kara nakładana na Klienta — jedyne wystąpienia to zapewnienia „bez żadnych kar" (korzyść Klienta). Aby wyczyścić słowo „kara" z treści operatywnej, przeredagowano na „bez żadnych opłat" (§16 ust. 1, §23 ust. 2, §24 ust. 3) — substancja (brak odpłatności za zakończenie) bez zmian.
+- **Cesja wierzytelności (art. 509 k.c.) — nie istniała** w dokumencie (grep bez trafień). §24 ust. 3 (przeniesienie na następcę prawnego z prawem wypowiedzenia) to legalny, nieoczywisty zapis — pozostawiony.
+- **Eskalacje sankcyjne** były już złagodzone do wezwania z terminem (§14 ust. 7 — zawieszenie po wezwaniu +7 dni; §16 ust. 2 — katalog zamknięty) — bez zmian.
+- **Reorder §16 ust. 3:** pozytywy Klienta na początek (eksport danych → zachowanie kont → okno migracyjne), potem skutki neutralne/negatywne (licencja, koniec prowadzenia, rozliczenie prowizji). Zaktualizowano odesłania „ust. 3 lit. c" → „lit. a" (§21 ust. 3 lit. h; notatka 9).
+- **NIE cięto (mimo „straszności"):** rdzeń modelu — prowizja bezterminowa mimo zmiany ról (§14 ust. 2), zakaz obchodzenia prowizji (§17), mechanika odstąpienia konsumenckiego (§18), harmonogram etapów (§6), limit odpowiedzialności wobec Przedsiębiorców (§19 ust. 4), wykup 24× / min. 1900 zł (§13 ust. 6).
+
+**D. Konto (okablowanie bramki logowania lejka /sklep — decyzja architektury 23.07: lejek sklepu linkuje wyłącznie regulamin sklepu):**
+- Dodano definicje „Serwis" i „Konto" (§2) oraz usługę „Konto" jako nieodpłatną usługę elektroniczną (§3 ust. 1 lit. d, ust. 5–6). Umowa o prowadzenie Konta: zawierana z chwilą rejestracji/pierwszego zalogowania, na czas nieoznaczony; usunięcie w każdym czasie; sankcje stopniowalne (wezwanie z terminem → blokada; natychmiastowa tylko względy bezpieczeństwa / rażące naruszenie, z podaniem przyczyny i prawem reklamacji §20); 30 dni na wydanie materiałów z rozmów z Asystentem. Wzór: §4 regulaminu aplikacji, zaadaptowany zwięźle do lejka sklepu.
+- Doprecyzowano, że rozmowa z Asystentem AI (§3 ust. 1 lit. b) jest **nieodpłatna** i ma charakter informacyjno-przygotowawczy. **W dokumencie nie ma i nie było wzmianek o odpłatnych rozmowach** — nic takiego nie dodano.
+
+**E. VAT prowizji (korekta Tomka 23.07):**
+- Prowizja 5% i cena wykupu = kwoty **NETTO powiększane o VAT** (wcześniej błędnie „brutto / zawiera VAT"). Poprawiono: §14 ust. 1 (prowizja netto + VAT wg stawki z dnia faktury), §13 ust. 6 lit. a (cena wykupu i min. 1900 zł jako netto + VAT), Podsumowanie pkt 6 i 7. „Przychód" w §14 ust. 4 („kwoty brutto od kupujących") = podstawa naliczania prowizji, dotyczy wpłat kupujących — pozostawiony bez zmian (to nie jest charakter VAT prowizji).
+- ⚠️ **min. 1900 zł = NETTO [DO POTWIERDZENIA — TOMEK: potwierdź, że 1900 to netto].**
+- 🚩 **FLAGA — komunikacja prowizji wobec KONSUMENTÓW (ustawa o informowaniu o cenach towarów i usług):** cena podawana konsumentowi musi zawierać VAT. W ofercie, lejku /sklep i materiałach kierowanych do Konsumentów/PNPK prowizję należy komunikować jako kwotę z VAT — **„5% + VAT (6,15%)"** (5% netto × 1,23 = 6,15% brutto przy stawce 23%). W samym Regulaminie prowizja pozostaje zdefiniowana jako netto + VAT (§14 ust. 1) — to poprawne dla wzorca umownego, ale przekaz cenowy w UI/ofercie musi pokazywać kwotę brutto (6,15%). Analogicznie cena wykupu (§13 ust. 6) w komunikacji do Konsumenta — z VAT.
+
+**F. Wersjonowanie:** wersja **2.0**, data wejścia w życie = placeholder `{{DATA_WEJSCIA}}` (ustawia Tomek/deploy). Dodano §23 ust. 4 (postanowienie przejściowe: umowy pod v1.0 wykonywane na warunkach v1.0; archiwum /sklep/regulamin/v1/; zmiana wobec umów trwających tylko w trybie §23 — ważne przyczyny, powiadomienie, wypowiedzenie bez opłat). §24 ust. 6 zaktualizowany do daty wejścia w życie.
+
 1. **Adres kontaktowy w Regulaminie = `ceo@tomekniedzwiecki.pl`.** Fakty podają ten adres jako kontaktowy dla usługi. Uwaga: istniejący regulamin „Aplikacji" używa `biuro@tomekniedzwiecki.pl`, a pamięć wspomina o `Reply-to=ceo@`. Ujednoliciłem na `ceo@` zgodnie z faktami tego zadania — potwierdź, czy to właściwa skrzynka reklamacyjno-odstąpieniowa.
 
 2. **Numeracja i data.** Wpisałem datę sporządzenia 21.07.2026 i wersję „v1 DRAFT". Przed publikacją należy ustawić datę wejścia w życie i finalny numer wersji.
@@ -415,7 +466,7 @@ Poniżej lista miejsc, w których przyjąłem założenie wymagające decyzji To
 
 8. **Katalog ważnych przyczyn wypowiedzenia przez Usługodawcę (§16 ust. 2)** — sformułowałem jako zamknięty, zgodnie z zakazem klauzul „w każdym czasie". Zweryfikuj, czy lista jest kompletna dla Twoich potrzeb (nie da się jej potem rozszerzać bez zmiany Regulaminu).
 
-9. **Wydanie danych kupujących przy zakończeniu (§16 ust. 3 lit. c)** — wpisano termin 14 dni od zakończenia współpracy.
+9. **Wydanie danych kupujących przy zakończeniu (§16 ust. 3 lit. a po rewizji 2.0; wcześniej lit. c)** — wpisano termin 14 dni od zakończenia współpracy.
 
 9a. **ROZSTRZYGNIĘTE (decyzja Tomka 21.07 + konsultacja gpt-5.6-sol):** wykup wg jawnej formuły — 24× średnia miesięczna prowizja z ostatnich 12 pełnych miesięcy sprzedaży, min. 1900 zł, raty za zgodą Stron; obejmuje przeniesienie praw + transfer domeny + konfigurację; eksport danych zawsze bezpłatny i poza wykupem; przy wypowiedzeniu przez Usługodawcę bez winy Klienta — transfer bezpłatny (§13 ust. 6). UWAGA: gpt-5.6-sol rekomendował dodatkowo TWARDY LIMIT kwotowy ceny wykupu (przykładowo 9800 zł) i niższy mnożnik (12×) — ŚWIADOMIE ODRZUCONE jako patroszące ekonomię modelu (24× = kapitalizacja 2 lat strumienia prowizji, uzasadnialna rynkowo); jeżeli Tomek chce maksymalnego bezpieczeństwa prawnego kosztem ekonomii — dodać limit.
 
