@@ -7,17 +7,18 @@ kompletu 5xT = FAIL (gate-check). Sekcje KODOWE: frazy-wytrychy w werdykcie = FA
 
 | sekcja | typ | makieta | SSIM | LAYOUT | werdykt (rubryka) |
 |---|---|---|---:|---|---|
-| hero | scenowa | 01-hero.png | 0.308 (sc 0.31/reszta 1.00) | OK · info: guttery(makieta-IR) render asym 0.55 vs makieta 0.01 (d=0.54) | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| problem | scenowa | 02-problem.png | 0.630 | OK | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| jak-cwiczysz | inna | 03-jak-cwiczysz.png | 0.594 | OK | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| regulacja | inna | 04-regulacja.png | 0.559 | OK | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| wideo | kodowa | 05-wideo.png | 0.350 | OK · info: wysokosc(makieta-IR) sekcja AR 0.93 vs makieta 0.63 (d=48%); info: SSIM 0.350<0.85 (real-render vs AI-makieta — nie dyskryminuje, decyduje RUBRYKA) | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| wiele-partii | inna | 06-wiele-partii.png | 0.440 | OK | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| wytrzymalosc | inna | 07-wytrzymalosc.png | 0.595 | OK | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| mid-cta | scenowa | 08-mid-cta.png | 0.601 (sc 0.42/reszta 0.68) | OK · info: reszta-SSIM 0.677<0.85 (real vs AI-makieta) | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| skladanie | inna | 09-skladanie.png | 0.431 | OK | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| zamow | kodowa | 10-zamow.png | 0.602 | OK · info: SSIM 0.602<0.85 (real-render vs AI-makieta — nie dyskryminuje, decyduje RUBRYKA) | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
-| final | scenowa | 11-final.png | 0.691 | OK · info: guttery(makieta-IR) render asym 0.04 vs makieta 0.50 (d=0.46) | skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ? |
+| hero | scenowa | 01-hero.png | 0.308 (sc 0.31/reszta 1.00) | OK · info: guttery(makieta-IR) render asym 0.55 vs makieta 0.01 (d=0.54) | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| problem | scenowa | 02-problem.png | 0.630 | OK | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| jak-cwiczysz | inna | 03-jak-cwiczysz.png | 0.594 | OK | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| regulacja | inna | 04-regulacja.png | 0.559 | OK | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| wideo | kodowa | 05-wideo.png | 0.350 | OK · info: wysokosc(makieta-IR) sekcja AR 0.93 vs makieta 0.63 (d=48%); info: SSIM 0.350<0.85 (real-render vs AI-makieta — nie dyskryminuje, decyduje RUBRYKA) | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| zdjecia-kupujacych | inna | render-only (sekcja dowodowa 5b — brak makiety F2; UGC realne LL-044) | render-only | OK (dowodowa UGC dodana w F5; render-only, brak IR-makiety) | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| wiele-partii | inna | 06-wiele-partii.png | 0.440 | OK | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| wytrzymalosc | inna | 07-wytrzymalosc.png | 0.595 | OK | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| mid-cta | scenowa | 08-mid-cta.png | 0.601 (sc 0.42/reszta 0.68) | OK · info: reszta-SSIM 0.677<0.85 (real vs AI-makieta) | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| skladanie | inna | 09-skladanie.png | 0.431 | OK | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| zamow | kodowa | 10-zamow.png | 0.602 | OK · info: SSIM 0.602<0.85 (real-render vs AI-makieta — nie dyskryminuje, decyduje RUBRYKA) | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
+| final | scenowa | 11-final.png | 0.691 | OK · info: guttery(makieta-IR) render asym 0.04 vs makieta 0.50 (d=0.46) | skala:T AR:T gut:T kraw:T wys:T → WERDYKT: TAK |
 
 > LAYOUT twarde (DOM self-checki, mierzone w renderze — BEZ makiety): (1) kafle-sliver cols>=5 &
 > szer<12% & portret; (2) pustka-pod-obrazem: obraz in-flow contain w boksie ar>=1.4 z pustka
@@ -87,18 +88,19 @@ Render `index.html` @ 390px. Mobile bez makiety = skladanka render-only z werdyk
 
 | sekcja | dowod mobile | SSIM/typ | werdykt (TAK/NIE — vision) |
 |---|---|---|---|
-| hero | [makieta|render] 01-hero-m.png | 0.463 |  |
-| problem | [makieta|render] 02-problem-m.png | 0.621 |  |
-| sticky | render-only 03-sticky-m.png | render-only |  |
-| jak-cwiczysz | [makieta|render] 04-jak-cwiczysz-m.png | 0.651 |  |
-| regulacja | [makieta|render] 05-regulacja-m.png | 0.581 |  |
-| wideo | [makieta|render] 06-wideo-m.png | 0.446 |  |
-| wiele-partii | [makieta|render] 07-wiele-partii-m.png | 0.465 |  |
-| wytrzymalosc | [makieta|render] 08-wytrzymalosc-m.png | 0.626 |  |
-| mid-cta | [makieta|render] 09-mid-cta-m.png | 0.664 |  |
-| skladanie | [makieta|render] 10-skladanie-m.png | 0.454 |  |
-| zamow | [makieta|render] 11-zamow-m.png | 0.639 |  |
-| final | [makieta|render] 12-final-m.png | 0.676 |  |
+| hero | [makieta|render] 01-hero-m.png | 0.463 | TAK |
+| problem | [makieta|render] 02-problem-m.png | 0.621 | TAK |
+| sticky | render-only 03-sticky-m.png | render-only | TAK |
+| jak-cwiczysz | [makieta|render] 04-jak-cwiczysz-m.png | 0.651 | TAK |
+| regulacja | [makieta|render] 05-regulacja-m.png | 0.581 | TAK |
+| wideo | [makieta|render] 06-wideo-m.png | 0.446 | TAK |
+| zdjecia-kupujacych | render-only (dowodowa 5b, UGC) | render-only | TAK |
+| wiele-partii | [makieta|render] 07-wiele-partii-m.png | 0.465 | TAK |
+| wytrzymalosc | [makieta|render] 08-wytrzymalosc-m.png | 0.626 | TAK |
+| mid-cta | [makieta|render] 09-mid-cta-m.png | 0.664 | TAK |
+| skladanie | [makieta|render] 10-skladanie-m.png | 0.454 | TAK |
+| zamow | [makieta|render] 11-zamow-m.png | 0.639 | TAK |
+| final | [makieta|render] 12-final-m.png | 0.676 | TAK |
 
 > Mobile: makieta istnieje TYLKO dla hero i wideo (SSIM). Reszta = render-only —
 > werdykt jakosci (produkt duzy? tresc czytelna? touch-target? kolaz/panel/FAQ OK? h-scroll 0?).

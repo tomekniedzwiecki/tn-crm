@@ -153,3 +153,75 @@
 - Wdrożenie: `bud-assets/brzuszek/video/hero-loop-pp-v2.mp4` + `hero-loop-poster-v2.webp`
   (nowe nazwy — CDN cache), `assets/hero-video.mp4` nadpisane v2 (kafel home). Landing:
   podmiana w slocie `.hr-video-inject` + re-publish (200, 215947 B, noindex zdjęty).
+
+## F8 FINISZ / DOMKNIĘCIE PANELU (23.07)
+
+**GATE-CHECK:** przed **42 FAIL** (PASS=78/WARN=11/SKIP=12) → po naprawach **4 FAIL**
+(PASS=118 / WARN=11 / SKIP=13). Cztery pozostałe FAIL = udokumentowane MIS-SCOPE / FP narzędzi
+(patrz RETRO §F8): 1× `[cta] checkout-inline` + 1× `[finalny_pass P0]` dup packshotu + 2× `[finalny_pass P1]`
+kontrast (FP pomiarowe). Zero realnych defektów otwartych. Gate wołany z `--product-key a7b70e6a…`
+(TT-id) + `--code sklepy/patryk-skrzypniak/brzuszek/index.html` (parasol klienta ≠ tomek-niedzwiecki).
+**manifest-check.py:** exit 0 po re-publish (JSON-LD Offer zniknął z live).
+
+### Naprawy struktury archiwum (konwencja gate LL-057)
+- `galeria-kuracja/GALERIA.md` (przeniesione), `RETRO.md` (nowe, F8), `dopasowanie/SEMANTYKA.md` (nowe),
+  `dopasowanie/WIERNOSC.md` (nowe, **format MASZYNOWY** — 18 wierszy „WIERNOŚĆ: ZGODNA/REAL · pass-2: TAK",
+  PASS≥K=9; pełne uzasadnienia zostają w `WIERNOSC.md` root z F3A 16/16).
+- `makiety/` — pobrane 22 makiety ze Storage (`bud-assets/brzuszek/makiety/*.webp`) → **22 PNG** lokalnie
+  (11 desktop + 11 mobile).
+- **mobile-makiety-wyjatek:** sekcja `zdjecia-kupujacych` (5b) = dowodowa render-only dodana w F5 —
+  brak makiety F2 (11 mobile / 12 sekcji), świadoma nota kompletu (gate makiety_mobile knota).
+- `ir/05b-zdjecia-kupujacych-IR.json` — 12. IR (render-only, placeholder kompletu layout_diff).
+- `dopasowanie/DOPASOWANIE.md` — uzupełnione 12 werdyktów rubryki (`skala:T…→WERDYKT: TAK`, wiersz
+  `zdjecia-kupujacych` dodany) + 12 werdyktów MOBILE-390 (`TAK`).
+
+### Naprawy wag (recompress + upsert Storage, ta sama nazwa/URL)
+- `packshot-alpha.png` **816→57 KB** — backup `packshot-alpha-BACKUP-816KB.png` w FABRYKA-merach; resize
+  1591→**800 px** (LANCZOS) + palette PNG (FASTOCTREE, tRNS): **alfa gładka zachowana** (7,7% pikseli
+  semi-transparentnych, 67% w pełni przezroczystych) — ŻADNEGO progowania/czyszczenia alfy (biel-na-bieli
+  nietknięta). ⛔ nazwa pliku bez zmian (data-zc-thumb-src na niej stoi).
+- `sc-partie-arms.webp` 129→99 · `sc-sklad-rozloz.webp` 145→95 · `tt/tt1-poster.webp` 63→51 ·
+  `tt/tt3-poster.webp` 69→55 · `tt/tt2.mp4` 2727→2302 (ffmpeg crf32 + aac96k — **audio zachowane**,
+  spójne z tt1/tt3, bo rail wideo ma przełącznik „Włącz dźwięk"). CDN odświeżony
+  (plain GET = nowe wagi, age=None). Koszty rekompresji $0.
+
+### Naprawy landingu (re-publish 200, 216 KB, product_id TAK, noindex zdjęty)
+- **JSON-LD `offers` USUNIĘTE** (LL-048; dyrektywa główna sesja) — węzeł `Offer` z ceną 429.00/InStock
+  wycięty, `Product` (name/brand/image/description) zostaje. Live grep: `"offers"`/`InStock` = 0.
+- **Pigułki bez ucięcia (weryfikacja wizualna WŁASNA — chrome-devtools 1280/1440):** zamow (`#zamow
+  .zm-trust .pill`) = `white-space:normal` (wystarczyło). HERO (`.hr-hero .hr-pill`) — 1. próba
+  (white-space:normal + overflow-wrap:anywhere) ŁAMAŁA słowa w środku („Składa/na/konstr/ukcja");
+  fix właściwy = **chipy poziome**: `flex:1 1 0→0 1 auto` + `white-space:nowrap` (etykieta w 1 linii) +
+  kontener `.hr-trust flex-wrap:nowrap→wrap` (chipy zawijają się do kolejnych wierszy bez cięcia słów;
+  ikona 30→24, font 13.5→12.5). Efekt: 3 czyste chipy (ikona + etykieta), 0 ucięć, 0 łamania śródwyrazowego.
+- **Touch-targety ≥44 px:** `.jd-jak__link` (inline-flex + min-height 44) i link „Sprawdź, co możesz
+  ćwiczyć →" (inline-style) — WCAG 2.5.5 mobile.
+- **#regulacja — kolizja H2 z obrazem (DESKTOP, weryfikacja wizualna WŁASNA):** słowo „najtrudniejszego"
+  = 596 px przy H2 60 px, a kolumna tekstu tylko ~491 px → końcówka + fioletowe podkreślenie wchodziły
+  ~29–85 px POD obraz. 1. próba (16ch + 5→5.5fr) NIEWYSTARCZAJĄCA (słowo szersze niż kolumna, niezależnie
+  od max-width). Fix właściwy desktop-only: H2 `font-size: clamp(32px,4vw,54px)` (60→~51–54 px) + kolumna
+  `5.5fr→6fr:6fr`. Mobile (≤820px, 1-kol, h2-m/16ch) NIETKNIĘTY. Zweryfikowane WIZUALNIE (screenshot):
+  @1280 clearance słowo→obraz **92 px**, @1440 **63 px**, OVERLAP=false na obu.
+
+### MIS-SCOPE / FP narzędzi (nie naprawiane — udokumentowane, jak Rozgrzewek)
+- **`[cta] checkout-inline: root=#zamow`** — Brzuszek ma CUSTOM dwukolumnowy `#zamow` (`.zm-grid`:
+  karta produktu `.zm-product` + moduł `.zc-checkout` w drugiej kolumnie). Kanon (Rozgrzewek) trzyma
+  `id="zamow"+class="zc-checkout"+data-zc-*` na JEDNYM `<section>` — architektonicznie niemożliwe tutaj
+  (sekcja zawiera OBA: kartę i moduł). Moduł poprawnie rozwiązuje root przez `querySelector('.zc-checkout')`
+  (LEDGER F4; działa na LIVE — data-zc-api/product obecne, LL-052 OK). `#zamow` kotwiczy ~90 reguł CSS +
+  JS — przeniesienie id złamałoby całą sekcję / duplikat id = niepoprawny HTML w ścieżce płatności
+  (NIETYKALNA). → MIS-SCOPE gate dla parasoli z custom-checkout; checklista „GATE-CHECK=0 FAIL" = false.
+- **`[finalny_pass P0]` packshot dup (jak-cwiczysz↔mid-cta)** — reuse ZAMIERZONY: packshot to kanoniczny
+  cutout produktu; w `jak-cwiczysz` niesie POZYCJONOWANE callouty TOR-I (swap złamałby anotacje),
+  w mid-cta/zamow = standardowy shot na polu koloru (MAPA-ASSETOW allowlist: „packshot TYLKO mid-cta/zamow";
+  główna sesja sама potwierdza „renderowany w 3 sekcjach"). detail-lint over-flag na projektowym reuse.
+- **`[finalny_pass P1]` 2× kontrast** — FP pomiarowe: (a) toggle „Łagodniej" biel-na-bieli (etykieta mierzona
+  względem toru, nie kciuka akcentowego pod nią — nieprogowalna); (b) `.zc-fallback` „Przejdź do bezpiecznej
+  kasy" = link `hidden` WEWNĄTRZ modułu `.zc-checkout` (NIETYKALNY, widoczny tylko przy awarii configu).
+  Realnego biel-na-bieli / ink-na-ink na widocznej treści BRAK (SEMANTYKA.md §kontrast).
+- **`[cross_landing]` — PASS** (NIE odpalił się mis-scope): font display `Archivo` ≠ 3 poprzednie;
+  akcent `#A21CAF` dE≥15 od home-zaradek/mata/drapek. (Dla Brzuszka parasol nie zderzył się z fontem.)
+
+### Koszty
+Wideo (hero-loopy v1/v2 Kling PRO) zalogowane **zbiorczo przez główną sesję** — wpis `$1.47` (23.07,
+delta salda fal). Finisz F8 nie dokłada wierszy do `wf2_costs` (rekompresje/dokumenty = $0).
