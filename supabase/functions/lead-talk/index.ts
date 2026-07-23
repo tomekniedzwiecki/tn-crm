@@ -190,6 +190,20 @@ async function ensureOffer(session: any, ctx?: { lead?: any; history?: { role: s
   return token
 }
 
+// Jednorazowa przepustka wejścia z czatu: karta oferty linkuje /p/<token>?e=<entry>.
+// Strona oferty konsumuje ją (entry_token_used_at) i wpuszcza bez bramki e-mail;
+// świeży entry przy KAŻDYM podaniu offerToken frontowi = każde kliknięcie z czatu
+// wchodzi gładko, a link bez ?e= (maile followupów, forward) trafia na bramkę.
+async function mintOfferEntry(offerToken: string | null): Promise<string | null> {
+  if (!offerToken) return null
+  const entry = genOfferToken()
+  const { error } = await supabase.from('client_offers')
+    .update({ entry_token: entry, entry_token_used_at: null })
+    .eq('unique_token', offerToken)
+  if (error) { console.error('[lead-talk] entry mint fail', error); return null }
+  return entry
+}
+
 // ── Stemple <faza> ───────────────────────────────────────────────────────────
 function extractFazy(text: string): string[] {
   const out: string[] = []
@@ -346,6 +360,7 @@ Deno.serve(async (req) => {
       turns: session.turns || 0,
       maxTurns: MAX_TURNS,
       offerToken: session.offer_token || null,
+      offerEntry: await mintOfferEntry(session.offer_token || null),
     }, 200, cors)
   }
 
@@ -359,7 +374,11 @@ Deno.serve(async (req) => {
       .select('role,content').eq('session_id', sid).order('id', { ascending: false }).limit(1).maybeSingle()
     // idempotencja na reload: ostatnia wiadomość to już powrót-z-oferty → oddaj ją
     if (lastMsg?.role === 'assistant' && /powrot_z_oferty/.test(lastMsg.content)) {
-      return jsonResponse({ message: lastMsg.content, offerToken: session.offer_token || null }, 200, cors)
+      return jsonResponse({
+        message: lastMsg.content,
+        offerToken: session.offer_token || null,
+        offerEntry: await mintOfferEntry(session.offer_token || null),
+      }, 200, cors)
     }
     const { data: lead } = await supabase.from('leads')
       .select('id,name,email,phone,direction,current_income,budget,weekly_hours,experience,open_question')
@@ -376,7 +395,11 @@ Deno.serve(async (req) => {
       const j = await res.json()
       const msg = (j?.choices?.[0]?.message?.content || '').trim()
       if (msg) await persistAssistant(session, msg)
-      return jsonResponse({ message: msg || null, offerToken: session.offer_token || null }, 200, cors)
+      return jsonResponse({
+        message: msg || null,
+        offerToken: session.offer_token || null,
+        offerEntry: await mintOfferEntry(session.offer_token || null),
+      }, 200, cors)
     } catch (e) {
       console.error('[lead-talk] resume_from_offer fail', e)
       return jsonResponse({ error: 'blad_ai' }, 502, cors)
@@ -493,6 +516,7 @@ Deno.serve(async (req) => {
           phase: extractFazy(full).pop() || session.last_phase || null,
           reservation: /<rezerwacja\s*\/?>/i.test(full),
           offerToken,
+          offerEntry: await mintOfferEntry(offerToken),
           cut: finishReason === 'length' || undefined,
         })
       } catch (e) {

@@ -1087,8 +1087,28 @@
                 back.classList.remove('hidden');
             }
 
-            // Bramka e-mail dla KAŻDEJ oferty (także source='rozmowa') — sam token w linku
-            // nie uwierzytelnia, link bywa forwardowany; hasłem jest e-mail leada.
+            // Jednorazowa przepustka z czatu (?e= z karty w /rozmowa): zgodna i NIEUŻYTA
+            // → skonsumuj atomowo i wejdź bez bramki. Każde inne wejście (link z maila,
+            // forward, ponowne użycie ?e=) = bramka e-mail; hasłem jest e-mail leada.
+            const entryParam = new URLSearchParams(location.search).get('e');
+            if (entryParam && clientOffer.entry_token === entryParam && !clientOffer.entry_token_used_at) {
+                const { data: consumed } = await supabaseClient
+                    .from('client_offers')
+                    .update({ entry_token_used_at: new Date().toISOString() })
+                    .eq('id', clientOffer.id)
+                    .eq('entry_token', entryParam)
+                    .is('entry_token_used_at', null)
+                    .select('id');
+                if (consumed && consumed.length) { await enterOffer(); return; }
+            }
+
+            // Odświeżenie strony w tej samej karcie przeglądarki nie wraca na bramkę
+            // (flaga per-tab z enterOffer; forward linku = inna karta = bramka).
+            if (sessionStorage.getItem(`offer-entered-${clientOffer.id}`)) {
+                await enterOffer();
+                return;
+            }
+
             showScreen('login-screen');
         }
 
@@ -1102,6 +1122,7 @@
         }
 
         async function enterOffer() {
+            try { sessionStorage.setItem(`offer-entered-${clientOffer.id}`, '1'); } catch { /* tryb prywatny */ }
             const { data: freshData } = await supabaseClient
                 .from('client_offers')
                 .select('view_count, view_history')
