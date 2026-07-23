@@ -78,3 +78,57 @@
 - F1/F1.7: 0 USD (pisanie docow + gate cross-only; zero generacji).
 - F2.5 branding: ~0.30 USD (6 faviconow gpt-image-2 medium 1024 + probki; HIGH nieuzywalny w tej
   infrze). wf2_costs: 1 wpis lp_styl_marka.
+
+## Faza F2 (styl-master + makiety desktop+mobile + KRYTYK + TOR-I) — wykonane 2026-07-23
+- **Styl-master DNA** (plansza specimen, F2 pkt 1) -> brand/00-styl-master.png -> Storage
+  bud-assets/ssawek/brand/. KRYTYK PASS: komplet DNA (paleta 7 chip + akcent JEDYNY oznaczony,
+  Barlow Semi Condensed vs Hanken Grotesk kontrast, jeden radius, 4 ikony outline ink, trust-pill
+  piaskowy, ciepla glebia, sygnatura S6 znacznik-rozek na karcie I ramce foto, DUZE liczby
+  119 zl/2000 W/20 l/4,7 kg, kafel PRODUKT wierny, kafel SWIAT brudna goraca robota). Domyka
+  **lp_styl_marka 8/8** (branding F2.5 + styl-master F2).
+- **Makiety: 14 sekcji build x (desktop+mobile) = 28** + styl-master. Manifest 16, ale #12 wideo +
+  #13 ugc-zdjecia = **blokada-tomek** (klasa dowodowa, agent bez prawa SKIP; bez makiety). Sekcje:
+  01-hero, 02-zaufanie, 03-problem, 04-rozwiazanie, 05-demo(TOR-I), 06-zastosowania, 07-zestaw,
+  08-porownanie, 09-mid-cta, 10-opinie, 11-galeria, 14-faq, 15-zamow, 16-final.
+- **Brief CELU** (nie dyktat elementow) + PRAWDZIWE dane VERBATIM z KARTY. Ref produktu = crop
+  kanistra z g11 (refs-cache/prod-whole) + packshot g14 (zestaw); styl = styl-master. NEG PASZPORTU
+  + EXCL (⛔ antystatyczny/99,99%/„silnik 2000 W"/Lehmann/Haddo/★nad foldem/numeracja sekcji).
+- **KRYTYK CZYSTY**: desktop 14/14 PASS w 1. rundzie (2 regeny = transient edge HTTP 500, nie
+  jakosc); mobile 14/14 PASS (12 czystych + **2 regeny jakosciowe: 09-mid-cta i 10-opinie**
+  bledy ANTI-BLEED — model wkleil plansze styl-master; naprawione hardened ANTI_BLEED clause).
+  Cross-landing 5/5 osi vs zaradek/mata/drapek. EMOCJA↔PRODUKT: 03-problem BEZ produktu. Anatomia
+  OK (dlonie: problem/demo/galeria/porownanie — 5 palcow, brak szpona). Brak near-dup scen
+  (distinct swiaty/konteksty). Akcent JEDYNY (CTA + swash + ★ w opinie POD foldem). DETAL-LAYER
+  >=3/4 (eyebrow caps + oversized display + 1 akcent + S6 rozek + hairlines + asymetria).
+  Mobile = projekt OD ZERA pod fold (hero: cena+CTA w 1. foldzie; 3-elementowe rzedy -> pion;
+  brak floating-chip na scenie hero).
+- **HERO — nosnik ruchu (DECYZJA):** KEEP „wir/wstega popiolu" z PRZEWODNIKA, ale DOPRECYZOWANY jako
+  ZWARTA, SPOJNA SMUGA/PLUME popiolu i sadzy (jak lina dymu — solidny widoczny wolumen) wciagana do
+  dyszy — NIE rozproszone pylki. Uzasadnienie: to klasa **dym/para** (jawnie DOZWOLONY nosnik
+  fizyczny w STANDARD F1.7b/F2), nie zakazane „swiatlo+cien+kurz-pylki". Zwarty strumien granulatu
+  w kierunkowym ruchu = dominujacy fizyczny obiekt (silueta + ruch), spelnia definicje. Makieta hero
+  (d+m) komponuje smuge WYSTAWIONA, poza strefa tekstu, nieprzycieta; produkt ostry/statyczny.
+  Alternatywa „waz w ruchu" ODRZUCONA (waz = element produktu; ruch weza sugeruje ruch produktu =
+  ryzyko wiernosci). Odnotowane tu wg zlecenia.
+- **TOR-I 05-demo**: T0 kwalifikacja (demo „jak dziala" = domyslnie TOR-I, L3); makieta pokazuje
+  3 STANY (01 wepnij / 02 wciagnij / 03 wytrzep filtr) na osobnych kadrach (d: rzad, m: pion).
+  SPEC-I kontrakt: interakcje/05-demo-SPEC-I.md (dwutrybowy: interaktywny stepper + fallback
+  no-JS/reduced-motion sekwencja; SSIM<0,9 miedzy stanami; crossfade 240-320 ms; asset per stan).
+- **Panel**: lp_styl_marka DONE 8/8 (force_kolejnosc — kalkulacja N/D Allegro). lp_makiety DONE
+  (KRYTYK czysty), gate kompletu OK (28 artefaktow makieta/makieta_mobile). **Kamien „AKCEPT
+  MAKIET" = PENDING (bramka Tomka, retro-akcept)** — celowo niezaznaczony. Artefakty: styl_master,
+  28x makieta/makieta_mobile (meta.section+viewport), doc TOKENS-MAKIETY + 05-demo-SPEC-I.
+
+## Odstepstwa F2 (swiadome)
+- Generacja edge wf2-gen MEDIUM (WF2_SKIP_LOCAL=1): local HIGH /v1/images/edits 520-uje niezawodnie
+  przez Cloudflare (>100s, LEDGER F2.5) — pomijam doomed HIGH by oszczedzic ~100s/obraz; jakosc
+  MEDIUM wystarczajaca (makieta = kontrakt layoutu; kod odtwarza tekst 1:1). Klasa: blipy OpenAI.
+- Diakrytyki PL (l/a/s/z) czesciowo gubione przez gpt-image na makietach — znana granica; kod F4
+  odtwarza copy 1:1 z poprawnymi znakami (makieta = wzorzec ukladu, nie zrodlo tekstu).
+- lp_styl_marka + lp_makiety zamkniete force_kolejnosc=True (kalkulacja Etap 1 N/D w torze Allegro).
+
+## Koszty F2
+- **openai-image: $1.86** (31 generacji gpt-image-2 edge MEDIUM @ $0.06: 1 styl + 14 desktop + 2
+  retry + 14 mobile + 2 regen). wf2_costs kind='openai-image', step lp_makiety.
+- **claude (praca agenta): $36.00** — ~4,0 MTok sesji (Opus 4.8) x $9,00/MTok (blend 80/20),
+  SZACUNEK SESJI wg liczby wywolan (dyrektywa Tomka 23.07). wf2_costs kind='claude', step lp_makiety.
