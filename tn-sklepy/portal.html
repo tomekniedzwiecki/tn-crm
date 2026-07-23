@@ -1280,12 +1280,25 @@
                 </div>
             </div>`;
         } else {
-            // pending — sklep działa, dostęp przekażę osobno (BEZ pokazywania adresu systemowego)
-            sec.innerHTML = `<div class="home-card"><div class="hc-top">
-                <div class="hc-ic"><i class="ph ph-storefront"></i></div>
-                <div class="hc-tt"><div class="hc-h">Panel Twojego sklepu</div>
-                <div class="hc-s">Twój sklep działa na platformie. Dostęp do panelu przekażę Ci osobno.</div></div>
-            </div></div>`;
+            // pending — sklep działa, konto na adresie systemowym: adres LOGOWANIA pokazujemy
+            // (jest stały i jawny — dyrektywa Tomka 23.07), ukryty zostaje tylko systemowy e-mail.
+            const loginUrl = mp.login_url || 'https://panel.niedzwiecki.ai/';
+            const loginPretty = prettyUrl(loginUrl);
+            sec.innerHTML = `<div class="home-card">
+                <div class="hc-top">
+                    <div class="hc-ic"><i class="ph ph-storefront"></i></div>
+                    <div class="hc-tt"><div class="hc-h">Panel Twojego sklepu</div>
+                    <div class="hc-s">Stąd zarządzasz swoim sklepem — produktami, zamówieniami i ustawieniami.</div></div>
+                </div>
+                <div style="margin-top:16px;padding-top:14px;border-top:1px solid #161616">
+                    <label class="lbl" style="margin-top:0">Adres panelu</label>
+                    <div class="copybox" style="max-width:100%"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${escapeHtml(loginPretty)}</span> <button type="button" style="flex-shrink:0" onclick="copyText('${escapeHtml(loginUrl)}', this)">Kopiuj</button></div>
+                    <p style="color:#a1a1aa;font-size:13px;line-height:1.6;margin-top:10px">Twój sklep działa na platformie. Dane do logowania przekażę Ci osobno.</p>
+                    <div class="task-actions">
+                        <a class="btn btn-accent" href="${escapeHtml(loginUrl)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px" onclick="track('link_click','Przejdź do panelu sklepu')"><i class="ph ph-arrow-square-out"></i> Przejdź do panelu</a>
+                    </div>
+                </div>
+            </div>`;
         }
     }
 

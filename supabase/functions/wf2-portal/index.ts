@@ -978,7 +978,9 @@ Deno.serve(async (req: Request) => {
         password_setup_url: MERCHANT_PW_SETUP_URL,
       };
     } else {
-      merchant_panel = { active: false, pending: true };
+      // pending: adres logowania platformy JEST jawny (dyrektywa Tomka 23.07) — ukrywamy
+      // wyłącznie systemowy e-mail konta, nie sam panel.
+      merchant_panel = { active: false, pending: true, login_url: MERCHANT_LOGIN_URL };
     }
   }
 
