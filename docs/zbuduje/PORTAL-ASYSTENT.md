@@ -40,13 +40,24 @@ zapis wiadomości, `body.context` (cap 4KB) → `buildContextBlock`. Per funkcja
 buildSystemPrompt, buildContextBlock, parseMarkers/onMarkers, extraActions (preAuth/postAuth),
 buildHistory, buildUploadPath, resolveScope, limity/model/bucket.
 
-## 3. Asystent portalu TN Sklepy (wf2)
+## 3. Asystent portalu TN Sklepy (wf2) — v2.1 „ROZMOWA JEST TREŚCIĄ ZADANIA"
 
-- **Wejścia UX (widok zadań):** przycisk „Asystent" w topbarze + FAB w prawym dolnym rogu +
-  inline-link w treści zadania. Kill-switch chowa wszystkie.
-- **Chat-first:** długie instrukcje zadań (ads_strona/ads_konto/ads_budzet) zwinięte w akordeon
-  „📖 Pełna instrukcja krok po kroku" (rozwinięty, gdy kill-switch OFF). Pola formularza + „Zrobione"
-  zawsze widoczne. Dane klient wpisuje w POLACH zadań — asystent tam kieruje, sam nie odhacza.
+- **Model (doprecyzowanie Tomka 23.07):** w zadaniach `CHAT_TASKS = ads_strona/ads_konto/ads_budzet/firma`
+  W MIEJSCU instrukcji jest OSADZONE okno rozmowy (TNChat embedded, jak WhatsApp) — asystent SAM wita
+  per zadanie lokalnym dymkiem z PIERWSZYM krokiem (`CLIENT_WS.chatIntro`; efemeryczny — przy istniejącym
+  wątku nie wraca) i prowadzi dalej bez powtórnego witania. ZERO przycisków/FAB/drawera/akordeonów.
+  **Wyjątek `pl_dane`** = czysty formularz (decyzja: dane proste). Pola zadania („Twoje dane do tego
+  zadania") + CTA „Zrobione" POD czatem (CTA nie-done = NIEBIESKI; zieleń tylko done).
+- **Wątki per zadanie:** `wf2_guide_messages.task_key` (migracja 20260723) — historia, transkrypt modelu
+  i intro filtrowane po `body.context.task_key` (hooki `rowExtra`/`historyExtraFilter` w portal-chat.ts);
+  NULL = stare/ogólne; panel admina (projekt.html) czyta CAŁOŚĆ bez filtra. Jedna trwała instancja czatu
+  przenoszona między slotami zadań (park w `#asystent-host` przed innerHTML!).
+- **Klikalne linki (decyzja Tomka):** dymki linkifikują `https?://` bezpiecznie (createElement('a'),
+  `tnc-link`, target=_blank, rel=noopener; zero innerHTML). Prompt: „zawsze dawaj bezpośredni pełny
+  link zamiast opisywać nawigację"; wiedza i chatIntro używają pełnych https://.
+- Kill-switch OFF → zadania czatowe pokazują pełną dawną instrukcję `ws.guide` (fallback; guide ZOSTAJE
+  w CLIENT_WS jako fallback + źródło promptu). Dane klient wpisuje w POLACH zadań — asystent tam
+  kieruje (dokładnymi etykietami pól), sam nie odhacza.
 - **Prompt** (zaszyty w wf2-ads-guide): persona przewodnika + zasady „JEDEN krok naraz" + wiedza
   per zadanie (pl_dane, sekcja ŚRODOWISKO REKLAMOWE 1:1 — pilnowana asercjami verify-wf2) +
   **doradca firmy** (DG vs nierejestrowana, limit 10 813,50 zł/kwartał 2026, bramki, VAT, inFakt

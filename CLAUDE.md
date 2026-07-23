@@ -143,8 +143,10 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   read-only, upload/vision, rate-limit, kill-switch, markery). Konsumenci: **`wf2-ads-guide`**
   (asystent CAŁEGO portalu tn-sklepy: zadania+zakładki+doradca firmy DG/nierejestrowana, kontekst
   `[STAN PROJEKTU]` z maskowaniem NRB/NIP, `HIDDEN_FOR_CLIENT` sync z `PREVIEW_ONLY_STEPS` —
-  asercja pilnuje) i **`wfa-test-chat`** (testy klienta tn-app). Widok zadań portalu wf2: 3 wejścia
-  (topbar/FAB/inline) + akordeon „Pełna instrukcja" zamiast ściany tekstu. Marker `<utkniecie>` →
+  asercja pilnuje) i **`wfa-test-chat`** (testy klienta tn-app). Widok zadań wf2 (v2.1, 23.07):
+  **ROZMOWA JEST TREŚCIĄ ZADANIA** — w ads_strona/ads_konto/ads_budzet/firma osadzone okno czatu
+  z powitaniem per zadanie (`chatIntro`), wątki per `wf2_guide_messages.task_key`, linki w dymkach
+  KLIKALNE; pl_dane = wyjątek (formularz); zero przycisków/akordeonów. Marker `<utkniecie>` →
   nota `wf2_notes`; kill-switch `settings.wf2_ads_guide_enabled` FAIL-OPEN; rate 60/h. **Aktualizując
   CLIENT_WS ads_* aktualizuj też prompt** (sekcja ŚRODOWISKO REKLAMOWE 1:1). Deploy
   `npm run deploy:wf2-ads-guide` / `deploy:wfa-test-chat`; zmiana tn-chat.* = bump `?v=` w OBU
