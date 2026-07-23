@@ -56,8 +56,17 @@ buildHistory, buildUploadPath, resolveScope, limity/model/bucket.
   `tnc-link`, target=_blank, rel=noopener; zero innerHTML). Prompt: „zawsze dawaj bezpośredni pełny
   link zamiast opisywać nawigację"; wiedza i chatIntro używają pełnych https://.
 - Kill-switch OFF → zadania czatowe pokazują pełną dawną instrukcję `ws.guide` (fallback; guide ZOSTAJE
-  w CLIENT_WS jako fallback + źródło promptu). Dane klient wpisuje w POLACH zadań — asystent tam
-  kieruje (dokładnymi etykietami pól), sam nie odhacza.
+  w CLIENT_WS jako fallback + źródło promptu). Klient może też wpisywać w POLACH zadań ręcznie.
+- **EKSTRAKCJA DANYCH Z ROZMOWY (23.07; lekcja Zaradek — klient wkleił share-link strony FB, asystent
+  odrzucił, pole zostało puste):** model emituje marker `<dane>{"pole":"wartość"}` → edge waliduje
+  (`CHAT_FIELD_WHITELIST` per zadanie, SYNC-guard z `CLIENT_FIELD_WHITELIST` wf2-portal; **share-linki
+  facebook.com/share/… AKCEPTOWANE** + resolve server-side do kanonicznego URL, fallback oryginał;
+  act_ normalizacja identyczna z task_save + propagacja `meta_ad_account_id`; NIP z sumą kontrolną;
+  daty → YYYY-MM-DD) → zapis atomowy (wf2_step_merge; guard: firma nie zapisuje dopóki w
+  HIDDEN_FOR_CLIENT) → potwierdzenie doklejone do odpowiedzi („✅ Zapisałem w zadaniu: …") + `saved[]`
+  w JSON → front sam wypełnia pola (applySavedFields, „Zapisano ✓") + activity `ads_guide_dane`.
+  Prompt: CEL DANYCH per zadanie, przyjmuj dane w rozmowie (NIE odsyłaj do pola), świadomość MOBILE
+  (zrzuty z aplikacji → zaproponuj komputer, w appce prowadź tylko po tym, co widać na zrzucie).
 - **Prompt** (zaszyty w wf2-ads-guide): persona przewodnika + zasady „JEDEN krok naraz" + wiedza
   per zadanie (pl_dane, sekcja ŚRODOWISKO REKLAMOWE 1:1 — pilnowana asercjami verify-wf2) +
   **doradca firmy** (DG vs nierejestrowana, limit 10 813,50 zł/kwartał 2026, bramki, VAT, inFakt
