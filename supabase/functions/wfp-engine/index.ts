@@ -548,6 +548,10 @@ Deno.serve(async (req) => {
           await logEvent(sb, inboxProspect.id as string, "auto", "opt_out", "Automatyczny opt-out z odpowiedzi (sprzeciw wykryty)", { source: "classify_reply" });
           inboxProspect.opted_out = true;
         }
+        // opt_out obsłużony automatycznie — nie wisi w liczniku „do obsłużenia" (nic się nie odsyła).
+        if (obj.typ === "opt_out") {
+          await sb.from("wfp_inbox").update({ handled_at: new Date().toISOString() }).eq("id", inboxId).is("handled_at", null);
+        }
 
         // Pozytywna/neutralna → od razu propozycja odpowiedzi (ta sama inwokacja).
         let suggested: Record<string, unknown> | null = null;
