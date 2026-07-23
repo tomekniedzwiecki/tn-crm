@@ -97,6 +97,10 @@ zostało wyczyszczone; to był single point of failure). Kolejność:
    landing startuje mądrzejszy.
 5. **Archiwum do repo** → `PLAN/PASZPORT/ICP/DOPASOWANIE` landinga do `FABRYKA-*/<slug>/` **w repo**
    (nie na Desktopie).
+6. **Koszt = też depozyt** → upewnij się, że KAŻDA faza zdeponowała do `wf2_costs` (zakładka „Koszty"):
+   twarde API **ORAZ** `kind='claude'` (zmierzone tokeny agenta × stawka mieszana 80/20 — Sonnet
+   $5,40 / Opus $9,00 / Haiku $1,80 /MTok; `note` = model + tokeny + „blend 80/20"). Główna pętla
+   zostaje szacunkiem w `WORKFLOW-V2-TOKENY.md`. Reguła i przykłady: `STANDARD-LANDING-SKLEPY.md` §6 pkt 10.
 
 ⛔ Depozyt = skeletony / tokeny / lekcje / metadane. **NIGDY „gotowy landing jako wzorzec do
 skopiowania"** — to droga do klonów.

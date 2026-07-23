@@ -1574,9 +1574,20 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 9. Sanity rendera (F7.2) czyste: zero błędów technicznych renderu.
 10. Wersje + grafiki zarchiwizowane na pulpicie; koszty w ledgerze **ORAZ w `wf2_costs`
     (od 18.07 OBOWIĄZKOWO — zakładka „Koszty" w /tn-sklepy; incydent Drapek: ledger był,
-    panel pusty): INSERT per faza (project_id wf2; produkt z portfela → product_id + step_key
-    lp_*; stage=2; amount USD; kind gpt-image/openai/fal; landing spoza portfela wf2 →
-    projekt rozwojowy `baacc66f-3dd0-462a-9799-de9c7aaea639`).
+    panel pusty)**. Po KAŻDEJ fazie sesja loguje przez `panel-sync.py cost_add` (project_id wf2;
+    produkt z portfela → `product_id` + `step` lp_*; landing spoza portfela wf2 → projekt
+    rozwojowy `baacc66f-3dd0-462a-9799-de9c7aaea639`) DWA rodzaje pozycji:
+    - **(a) twarde API** — jak dotąd: `kind` wg źródła (`openai-image`/`gpt-image`/`fal`/`moonshot`/
+      `gemini`/`inne`), `amount` = realny wydatek USD;
+    - **(b) `kind='claude'`** — praca agenta fazy: **ZMIERZONE** tokeny subagenta (z harness) × stawka
+      **MIESZANA** modelu przy jawnym założeniu proporcji input/output **80/20**:
+      Sonnet 5 = **$5,40/MTok** (0,8×$3+0,2×$15) · Opus 4.8 = **$9,00/MTok** (0,8×$5+0,2×$25) ·
+      Haiku 4.5 = **$1,80/MTok** (0,8×$1+0,2×$5). `note` MUSI zawierać **model + liczbę tokenów +
+      „blend 80/20"**, żeby szacunek był audytowalny (np. „Agent Opus F1 plan ~221k tok (blend 80/20)").
+    **Główna pętla orkiestratora NIE wchodzi do `wf2_costs`** — pozostaje szacunkiem w
+    `WORKFLOW-V2-TOKENY.md` (brak zmierzonego licznika billingowego głównej pętli).
+    Etap (`stage`) nadaje się AUTOMATYCZNIE: `cost_add` wyprowadza go z `wf2_step_defs` po kluczu
+    kroku (lp_* → etap 2 „Landing"); jawny `stage=` podawaj tylko dla wpisów bez kroku.
 11. **Karta Prawdy (Z7) — COPY-GATE `gate-check.py` blok `copy`:** grep `shop.name`/URL sklepu
     źródłowego ⊄ HTML; KAŻDY claim ma kotwicę w źródle (§1a); KARTA-PRAWDY TAGUJE każdą
     liczbę-ze-specyfikacji `[KONKRET-SKU]`/`[KONKRET]`/`[SPEC]` — liczba-z-jednostką
@@ -1756,6 +1767,19 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-23 (KOSZT PRACY AGENTA DO PANELU — `kind='claude'`; dyrektywa Tomka „nie rejestrujesz
+  kosztów tutaj poprawnie"):** panel „Koszty" pokazywał tylko twarde API (np. $0,30 po dwóch ciężkich
+  fazach), bo praca agentów Claude (tokeny) NIE była logowana. **ZMIANY:** (1) pkt 10 checklisty —
+  po KAŻDEJ fazie oprócz twardego API sesja loguje `kind='claude'`: ZMIERZONE tokeny subagenta ×
+  stawka MIESZANA modelu przy proporcji input/output 80/20 (Sonnet 5 $5,40/MTok · Opus 4.8
+  $9,00/MTok · Haiku 4.5 $1,80/MTok); `note` = model + tokeny + „blend 80/20" (audytowalność).
+  Główna pętla orkiestratora zostaje szacunkiem w `WORKFLOW-V2-TOKENY.md`, poza `wf2_costs`.
+  (2) `panel-sync.py cost_add` — naprawiony default `stage`: gdy pominięty, etap wyprowadzany
+  z `wf2_step_defs` po kluczu kroku (kolumna `key`), fallback 5 tylko dla nieznanego/braku kroku
+  (wcześniej twardy default=5 wrzucał koszty lp_* do etapu 5 „Materiały i kampania" zamiast 2
+  „Landing"). (3) Backfill DEMO Allegro/ssawek: 4 wpisy `claude` (ekstrakcja+F0 Sonnet, F1+F2.5
+  Opus) = $5,70; z twardym API $0,30 → etap 2 „Landing" ma komplet ~$6,00.
 
 - **2026-07-23 (DRUGIE ZAUFANE ŹRÓDŁO F0: `source='allegro'` — tor „Allegro→Marka", 1. produkt
   z Allegro):** twardy gate F0 pochodzenia danych (`GALERIA-ALI.md §0`) ufa odtąd `source ∈

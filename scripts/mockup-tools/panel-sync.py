@@ -848,10 +848,42 @@ def wybor_portfel(project, count=None, dry_run=False, od_tomka=False):
 
 
 # ── 4b. Fabryka wideo: koszty / oś czasu / rejestr kreacji ──
-def cost_add(project, product, amount, kind="fal", currency="USD", step=None, stage=5,
+_STAGE_BY_STEP_CACHE = {}
+
+
+def _stage_for_step(step):
+    """Etap (wf2_step_defs.stage) dla klucza kroku; None gdy krok nieznany / brak.
+    ⚠️ Kolumna klucza w wf2_step_defs to `key` (NIE `step_key` — próba `step_key` = 42703).
+    Cache per proces: jedna faza loguje wiele wpisów tego samego kroku."""
+    if not step:
+        return None
+    if step in _STAGE_BY_STEP_CACHE:
+        return _STAGE_BY_STEP_CACHE[step]
+    stage = None
+    try:
+        rows = _get("wf2_step_defs", {"key": f"eq.{step}", "select": "stage", "limit": "1"})
+        if rows and rows[0].get("stage") is not None:
+            stage = rows[0]["stage"]
+    except Exception as e:
+        log(f"cost_add: nie ustalono etapu z wf2_step_defs dla step={step!r} ({e})")
+    _STAGE_BY_STEP_CACHE[step] = stage
+    return stage
+
+
+def cost_add(project, product, amount, kind="fal", currency="USD", step=None, stage=None,
              note=None, created_by="auto"):
     """Koszt do wf2_costs. Tabela NIE ma uniku — dedup po (project, product, step, kind, note);
-    bez note NIE deduplikuje (świadomie: kolejne pozycje)."""
+    bez note NIE deduplikuje (świadomie: kolejne pozycje).
+
+    ETAP (`stage`): jawny argument ZAWSZE wygrywa (pełna kompatybilność wsteczna). Gdy pominięty
+    (stage=None), etap jest WYPROWADZANY z wf2_step_defs po kluczu kroku (`step`); dopiero gdy krok
+    jest nieznany / brak — fallback na 5. Wcześniej default=5 cicho wrzucał koszty kroków lp_*
+    (Landing = etap 2) do etapu 5 „Materiały i kampania", bo front bierze `c.stage` PRZED
+    fallbackiem do definicji kroku."""
+    if stage is None:
+        stage = _stage_for_step(step)
+        if stage is None:
+            stage = 5
     if note:
         params = {"project_id": f"eq.{project}", "kind": f"eq.{kind}", "note": f"eq.{note}",
                   "select": "id"}

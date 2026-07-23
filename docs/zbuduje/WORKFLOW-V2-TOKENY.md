@@ -107,6 +107,31 @@ TESTY §9 + noty decyzyjne → test:wf2 19/19.
 | Główna pętla Fable — input kumulacyjny (cache read) | ~5M | ~$9 |
 | **Razem** | **~5,4M (w tym 339k zmierzone)** | **~$13 ≈ 48 zł** |
 
+### 2026-07-23 — FABRYKA ssawek/Popiołek (tor Allegro→Marka) F0–F2.5
+
+Zakres: ekstrakcja konkretnej oferty Allegro (odkurzacz Lehmann Haddo, slug `ssawek`, DEMO) →
+F0 dane/kuracja zdjęć/KARTA PRAWDY → F1+F1.7 plan i przewodnik landingu → F2.5 branding
+mini-marki „Popiołek" (6 faviconów gpt-image-2 medium). Panel /tn-sklepy dostał koszty per
+faza jako `kind='claude'` (blend 80/20) + twarde API. **F2 (makiety) w toku — dopisać po
+zakończeniu.** Metodologia stawek panelu: input/output 80/20 → Sonnet 5 $5,40/MTok, Opus 4.8
+$9,00/MTok (spójne z per-model wyceną subagentów w poprzednich wpisach).
+
+| Składnik | Tokeny | Koszt API (szac.) |
+|---|---|---|
+| Subagent Sonnet — ekstrakcja oferty Allegro (ZMIERZONE) | 172 250 | ~$0,93 (blend 80/20 $5,40/MTok) |
+| Subagent Sonnet — F0 dane/kuracja/KARTA (ZMIERZONE) | 358 257 | ~$1,93 (blend 80/20) |
+| Subagent Opus — F1+F1.7 plan/przewodnik (ZMIERZONE, ~70% z 316 445) | ~221 500 | ~$1,99 (blend 80/20 $9,00/MTok) |
+| Subagent Opus — F2.5 branding Popiołek (ZMIERZONE, ~30% z 316 445) | ~94 900 | ~$0,85 (blend 80/20) |
+| **Agenty zmierzone razem = panel `kind='claude'`** | **~846 950** | **~$5,70** |
+| Generacje obrazów (6 faviconów gpt-image-2 medium) | — | ~$0,30 |
+| Główna pętla Fable — output (orkiestracja F0–F2.5, szac.) | ~30 000 | ~$1,5 |
+| Główna pętla Fable — input kumulacyjny (szac., ~15–25 wywołań × duży kontekst, głównie cache read) | ~3–6M | ~$6–12 |
+| **Razem F0–F2.5 (do makiet)** | **~4–7M (w tym 847k zmierzone)** | **~$14 (zakres $10–19) ≈ 52 zł** |
+
+Uwaga: panel /tn-sklepy rejestruje TYLKO zmierzone agenty (`kind='claude'` = $5,70) + twarde
+API ($0,30 → etap 2 „Landing" ≈ $6,00). Szacunek głównej pętli żyje WYŁĄCZNIE w tym pliku —
+brak zmierzonego licznika billingowego głównej pętli (STANDARD §6 pkt 10).
+
 ### Suma narastająco (po całym 2026-07-03)
 
 | | Tokeny (szac.) | Koszt API (szac.) |
