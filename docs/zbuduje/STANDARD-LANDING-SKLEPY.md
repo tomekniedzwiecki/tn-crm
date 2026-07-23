@@ -316,6 +316,20 @@ KONTRAKTEM dla F2/F4/gate. Blok w `PLAN.md` (nagłówek dokładnie `## MANIFEST 
 - **`build`** = sekcja MUSI mieć komplet: makietę **d+m** (F2) · `<section id>` w kodzie (F4) · kompozyt dowodu (F7.1).
 - **`SKIP`** = dozwolony **TYLKO z JAWNYM POWODEM** w tej samej linii, z kotwicą (KARTA/LEDGER). Powód = FAKT
   („0 klipów", „0 opinii z treścią"), NIGDY „nie zdążyłem". **Cichy brak planowanej sekcji = FAIL**, nie „może być".
+- **⛔ KLASA DOWODOWA BEZ PRAWA SKIP (Tomek 23.07 — 2. eskalacja: „usunąć to, co daje sobie prawo
+  decydować o tym"):** sekcje **wideo TikTok/UGC** i **zdjęcia od kupujących** są OBOWIĄZKOWE jak
+  rdzeń — **agent NIE MA prawa wpisać im `SKIP`**. Ta decyzja NIE należy do fabryki:
+  1. Fabryka najpierw WALCZY o materiał wg protokołu wyczerpania: **zdjęcia** — listing
+     `bud-reviews/<ali_id>/` w Storage (NIGDY diagnoza „opinie bez zdjęć" z samej Karty —
+     precedens Rozmrozika: 6 klatek leżało w Storage, sekcja poszła na skip) + vision-gate
+     per klatka z werdyktami; **wideo** — WSZYSCY kandydaci TT (bud_tt_candidates + snapshot),
+     pobranie, a przy dyskwalifikatorach (wypalone napisy/claim) próba crop/trim czystego
+     fragmentu przed odrzutem.
+  2. Jeżeli po pełnym protokole materiału nadal nie ma → sekcja idzie do **TABELI BLOKAD jako
+     kamień TOMKA** (protokół wyczerpania w załączniku), landing może być live, ale manifest
+     trzyma pozycję jako `blokada-tomek`, nie `SKIP`. Werdykt „sekcji nie będzie" może wydać
+     wyłącznie Tomek.
+  3. Gate `sekcje_plan`: `SKIP` przy sekcji klasy dowodowej = **FAIL** (niezależnie od powodu).
 - **Gate `sekcje_plan`** (F6, `gate-check.py`) rekoncyliuje: KAŻDA `build` z manifestu ↔ makieta ↔ `<section id>` ↔
   kompozyt dopasowania. Planowana `build` bez pokrycia = **FAIL**; sekcja w kodzie spoza manifestu = WARN (nieplanowana);
   `SKIP` bez powodu = FAIL. Manifest MUSI zawierać rdzeń `hero · zamow · final · mid-cta` jako `build` (brak rdzeniowej = FAIL).
