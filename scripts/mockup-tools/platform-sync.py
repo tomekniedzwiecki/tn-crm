@@ -89,6 +89,19 @@ def _load_watermark_salt():
     return os.environ.get("WF2_WATERMARK_SALT")
 
 
+_ASSET_GATE_MOD = None
+def _asset_gate():
+    """Lazy import asset-gate.py (myślnik w nazwie → importlib)."""
+    global _ASSET_GATE_MOD
+    if _ASSET_GATE_MOD is None:
+        import importlib.util
+        p = os.path.join(_HERE, "asset-gate.py")
+        spec = importlib.util.spec_from_file_location("asset_gate", p)
+        _ASSET_GATE_MOD = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_ASSET_GATE_MOD)
+    return _ASSET_GATE_MOD
+
+
 def build_id(product_id):
     """WATERMARK niewywnioskowalny z HTML: HMAC-SHA256(sekret, 'wf2:'+product_id)[:16].
     Sekret = WF2_WATERMARK_SALT (jeśli jest) lub SUPABASE_SERVICE_KEY (ps.KEY) — kopista
@@ -323,9 +336,15 @@ def cmd_publish(a):
     canonical = f"https://{dom}/{path}" if path else f"https://{dom}"
     strip = a.strip_noindex or custom
     html = _substitute(html, p["id"], canonical, pr.get("pixel_id"), p.get("checkout_url"), strip)
+    if getattr(a, "gate_assets", False):
+        # BRAMKA ASSETÓW (opt-in do czasu migracji oryginałów do prywatnego bucketa —
+        # dopóki oryginały są publiczne, bramka jest omijalna po jawnej ścieżce; patrz
+        # docs/zbuduje/OCHRONA-LANDINGOW.md runbook). hero-exempt: LCP zostaje nietknięte.
+        html, gstats = _asset_gate().gate_html(html, hero_exempt=True)
+        log(f"asset-gate: bramkowane {len(gstats['rewritten'])} · hero-exempt {len(gstats['hero_exempt'])}")
     if not getattr(a, "no_harden", False):
         html = _harden(html, p["id"], p.get("platform_name") or p["name"])
-        log("harden: strip komentarzy + collapse + fingerprint (ochrona przed kopiami)")
+        log("harden: strip komentarzy + collapse + watermark HMAC 4-loci (ochrona przed kopiami)")
     d = adapter_ok({"action": "publish_landing", "shop_id": sid, "path": path, "html": html,
                     "name": a.name or p.get("platform_name") or p["name"]}, "publish_landing")
     url = d.get("url") or canonical
@@ -395,7 +414,9 @@ def main():
     s.add_argument("--name"); s.add_argument("--strip-noindex", action="store_true")
     s.add_argument("--allow-no-runtime", action="store_true")
     s.add_argument("--no-harden", dest="no_harden", action="store_true",
-                   help="pomiń ochronę przed kopiami (strip komentarzy+collapse+fingerprint)")
+                   help="pomiń ochronę przed kopiami (strip komentarzy+collapse+watermark)")
+    s.add_argument("--gate", dest="gate_assets", action="store_true",
+                   help="bramkuj assety przez wf2-asset (hero-exempt); WYMAGA migracji oryginałów do prywatnego bucketa — patrz OCHRONA-LANDINGOW.md")
     s = sub.add_parser("home", help="publikacja strony głównej (path:'')")
     s.add_argument("project"); s.add_argument("file"); s.add_argument("--strip-noindex", action="store_true")
     s.add_argument("--no-harden", dest="no_harden", action="store_true",
