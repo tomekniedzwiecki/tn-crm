@@ -339,6 +339,20 @@ KONTRAKTEM dla F2/F4/gate. Blok w `PLAN.md` (nagłówek dokładnie `## MANIFEST 
 - **Powód (Tomek na macie — brak dedykowanej sekcji CTA i wideo):** dotąd gate liczył sekcje **Z GOTOWEGO HTML**
   → sekcja porzucona PRZED buildem (koder ją pominął, plan o niej „zapomniał") była NIEWIDZIALNA. Manifest zamienia
   pytanie „co zbudowano?" na „co MIAŁO powstać?" — i egzekwuje różnicę.
+- **FORMAT KANONICZNY pozycji (23.07 — na Ulepszku 3 landingi = 3 różne dialekty zapisu; parser
+  gate'a musiał zgadywać, a wariant bez pola `typ` o mało nie ukrył sekcji DOWODOWEJ):**
+  `` N. `id | typ | status — powód` `` — backtick wokół CAŁEJ pozycji; ZAWSZE 3 pola
+  (`typ` ∈ scenowa|kodowa, `status` ∈ build|SKIP|blokada-tomek); separator powodu ` — `;
+  powód OBOWIĄZKOWY dla SKIP i blokada-tomek; numeracja liczbami całkowitymi (bez sufiksów
+  `5b` — przy wstawce pełna renumeracja).
+- **⚙️ EGZEKUTOR MASZYNOWY `manifest-check.py` (23.07):**
+  `python -X utf8 scripts/mockup-tools/manifest-check.py --plan <PLAN.md> --url <live> [--file <index.html>]`
+  — parsuje manifest, FAIL-uje: SKIP na klasie dowodowej · `build` bez `<section id>` w HTML ·
+  hero bez wideo (slot/mp4/poster HEAD 200) · sekcja dowodowa pusta lub z martwymi assetami ·
+  gwiazdki/oceny/„opinii" w sekcjach dowodowych · JSON-LD Offer/AggregateRating; WARN: sekcja
+  spoza manifestu, rozjazd live↔repo. **OBOWIĄZKOWY w dwóch miejscach: (1) FINISZ — przed
+  oznaczeniem `lp_finisz` done (obok gate-check.py), (2) po KAŻDYM naprawczym re-publish.**
+  Exit ≠ 0 = landing niekompletny; wynik cytowany w nocie lp_finisz.
 
 **GIT-DYSCYPLINA FABRYKI (Tomek 23.07: „commituj swoje zmiany i niech fabryka też to
 zawsze robi, bo robi się bałagan").** Każda faza zamykająca krok panelu (F1 plan · F2
