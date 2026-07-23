@@ -957,5 +957,96 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     : bad('portal.html CTA kolor', '.tv-cta nadal zielony (#45a557) — zieleń tylko dla done');
 }
 
+// ── 20. Ekstrakcja danych z rozmowy (marker <dane>) — asystent wyciąga i ZAPISUJE ─────────
+// Realny przypadek (23.07, Zaradek): klient wkleił link „share" z telefonu (facebook.com/share/…),
+// asystent go ODRZUCIŁ i odesłał do pola → dane przepadły. Fix: model emituje <dane>{…}</dane>,
+// edge waliduje + zapisuje po stronie fabryki (jak wf2-portal task_save), pole wypełnia się samo.
+{
+  const guideSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-guide', 'index.ts'), 'utf8');
+  const portalSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-portal', 'index.ts'), 'utf8');
+  const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
+
+  // (a) marker <dane> w PROMPCIE (instrukcja dla modelu) + PARSER w edge (parseDane wycina marker)
+  (guideSrc.includes('<dane>') && guideSrc.includes('function parseDane') && /<dane>\(\[\\s\\S\]\*\?\)<\\\/dane>/.test(guideSrc))
+    ? ok('wf2-ads-guide: marker <dane> w prompcie + parser parseDane (regex wycinający) w edge')
+    : bad('wf2-ads-guide marker <dane>', 'brak <dane> w prompcie lub parseDane/regex w edge');
+  // marker <dane> spięty w parseMarkers/onMarkers → applyDane + zwrot saved
+  (guideSrc.includes('applyDane') && guideSrc.includes('kind: "dane"') && guideSrc.includes('return ctx.json({ reply, stuck: !!stuck, saved })'))
+    ? ok('wf2-ads-guide: onMarkers → applyDane + odpowiedź JSON rozszerzona o saved')
+    : bad('wf2-ads-guide onMarkers dane', 'brak applyDane / kind:"dane" / saved w odpowiedzi JSON');
+
+  // (b) SYNC zbiorów: CHAT_FIELD_WHITELIST (guide) == CLIENT_FIELD_WHITELIST (portal) dla ads_strona/ads_konto/firma
+  {
+    const parseWl = (src, constName) => {
+      const start = src.indexOf(constName);
+      if (start < 0) return null;
+      const open = src.indexOf('{', start);
+      const close = src.indexOf('};', open);
+      const block = open >= 0 && close > open ? src.slice(open, close) : '';
+      const wl = {};
+      for (const m of block.matchAll(/([a-z_]+):\s*\[([^\]]*)\]/g)) {
+        wl[m[1]] = [...m[2].matchAll(/"([a-z_]+)"/g)].map((x) => x[1]).sort();
+      }
+      return wl;
+    };
+    const chatWl = parseWl(guideSrc, 'CHAT_FIELD_WHITELIST');
+    const clientWl = parseWl(portalSrc, 'CLIENT_FIELD_WHITELIST');
+    const eq = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => x === b[i]);
+    const keysToCheck = ['ads_strona', 'ads_konto', 'firma'];
+    const synced = chatWl && clientWl && keysToCheck.every((k) => eq(chatWl[k], clientWl[k]));
+    synced
+      ? ok('sync: CHAT_FIELD_WHITELIST (guide) == CLIENT_FIELD_WHITELIST (portal) dla ads_strona/ads_konto/firma')
+      : bad('CHAT_FIELD_WHITELIST sync', `rozjazd zbiorów pól: guide=${JSON.stringify(chatWl)} vs portal=${JSON.stringify(clientWl)}`);
+  }
+
+  // (c) walidacja NIP z sumą kontrolną (wagi 6 5 7 2 3 4 5 6 7 + mod 11)
+  (guideSrc.includes('function validateNip') && /\[6,\s*5,\s*7,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7\]/.test(guideSrc) && /%\s*11/.test(guideSrc))
+    ? ok('wf2-ads-guide: validateNip z sumą kontrolną (wagi 6 5 7 2 3 4 5 6 7, mod 11)')
+    : bad('wf2-ads-guide NIP', 'brak validateNip / wag [6,5,7,2,3,4,5,6,7] / mod 11');
+
+  // (d) share-link akceptowany: /share/ w walidacji fanpage (edge) + „share" w prompcie (przyjmij, nie odrzucaj)
+  (guideSrc.includes('function resolveShareLink') && /\/\^\\\/share\\\//.test(guideSrc) && guideSrc.includes('redirect: "follow"') && guideSrc.includes('/share/'))
+    ? ok('wf2-ads-guide: share-link akceptowany + rozwiązywany (resolveShareLink, redirect follow, /share/)')
+    : bad('wf2-ads-guide share-link', 'brak resolveShareLink / obsługi /share/ z redirect follow');
+  (/share/i.test(guideSrc) && guideSrc.includes('facebook.com/share/') && /POPRAWNE|POPRAWNY/.test(guideSrc))
+    ? ok('wf2-ads-guide prompt: share-link (facebook.com/share/…) opisany jako POPRAWNY (przyjmij, nie odrzucaj)')
+    : bad('wf2-ads-guide prompt share', 'prompt nie mówi, że share-link jest POPRAWNY');
+
+  // (e) normalizacja act_ IDENTYCZNA jak wf2-portal (act_${...} + cyfry) — pętla ręczna bez webhooka
+  (guideSrc.includes('function validateAdAccount') && /`act_\$\{m\[1\]\}`/.test(guideSrc) && portalSrc.includes('act_${rawId}'))
+    ? ok('wf2-ads-guide: normalizacja act_ (act_${cyfry}) zgodna z wf2-portal task_save')
+    : bad('wf2-ads-guide act_', 'brak validateAdAccount / act_${...} albo rozjazd z wf2-portal');
+
+  // (f) propagacja act_ → wf2_projects.meta_ad_account_id gdy puste (jak task_save)
+  (guideSrc.includes('function propagateAdAccount') && guideSrc.includes('meta_ad_account_id') && /update\(\{ meta_ad_account_id: actId \}\)/.test(guideSrc))
+    ? ok('wf2-ads-guide: propagacja act_ → wf2_projects.meta_ad_account_id (gdy puste)')
+    : bad('wf2-ads-guide propagacja', 'brak propagateAdAccount / update meta_ad_account_id');
+  // zapis ads_* przez atomowy rpc wf2_step_merge (p_block_merge) jak w portalu
+  (guideSrc.includes('rpc("wf2_step_merge"') && /p_block_merge: true/.test(guideSrc))
+    ? ok('wf2-ads-guide: zapis ads_* przez rpc(wf2_step_merge) block-merge (jak task_save)')
+    : bad('wf2-ads-guide zapis', 'brak rpc(wf2_step_merge)/p_block_merge=true');
+
+  // (g) front konsumuje saved: onResponse → applySavedFields (input [data-task][data-field] + Zapisano + P.steps)
+  (portalHtml.includes('onResponse:') && portalHtml.includes('applySavedFields') && portalHtml.includes('d.saved')
+    && portalHtml.includes('[data-task="${task_key}"][data-field="${field}"]') && portalHtml.includes('client_fields'))
+    ? ok('portal.html: onResponse → applySavedFields (input [data-task][data-field] + Zapisano ✓ + P.steps.client_fields)')
+    : bad('portal.html saved', 'brak onResponse/applySavedFields/d.saved/selektora pola/aktualizacji client_fields');
+
+  // (h) zasada MOBILE w prompcie (aplikacja mobilna Meta Business Suite → prowadź / poleć komputer)
+  (guideSrc.includes('APLIKACJA MOBILNA') && guideSrc.includes('Meta Business Suite') && /KOMPUTERZE|komputerze/.test(guideSrc))
+    ? ok('wf2-ads-guide prompt: zasada MOBILE (aplikacja mobilna Meta Business Suite → przeglądarka na komputerze / prowadź po appce)')
+    : bad('wf2-ads-guide prompt MOBILE', 'brak zasady o aplikacji mobilnej / Meta Business Suite / komputerze');
+
+  // (i) firma: guard defensywny — zapis blokowany dopóki „firma" w HIDDEN_FOR_CLIENT (sync z PREVIEW_ONLY_STEPS)
+  /taskKey === "firma" && HIDDEN_FOR_CLIENT\.has\("firma"\)/.test(guideSrc)
+    ? ok('wf2-ads-guide: firma — guard HIDDEN_FOR_CLIENT (brak zapisu dopóki krok ukryty)')
+    : bad('wf2-ads-guide firma guard', 'brak guardu firma/HIDDEN_FOR_CLIENT w applyDane');
+
+  // (j) aktywność ads_guide_dane (log co zapisano, bez wartości wrażliwych)
+  guideSrc.includes('action: "ads_guide_dane"')
+    ? ok('wf2-ads-guide: aktywność wf2_activities action="ads_guide_dane"')
+    : bad('wf2-ads-guide aktywność', 'brak action="ads_guide_dane"');
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

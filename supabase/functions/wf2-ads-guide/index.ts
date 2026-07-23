@@ -64,8 +64,9 @@ Jesteś asystentem portalu „Twój biznes" — osobistym przewodnikiem klienta,
 - JEDEN krok naraz obowiązuje ZAWSZE — także gdy klient pyta „co wpisać we wszystkie pola" albo prosi o całość: podaj pierwszy krok/pole (max 2–3 powiązane), zapowiedz „potem przejdziemy dalej" i czekaj. NIGDY nie wyrzucaj pełnej listy kroków ani wszystkich pól w jednej wiadomości.
 - ZRZUT EKRANU to Twoje najlepsze narzędzie — prosisz o niego PROAKTYWNIE: gdy klient opisuje ekran słowami, gdy 2. raz nie może znaleźć przycisku/opcji, albo gdy nie masz pewności co widzi → „wklej mi proszę zrzut ekranu (Ctrl+V), to poprowadzę Cię dokładnie". Najpierw zrzut, dopiero potem ewentualna eskalacja do Tomka.
 - NIE ZGADUJ układu menu ani ścieżek w interfejsach Meta/Facebooka: podawaj TYLKO linki i ścieżki z sekcji wiedzy poniżej. Interfejs Meta bywa różny per konto — jeśli klient nie widzi tego, co opisujesz, nie wymyślaj alternatywnych ścieżek, tylko poproś o zrzut.
-- Dane wpisuje się w POLACH ZADANIA w portalu, nie w czacie: kieruj „wpisz to w polu poniżej, w zadaniu X". Po wykonaniu zadania klient sam klika „Zrobione" — Ty NIE odhaczasz zadań.
-- Jeśli klient wklei w czacie wrażliwe dane (pełny numer konta, NIP, hasło) — podziękuj, ale delikatnie dodaj, że takich danych lepiej nie wklejać do czatu (zostają w historii rozmowy); numer konta i NIP wpisuje się bezpiecznie w polach zadania.
+- DANE OD KLIENTA (najważniejsze): gdy klient poda w rozmowie daną, która jest CELEM bieżącego zadania (link do strony na Facebooku, ID konta reklamowego act_…, NIP, data rejestracji) — PRZYJMIJ ją od razu. Na SAMYM KOŃCU odpowiedzi dodaj ukryty marker <dane>{"pole":"wartość"}</dane> (poprawny JSON-obiekt; klucze WYŁĄCZNIE z „CEL DANYCH" bieżącego zadania — patrz sekcje niżej). System sam zweryfikuje wartość, ZAPISZE ją, wypełni pole za klienta i potwierdzi — więc NIE każ klientowi przepisywać danej do pola pod rozmową ani nie odsyłaj go tam („wpisz to w polu poniżej"). Powiedz po ludzku, że przyjmujesz i zapisujesz. Jeśli klient WOLI sam wpisać w polu — też dobrze. Jeśli dana wygląda błędnie (NIP nie ma 10 cyfr, link nie prowadzi do Facebooka) — NIE dawaj markera, tylko dopytaj. Po wykonaniu zadania klient sam klika „Zrobione" — Ty NIE odhaczasz zadań.
+- Danych naprawdę wrażliwych, o które w danym zadaniu NIE prosimy (pełny numer konta NRB, hasła), nie zbieraj przez czat: podziękuj i wskaż, że numer konta wpisuje się bezpiecznie w polu zadania „Dane rozliczeniowe". (NIP, linki do strony i ID konta reklamowego SĄ potrzebne do zadania — te przyjmuj markerem <dane>, jak wyżej.)
+- APLIKACJA MOBILNA vs KOMPUTER: ścieżki i linki w Twojej wiedzy są DESKTOPOWE (przeglądarka na komputerze). Gdy zrzut pokazuje aplikację mobilną (Meta Business Suite albo Facebook na telefonie) — powiedz życzliwie, że ten krok najsprawniej zrobić w przeglądarce na KOMPUTERZE, i podaj bezpośredni link. Jeśli klient może działać tylko telefonem — prowadź go po aplikacji cierpliwie, prosząc o zrzut po KAŻDYM kroku, i nie udawaj, że znasz układ aplikacji, jeśli nie widzisz go na zrzucie.
 - Jeśli klient utknął mimo 2–3 prób (w tym po zrzucie) albo prosi o kontakt z Tomkiem → na SAMYM KOŃCU odpowiedzi dopisz ukryty marker <utkniecie>krótki opis blokady po polsku (na jakim kroku i co blokuje)</utkniecie> i powiedz po ludzku, że Tomek dostał znać i wróci z pomocą.
 - Czego NIE WIESZ, tego nie zmyślasz: pytania o polityki, których nie ma w Twojej wiedzy (np. zwroty/wypłaty środków z konta reklamowego Meta, szczegóły rozliczeń współpracy, kwestie prawne typu RODO/administrator danych) → powiedz uczciwie, że to potwierdzi Tomek, i zaproponuj, że klient napisze do niego — BEZ markera utknięcia (to nie jest blokada techniczna). Nie składasz zapewnień o serwerach, umowach ani przetwarzaniu danych.
 - Tematy poza portalem/sklepem: krótko i życzliwie zawróć do tematu współpracy.
@@ -113,6 +114,7 @@ Zawsze: potwierdź uczucie → podaj jeden konkret → zostaw klientowi decyzję
 - NIE obiecujesz konkretnych kwot podatku ani „na pewno zwolnienia z VAT" — przy elektronice i kosmetykach VAT bywa obowiązkowy od startu; to potwierdza księgowy.
 
 ZASADA WIDOCZNOŚCI: jeśli w [STAN PROJEKTU] NIE ma zadania „Twoja firma" na liście zadań klienta, NIE odsyłaj do niego (jeszcze nie jest odblokowane) — ale na pytania o firmę/rozliczenia odpowiadaj doradczo ZAWSZE. Jeśli zadanie JEST na liście — kieruj do niego (tam pola NIP i data rejestracji).
+CEL DANYCH tego zadania („Twoja firma"): nip (10 cyfr) oraz — jeśli klient poda — data_rejestracji. Gdy klient poda NIP w rozmowie, przyjmij go markerem <dane>{"nip":"…"}</dane>; jeśli poda też datę rejestracji: <dane>{"nip":"…","data_rejestracji":"DD.MM.RRRR"}</dane>. NIP jest daną potrzebną do zadania (nie „wrażliwą jak hasło") — przyjmuj go, nie odsyłaj do pola.
 
 [5] PORTAL — zakładki (żebyś umiał nawigować klienta)
 - Strona główna: pasek postępu etapów, karta „Twój ruch" (co teraz), „Twoje zadania" (wejście do zadań), „Panel Twojego sklepu" (podgląd sklepu na platformie), „Wasze produkty" (portfel z materiałami), „Wasze ceny i zyski" (rozbicie marży netto na produkt, potencjał hurtowy, pole „Twoja cena zakupu" — jeśli klient zna realną cenę zakupu, może ją tam wpisać, to poprawia dokładność wyliczeń).
@@ -150,14 +152,17 @@ KROK 4 — Nadaj mi dostęp partnera.
 Wejście: https://business.facebook.com/settings/partners → Dodaj → wybierz menu „Nadaj partnerowi dostęp do zasobów" (NIE „Dodaj osoby"!) → wpisz moje ID partnera: ${BM_PARTNER_ID} (wklej jako LICZBĘ, nie jako czyjeś nazwisko). Zaznacz naraz: konto reklamowe + stronę na Facebooku + Instagram, przy każdym wybierz uprawnienia „Zarządzaj" i kliknij Zaproś.
 NAWIGACJA: sekcja „Partnerzy" jest w Ustawieniach firmowych w grupie „Użytkownicy" (tuż obok „Osoby" i „Konta") — jeśli klient widzi listę „Osoby / Konta / Źródła danych", to Partnerzy są w tej pierwszej grupie. Gdy jej nie widzi — poproś o zrzut ekranu, nie wymyślaj innej ścieżki.
 
-KROK 5 — Wklej ID konta reklamowego w portalu.
-Klient kopiuje ID konta reklamowego (act_… — jest pod nazwą konta na https://business.facebook.com/settings/ad-accounts) i wkleja je w pole na dole zadania „Konto reklamowe" w portalu. Dzięki temu sprawdzę dostęp i dokończę konfigurację po swojej stronie.
+KROK 5 — Podaj ID konta reklamowego.
+Klient kopiuje ID konta reklamowego (act_… — jest pod nazwą konta na https://business.facebook.com/settings/ad-accounts). Może je po prostu WKLEIĆ w rozmowie — wtedy przyjmij je markerem <dane>{"ad_account_id":"act_…"}</dane> (system zapisze i wypełni pole za klienta). Nie każ mu przepisywać do pola pod rozmową.
+CEL DANYCH tego zadania: ad_account_id (act_… — np. act_123456789012).
 
 ═══ STRONA MARKI NA FACEBOOKU (zadanie „Strona firmowa") ═══
 Reklamy muszą wychodzić z prawdziwej strony marki. Klient tworzy ją ręcznie na https://facebook.com/pages/create (nazwa strony = „${shop}", kategoria „Sklep"), dodaje logo i zdjęcie w tle, uzupełnia sekcję „Informacje" i publikuje 3–6 postów (logo, cover i propozycje postów dostaje w materiałach). NAWIGACJA desktop: tworzenie strony też przez menu dziewięciu kropek w PRAWYM górnym rogu Facebooka → „Strona"; nie odsyłaj na https://facebook.com/pages (to tylko lista stron). Konto na Instagramie jest opcjonalne na start (można połączyć później w Ustawieniach strony → Połączone konta). ZAKRES TEGO ZADANIA: utworzyć stronę i wkleić jej link w polu zadania — to wszystko; nadanie dostępu przez „Partnerzy" należy do zadania „Konto reklamowe" (krok 4 — przy okazji zaznacza się tam też stronę) i wspominaj o nim tylko, gdy klient zapyta. Nie warto kupować lajków — pusta strona to sygnał ostrzegawczy dla Meta i klientów.
+CEL DANYCH tego zadania: fanpage_url (link do strony na Facebooku), opcjonalnie instagram_url. Gdy klient poda link — przyjmij go markerem <dane>{"fanpage_url":"https://facebook.com/…"}</dane>. WAŻNE: linki „share" z aplikacji na telefonie (https://www.facebook.com/share/…) to POPRAWNE linki do strony/profilu — PRZYJMIJ je tak samo jak zwykły adres facebook.com/…; NIGDY nie odrzucaj ich jako „link do posta" i nie odsyłaj klienta do pola. System sam rozwinie share-link do właściwego adresu i zapisze. Jeśli klient poda też Instagram: <dane>{"instagram_url":"https://instagram.com/…"}</dane>.
 
 ═══ BUDŻET STARTOWY (zadanie „Budżet reklamowy") ═══
 Klient zasila swoje konto reklamowe budżetem startowym 1000 zł (500 zł na testy + 500 zł na skalowanie tego, co zadziała). To pieniądze na reklamy — wydawane bezpośrednio w Meta, na jego koncie. Najprościej: https://adsmanager.facebook.com → koło zębate → Ustawienia płatności → przy pierwszej konfiguracji wybierz płatności ręczne (doładowanie z góry) → doładuj 1000 zł ZAWSZE z Ustawień płatności właśnie tego konta reklamowego (patrz ostrzeżenie z kroku 3). Pytania o zwrot/wypłatę wpłaconych środków z konta Meta: nie wyrokuj (tej polityki nie masz w wiedzy) — uczciwie powiedz, że szczegóły potwierdzi Tomek.
+CEL DANYCH tego zadania: BRAK pól do zapisania — wystarczy słowne potwierdzenie klienta, że doładował budżet. W tym zadaniu NIE wystawiaj markera <dane>.
 
 ═══ RZECZY, O KTÓRYCH WARTO UPRZEDZIĆ ═══
 - 2FA (dwuskładnikowe logowanie): Meta często wymaga go do prowadzenia reklam — jeśli klient napotka prośbę, niech je włączy (SMS albo aplikacja uwierzytelniająca).
@@ -199,6 +204,292 @@ async function recordStuck(sb: SB, projectId: string, desc: string): Promise<voi
   } catch (e) {
     console.error("[wf2-ads-guide] recordStuck:", e);
   }
+}
+
+// ══ EKSTRAKCJA DANYCH Z ROZMOWY (marker <dane>) ═════════════════════════════════
+// Klient podaje daną z celu zadania WPROST w rozmowie (link do strony, act_ konta, NIP…). Model
+// emituje na końcu odpowiedzi <dane>{"pole":"wartość"}</dane>; my walidujemy i ZAPISUJEMY po stronie
+// fabryki — DOKŁADNIE jak wf2-portal task_save (whitelist pól per zadanie, normalizacja act_, atomowy
+// rpc wf2_step_merge dla ads_*, propagacja meta_ad_account_id). Pole w portalu wypełnia się samo.
+//
+// ⛔ SYNC z CLIENT_FIELD_WHITELIST w supabase/functions/wf2-portal/index.ts:96 — te SAME pola dla
+//    ads_strona / ads_konto / firma (asercja: scripts/verify-wf2.mjs sekcja 20b porównuje zbiory).
+//    ads_budzet = [] (brak pól — potwierdzenie słowne wystarcza). Klucz spoza aktywnego zadania → ignoruj.
+const CHAT_FIELD_WHITELIST: Record<string, string[]> = {
+  ads_strona: ["fanpage_url", "instagram_url"],
+  ads_konto: ["ad_account_id"],
+  ads_budzet: [],
+  firma: ["nip", "data_rejestracji"],
+};
+
+// Etykiety pól = DOKŁADNIE jak w portalu (tn-sklepy/portal.html) — do potwierdzeń w rozmowie.
+const FIELD_LABELS: Record<string, string> = {
+  fanpage_url: "Link do strony na Facebooku",
+  instagram_url: "Link do Instagrama",
+  ad_account_id: "ID konta reklamowego",
+  nip: "NIP",
+  data_rejestracji: "Data rejestracji",
+};
+
+// Hosty uznawane za „stronę na Facebooku" (share-link z telefonu też tu wpada).
+function fbHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/^www\./, "");
+  return h === "facebook.com" || h === "fb.com" || h === "m.facebook.com" || h === "web.facebook.com";
+}
+// Parsowanie luźnego URL (klient często wkleja bez https://).
+function parseUrlLoose(raw: string): URL | null {
+  let s = String(raw || "").trim();
+  if (!s) return null;
+  if (!/^https?:\/\//i.test(s)) s = "https://" + s;
+  try {
+    return new URL(s);
+  } catch {
+    return null;
+  }
+}
+// URL bez query (szum ref/fbclid). Wyjątek: profile.php niesie tożsamość w ?id= — tego nie tniemy.
+function stripQuery(u: URL): string {
+  if (/\/profile\.php$/i.test(u.pathname) && u.searchParams.get("id")) {
+    return `${u.origin}${u.pathname}?id=${u.searchParams.get("id")}`;
+  }
+  return u.origin + u.pathname;
+}
+// Rozwiązanie share-linku (https://facebook.com/share/…) do finalnego adresu strony/profilu.
+// GET redirect:'follow', timeout 5 s, User-Agent przeglądarkowy. Zwraca finalny URL BEZ query,
+// albo null (fail / login-wall / brak rozwinięcia) — wtedy wołający zapisuje oryginalny share-link.
+async function resolveShareLink(href: string): Promise<string | null> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(href, {
+      method: "GET",
+      redirect: "follow",
+      signal: ctrl.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
+      },
+    });
+    const finalUrl = res.url || "";
+    if (!finalUrl) return null;
+    const fu = new URL(finalUrl);
+    if (!fbHost(fu.hostname)) return null; // wyszło poza Facebooka → nie ufaj
+    if (/\/(login|checkpoint|recover|help)\b/i.test(fu.pathname)) return null; // login-wall (fetch bez sesji)
+    if (/^\/share\//i.test(fu.pathname)) return null; // nie rozwinęło się
+    return stripQuery(fu);
+  } catch {
+    return null; // timeout / błąd sieci → fallback na oryginał
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// ── Walidatory per pole (zwracają { value } albo { err } z krótkim powodem po polsku) ──
+async function validateFanpage(raw: string): Promise<{ value?: string; err?: string }> {
+  const u = parseUrlLoose(raw);
+  if (!u) return { err: "to nie wygląda na link — podeślij proszę pełny adres Twojej strony na Facebooku." };
+  if (!fbHost(u.hostname)) {
+    return { err: "to nie jest link do Facebooka — potrzebuję adresu Twojej strony na facebook.com." };
+  }
+  // Share-link z aplikacji na telefonie (facebook.com/share/…) jest POPRAWNY — akceptujemy i próbujemy rozwinąć.
+  if (/^\/share\//i.test(u.pathname)) {
+    const resolved = await resolveShareLink(u.href);
+    return { value: resolved || u.href }; // sukces → finalny URL bez query; fail → oryginalny share-link
+  }
+  return { value: stripQuery(u) };
+}
+function validateInstagram(raw: string): { value?: string; err?: string } {
+  const u = parseUrlLoose(raw);
+  if (!u) return { err: "to nie wygląda na link do Instagrama." };
+  const h = u.hostname.toLowerCase().replace(/^www\./, "");
+  if (h !== "instagram.com") return { err: "to nie jest link do Instagrama (instagram.com)." };
+  return { value: stripQuery(u) };
+}
+// Normalizacja act_ IDENTYCZNA jak wf2-portal task_save: same cyfry → act_<cyfry>; act_<cyfry> → as-is.
+function validateAdAccount(raw: string): { value?: string; err?: string } {
+  const s = String(raw || "").trim().replace(/\s+/g, "");
+  const m = s.match(/^(?:act_)?(\d{6,20})$/i);
+  if (!m) return { err: "ID konta reklamowego wygląda inaczej — to numer w formacie act_123456789012." };
+  return { value: `act_${m[1]}` };
+}
+// NIP: 10 cyfr po usunięciu separatorów + suma kontrolna (wagi 6 5 7 2 3 4 5 6 7).
+function validateNip(raw: string): { value?: string; err?: string } {
+  const digits = String(raw || "").replace(/[\s\-.]/g, "");
+  if (!/^\d{10}$/.test(digits)) return { err: "NIP powinien mieć dokładnie 10 cyfr." };
+  const W = [6, 5, 7, 2, 3, 4, 5, 6, 7];
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += Number(digits[i]) * W[i];
+  const ctrl = sum % 11;
+  if (ctrl === 10 || ctrl !== Number(digits[9])) {
+    return { err: "ten NIP nie przechodzi weryfikacji (suma kontrolna się nie zgadza)." };
+  }
+  return { value: digits };
+}
+// Data rejestracji → YYYY-MM-DD (akceptuje DD.MM.RRRR / RRRR-MM-DD / DD-MM-RRRR / DD/MM/RRRR).
+function validateDate(raw: string): { value?: string; err?: string } {
+  const s = String(raw || "").trim();
+  let y = 0, mo = 0, d = 0, m: RegExpMatchArray | null;
+  if ((m = s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/))) {
+    y = +m[1]; mo = +m[2]; d = +m[3];
+  } else if ((m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/))) {
+    d = +m[1]; mo = +m[2]; y = +m[3];
+  } else {
+    return { err: "podaj datę w formacie DD.MM.RRRR (np. 15.08.2026)." };
+  }
+  if (y < 2000 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return { err: "ta data wygląda na niepoprawną." };
+  const iso = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const dt = new Date(iso + "T00:00:00Z");
+  if (Number.isNaN(dt.getTime()) || dt.getUTCMonth() + 1 !== mo || dt.getUTCDate() !== d) {
+    return { err: "ta data nie istnieje w kalendarzu." };
+  }
+  return { value: iso };
+}
+async function validateField(field: string, raw: unknown): Promise<{ value?: string; err?: string }> {
+  const v = String(raw == null ? "" : raw).trim();
+  if (!v) return { err: "pole było puste." };
+  if (v.length > 500) return { err: "ta wartość jest za długa." };
+  switch (field) {
+    case "fanpage_url":
+      return await validateFanpage(v);
+    case "instagram_url":
+      return validateInstagram(v);
+    case "ad_account_id":
+      return validateAdAccount(v);
+    case "nip":
+      return validateNip(v);
+    case "data_rejestracji":
+      return validateDate(v);
+    default:
+      return { err: "nieobsługiwane pole." };
+  }
+}
+
+// Marker <dane>{…}</dane> — wytnij z tekstu, zwróć PIERWSZY poprawny JSON-obiekt + oczyszczony tekst.
+function parseDane(text: string): { clean: string; dane: Record<string, unknown> | null } {
+  let dane: Record<string, unknown> | null = null;
+  const clean = text
+    .replace(/<dane>([\s\S]*?)<\/dane>/gi, (_m, inner) => {
+      if (!dane) {
+        try {
+          const parsed = JSON.parse(String(inner).trim());
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            dane = parsed as Record<string, unknown>;
+          }
+        } catch { /* zły JSON → ignoruj marker (model dopyta) */ }
+      }
+      return "";
+    })
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return { clean, dane };
+}
+
+// Zapis pól klienta — DOKŁADNIE jak wf2-portal task_save:
+//  • ads_* + instancja kroku istnieje → atomowy rpc wf2_step_merge (p_block_merge=true; nie wyścig z verify/connect)
+//  • ads_* bez instancji → INSERT; firma → RMW data.fields (nie koliduje z automatami)
+async function saveTaskFields(
+  sb: SB,
+  projectId: string,
+  stepKey: string,
+  fields: Record<string, string>,
+): Promise<boolean> {
+  const { data: stepRow } = await sb.from("wf2_steps")
+    .select("id, data").eq("project_id", projectId).eq("step_key", stepKey).is("product_id", null).maybeSingle();
+  if (stepRow && stepKey.startsWith("ads_")) {
+    const { error } = await sb.rpc("wf2_step_merge", {
+      p_step_id: stepRow.id, p_block_key: "fields", p_block: fields, p_checks: [], p_block_merge: true,
+    });
+    return !error;
+  }
+  const prevData = (stepRow?.data && typeof stepRow.data === "object") ? stepRow.data as Record<string, unknown> : {};
+  const prevFields = (prevData.fields && typeof prevData.fields === "object") ? prevData.fields as Record<string, unknown> : {};
+  const newData = { ...prevData, fields: { ...prevFields, ...fields } };
+  if (stepRow) {
+    const { error } = await sb.from("wf2_steps").update({ data: newData }).eq("id", stepRow.id);
+    return !error;
+  }
+  const { error } = await sb.from("wf2_steps").insert({ project_id: projectId, step_key: stepKey, data: newData });
+  return !error;
+}
+
+// Propagacja act_ → wf2_projects.meta_ad_account_id gdy PUSTE (jak w task_save); kolizja → nota do potwierdzenia.
+async function propagateAdAccount(sb: SB, projectId: string, actId: string): Promise<void> {
+  const { data: proj } = await sb.from("wf2_projects").select("meta_ad_account_id").eq("id", projectId).maybeSingle();
+  const cur = String((proj as Record<string, unknown> | null)?.meta_ad_account_id || "").trim();
+  if (!cur) {
+    await sb.from("wf2_projects").update({ meta_ad_account_id: actId }).eq("id", projectId);
+    await sb.from("wf2_activities").insert({
+      project_id: projectId, actor: "client", action: "ads_manual_id",
+      description: `Klient podał ${actId} (z rozmowy z asystentem)`,
+    });
+  } else if (cur !== actId) {
+    const { data: dup } = await sb.from("wf2_notes")
+      .select("id").eq("project_id", projectId).eq("status", "open")
+      .like("body", "⚠️ AUTOMAT: klient podał inne ID konta%").limit(1);
+    if (!dup || dup.length === 0) {
+      await sb.from("wf2_notes").insert({
+        project_id: projectId, tag: "blokada", status: "open", author: "auto",
+        body: `⚠️ AUTOMAT: klient podał inne ID konta (${actId}) niż zapisane (${cur}) — potwierdź właściwe.`.slice(0, 1000),
+      });
+    }
+  }
+}
+
+// Zastosuj marker <dane>: whitelist per aktywne zadanie → walidacja → zapis → potwierdzenia.
+// Zwraca sukcesy (do JSON `saved` i frontu) + linie potwierdzeń doklejane do reply (✅ / ⚠️).
+async function applyDane(
+  dane: Record<string, unknown>,
+  ctx: Ctx,
+): Promise<{ saved: Array<{ task_key: string; field: string; value: string }>; confirmLines: string[] }> {
+  const saved: Array<{ task_key: string; field: string; value: string }> = [];
+  const confirmLines: string[] = [];
+
+  const taskKey = validTaskKey(ctx.body); // pola zapisujemy WYŁĄCZNIE do aktywnego zadania wiadomości
+  if (!taskKey) return { saved, confirmLines };
+
+  // firma: guard defensywny — dopóki krok UKRYTY przed klientem (HIDDEN_FOR_CLIENT, sync z wf2-portal
+  // PREVIEW_ONLY_STEPS), NIE zapisujemy (podgląd i tak readonly, tu nie dojdzie). Odblokowanie = usunięcie
+  // "firma" z HIDDEN_FOR_CLIENT (i z PREVIEW_ONLY_STEPS w wf2-portal).
+  let wl = CHAT_FIELD_WHITELIST[taskKey] || [];
+  if (taskKey === "firma" && HIDDEN_FOR_CLIENT.has("firma")) wl = [];
+  if (!wl.length) return { saved, confirmLines };
+
+  const toSave: Record<string, string> = {};
+  let actIdToPropagate: string | null = null;
+  for (const field of wl) {
+    if (!(field in dane)) continue; // pole spoza tego, co model przysłał → pomiń
+    const raw = dane[field];
+    if (raw == null || String(raw).trim() === "") continue;
+    const res = await validateField(field, raw);
+    if (res.err) {
+      confirmLines.push(`⚠️ Nie zapisałem — ${res.err} Podeślij proszę jeszcze raz.`);
+      continue;
+    }
+    const val = String(res.value).slice(0, 500);
+    toSave[field] = val;
+    if (field === "ad_account_id") actIdToPropagate = val;
+  }
+  if (!Object.keys(toSave).length) return { saved, confirmLines };
+
+  const okSave = await saveTaskFields(ctx.sb, ctx.projectId, taskKey, toSave);
+  if (!okSave) {
+    confirmLines.push("⚠️ Nie zapisałem — coś się przycięło po naszej stronie. Podeślij proszę jeszcze raz.");
+    return { saved, confirmLines };
+  }
+
+  for (const [field, val] of Object.entries(toSave)) {
+    saved.push({ task_key: taskKey, field, value: val });
+    confirmLines.push(`✅ Zapisałem w zadaniu: ${FIELD_LABELS[field] || field} — pole poniżej właśnie się uzupełniło.`);
+  }
+  if (actIdToPropagate) await propagateAdAccount(ctx.sb, ctx.projectId, actIdToPropagate);
+
+  // Aktywność: TYLKO etykiety pól (bez wartości — NIP jest wrażliwy).
+  await ctx.sb.from("wf2_activities").insert({
+    project_id: ctx.projectId, actor: "client", action: "ads_guide_dane",
+    description: `Asystent zapisał z rozmowy (${taskKey}): ${Object.keys(toSave).map((f) => FIELD_LABELS[f] || f).join(", ")}`.slice(0, 500),
+  });
+
+  return { saved, confirmLines };
 }
 
 // ── [STAN PROJEKTU] — dynamiczny kontekst asystenta (PROMPT-SPEC §7) ────────────
@@ -370,17 +661,35 @@ const CONFIG: PortalChatConfig = {
   // Transkrypt modelu = TYLKO wątek bieżącego zadania (gdy task_key poprawny); bez task_key = pełna historia.
   historyExtraFilter: (q: Any, body: Any) => { const k = validTaskKey(body); return k ? q.eq("task_key", k) : q; },
 
+  // Dwa markery: <utkniecie> (nota blokada) i <dane> (ekstrakcja pól). parseStuck najpierw, potem
+  // parseDane na już oczyszczonym tekście — oba wychodzą z widocznej odpowiedzi.
   parseMarkers: (text: string) => {
-    const { clean, stuck } = parseStuck(text);
-    return { clean, markers: stuck ? [stuck] : [] };
+    const { clean: c1, stuck } = parseStuck(text);
+    const { clean, dane } = parseDane(c1);
+    const markers: Any[] = [];
+    if (stuck) markers.push({ kind: "stuck", value: stuck });
+    if (dane) markers.push({ kind: "dane", value: dane });
+    return { clean, markers };
   },
 
-  onMarkers: async (markers: string[], ctx: Ctx) => {
-    const stuck = markers.length ? markers[0] : null;
+  onMarkers: async (markers: Any[], ctx: Ctx) => {
+    const stuckM = markers.find((m: Any) => m && m.kind === "stuck");
+    const daneM = markers.find((m: Any) => m && m.kind === "dane");
+    const stuck = stuckM ? stuckM.value as string : null;
     if (stuck) await recordStuck(ctx.sb, ctx.projectId, stuck);
-    const reply = ctx.clean || "Jestem tu, żeby pomóc — napisz, na którym kroku utknąłeś, albo wklej zrzut ekranu.";
+
+    let reply = ctx.clean || "";
+    let saved: Array<{ task_key: string; field: string; value: string }> = [];
+    if (daneM && daneM.value) {
+      const r = await applyDane(daneM.value as Record<string, unknown>, ctx);
+      saved = r.saved;
+      // Potwierdzenia doklejane do odpowiedzi (wzorem [TK-n] z wfa-test-chat) — system dopisuje, model nie zna wyniku.
+      if (r.confirmLines.length) reply = (reply ? reply + "\n\n" : "") + r.confirmLines.join("\n\n");
+    }
+    if (!reply) reply = "Jestem tu, żeby pomóc — napisz, na którym kroku utknąłeś, albo wklej zrzut ekranu.";
+
     await ctx.insertAssistant(reply);
-    return ctx.json({ reply, stuck: !!stuck });
+    return ctx.json({ reply, stuck: !!stuck, saved });
   },
 };
 

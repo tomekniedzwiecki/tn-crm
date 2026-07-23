@@ -1693,6 +1693,10 @@
             // żeby trafiło do body.context.task_key (edge wf2-ads-guide czyta z capem 4KB portal-chat.ts).
             context: () => ({ context: { task_key: (tvActive && tvActive !== '__done__') ? tvActive : null } }),
             track: (action, desc) => track('open_guide', desc),   // portal.track sam pilnuje previewMode
+            // Asystent wyciągnął daną z rozmowy i ZAPISAŁ ją po stronie serwera (edge wf2-ads-guide).
+            // Front tylko odzwierciedla wynik: wypełnia input pola, pokazuje „Zapisano ✓" i aktualizuje
+            // lokalny stan (P.steps), żeby przełączenie zadań nie cofnęło wartości. BEZ zapisu z frontu.
+            onResponse: (d) => { if (d && Array.isArray(d.saved) && d.saved.length) applySavedFields(d.saved); },
             onHistory: (d) => {
                 asystentEnabled = (d && d.enabled !== false);
                 chatReady = true;
@@ -1764,6 +1768,21 @@
                 Object.keys(fields).forEach(k => { const ok = $('ok-' + key + '-' + k); if (ok) { ok.textContent = 'Zapisano ✓'; setTimeout(() => { if (ok) ok.textContent = ''; }, 1800); } });
             } else { showToast('Nie udało się zapisać — spróbuj ponownie', 'error'); }
         } catch (e) { showToast('Chwilowa przerwa techniczna — spróbuj za moment', 'error'); }
+    }
+    // Asystent (edge wf2-ads-guide) zapisał daną z rozmowy → JSON `saved:[{task_key,field,value}]`.
+    // Serwer już zapisał — front tylko odzwierciedla: (1) lokalny stan P.steps (przetrwa re-render /
+    // przełączenie zadań), (2) widoczny input pola + „Zapisano ✓" (istniejący wzorzec fld-ok). Bez zapisu z frontu.
+    function applySavedFields(saved) {
+        if (previewMode) return;
+        saved.forEach(({ task_key, field, value }) => {
+            if (!task_key || !field) return;
+            const st = stepFor(task_key, null);
+            if (st) st.client_fields = Object.assign({}, st.client_fields, { [field]: value });
+            const inp = document.querySelector(`[data-task="${task_key}"][data-field="${field}"]`);
+            if (inp) inp.value = value;
+            const ok = $('ok-' + task_key + '-' + field);
+            if (ok) { ok.textContent = 'Zapisano ✓'; setTimeout(() => { if (ok) ok.textContent = ''; }, 2400); }
+        });
     }
     async function taskDone(key, done) {
         if (previewMode) return;
