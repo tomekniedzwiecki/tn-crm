@@ -213,6 +213,39 @@
         .ceny-note-small { margin-top:12px; color:#5c5c64; font-size:11.5px; line-height:1.55; }
         .ceny-seg button:disabled { opacity:.5; cursor:default; }
         @media (max-width:560px){ .ceny-form-row { flex-direction:column; } .ceny-seg { width:100%; } .ceny-seg button { flex:1; } .ceny-amount { flex-basis:auto; } }
+        /* ── Strony Waszych produktów — gotowe strony sprzedażowe (na żywo) ──
+           Zieleń = wyłącznie stan UKOŃCZONE/na żywo (spójnie z resztą paneli). */
+        .lp-kicker { display:inline-flex; align-items:center; gap:8px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:#7fdba0; }
+        .lp-h2 { color:#fff; font-size:19px; font-weight:600; letter-spacing:-.02em; margin:7px 0 6px; }
+        .lp-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; margin-top:18px; }
+        @media (max-width:700px){ .lp-grid { grid-template-columns:1fr; } }
+        .lp-card { position:relative; display:block; border:1px solid #242428; border-radius:14px; background:#0a0a0a; overflow:hidden;
+            text-decoration:none; transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+        .lp-card:hover { transform:translateY(-3px); border-color:#3f3f46; box-shadow:0 22px 48px -20px rgba(0,0,0,.9); }
+        .lp-cover { position:relative; aspect-ratio:16/9; background:#101012; overflow:hidden; }
+        .lp-cover img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .4s ease; }
+        .lp-card:hover .lp-cover img { transform:scale(1.045); }
+        .lp-cover::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(5,5,5,0) 52%, rgba(5,5,5,.5) 100%); }
+        .lp-live { position:absolute; top:12px; left:12px; z-index:2; display:inline-flex; align-items:center; gap:7px;
+            background:rgba(5,5,5,.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(69,165,87,.5);
+            color:#7fdba0; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; border-radius:99px; padding:5px 11px; }
+        .lp-live-dot { width:7px; height:7px; border-radius:50%; background:#45a557; flex-shrink:0; animation:lpPulse 2.4s ease-out infinite; }
+        @keyframes lpPulse { 0%{box-shadow:0 0 0 0 rgba(69,165,87,.5)} 70%{box-shadow:0 0 0 7px rgba(69,165,87,0)} 100%{box-shadow:0 0 0 0 rgba(69,165,87,0)} }
+        @media (prefers-reduced-motion: reduce){ .lp-live-dot { animation:none; } .lp-card, .lp-cover img { transition:none; } }
+        .lp-body { display:flex; align-items:center; gap:14px; padding:15px 17px; }
+        .lp-tt { flex:1 1 auto; min-width:0; }
+        .lp-name { color:#fff; font-size:15.5px; font-weight:600; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .lp-name small { color:#8a8a93; font-weight:500; font-size:12.5px; }
+        .lp-url { color:#6b6b74; font-size:12px; margin-top:3px; font-family:'JetBrains Mono',monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .lp-go { flex-shrink:0; display:inline-flex; align-items:center; gap:7px; background:#fff; color:#000; border-radius:8px;
+            padding:9px 14px; font-size:13px; font-weight:600; white-space:nowrap; }
+        .lp-card:hover .lp-go { background:#e4e4e7; }
+        .lp-cover-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#3f3f46; font-size:44px; font-weight:600; }
+        .lp-shop { margin-top:14px; display:flex; align-items:center; gap:14px; border:1px solid #1f1f1f; border-radius:12px; background:#0a0a0a;
+            padding:14px 17px; text-decoration:none; transition:border-color .15s, background .15s; }
+        .lp-shop:hover { border-color:#3f3f46; background:#0d0d0d; }
+        .lp-note { margin-top:13px; color:#5c5c64; font-size:12px; display:flex; align-items:center; gap:7px; }
+        @media (max-width:560px){ .lp-body { padding:13px 15px; } .lp-go { padding:8px 12px; font-size:12.5px; } }
         /* Mobile: pola 16px = brak auto-zoomu iOS; główne przyciski pełnej szerokości */
         @media (max-width:560px){
             input[type=password], input[type=text], input[type=email], textarea { font-size:16px; }
@@ -367,6 +400,9 @@
 
         <!-- Twój ruch / Pracujemy nad -->
         <div id="p-move"></div>
+
+        <!-- Strony Waszych produktów — WYŁĄCZNIE w pełni ukończone strony (landing_ready z edge) -->
+        <section id="sec-landings" class="hidden"></section>
 
         <!-- Twoje zadania — karta-CTA (pełny przepływ w ekranie #tasks-view) -->
         <section id="sec-tasks" class="hidden"></section>
@@ -803,6 +839,7 @@
             id: p.id, name: p.name, slug: p.slug, status: p.status, cover_url: p.cover_url,
             unit_profit: p.unit_profit, price: p.price, sort: p.sort,
             platform_page_url: p.platform_page_url, supplier_url: p.supplier_url, tiktoks: p.tiktoks || [],
+            platform_name: p.platform_name || null, landing_ready: p.landing_ready === true,
             // ── CENY 3.2 (wyliczone po stronie edge) ──
             cost_effective: p.cost_effective, unit_profit_net: p.unit_profit_net,
             price_status_label: p.price_status_label, wholesale_forecast: p.wholesale_forecast || null,
@@ -871,6 +908,7 @@
             ? 'Wszystkie etapy za nami — sklep działa.'
             : `Jesteśmy na etapie: <b style="color:#fff">${escapeHtml(stageLabel)}</b>`;
         renderMove();
+        renderLandings();
         renderHomeCard();
         renderMerchantPanel();
         renderStageNav();
@@ -896,6 +934,69 @@
                 <span class="move-txt"><span class="move-lead">Pracujemy nad</span><span class="move-body">${escapeHtml(d.stage_label)} — ${escapeHtml(d.label)}</span></span>
             </div>`;
         }
+    }
+
+    // ── Strony Waszych produktów — GOTOWE strony sprzedażowe ─────────────────
+    // Pokazujemy WYŁĄCZNIE produkty z flagą landing_ready z edge (cała produkcja
+    // strony domknięta) + opublikowanym adresem. Kolejne karty pojawiają się same,
+    // gdy dany produkt będzie w pełni gotowy; do tego czasu sekcja ich nie zdradza.
+    function landingProducts() {
+        return (P.products || []).filter(p => p.landing_ready === true && p.platform_page_url)
+            .sort((a, b) => (a.sort || 0) - (b.sort || 0));
+    }
+    function prettyUrl(u) { return String(u || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''); }
+    // „Odsączek — składany koszyk do smażenia" → marka wyeksponowana, opis wyciszony
+    function landingTitleHtml(p) {
+        const full = (p.platform_name || p.name || 'Produkt').trim();
+        const parts = full.split(/\s*[—–]\s*/);
+        if (parts.length > 1 && parts[0].length >= 3) {
+            return `${escapeHtml(parts[0])} <small>· ${escapeHtml(parts.slice(1).join(' — '))}</small>`;
+        }
+        return escapeHtml(full);
+    }
+    function trackLanding(id) {
+        const p = (P.products || []).find(x => x.id === id);
+        track('link_click', 'Strona produktu: ' + ((p && (p.platform_name || p.name)) || ''), id);
+    }
+    function renderLandings() {
+        const sec = $('sec-landings');
+        const list = landingProducts();
+        if (!list.length) { sec.classList.add('hidden'); sec.innerHTML = ''; return; }
+        sec.classList.remove('hidden');
+        const cards = list.map(p => {
+            const href = escapeHtml(p.platform_page_url);
+            const cover = p.cover_url
+                ? `<img src="${escapeHtml(p.cover_url)}" alt="" loading="lazy">`
+                : `<div class="lp-cover-fallback">${escapeHtml(((p.platform_name || p.name || '?').trim()[0] || '?').toUpperCase())}</div>`;
+            return `<a class="lp-card" href="${href}" target="_blank" rel="noopener" onclick="trackLanding('${p.id}')">
+                <div class="lp-cover">${cover}<span class="lp-live"><span class="lp-live-dot"></span> Na żywo</span></div>
+                <div class="lp-body">
+                    <div class="lp-tt">
+                        <div class="lp-name">${landingTitleHtml(p)}</div>
+                        <div class="lp-url">${escapeHtml(prettyUrl(p.platform_page_url))}</div>
+                    </div>
+                    <span class="lp-go">Obejrzyj <i class="ph ph-arrow-up-right"></i></span>
+                </div>
+            </a>`;
+        }).join('');
+        // strona główna sklepu — dopiero gdy krok „strona główna" jest domknięty (żadnych niedokończonych stron)
+        const homeStep = stepFor('pl_glowna', null);
+        const dom = String(P.project.domain || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+        const homeRow = (dom && homeStep && homeStep.status === 'done')
+            ? `<a class="lp-shop" href="https://${escapeHtml(dom)}/" target="_blank" rel="noopener" onclick="track('link_click','Strona główna sklepu')">
+                <div class="hc-ic"><i class="ph ph-storefront"></i></div>
+                <div class="hc-tt"><div class="hc-h">Strona główna sklepu</div>
+                <div class="hc-s">${escapeHtml(dom)} — wszystkie Wasze produkty w jednym miejscu.</div></div>
+                <span class="lp-go">Otwórz <i class="ph ph-arrow-up-right"></i></span>
+            </a>` : '';
+        const pendingCount = (P.products || []).filter(p => !CENY_EXCLUDED.has(p.status) && !(p.landing_ready === true && p.platform_page_url)).length;
+        const note = pendingCount > 0
+            ? `<p class="lp-note"><i class="ph ph-hammer"></i> Pracujemy nad kolejnymi stronami — pojawią się tutaj, gdy będą w pełni gotowe.</p>` : '';
+        sec.innerHTML = `
+            <div class="lp-kicker"><span class="lp-live-dot"></span> Na żywo w internecie</div>
+            <h2 class="lp-h2">Strony Waszych produktów</h2>
+            <p class="sdesc" style="margin-bottom:0">Każdy produkt dostaje własną stronę sprzedażową. Te są już w pełni gotowe — obejrzyj je dokładnie tak, jak zobaczą je Wasi klienci.</p>
+            <div class="lp-grid">${cards}</div>${homeRow}${note}`;
     }
 
     let taskFieldTimers = {};

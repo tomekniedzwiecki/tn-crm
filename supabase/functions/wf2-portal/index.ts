@@ -803,7 +803,7 @@ Deno.serve(async (req: Request) => {
     sb.from("wf2_steps").select("step_key, product_id, status, completed_at, data")
       .eq("project_id", p.id).range(0, 999),
     sb.from("wf2_products")
-      .select("id, name, slug, status, cover_url, unit_profit, price, sort, platform_page_url, supplier_url, tt_product_id, cost_purchase, fees_pct, shipping_paid_by, cost_shipping, price_phase, client_cost_purchase, client_cost_is_net, client_cost_source, client_cost_note, client_cost_set_at")
+      .select("id, name, slug, status, cover_url, unit_profit, price, sort, platform_page_url, platform_name, supplier_url, tt_product_id, cost_purchase, fees_pct, shipping_paid_by, cost_shipping, price_phase, client_cost_purchase, client_cost_is_net, client_cost_source, client_cost_note, client_cost_set_at")
       .eq("project_id", p.id).order("sort"),
     sb.from("wf2_artifacts")
       .select("id, product_id, step_key, kind, url, meta, created_at")
@@ -865,6 +865,27 @@ Deno.serve(async (req: Request) => {
     return { step_key: s.step_key, product_id: s.product_id, status: s.status, completed_at: s.completed_at, client_fields, checklist: clientChecklist(s.step_key, s.data) };
   });
 
+  // ── landing_ready: link do strony produktu wychodzi do klienta DOPIERO, gdy CAŁA
+  // produkcja strony jest domknięta (dyrektywa Tomka 23.07). Kryterium FAIL-CLOSED:
+  // KAŻDY aktywny krok produktowy etapu 2 (lp_dane…lp_finisz, bez sub-kroków) ma dla
+  // tego produktu status done/skipped ORAZ strona jest opublikowana (platform_page_url).
+  // Brak wiersza kroku = NIE gotowe. Kolumny produktu (status='gotowy') celowo NIE są
+  // kryterium — bywają ustawiane zanim produkcja realnie się skończy.
+  const landingStepKeys = ((defsQ.data || []) as Array<Record<string, any>>)
+    .filter((d) => Number(d.stage) === 2 && d.scope === "product" && !d.sub_of)
+    .map((d) => String(d.key));
+  const doneStepsByProduct: Record<string, Set<string>> = {};
+  for (const s of ((stepsQ.data || []) as Array<Record<string, any>>)) {
+    if (!s.product_id) continue;
+    if (!["done", "skipped"].includes(String(s.status))) continue;
+    (doneStepsByProduct[String(s.product_id)] ||= new Set()).add(String(s.step_key));
+  }
+  const landingReady = (x: Record<string, any>): boolean => {
+    if (!landingStepKeys.length || !x.platform_page_url || String(x.status) === "kill") return false;
+    const done = doneStepsByProduct[String(x.id)];
+    return !!done && landingStepKeys.every((k) => done.has(k));
+  };
+
   // produkty + tiktoks (jedno zapytanie do bud_tt_products)
   const prods = (prodsQ.data || []) as Array<Record<string, any>>;
   const ttIds = [...new Set(prods.map((x) => x.tt_product_id).filter(Boolean))];
@@ -912,7 +933,8 @@ Deno.serve(async (req: Request) => {
     return {
       id: x.id, name: x.name, slug: x.slug, status: x.status, cover_url: x.cover_url,
       unit_profit: x.unit_profit, price: x.price, sort: x.sort,
-      platform_page_url: x.platform_page_url, supplier_url: x.supplier_url,
+      platform_page_url: x.platform_page_url, platform_name: x.platform_name || null,
+      landing_ready: landingReady(x), supplier_url: x.supplier_url,
       tiktoks: buildTiktoks(x.tt_product_id ? ttMap[x.tt_product_id] : undefined),
       // ── CENY 3.2 (wszystko wyliczone/whitelistowane; NIGDY price_phase/reason surowo) ──
       cost_effective: ceny.cost_effective,
