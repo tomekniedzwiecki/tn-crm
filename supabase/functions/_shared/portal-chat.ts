@@ -100,11 +100,14 @@ async function callOpenAI(ctx: Ctx, system: string, transcript: TranscriptEntry[
 }
 
 // Wiadomości sesji/projektu z podpisanymi URL-ami zrzutów (bucket prywatny). Kolejność rosnąca.
-async function loadSignedMessages(ctx: Ctx, filterCol: string, filterVal: string, rangeEnd = 499) {
+// applyFilter (opcjonalny) = dodatkowe zawężenie zapytania (np. wątek per zadanie: .eq('task_key', k)).
+async function loadSignedMessages(ctx: Ctx, filterCol: string, filterVal: string, rangeEnd = 499, applyFilter?: (q: Any) => Any) {
   const cfg = ctx.cfg;
-  const { data: msgs } = await ctx.sb.from(cfg.messagesTable)
+  let q = ctx.sb.from(cfg.messagesTable)
     .select(`role, content, ${cfg.imageField}, created_at`)
-    .eq(filterCol, filterVal).order("created_at", { ascending: true }).range(0, rangeEnd);
+    .eq(filterCol, filterVal);
+  if (applyFilter) q = applyFilter(q);
+  const { data: msgs } = await q.order("created_at", { ascending: true }).range(0, rangeEnd);
   const allPaths: string[] = [];
   (msgs || []).forEach((m: Any) => pathsOf(m[cfg.imageField]).forEach((pp) => allPaths.push(pp)));
   const signed = await ctx.sign(allPaths);
@@ -175,16 +178,23 @@ async function handleMessage(ctx: Ctx): Promise<Response> {
   if (scope.error) return scope.error;
   const { session, scopeFields, historyFilter } = scope;
 
+  // rowExtra (opcjonalny): kolumny doklejane do KAŻDEGO wiersza wiadomości (user i asystent) —
+  // np. znacznik wątku task_key (wf2). Brak hooka = zachowanie identyczne (wfa-test-chat).
+  const rowExtra = cfg.rowExtra ? (cfg.rowExtra(ctx, body) || {}) : {};
+
   // Zapis wiadomości usera (z załącznikami bieżącej tury).
   await sb.from(cfg.messagesTable).insert({
-    ...scopeFields, project_id: projectId, role: "user", content: userText,
+    ...scopeFields, ...rowExtra, project_id: projectId, role: "user", content: userText,
     [cfg.imageField]: attach.map((path: string) => ({ path })),
   });
 
   // Kontekst modelu: ostatnie N wiadomości. Vision: podpisujemy TYLKO zrzuty z bieżącej (ostatniej) tury.
-  const { data: histRows } = await sb.from(cfg.messagesTable)
+  // historyExtraFilter (opcjonalny) = to samo zawężenie co w akcji history (transkrypt = wątek bieżącego zadania).
+  let hq = sb.from(cfg.messagesTable)
     .select(`role, content, ${cfg.imageField}, created_at`)
-    .eq(historyFilter[0], historyFilter[1]).order("created_at", { ascending: false }).limit(cfg.historyTurns);
+    .eq(historyFilter[0], historyFilter[1]);
+  if (cfg.historyExtraFilter) hq = cfg.historyExtraFilter(hq, body);
+  const { data: histRows } = await hq.order("created_at", { ascending: false }).limit(cfg.historyTurns);
   const hist = (histRows || []).reverse();
   const curSigned = attach.length ? await ctx.sign(attach) : {};
   const transcript: TranscriptEntry[] = hist.map((m: Any, idx: number) => {
@@ -205,7 +215,7 @@ async function handleMessage(ctx: Ctx): Promise<Response> {
 
   const { clean, markers } = cfg.parseMarkers(ai.text);
   const insertAssistant = async (content: string) => {
-    await sb.from(cfg.messagesTable).insert({ ...scopeFields, project_id: projectId, role: "assistant", content });
+    await sb.from(cfg.messagesTable).insert({ ...scopeFields, ...rowExtra, project_id: projectId, role: "assistant", content });
   };
   return await cfg.onMarkers(markers, { ...ctx, clean, session, insertAssistant, aiText: ai.text });
 }
@@ -245,6 +255,8 @@ export interface PortalChatConfig {
   resolveScope(ctx: Ctx, o: { create: boolean }): Promise<{ session?: Any; scopeFields?: Any; historyFilter?: [string, string]; error?: Response }>;
   buildSystemPrompt(ctx: Ctx): string | Promise<string>;
   buildContextBlock?(ctx: Ctx, body: Any): string | null;             // plumbing (dziś null)
+  rowExtra?(ctx: Ctx, body: Any): Record<string, unknown> | null;     // kolumny doklejane do KAŻDEGO wiersza wiadomości (user+asystent); np. task_key
+  historyExtraFilter?(q: Any, body: Any): Any;                        // dodatkowe zawężenie zapytań history/transkrypt (np. .eq('task_key', k))
   parseMarkers(text: string): { clean: string; markers: Any[] };
   onMarkers(markers: Any[], tail: Ctx): Promise<Response>;            // side-effecty + kształt odpowiedzi + zapis asystenta
   callLabel?(ctx: Ctx): string;                                       // etykieta logu OpenAI (default proj=…)
@@ -296,7 +308,7 @@ export async function servePortalChat(req: Request, cfg: PortalChatConfig): Prom
   ctx.sign = (paths: string[]) => signPaths(sb, cfg.bucket, paths);
   ctx.isKilled = () => isKilled(sb, cfg.killSwitchKey);
   ctx.callOpenAI = (system: string, transcript: TranscriptEntry[], label: string) => callOpenAI(ctx, system, transcript, label);
-  ctx.loadSignedMessages = (col: string, val: string, rangeEnd = 499) => loadSignedMessages(ctx, col, val, rangeEnd);
+  ctx.loadSignedMessages = (col: string, val: string, rangeEnd = 499, applyFilter?: (q: Any) => Any) => loadSignedMessages(ctx, col, val, rangeEnd, applyFilter);
   ctx.roErr = () => json({ error: "podgląd — tylko odczyt" }, 403);
   ctx.json = json;
   ctx.sleep = sleep;

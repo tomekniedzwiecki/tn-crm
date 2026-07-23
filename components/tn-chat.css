@@ -128,6 +128,11 @@ body.tnc-fs-open, body.tnc-body-lock { overflow: hidden; }
 .tnc-ts { font-size: 10.5px; opacity: .5; margin-top: 5px; letter-spacing: .2px; }
 .tnc-b.me .tnc-ts { text-align: right; }
 
+/* Klikalne linki w dymkach (linkifikacja treści) — akcent + podkreślenie na hover. */
+.tnc-link { color: var(--tnc-accent); text-decoration: none; word-break: break-word; overflow-wrap: anywhere; }
+.tnc-link:hover { text-decoration: underline; }
+.tnc-b.me .tnc-link { color: #cfe3ff; }   /* dymek usera ma ciemne tło — jaśniejszy link dla kontrastu */
+
 /* wskaźnik pisania */
 .tnc-typing { align-self: flex-start; display: flex; gap: 4px; padding: 13px 15px; }
 .tnc-typing span {
@@ -215,7 +220,10 @@ body.tnc-fs-open, body.tnc-body-lock { overflow: hidden; }
 /* ── Responsywność: mobile = drawer na cały ekran ── */
 @media (max-width: 720px) {
     .tnc-drawer .tnc-panel { max-width: 100%; }
-    .tnc-embedded:not(.tnc-fs) .tnc-chat { height: var(--tnc-chat-h, 66vh); min-height: 300px; }
+    /* Okno rozmowy capowane do ~56svh (overflow-y:auto już wyżej) — composer widoczny bez scrollowania strony. */
+    .tnc-embedded:not(.tnc-fs) .tnc-chat { height: var(--tnc-chat-h, 56svh); max-height: 56svh; min-height: 240px; }
+    /* Input nie może przycinać placeholdera na mobile. */
+    .tnc-embedded .tnc-input { min-height: 26px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

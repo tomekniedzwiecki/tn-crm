@@ -833,11 +833,11 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
     ? ok('tn-chat.js: API addLocalBubble + cfg.height (--tnc-chat-h) na embedded')
     : bad('tn-chat.js API', 'brak addLocalBubble / obsługi height (--tnc-chat-h)');
 
-  // (h) bump ?v=2026072301 tn-chat.* w OBU portalach (tn-sklepy + tn-app)
-  (portalHtml.includes('tn-chat.js?v=2026072301') && portalHtml.includes('tn-chat.css?v=2026072301')
-    && appPortalHtml.includes('tn-chat.js?v=2026072301') && appPortalHtml.includes('tn-chat.css?v=2026072301'))
-    ? ok('bump ?v=2026072301: tn-chat.js/css w tn-sklepy + tn-app portal')
-    : bad('bump ?v tn-chat', 'brak ?v=2026072301 na tn-chat.js/css w obu portalach');
+  // (h) bump ?v=2026072302 tn-chat.* w OBU portalach (tn-sklepy + tn-app)
+  (portalHtml.includes('tn-chat.js?v=2026072302') && portalHtml.includes('tn-chat.css?v=2026072302')
+    && appPortalHtml.includes('tn-chat.js?v=2026072302') && appPortalHtml.includes('tn-chat.css?v=2026072302'))
+    ? ok('bump ?v=2026072302: tn-chat.js/css w tn-sklepy + tn-app portal')
+    : bad('bump ?v tn-chat', 'brak ?v=2026072302 na tn-chat.js/css w obu portalach');
 
   // (a) prompt zawiera kotwice bloku firma (WIEDZA-FIRMA-DG wklejona do §4)
   (src.includes('10 813,50') && src.includes('infakt.pl/polecam/tomekniedzwiecki') && src.includes('nierejestrowana'))
@@ -873,6 +873,88 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   // deploy skonfigurowany (--no-verify-jwt)
   const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
   /"deploy:wf2-ads-guide":\s*"[^"]*--no-verify-jwt/.test(pkg) ? ok('package.json ma deploy:wf2-ads-guide (--no-verify-jwt)') : bad('package.json', 'brak deploy:wf2-ads-guide z --no-verify-jwt');
+}
+
+// ── 19. Wątki czatu PER ZADANIE + klikalne linki (pakiet naprawczy v2.1) ───
+// Defekt v2: historia była JEDNYM wątkiem per projekt (wiadomości przeciekały między zadaniami,
+// intro dublowało się przy powrotach). Fix: kolumna task_key + filtr history/transkryptu; asystent
+// daje KLIKALNE linki zamiast opisywać nawigację. Asercje STATYCZNE (grep plików) — bez sieci.
+{
+  const guideSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads-guide', 'index.ts'), 'utf8');
+  const sharedSrc = readFileSync(join(ROOT, 'supabase', 'functions', '_shared', 'portal-chat.ts'), 'utf8');
+  const wfaSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wfa-test-chat', 'index.ts'), 'utf8');
+  const chatJs = readFileSync(join(ROOT, 'components', 'tn-chat.js'), 'utf8');
+  const chatCss = readFileSync(join(ROOT, 'components', 'tn-chat.css'), 'utf8');
+  const portalHtml = readFileSync(join(ROOT, 'tn-sklepy', 'portal.html'), 'utf8');
+
+  // (a) migracja task_key: kolumna (IF NOT EXISTS) + indeks (project_id, task_key, created_at)
+  const migPath = join(ROOT, 'supabase', 'migrations', '20260723_wf2_guide_task_threads.sql');
+  const mig = existsSync(migPath) ? readFileSync(migPath, 'utf8') : '';
+  (mig.includes('ADD COLUMN IF NOT EXISTS task_key') && mig.includes('(project_id, task_key, created_at)'))
+    ? ok('migracja 20260723_wf2_guide_task_threads: task_key + indeks (project_id, task_key, created_at)')
+    : bad('migracja task_key', 'brak ADD COLUMN task_key / indeksu (project_id, task_key, created_at)');
+
+  // (b) shared: generyczne hooki rowExtra (do KAŻDEGO wiersza) + historyExtraFilter (history+transkrypt)
+  (sharedSrc.includes('rowExtra') && sharedSrc.includes('historyExtraFilter') && /\.\.\.rowExtra/.test(sharedSrc) && sharedSrc.includes('applyFilter'))
+    ? ok('portal-chat.ts: hooki rowExtra (...rowExtra w obu insertach) + historyExtraFilter + applyFilter w loadSignedMessages')
+    : bad('portal-chat.ts hooki', 'brak rowExtra / historyExtraFilter / applyFilter');
+  // wfa-test-chat NIE ustawia rowExtra/historyExtraFilter (zachowanie 1:1 — brak regresji spowiednika)
+  (!wfaSrc.includes('rowExtra') && !wfaSrc.includes('historyExtraFilter'))
+    ? ok('wfa-test-chat: bez rowExtra/historyExtraFilter (zachowanie 1:1)')
+    : bad('wfa-test-chat regresja', 'wfa-test-chat ustawia rowExtra/historyExtraFilter — miał zostać nietknięty');
+
+  // (c) wf2: rowExtra=task_key (validTaskKey/CHAT_TASK_KEYS) + filtr .eq("task_key") w history/transkrypcie
+  (guideSrc.includes('CHAT_TASK_KEYS') && guideSrc.includes('validTaskKey') && /rowExtra:\s*\(/.test(guideSrc)
+    && guideSrc.includes('historyExtraFilter') && guideSrc.includes('q.eq("task_key"'))
+    ? ok('wf2-ads-guide: rowExtra=task_key + filtr .eq("task_key") w history/transkrypcie (wątek per zadanie)')
+    : bad('wf2-ads-guide task_key', 'brak validTaskKey/CHAT_TASK_KEYS/rowExtra/historyExtraFilter/eq task_key');
+  // bez task_key → pełna historia (panel admina): filtr zwraca q bez zawężenia
+  /return k \? q\.eq\("task_key", k\) : q;/.test(guideSrc)
+    ? ok('wf2-ads-guide: bez task_key → pełna historia (q bez filtra) — panel admina')
+    : bad('wf2-ads-guide fallback historii', 'brak gałęzi „bez task_key → pełna historia"');
+  // CHAT_TASK_KEYS == CHAT_TASKS w portalu (te same 4 zadania czatowe)
+  ['ads_strona', 'ads_konto', 'ads_budzet', 'firma'].every((k) => guideSrc.includes(`"${k}"`))
+    ? ok('wf2-ads-guide: CHAT_TASK_KEYS = [ads_strona, ads_konto, ads_budzet, firma]')
+    : bad('wf2-ads-guide CHAT_TASK_KEYS', 'brak kompletu kluczy zadań czatowych');
+
+  // (d) linkifikacja tn-chat: bezpieczna (appendLinkified/createElement('a')/rel noopener/tnc-link), bez innerHTML z treści
+  (chatJs.includes('appendLinkified') && chatJs.includes("createElement('a')") && chatJs.includes("'noopener noreferrer'")
+    && chatJs.includes("a.className = 'tnc-link'") && chatJs.includes('appendLinkified(b,'))
+    ? ok("tn-chat.js: linkifikacja bezpieczna (appendLinkified/createElement('a')/rel noopener/tnc-link; bubble buduje DOM)")
+    : bad('tn-chat.js linkifikacja', "brak appendLinkified/createElement('a')/noopener/tnc-link lub bubble nie linkifikuje");
+  // context() doklejane też do akcji history (wątek per zadanie działa przy refresh)
+  /Object\.assign\(\{ action: 'history' \}, cfg\.context\(\)\)/.test(chatJs)
+    ? ok('tn-chat.js: context() doklejane do akcji history (refresh pobiera wątek zadania)')
+    : bad('tn-chat.js history context', 'akcja history nie dokleja cfg.context()');
+  // CSS .tnc-link (akcent + podkreślenie na hover) + mobile okno rozmowy ~56svh
+  (chatCss.includes('.tnc-link') && /\.tnc-link:hover\s*\{[^}]*underline/.test(chatCss))
+    ? ok('tn-chat.css: .tnc-link (akcent + underline na hover)') : bad('tn-chat.css .tnc-link', 'brak .tnc-link / underline na hover');
+  /max-width:\s*720px[\s\S]*max-height:\s*56svh/.test(chatCss)
+    ? ok('tn-chat.css: mobile okno rozmowy max-height 56svh (composer widoczny)') : bad('tn-chat.css mobile', 'brak max-height 56svh na mobile');
+
+  // (e) prompt asystenta: reguła BEZPOŚREDNI pełny link (klikalny) + dokładne nazwy pól; adresy Meta jako https://
+  (guideSrc.includes('BEZPOŚREDNI pełny link') && guideSrc.includes('Linki w czacie są klikalne') && guideSrc.includes('Link do strony na Facebooku'))
+    ? ok('wf2-ads-guide prompt: „BEZPOŚREDNI pełny link (https://…)" klikalny + dokładne nazwy pól')
+    : bad('wf2-ads-guide prompt linki', 'brak reguły o bezpośrednim pełnym linku / nazwach pól');
+  (guideSrc.includes('https://business.facebook.com/settings/partners') && guideSrc.includes('https://facebook.com/pages/create') && guideSrc.includes('https://adsmanager.facebook.com'))
+    ? ok('wf2-ads-guide prompt: adresy Meta jako pełne https:// (partners/pages-create/adsmanager)')
+    : bad('wf2-ads-guide prompt https', 'brak pełnych https:// adresów Meta w promptcie');
+
+  // (f) portal chatIntro: gołe adresy zamienione na https:// (linkifikacja je podchwyci)
+  (portalHtml.includes('https://business.facebook.com/latest/business_home') && portalHtml.includes('https://facebook.com/pages/create') && portalHtml.includes('https://business.facebook.com/billing_hub/payment_settings'))
+    ? ok('portal.html chatIntro: adresy jako pełne https:// (business_home/pages-create/billing_hub)')
+    : bad('portal.html intro https', 'brak https:// w chatIntro (business_home/pages-create/billing_hub)');
+
+  // (g) wątek per zadanie w portalu: refresh() przez syncChatTask (chatLoadedTask) + intro tylko gdy wątek pusty (onHistory); maybeIntro usunięty
+  (portalHtml.includes('syncChatTask') && portalHtml.includes('chatLoadedTask') && portalHtml.includes('chat.refresh()')
+    && /d\.messages\)\s*&&\s*d\.messages\.length/.test(portalHtml) && !portalHtml.includes('maybeIntro'))
+    ? ok('portal.html: wątek per zadanie (syncChatTask/chatLoadedTask/refresh) + intro tylko gdy pusty; maybeIntro usunięty')
+    : bad('portal.html wątek per zadanie', 'brak syncChatTask/chatLoadedTask/refresh albo pozostał maybeIntro');
+
+  // (h) CTA zadania NIEukończonego = NIEBIESKI (#0070f3), nie zielony (reguła: zieleń TYLKO done)
+  (/\.tv-cta\s*\{[^}]*background:#0070f3/.test(portalHtml) && !/\.tv-cta\s*\{[^}]*background:#45a557/.test(portalHtml))
+    ? ok('portal.html: .tv-cta = niebieski #0070f3 (zieleń tylko done)')
+    : bad('portal.html CTA kolor', '.tv-cta nadal zielony (#45a557) — zieleń tylko dla done');
 }
 
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);

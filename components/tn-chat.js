@@ -77,6 +77,29 @@
 
     function escRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
+    // Linkifikacja treści dymka (BEZPIECZNA): buduje DOM — zwykły tekst przez createTextNode (nigdy
+    // nie interpretowany jako HTML), a URL-e http(s) przez createElement('a'). ZERO innerHTML z treści.
+    // Trailing interpunkcja (.,;:!?)) obcinana z href, ale zostaje jako tekst po linku.
+    function appendLinkified(node, text) {
+        text = String(text == null ? '' : text);
+        var re = /https?:\/\/[^\s<]+/g;
+        var last = 0, m;
+        while ((m = re.exec(text))) {
+            if (m.index > last) node.appendChild(document.createTextNode(text.slice(last, m.index)));
+            var url = m[0], trail = '';
+            var mt = url.match(/[.,;:!?)]+$/);
+            if (mt) { trail = mt[0]; url = url.slice(0, url.length - trail.length); }
+            if (url) {
+                var a = document.createElement('a');
+                a.className = 'tnc-link'; a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.textContent = url; node.appendChild(a);
+            }
+            if (trail) node.appendChild(document.createTextNode(trail));
+            last = m.index + m[0].length;
+        }
+        if (last < text.length) node.appendChild(document.createTextNode(text.slice(last)));
+    }
+
     // Czas dymka — relatywny „przed chwilą"/„N min temu", potem HH:MM / wczoraj / DD.MM (Europe/Warsaw).
     function fmtTime(iso) {
         if (!iso) return '';
@@ -276,7 +299,8 @@
         // ── Render rozmowy ──
         function bubble(role, text, imgs, ts) {
             var b = el('div', 'tnc-b ' + (role === 'user' ? 'me' : 'ai'));
-            b.textContent = text || '';
+            appendLinkified(b, text || '');   // treść escapowana (textNode); URL-e → klikalne <a class="tnc-link">
+
             (imgs || []).forEach(function (u) {
                 if (!u) return;
                 var im = el('img'); im.src = u; im.loading = 'lazy'; im.alt = 'Załącznik';
@@ -310,7 +334,8 @@
         // ── Historia ──
         function loadHistory() {
             inst.loaded = false;
-            return call({ action: 'history' }).then(function (res) {
+            // context() doklejane też do history (np. {context:{task_key}}) — pozwala edge zwrócić wątek per zadanie.
+            return call(Object.assign({ action: 'history' }, cfg.context())).then(function (res) {
                 return res.json().catch(function () { return {}; }).then(function (d) {
                     if (!res.ok) { inst.enabled = false; renderMessages([]); inst.loaded = true; return; }
                     // Kontrakt planu = pole `enabled`; tolerujemy też `active` (obecne wfa-test-chat) — false w którymkolwiek = wyłączony.

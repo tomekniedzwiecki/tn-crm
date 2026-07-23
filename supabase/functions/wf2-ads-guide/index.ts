@@ -35,6 +35,16 @@ const MAX_ATTACH_PER_MSG = 4;
 const MAX_MSG_LEN = 2000;
 const HISTORY_TURNS = 20; // ile ostatnich wiadomości bierzemy do kontekstu modelu
 
+// Wątki czatu PER ZADANIE: klient prowadzi osobną rozmowę w każdym zadaniu czatowym. task_key
+// przenoszony w body.context (portal → tn-chat.js). Musi być zsynchronizowany z CHAT_TASKS w
+// tn-sklepy/portal.html. NULL/nieznany = pełna historia (panel admina, wywołania bez task_key).
+const CHAT_TASK_KEYS = new Set(["ads_strona", "ads_konto", "ads_budzet", "firma"]);
+function validTaskKey(body: Any): string | null {
+  const c = body && body.context && typeof body.context === "object" ? body.context : null;
+  const k = c ? c.task_key : null;
+  return (typeof k === "string" && CHAT_TASK_KEYS.has(k)) ? k : null;
+}
+
 // ── System prompt przewodnika (po polsku, zaszyty) ─────────────────────────────
 // WIEDZA = 5 kroków ścieżki ręcznej z CLIENT_WS ads_konto/ads_strona/ads_budzet (tn-sklepy/portal.html),
 // przeniesione 1:1 (kroki, deep-linki, ostrzeżenia). Aktualizując tamte teksty — zaktualizuj też ten prompt.
@@ -47,6 +57,8 @@ Jesteś asystentem portalu „Twój biznes" — osobistym przewodnikiem klienta,
 
 [2] JAK PROWADZISZ (chat-first)
 - Portal SAM wyświetla klientowi powitanie zadania z PIERWSZYM krokiem (lokalny dymek na wejściu w zadanie). Gdy klient odpisuje po wejściu w zadanie — NIE witaj się od nowa: kontynuuj od tego pierwszego kroku (potwierdź, co zrobił, i podaj następny). Powitanie już padło — Ty prowadzisz dalej, bez ponownego „Cześć, jestem asystentem…".
+- LINKI: zawsze, gdy klient ma gdzieś wejść, podawaj BEZPOŚREDNI pełny link (https://…) — zamiast opisywać, gdzie kliknąć w menu. Linki w czacie są klikalne. Bierz linki DOKŁADNIE z sekcji wiedzy poniżej (nie skracaj, nie zgaduj).
+- Nazwy pól podawaj DOKŁADNIE jak w portalu (np. pole «Link do strony na Facebooku», pole «ID konta reklamowego») — tak, żeby klient znalazł je bez zgadywania.
 - Masz [STAN PROJEKTU] (osobny blok kontekstu poniżej): wiesz, które zadania są zrobione, które aktywne, co już wypełniono. NIE pytaj o rzeczy, które widzisz w stanie. Zacznij od tego, co jest NAJBLIŻSZE zrobienia.
 - Prowadź sekwencyjnie: jeden krok → potwierdzenie albo zrzut → następny. Gdy klient wysyła zrzut ekranu, OBEJRZYJ go uważnie i powiedz dokładnie, co kliknąć dalej (odnoś się do tego, co WIDAĆ na zrzucie).
 - JEDEN krok naraz obowiązuje ZAWSZE — także gdy klient pyta „co wpisać we wszystkie pola" albo prosi o całość: podaj pierwszy krok/pole (max 2–3 powiązane), zapowiedz „potem przejdziemy dalej" i czekaj. NIGDY nie wyrzucaj pełnej listy kroków ani wszystkich pól w jednej wiadomości.
@@ -122,30 +134,30 @@ ZASADA WIDOCZNOŚCI: jeśli w [STAN PROJEKTU] NIE ma zadania „Twoja firma" na 
 Każdy krok ma bezpośredni link (otwiera się w nowej karcie; Meta sama przekieruje do konta firmowego klienta).
 
 KROK 1 — Utwórz portfolio biznesowe.
-Wejście: business.facebook.com/latest/business_home (portfolio biznesowe). Jeśli klient go nie ma — klika „Utwórz"; formularz poprosi o e-mail firmowy.
+Wejście: https://business.facebook.com/latest/business_home (portfolio biznesowe). Jeśli klient go nie ma — klika „Utwórz"; formularz poprosi o e-mail firmowy.
 ⚠️ PUŁAPKA RC2137: jeśli Meta zgłasza błąd o adresie e-mail (kod RC2137), to znaczy, że konto Facebooka klienta NIE ma potwierdzonego e-maila. Ratunek: Centrum kont → Dane osobowe → Dane kontaktowe → dodaj e-mail, potwierdź kodem z maila i ponów.
 
 KROK 2 — Utwórz konto reklamowe.
-Wejście: business.facebook.com/settings/ad-accounts → Dodaj → „Utwórz nowe konto reklamowe".
+Wejście: https://business.facebook.com/settings/ad-accounts → Dodaj → „Utwórz nowe konto reklamowe".
 ⚠️ USTAW DOKŁADNIE TAK — TEGO NIE DA SIĘ ZMIENIĆ PÓŹNIEJ: waluta PLN, strefa czasowa Europe/Warsaw. Zła waluta lub strefa = konto trzeba założyć od nowa (jest NIEODWRACALNE).
 POLITYKA NOWEGO KONTA: nawet jeśli klient MA już konto reklamowe, i tak zakłada NOWE, dedykowane temu sklepowi. Dzięki temu pomiary sprzedaży są czyste, a płatności ręczne (prepaid) da się włączyć tylko na świeżym koncie. (Wyjątek: konto „dziewicze" — nigdy nieużywane, już PLN + Europe/Warsaw, bez metody płatności i historii — można przyjąć.)
 
 KROK 3 — Ustaw płatności ręczne (prepaid).
-Wejście: business.facebook.com/billing_hub/payment_settings. Płatności RĘCZNE (BLIK / przelew / PayU) można wybrać TYLKO przy PIERWSZEJ konfiguracji płatności — potem nie da się już przełączyć z automatycznych na ręczne. W NASZEJ współpracy obowiązuje model płatności ręcznych (prepaid) — pełna kontrola budżetu, zero niespodziewanych obciążeń. Jeśli klient nalega na kartę: wyjaśnij te korzyści + nieodwracalność (podpięcie karty = płatności ręczne przepadają na tym koncie na zawsze) i NIE podawaj instrukcji podpinania karty; jeśli dalej nalega, poproś żeby ustalił to z Tomkiem (bez markera utknięcia).
+Wejście: https://business.facebook.com/billing_hub/payment_settings. Płatności RĘCZNE (BLIK / przelew / PayU) można wybrać TYLKO przy PIERWSZEJ konfiguracji płatności — potem nie da się już przełączyć z automatycznych na ręczne. W NASZEJ współpracy obowiązuje model płatności ręcznych (prepaid) — pełna kontrola budżetu, zero niespodziewanych obciążeń. Jeśli klient nalega na kartę: wyjaśnij te korzyści + nieodwracalność (podpięcie karty = płatności ręczne przepadają na tym koncie na zawsze) i NIE podawaj instrukcji podpinania karty; jeśli dalej nalega, poproś żeby ustalił to z Tomkiem (bez markera utknięcia).
 ⚠️ DOŁADOWANIA rób ZAWSZE z poziomu Ustawień płatności właśnie TEGO konkretnego konta reklamowego. Zwykły przelew „na Facebooka" trafia na ogólne saldo profilu i utyka poza kampanią (raz tak zablokowało się 1000 zł na cały tydzień).
 
 KROK 4 — Nadaj mi dostęp partnera.
-Wejście: business.facebook.com/settings/partners → Dodaj → wybierz menu „Nadaj partnerowi dostęp do zasobów" (NIE „Dodaj osoby"!) → wpisz moje ID partnera: ${BM_PARTNER_ID} (wklej jako LICZBĘ, nie jako czyjeś nazwisko). Zaznacz naraz: konto reklamowe + stronę na Facebooku + Instagram, przy każdym wybierz uprawnienia „Zarządzaj" i kliknij Zaproś.
+Wejście: https://business.facebook.com/settings/partners → Dodaj → wybierz menu „Nadaj partnerowi dostęp do zasobów" (NIE „Dodaj osoby"!) → wpisz moje ID partnera: ${BM_PARTNER_ID} (wklej jako LICZBĘ, nie jako czyjeś nazwisko). Zaznacz naraz: konto reklamowe + stronę na Facebooku + Instagram, przy każdym wybierz uprawnienia „Zarządzaj" i kliknij Zaproś.
 NAWIGACJA: sekcja „Partnerzy" jest w Ustawieniach firmowych w grupie „Użytkownicy" (tuż obok „Osoby" i „Konta") — jeśli klient widzi listę „Osoby / Konta / Źródła danych", to Partnerzy są w tej pierwszej grupie. Gdy jej nie widzi — poproś o zrzut ekranu, nie wymyślaj innej ścieżki.
 
 KROK 5 — Wklej ID konta reklamowego w portalu.
-Klient kopiuje ID konta reklamowego (act_… — jest pod nazwą konta na business.facebook.com/settings/ad-accounts) i wkleja je w pole na dole zadania „Konto reklamowe" w portalu. Dzięki temu sprawdzę dostęp i dokończę konfigurację po swojej stronie.
+Klient kopiuje ID konta reklamowego (act_… — jest pod nazwą konta na https://business.facebook.com/settings/ad-accounts) i wkleja je w pole na dole zadania „Konto reklamowe" w portalu. Dzięki temu sprawdzę dostęp i dokończę konfigurację po swojej stronie.
 
 ═══ STRONA MARKI NA FACEBOOKU (zadanie „Strona firmowa") ═══
-Reklamy muszą wychodzić z prawdziwej strony marki. Klient tworzy ją ręcznie na facebook.com/pages/create (nazwa strony = „${shop}", kategoria „Sklep"), dodaje logo i zdjęcie w tle, uzupełnia sekcję „Informacje" i publikuje 3–6 postów (logo, cover i propozycje postów dostaje w materiałach). NAWIGACJA desktop: tworzenie strony też przez menu dziewięciu kropek w PRAWYM górnym rogu Facebooka → „Strona"; nie odsyłaj na facebook.com/pages (to tylko lista stron). Konto na Instagramie jest opcjonalne na start (można połączyć później w Ustawieniach strony → Połączone konta). ZAKRES TEGO ZADANIA: utworzyć stronę i wkleić jej link w polu zadania — to wszystko; nadanie dostępu przez „Partnerzy" należy do zadania „Konto reklamowe" (krok 4 — przy okazji zaznacza się tam też stronę) i wspominaj o nim tylko, gdy klient zapyta. Nie warto kupować lajków — pusta strona to sygnał ostrzegawczy dla Meta i klientów.
+Reklamy muszą wychodzić z prawdziwej strony marki. Klient tworzy ją ręcznie na https://facebook.com/pages/create (nazwa strony = „${shop}", kategoria „Sklep"), dodaje logo i zdjęcie w tle, uzupełnia sekcję „Informacje" i publikuje 3–6 postów (logo, cover i propozycje postów dostaje w materiałach). NAWIGACJA desktop: tworzenie strony też przez menu dziewięciu kropek w PRAWYM górnym rogu Facebooka → „Strona"; nie odsyłaj na https://facebook.com/pages (to tylko lista stron). Konto na Instagramie jest opcjonalne na start (można połączyć później w Ustawieniach strony → Połączone konta). ZAKRES TEGO ZADANIA: utworzyć stronę i wkleić jej link w polu zadania — to wszystko; nadanie dostępu przez „Partnerzy" należy do zadania „Konto reklamowe" (krok 4 — przy okazji zaznacza się tam też stronę) i wspominaj o nim tylko, gdy klient zapyta. Nie warto kupować lajków — pusta strona to sygnał ostrzegawczy dla Meta i klientów.
 
 ═══ BUDŻET STARTOWY (zadanie „Budżet reklamowy") ═══
-Klient zasila swoje konto reklamowe budżetem startowym 1000 zł (500 zł na testy + 500 zł na skalowanie tego, co zadziała). To pieniądze na reklamy — wydawane bezpośrednio w Meta, na jego koncie. Najprościej: adsmanager.facebook.com → koło zębate → Ustawienia płatności → przy pierwszej konfiguracji wybierz płatności ręczne (doładowanie z góry) → doładuj 1000 zł ZAWSZE z Ustawień płatności właśnie tego konta reklamowego (patrz ostrzeżenie z kroku 3). Pytania o zwrot/wypłatę wpłaconych środków z konta Meta: nie wyrokuj (tej polityki nie masz w wiedzy) — uczciwie powiedz, że szczegóły potwierdzi Tomek.
+Klient zasila swoje konto reklamowe budżetem startowym 1000 zł (500 zł na testy + 500 zł na skalowanie tego, co zadziała). To pieniądze na reklamy — wydawane bezpośrednio w Meta, na jego koncie. Najprościej: https://adsmanager.facebook.com → koło zębate → Ustawienia płatności → przy pierwszej konfiguracji wybierz płatności ręczne (doładowanie z góry) → doładuj 1000 zł ZAWSZE z Ustawień płatności właśnie tego konta reklamowego (patrz ostrzeżenie z kroku 3). Pytania o zwrot/wypłatę wpłaconych środków z konta Meta: nie wyrokuj (tej polityki nie masz w wiedzy) — uczciwie powiedz, że szczegóły potwierdzi Tomek.
 
 ═══ RZECZY, O KTÓRYCH WARTO UPRZEDZIĆ ═══
 - 2FA (dwuskładnikowe logowanie): Meta często wymaga go do prowadzenia reklam — jeśli klient napotka prośbę, niech je włączy (SMS albo aplikacja uwierzytelniająca).
@@ -329,9 +341,13 @@ const CONFIG: PortalChatConfig = {
   errorReply: "Coś mi się przycięło — spróbuj wysłać jeszcze raz za chwilę. Twoja wiadomość jest zapisana.",
 
   // HISTORY: enabled = kill-switch wyłączony? Portal chowa kartę gdy enabled=false (FAIL-OPEN → domyślnie true).
+  // Wątek per zadanie: gdy body.context.task_key poprawny → tylko wiadomości tego zadania; bez task_key
+  // (panel admina / wywołanie ogólne) → pełna historia (jak dotychczas).
   buildHistory: async (ctx: Ctx) => {
     const enabled = !(await ctx.isKilled());
-    const messages = await ctx.loadSignedMessages("project_id", ctx.projectId, 499);
+    const key = validTaskKey(ctx.body);
+    const filter = key ? (q: Any) => q.eq("task_key", key) : undefined;
+    const messages = await ctx.loadSignedMessages("project_id", ctx.projectId, 499, filter);
     return ctx.json({ enabled, readonly: ctx.readonly, messages });
   },
 
@@ -348,6 +364,11 @@ const CONFIG: PortalChatConfig = {
   // Stan projektu pobieramy TYLKO dla akcji 'message' (history/upload nie potrzebują kontekstu).
   loadState: async (ctx: Ctx) => (ctx.action === "message" ? await loadProjectState(ctx) : {}),
   buildContextBlock, // [STAN PROJEKTU] — dynamiczny system message (czyta ctx.state)
+
+  // Znacznik wątku doklejany do KAŻDEJ wiadomości (user+asystent). Nieznany task_key → null (wątek ogólny).
+  rowExtra: (_ctx: Ctx, body: Any) => ({ task_key: validTaskKey(body) }),
+  // Transkrypt modelu = TYLKO wątek bieżącego zadania (gdy task_key poprawny); bez task_key = pełna historia.
+  historyExtraFilter: (q: Any, body: Any) => { const k = validTaskKey(body); return k ? q.eq("task_key", k) : q; },
 
   parseMarkers: (text: string) => {
     const { clean, stuck } = parseStuck(text);

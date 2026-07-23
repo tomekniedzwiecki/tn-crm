@@ -12,8 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/tn-sklepy/panel.css?v=2026072102">
     <script src="/tn-sklepy/panel-core.js?v=2026072103"></script>
-    <link rel="stylesheet" href="/components/tn-chat.css?v=2026072301">
-    <script src="/components/tn-chat.js?v=2026072301"></script>
+    <link rel="stylesheet" href="/components/tn-chat.css?v=2026072302">
+    <script src="/components/tn-chat.js?v=2026072302"></script>
     <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }</script>
     <style>
         /* Portal = jedna wąska, wyśrodkowana kolumna. Ciemny motyw Geist (spójny z panelem). */
@@ -121,19 +121,20 @@
         .tv-step-mnum { display:none; font-size:11px; font-weight:600; color:#8a8a93; }
         .tv-step.active .tv-step-mnum { color:#52a8ff; }
         /* obszar roboczy */
-        .tv-work { flex:1; min-width:0; max-width:720px; }
+        .tv-work { flex:1; min-width:0; max-width:720px; scroll-margin-top:76px; }  /* scrollIntoView nie chowa treści pod sticky .tv-topbar */
         .tv-w-kicker { display:inline-flex; align-items:center; gap:9px; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#52a8ff; margin-bottom:11px; }
         .tv-w-kicker .tv-time { color:#71717a; font-weight:500; text-transform:none; letter-spacing:0; display:inline-flex; align-items:center; gap:4px; }
-        .tv-w-title { color:#fff; font-size:26px; font-weight:600; letter-spacing:-.02em; line-height:1.15; margin-bottom:18px; }
+        .tv-w-title { color:#fff; font-size:26px; font-weight:600; letter-spacing:-.02em; line-height:1.15; margin-bottom:18px; scroll-margin-top:76px; }
         @media (max-width:560px){ .tv-w-title { font-size:22px; } }
         .tv-why { display:flex; gap:12px; background:rgba(0,112,243,.06); border:1px solid rgba(0,112,243,.22); border-radius:10px; padding:14px 16px; margin-bottom:24px; }
         .tv-why > i { color:#52a8ff; font-size:17px; margin-top:1px; flex-shrink:0; }
         .tv-why-l { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#6ba7e8; margin-bottom:4px; }
         .tv-why p { color:#cfe0f5; font-size:13.5px; line-height:1.55; }
         .tv-cta-row { margin-top:28px; padding-top:22px; border-top:1px solid #161616; }
-        .tv-cta { display:inline-flex; align-items:center; justify-content:center; gap:9px; background:#45a557; color:#fff; border:none;
+        /* CTA zadania NIEukończonego = NIEBIESKI (akcja). Zieleń TYLKO dla stanu „done" (baner/ikona). */
+        .tv-cta { display:inline-flex; align-items:center; justify-content:center; gap:9px; background:#0070f3; color:#fff; border:none;
             border-radius:9px; padding:14px 26px; font-size:14.5px; font-weight:600; cursor:pointer; transition:background .15s; }
-        .tv-cta:hover:not(:disabled) { background:#3d9850; }
+        .tv-cta:hover:not(:disabled) { background:#0060df; }
         .tv-cta:disabled { opacity:.5; cursor:default; }
         .tv-done-banner { display:inline-flex; align-items:center; gap:9px; color:#5cd07f; font-size:14.5px; font-weight:600; }
         .tv-undo { display:block; background:none; border:none; color:#71717a; font-size:12.5px; cursor:pointer; text-decoration:underline; margin-top:12px; padding:0; }
@@ -570,7 +571,7 @@
             desc: 'Zakładasz swoje konto reklamowe Meta i udostępniasz mi do niego dostęp — reklamy ruszają z Twojego konta, a Ty płacisz bezpośrednio do Meta. Prowadzę Cię przez to krok po kroku.',
             why: 'Reklamy ruszają z Twojego konta — Ty jesteś właścicielem i płacisz Meta bezpośrednio. Dostęp jest mi potrzebny, żeby ustawić i prowadzić kampanie.',
             time: 'ok. 10 min',
-            chatIntro: 'Cześć! 👋 Przed nami najważniejszy techniczny krok całej konfiguracji: konto reklamowe i dostęp dla Tomka. Spokojnie — przejdziemy przez to razem, krok po kroku, nic nie musisz znać z góry.\n\nKrok 1: wejdź na business.facebook.com/latest/business_home i utwórz portfolio biznesowe (przycisk „Utwórz").\n\nNapisz, co widzisz po wejściu — albo wklej zrzut ekranu (Ctrl+V), a poprowadzę Cię dalej.',
+            chatIntro: 'Cześć! 👋 Przed nami najważniejszy techniczny krok całej konfiguracji: konto reklamowe i dostęp dla Tomka. Spokojnie — przejdziemy przez to razem, krok po kroku, nic nie musisz znać z góry.\n\nKrok 1: wejdź na https://business.facebook.com/latest/business_home i utwórz portfolio biznesowe (przycisk „Utwórz").\n\nNapisz, co widzisz po wejściu — albo wklej zrzut ekranu (Ctrl+V), a poprowadzę Cię dalej.',
             guide: `<p><b>Konto reklamowe zakładasz i udostępniasz mi ręcznie w Menedżerze firmy (Meta Business Suite).</b> Przejdziesz 5 krótkich kroków — każdy ma bezpośredni link (otwiera się w nowej karcie). Meta sama przekieruje Cię do Twojego konta firmowego.</p>
 
                 <div class="step-manual">
@@ -617,7 +618,7 @@
             desc: 'Twoja strona marki na Facebooku (i profil na Instagramie) — tworzysz ją ręcznie i udostępniasz mi w tym samym kroku „Partnerzy" co konto reklamowe.',
             why: 'Reklamy na Facebooku muszą wychodzić ze strony marki. Bez niej nie wystartujemy.',
             time: 'ok. 10 min',
-            chatIntro: 'Cześć! 👋 W tym zadaniu założysz stronę swojej marki %NAME% na Facebooku (Instagram dopniemy przy okazji — jest opcjonalny na start). Poprowadzę Cię krok po kroku, jak na czacie.\n\nZacznij tak: wejdź na facebook.com/pages/create i utwórz stronę o nazwie „%NAME%" (kategoria: Sklep).\n\nDaj znać, gdy będzie gotowa — a jak coś będzie niejasne, po prostu napisz albo wklej zrzut ekranu (Ctrl+V).',
+            chatIntro: 'Cześć! 👋 W tym zadaniu założysz stronę swojej marki %NAME% na Facebooku (Instagram dopniemy przy okazji — jest opcjonalny na start). Poprowadzę Cię krok po kroku, jak na czacie.\n\nZacznij tak: wejdź na https://facebook.com/pages/create i utwórz stronę o nazwie „%NAME%" (kategoria: Sklep).\n\nDaj znać, gdy będzie gotowa — a jak coś będzie niejasne, po prostu napisz albo wklej zrzut ekranu (Ctrl+V).',
             guide: `<p>Reklamy muszą wychodzić z prawdziwej strony marki. Załóż ją ręcznie — to kilka minut:</p>
                 <ol style="margin:8px 0;padding-left:18px">
                 <li>Wejdź na <a href="https://www.facebook.com/pages/create" target="_blank" rel="noopener" onclick="track('link_click','facebook pages create')">facebook.com/pages/create</a>. Nazwa strony: <b>%NAME%</b>, kategoria: „Sklep".</li>
@@ -632,7 +633,7 @@
             desc: 'Zasilasz swoje konto reklamowe budżetem startowym 1000 zł. To pieniądze na pierwsze kampanie testowe.',
             why: '1000 zł to budżet na pierwsze kampanie testowe (500 zł na testy, 500 zł na skalowanie tego, co zadziała) — z niego Meta pobiera opłaty za wyświetlenia.',
             time: 'ok. 5 min',
-            chatIntro: 'Cześć! 👋 Ostatni krok środowiska reklamowego: budżet na Twoje reklamy. Ustawimy płatności ręczne (doładowanie z góry) — masz wtedy pełną kontrolę i żadnych automatycznych obciążeń.\n\nKrok 1: wejdź w Ustawienia płatności swojego NOWEGO konta reklamowego: business.facebook.com/billing_hub/payment_settings.\n\nNapisz, co widzisz na ekranie, to poprowadzę Cię dalej.',
+            chatIntro: 'Cześć! 👋 Ostatni krok środowiska reklamowego: budżet na Twoje reklamy. Ustawimy płatności ręczne (doładowanie z góry) — masz wtedy pełną kontrolę i żadnych automatycznych obciążeń.\n\nKrok 1: wejdź w Ustawienia płatności swojego NOWEGO konta reklamowego: https://business.facebook.com/billing_hub/payment_settings.\n\nNapisz, co widzisz na ekranie, to poprowadzę Cię dalej.',
             guide: `<p>Zasil konto reklamowe budżetem startowym <b>1000 zł</b> (500 zł na testy + 500 zł na skalowanie tego, co zadziała). To pieniądze na reklamy — wydawane bezpośrednio w Meta, na Twoim koncie.</p>
                 <p style="margin-top:10px"><b>Najprościej — płatności ręczne (doładowanie z góry):</b></p>
                 <ol>
@@ -1318,7 +1319,8 @@
                 <div class="tv-cta-row">${cta}</div>`;
             const slot = $('task-chat-slot');
             if (chat && chat.el && slot) slot.appendChild(chat.el);   // przenieś trwały czat do slotu (bez re-mountu)
-            maybeIntro(d.key);
+            syncChatTask(d.key);   // przeładuj wątek tego zadania (per task_key); powitanie doda onHistory gdy pusty
+            trackChatTask(d.key);
             return;
         }
 
@@ -1346,8 +1348,12 @@
     let chat = null;             // trwała instancja TNChat (embedded)
     let asystentEnabled;         // undefined = jeszcze nieznane; false = kill-switch OFF (fallback na ws.guide)
     let chatReady = false;       // historia załadowana (onHistory) — dopiero wtedy dokładamy powitania
-    let lastIntroTask = null;    // ostatnio pokazane powitanie (klucz zadania) — anty-duplikacja przy powrotach
+    let chatLoadedTask = null;   // klucz zadania, którego wątek jest AKTUALNIE załadowany w czacie (per task_key)
     const chatTaskTracked = new Set();  // dedup trackingu pierwszego pokazania czatu danego zadania
+
+    // Klucz bieżącego zadania czatowego (albo null: __done__ / zadanie nieczatowe jak pl_dane).
+    function currentChatKey() { return (tvActive && tvActive !== '__done__' && CHAT_TASKS.includes(tvActive)) ? tvActive : null; }
+    function introFor(key) { const ws = clientWs(key); return ws.chatIntro ? String(ws.chatIntro).replace(/%NAME%/g, (P.project && P.project.name) || 'Twojej marki') : ''; }
 
     // Montaż trwałej instancji czatu (raz). Komponent sam pobiera historię — stan kill-switcha z onHistory.
     function ensureChatMounted() {
@@ -1359,7 +1365,7 @@
             title: 'Asystent',
             subtitle: 'Napisz jak na czacie — poprowadzę Cię krok po kroku',
             // BEZ cfg.intro — powitania wstawiamy sami per zadanie (addLocalBubble), żeby zależały od kontekstu.
-            placeholder: 'Napisz wiadomość albo wklej zrzut (Ctrl+V)…',
+            placeholder: 'Napisz wiadomość…',   // krótki — placeholder nie przycina się na mobile (tip o zrzucie jest w hincie)
             height: 'min(400px, 54svh)',   // okno rozmowy; z nagłówkiem+composerem cała karta ≈ 480–560px / mobile ~60svh
 
             auth: () => previewMode ? { token, preview: true } : { token, password: currentPw },
@@ -1377,25 +1383,30 @@
             onHistory: (d) => {
                 asystentEnabled = (d && d.enabled !== false);
                 chatReady = true;
-                lastIntroTask = null;   // renderMessages właśnie wyczyściło dymki → pozwól ponownie wstawić powitanie
+                // renderMessages właśnie wyczyściło dymki. Jeśli wątek TEGO zadania jest PUSTY — wstaw
+                // powitanie jako PIERWSZY dymek. Przy powrocie do zadania wątek nie jest już pusty → bez dubla.
+                if (asystentEnabled !== false && !(d && Array.isArray(d.messages) && d.messages.length)) {
+                    const intro = introFor(currentChatKey());
+                    if (intro) chat.addLocalBubble('ai', intro);
+                }
                 refreshAsystentUi();
             },
         });
+        // Komponent SAM odpalił history dla bieżącego zadania (context()) — zapamiętaj wątek, by nie refetchować.
+        chatLoadedTask = currentChatKey();
     }
     // Odparkuj czat z powrotem do ukrytego hosta — zanim podmienimy innerHTML #tv-work albo wyjdziemy z widoku.
     function parkChat() {
         if (chat && chat.el) { const host = $('asystent-host'); if (host && chat.el.parentNode !== host) host.appendChild(chat.el); }
     }
-    // Powitanie per zadanie (lokalny dymek). Nie duplikuj: pokazuj tylko, gdy ostatnie powitanie ≠ to zadanie
-    // (re-render tego samego zadania / powrót bez zmiany → bez drugiego dymka).
-    function maybeIntro(key) {
-        if (!chat || !chatReady || asystentEnabled === false) return;
-        if (lastIntroTask === key) return;
-        const ws = clientWs(key);
-        const intro = ws.chatIntro ? String(ws.chatIntro).replace(/%NAME%/g, (P.project && P.project.name) || 'Twojej marki') : '';
-        if (intro) chat.addLocalBubble('ai', intro);   // %NAME% podmieniane surowo — komponent renderuje przez textContent
-        lastIntroTask = key;
-        trackChatTask(key);
+    // Przełączenie wątku czatu na zadanie: przeładuj historię z nowym task_key (przez context() → refresh()).
+    // Powitanie dokłada onHistory, gdy wątek zadania pusty. Idempotentne: ponowny render tego samego
+    // zadania nie refetchuje (chatLoadedTask). Dzięki temu wiadomości NIE przeciekają między zadaniami.
+    function syncChatTask(key) {
+        if (!chat) return;
+        if (chatLoadedTask === key) return;
+        chatLoadedTask = key;
+        chat.refresh();   // czyści log i pobiera historię filtrowaną po task_key (context())
     }
     // Tracking: pierwsze pokazanie czatu danego zadania w sesji (zamiast dawnych wejść przyciskami).
     function trackChatTask(key) {
