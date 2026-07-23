@@ -244,7 +244,18 @@ każdą liczbę: [KONKRET-SKU] / [SPEC] / [BEŁKOT-CUT].
 Vision-gate KAŻDEGO materiału: zdjęcia aukcji (infografiki z obcym
 tekstem/marką = odrzut z galerii, treść wolno cytować), zdjęcia opinii (zrzuty apki
 AliExpress/obce marki/off-topic = odrzut), WIDEO (poster/klatka — off-product w obie strony
-= sekcję pominąć, nawet przy milionach wyświetleń). Cena = półka rynkowa kategorii PL +
+= sekcję pominąć, nawet przy milionach wyświetleń).
+**⭐ ZDJĘCIA KUPUJĄCYCH — SELEKCJA (BRAMKOWANA; Tomek 23.07: „używać tylko te, które mają
+5 gwiazdek, ale też zobaczyć, które będą się najlepiej nadawać — są najładniejsze, mają
+pozytywny odbiór"):** do sekcji `zdjecia-kupujacych` wchodzą WYŁĄCZNIE obrazki z recenzji
+**`stars == 5`** (`ali_snapshot.reviews[].stars` — twardy filtr; zdjęcie z 4★, choćby ładne,
+= OUT, bo tekst-źródło niesie zastrzeżenie). Z puli 5★ **RANKING, nie pierwsze-lepsze** —
+obejrzyj vision-em WSZYSTKIE kandydatki i wybierz najlepsze wg: (a) jakość techniczna
+(ostrość/światło/kadr — rozmazane, ciemne, przypadkowe = odrzut), (b) produkt widoczny
+**W UŻYCIU/kontekście** (nie sam karton na podłodze), (c) pozytywny odbiór pary
+zdjęcie+tekst (podpis przy zdjęciu MUSI pochodzić z **TEJ SAMEJ** recenzji — nigdy
+miks tekstu jednej z fotką innej). Werdykt selekcji (ile kandydatek → ile wybrano → powody
+odrzutu jednym słowem) zapisz w `galeria-kuracja/GALERIA.md` (audytowalność). Cena = półka rynkowa kategorii PL +
 zdrowa marża (nie sztywny mnożnik); końcówki: <150 → ,90; ≥150 → pełne/9,00. Mini-marka:
 USP-first zdrobnienie korzyści (Zmieścik/Świtek/Blasik…), slug lowercase bez znaków.
 **⚠️ Dla produktu z ≥2 funkcjami (MAPA F0.6b) nazwa NIE koduje jednego zastosowania (anty-Popiołek;
@@ -470,6 +481,13 @@ egzekwowany na swojej fazie):
    mobile dominujący/pełnokadrowy), proporcje slotu = proporcje przyszłej pętli (beat nie
    będzie potem dokrawany), copy/CTA nie nachodzą na strefę ruchu. **Krytyk F2 ma TWARDY
    punkt „makieta hero zaprojektowana pod animację?" — FAIL blokuje F3.**
+   **⛔ JEDEN KADR = JEDNA SCENA (Tomek 23.07, Rozmrozik: „nie jestem przekonany do dwóch
+   zdjęć w hero — jak chcemy coś takiego zrobić, trzeba i tak dać JEDNO zdjęcie pokazujące
+   dwie sytuacje"):** hero-medium to ZAWSZE jedna fotografia/jedna ciągła rzeczywistość.
+   Kontrast przed/po lub dwie sytuacje = skomponowane WEWNĄTRZ jednego kadru (np. zamrożone
+   i rozmrożone na tym samym blacie tej samej sceny), NIGDY kolaż/duet dwóch osobnych zdjęć
+   obok siebie. Powód podwójny: kolaż rozbija kompozycję (feedback) i zabija i2v — Kling
+   animuje JEDNĄ scenę, dwa niezależne kadry = dwa pół-martwe światy w jednej pętli.
 3. **F3 sc-hero** generowana jako ŹRÓDŁO i2v, nie niezależna ilustracja: to samo zdjęcie
    jest posterem sceny i source'em generacji pętli (poster=klatka 1 ⇒ zero skoku przy
    fade-in). Test przydatności kadru przed zamknięciem F3: „czy Kling ma tu co poruszyć
@@ -798,6 +816,16 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
     kolejność cena→CTA? **Brak zaprojektowanego CTA na którejś z tych 4 makiet = REGEN makiety** (nie
     „przycisk dorobi koder" — goły re-CTA dodany w kodzie = FAIL projektowy). Sekcja mid-CTA bez CTA
     w kadrze = ta sama wada, o której mówił Tomek, o krok subtelniejsza.
+    (+ 12) **⚖️ RÓWNOWAGA MEDIA↔TEKST (Tomek 23.07, Brzuszek/KONSTRUKCJA: „zobacz jakie małe
+    zdjęcie w porównaniu do tekstu i źle to wygląda"): w sekcji dwukolumnowej media+tekst obraz
+    NIE MOŻE być thumbnailem zagubionym obok ściany tekstu.** Test krytyka (makieta F2 ORAZ
+    render kodu F6/F7 — layout potrafi się rozjechać dopiero w kodzie): (a) kolumna medialna
+    wizualnie RÓWNORZĘDNA z tekstową (obraz dopełnia wysokość bloku tekstu — `align-items:
+    stretch` + `height:100%/object-fit:cover`, nie `center` z pustką nad/pod); (b) obraz zajmuje
+    ≥~40% szerokości sekcji na desktopie; (c) gdy tekst jest znacznie wyższy niż naturalny kadr —
+    powiększ obraz do wysokości kolumny (crop cover) ALBO dołóż drugi kadr detalu, NIGDY nie
+    zostawiaj „znaczka pocztowego" w morzu pustki. Incydent wzorcowy: sekcja `wytrzymalosc`
+    Brzuszka — zdjęcie 421×280 px obok kolumny tekstu ~950 px = FAIL.
 - **🥇 BRIEF CELU > DYKTAT ELEMENTÓW (Tomek 16.07, potwierdzone testem A/B na hero Uśmieszka):**
   najlepsze makiety wychodzą, gdy prompt opowiada CO sprzedajemy, KOMU i CO klient ma poczuć,
   a PRAWDZIWE fakty (cena, oceny, cechy, płatności) podaje jako MATERIAŁ do wyboru — kompozycję
