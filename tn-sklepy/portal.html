@@ -246,6 +246,63 @@
         .lp-shop:hover { border-color:#3f3f46; background:#0d0d0d; }
         .lp-note { margin-top:13px; color:#5c5c64; font-size:12px; display:flex; align-items:center; gap:7px; }
         @media (max-width:560px){ .lp-body { padding:13px 15px; } .lp-go { padding:8px 12px; font-size:12.5px; } }
+        /* ── NAWIGACJA PANELU (widoki SPA) ─────────────────────────────────────
+           Desktop ≥1025px: stały sidebar 240px (wzorzec starego panelu klienta).
+           Mobile ≤1024px: dolny pasek ikon (app-feel). Widoczne tylko przy
+           zalogowanej treści (body.nav-on); ekran zadań ma własny topbar. */
+        .off { display:none !important; }
+        #side-nav { position:fixed; top:0; left:0; bottom:0; width:240px; z-index:45; background:#080808;
+            border-right:1px solid #1a1a1c; display:none; flex-direction:column; }
+        body.nav-on #side-nav { display:flex; }
+        @media (max-width:1024px){ body.nav-on #side-nav { display:none; } }
+        .sn-head { padding:18px 18px 15px; border-bottom:1px solid #161616; display:flex; gap:12px; align-items:center; }
+        .sn-brand { color:#fff; font-size:14px; font-weight:600; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sn-status { color:#71717a; font-size:11px; margin-top:3px; white-space:nowrap; }
+        .sn-nav { flex:1; padding:12px 10px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; }
+        .sn-item { display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; color:#8a8a93;
+            font-size:13.5px; font-weight:500; cursor:pointer; background:none; border:none; text-align:left; width:100%;
+            font-family:inherit; transition:background .15s, color .15s; }
+        .sn-item:hover { background:rgba(255,255,255,.04); color:#c4c4ca; }
+        .sn-item.active { background:rgba(255,255,255,.08); color:#fff; }
+        .sn-item i { font-size:17px; width:20px; text-align:center; flex-shrink:0; }
+        .sn-count { margin-left:auto; font-size:11px; color:#6b6b74; font-variant-numeric:tabular-nums; }
+        .sn-count.todo { background:#f5a623; color:#111; border-radius:99px; min-width:18px; height:18px;
+            display:inline-flex; align-items:center; justify-content:center; font-weight:700; padding:0 5px; }
+        .sn-foot { padding:14px 18px; border-top:1px solid #161616; color:#5c5c64; font-size:11.5px; line-height:1.6; }
+        #bottom-nav { position:fixed; left:0; right:0; bottom:0; z-index:45; display:none; gap:2px;
+            background:rgba(8,8,8,.94); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+            border-top:1px solid #1c1c1f; padding:6px 8px calc(6px + env(safe-area-inset-bottom)); }
+        @media (max-width:1024px){ body.nav-on #bottom-nav { display:flex; } body.nav-on .wrap { padding-bottom:96px; } }
+        .bn-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 2px 5px;
+            background:none; border:none; color:#6b6b74; font-size:10px; font-weight:500; cursor:pointer;
+            border-radius:9px; position:relative; font-family:inherit; min-width:0; }
+        .bn-item i { font-size:20px; }
+        .bn-item.active { color:#fff; }
+        .bn-item.active i { color:#52a8ff; }
+        .bn-badge { position:absolute; top:2px; left:calc(50% + 4px); min-width:16px; height:16px; border-radius:99px;
+            background:#f5a623; color:#111; font-size:9.5px; font-weight:700; display:flex; align-items:center;
+            justify-content:center; padding:0 4px; }
+        /* desktop z sidebarem: treść centrowana w pozostałej przestrzeni; nagłówek marki przejmuje sidebar */
+        @media (min-width:1025px){
+            body.nav-on .wrap { margin-left:240px; max-width:none; }
+            body.nav-on #content { max-width:60rem; margin:0 auto; }
+            body.nav-on .p-head { display:none; }
+        }
+        /* ── Kafle-skróty na widoku START ── */
+        .sc-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:14px; }
+        @media (max-width:640px){ .sc-grid { grid-template-columns:1fr; } }
+        .sc-tile { display:flex; flex-direction:column; gap:12px; text-align:left; background:#0a0a0a; border:1px solid #1f1f1f;
+            border-radius:12px; padding:16px; cursor:pointer; color:inherit; font-family:inherit; font-size:inherit;
+            transition:border-color .15s, background .15s; }
+        .sc-tile:hover { border-color:#3a3a42; background:#0c0c0c; }
+        .sc-top { display:flex; align-items:center; gap:11px; }
+        .sc-h { color:#fff; font-size:14px; font-weight:600; letter-spacing:-.01em; }
+        .sc-s { color:#8a8a93; font-size:12.5px; line-height:1.5; }
+        .sc-arrow { margin-left:auto; color:#52525b; font-size:15px; flex-shrink:0; }
+        .sc-covers { display:flex; align-items:center; }
+        .sc-covers img { width:26px; height:26px; border-radius:7px; object-fit:cover; border:1px solid #26262a; margin-left:-7px; background:#141416; }
+        .sc-covers img:first-child { margin-left:0; }
+        .sc-live { display:inline-flex; align-items:center; gap:6px; color:#7fdba0; font-size:12px; font-weight:600; margin-left:9px; }
         /* Mobile: pola 16px = brak auto-zoomu iOS; główne przyciski pełnej szerokości */
         @media (max-width:560px){
             input[type=password], input[type=text], input[type=email], textarea { font-size:16px; }
@@ -379,6 +436,22 @@
     <!-- Ładowanie -->
     <div id="loading" class="skel"><i class="ph ph-circle-notch ph-spin" style="font-size:28px"></i><div style="margin-top:10px">Wczytuję panel…</div></div>
 
+<!-- Nawigacja panelu: sidebar (desktop) — wzorzec starego panelu klienta, skórka Geist -->
+<aside id="side-nav" aria-label="Menu panelu">
+    <div class="sn-head">
+        <div class="p-logo" id="sn-logo">·</div>
+        <div class="min-w-0">
+            <div class="sn-brand" id="sn-brand">…</div>
+            <div class="sn-status" id="sn-status"></div>
+        </div>
+    </div>
+    <nav class="sn-nav" id="sn-nav"></nav>
+    <div class="sn-foot">Masz pytanie? Odpisz po prostu na naszą korespondencję mailową.</div>
+</aside>
+
+<!-- Nawigacja panelu: dolny pasek (mobile, app-feel) -->
+<nav id="bottom-nav" aria-label="Menu panelu"></nav>
+
 <div class="wrap">
 
     <!-- Treść -->
@@ -392,20 +465,26 @@
             <span class="stage-badge" id="p-stage"></span>
         </div>
 
-        <div class="prog">
-            <div class="prog-bar"><div id="p-bar"></div></div>
-            <span class="prog-pct" id="p-pct"></span>
-        </div>
-        <p id="p-stageline" style="color:#a7a7af;font-size:13.5px;margin-top:8px"></p>
+        <!-- Widok START: postęp + Twój ruch -->
+        <div id="sec-overview">
+            <div class="prog">
+                <div class="prog-bar"><div id="p-bar"></div></div>
+                <span class="prog-pct" id="p-pct"></span>
+            </div>
+            <p id="p-stageline" style="color:#a7a7af;font-size:13.5px;margin-top:8px"></p>
 
-        <!-- Twój ruch / Pracujemy nad -->
-        <div id="p-move"></div>
+            <!-- Twój ruch / Pracujemy nad -->
+            <div id="p-move"></div>
+        </div>
 
         <!-- Strony Waszych produktów — WYŁĄCZNIE w pełni ukończone strony (landing_ready z edge) -->
         <section id="sec-landings" class="hidden"></section>
 
         <!-- Twoje zadania — karta-CTA (pełny przepływ w ekranie #tasks-view) -->
         <section id="sec-tasks" class="hidden"></section>
+
+        <!-- Widok START: kafle-skróty do pozostałych miejsc panelu -->
+        <section id="sec-shortcuts" class="hidden"></section>
 
         <!-- Panel Twojego sklepu — login + link + ustaw hasło (gdy konto merchanta = e-mail klienta) -->
         <section id="sec-merchant" class="hidden"></section>
@@ -535,7 +614,10 @@
     const trackedMedia = new Set();
     let visitTracked = false;
 
-    function show(id) { ['login','setpw','consent','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id)); }
+    function show(id) {
+        ['login','setpw','consent','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+        document.body.classList.toggle('nav-on', id === 'content'); // sidebar/bottom-nav tylko przy treści panelu
+    }
     function authHeaders() { const h = { 'Content-Type': 'application/json' }; if (previewMode && adminJwt) h['Authorization'] = 'Bearer ' + adminJwt; return h; }
     async function api(body) {
         const r = await fetch(FN_URL, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body || {}) });
@@ -788,9 +870,117 @@
     function enterPortal() {
         show('content');
         if (previewMode) $('preview-banner').classList.remove('hidden');
-        // deep-link #…v=zadania → od razu ekran zadań
-        if (tasksHashOn()) { syncTasksView(); tasksScreenTracked = true; track('open_step', 'Twoje zadania'); }
+        // deep-link #…v=zadania|strony|postep|sklep → właściwy widok od razu
+        syncView();
+        if (tasksHashOn()) { tasksScreenTracked = true; track('open_step', 'Twoje zadania'); }
         trackVisit();
+    }
+
+    // ── Widoki panelu (SPA): start | strony | postep | sklep (+ „zadania" = osobny ekran) ──
+    // Sekcje mają DWA niezależne przełączniki: .hidden = „czy jest treść" (ustawiają render*),
+    // .off = „czy sekcja należy do aktywnego widoku" (ustawia applyView). Deep-link = #…v=<widok>.
+    const VIEW_IDS = {
+        start:  ['sec-overview', 'sec-tasks', 'sec-shortcuts'],
+        strony: ['sec-landings'],
+        postep: ['stage-nav', 'sec-process', 'sec-portfolio'],
+        sklep:  ['sec-merchant'],
+    };
+    const ALL_VIEW_IDS = [...new Set(Object.values(VIEW_IDS).flat())];
+    const viewTracked = new Set();
+    function viewHashGet() {
+        const v = new URLSearchParams((location.hash || '').replace(/^#/, '')).get('v') || 'start';
+        return VIEW_IDS[v] ? v : 'start';
+    }
+    // widok bez treści (np. deep-link do stron, zanim pierwsza jest gotowa) → start
+    function viewSafe(v) {
+        if (!VIEW_IDS[v]) return 'start';
+        if (v === 'strony' && !landingProducts().length) return 'start';
+        if (v === 'sklep' && !P.merchantPanel) return 'start';
+        return v;
+    }
+    function applyView(v) {
+        v = viewSafe(v);
+        ALL_VIEW_IDS.forEach(id => { const el = $(id); if (el) el.classList.toggle('off', !VIEW_IDS[v].includes(id)); });
+        document.querySelectorAll('.sn-item[data-v], .bn-item[data-v]').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+        return v;
+    }
+    function enterView(v) {
+        if (v === 'zadania') { enterTasks(); return; }
+        v = applyView(v);
+        const p = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+        if (v === 'start') p.delete('v'); else p.set('v', v);
+        const s = p.toString();
+        try { history.pushState(null, '', location.pathname + location.search + (s ? '#' + s : '')); } catch (e) {}
+        window.scrollTo(0, 0);
+        if (v !== 'start' && !viewTracked.has(v)) {
+            viewTracked.add(v);
+            const names = { strony: 'Twoje strony', postep: 'Postęp prac', sklep: 'Panel sklepu' };
+            track('open_step', 'Zakładka: ' + (names[v] || v));
+        }
+    }
+
+    // ── Menu panelu: sidebar (desktop) + dolny pasek (mobile) ──────────────────
+    const BN_SHORT = { start: 'Start', strony: 'Strony', zadania: 'Zadania', postep: 'Postęp', sklep: 'Sklep' };
+    function navItems() {
+        const tasks = tvTasks().filter(taskUnlocked);
+        const todo = tasks.filter(d => !isTaskDone(d)).length;
+        const landN = landingProducts().length;
+        const items = [
+            { v: 'start',   icon: 'ph-house',                label: 'Start' },
+            { v: 'strony',  icon: 'ph-globe-hemisphere-west', label: 'Twoje strony', count: landN, show: landN > 0 },
+            { v: 'zadania', icon: 'ph-list-checks',          label: 'Twoje zadania', badge: todo, show: tasks.length > 0 },
+            { v: 'postep',  icon: 'ph-steps',                label: 'Postęp prac' },
+            { v: 'sklep',   icon: 'ph-storefront',           label: 'Panel sklepu', show: !!P.merchantPanel },
+        ];
+        return items.filter(it => it.show !== false);
+    }
+    function renderNav() {
+        const items = navItems();
+        $('sn-nav').innerHTML = items.map(it => `<button type="button" class="sn-item" data-v="${it.v}" onclick="enterView('${it.v}')">
+            <i class="ph ${it.icon}"></i>${escapeHtml(it.label)}
+            ${it.badge ? `<span class="sn-count todo">${it.badge}</span>` : (it.count ? `<span class="sn-count">${it.count}</span>` : '')}
+        </button>`).join('');
+        $('bottom-nav').innerHTML = items.map(it => `<button type="button" class="bn-item" data-v="${it.v}" onclick="enterView('${it.v}')">
+            <i class="ph ${it.icon}"></i>${escapeHtml(BN_SHORT[it.v] || it.label)}
+            ${it.badge ? `<span class="bn-badge">${it.badge}</span>` : ''}
+        </button>`).join('');
+        const pr = P.project || {};
+        $('sn-logo').textContent = ((pr.name || pr.customer_name || '?').trim()[0] || '?').toUpperCase();
+        $('sn-brand').textContent = pr.name || pr.customer_name || 'Wasz sklep';
+    }
+
+    // ── Kafle-skróty na widoku START ───────────────────────────────────────────
+    function renderShortcuts() {
+        const sec = $('sec-shortcuts');
+        const tiles = [];
+        const lands = landingProducts();
+        if (lands.length) {
+            const n = lands.length;
+            const sub = n === 1 ? '1 strona działa na żywo' : (n >= 2 && n <= 4 ? n + ' strony działają na żywo' : n + ' stron działa na żywo');
+            const covers = lands.slice(0, 3).map(p => p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" alt="" loading="lazy">` : '').join('');
+            tiles.push(`<button type="button" class="sc-tile" onclick="enterView('strony')">
+                <div class="sc-top"><div class="hc-ic hc-ic-done"><i class="ph ph-globe-hemisphere-west"></i></div>
+                <div><div class="sc-h">Twoje strony</div><div class="sc-s">${sub}</div></div>
+                <i class="ph ph-caret-right sc-arrow"></i></div>
+                <div class="sc-covers">${covers}<span class="sc-live"><span class="lp-live-dot"></span> Na żywo</span></div>
+            </button>`);
+        }
+        const nums = stageNums(); const front = frontStage();
+        const stDesc = front === Infinity ? 'Wszystkie etapy ukończone' : ('Etap ' + front + ' z ' + nums.length + ' w toku');
+        tiles.push(`<button type="button" class="sc-tile" onclick="enterView('postep')">
+            <div class="sc-top"><div class="hc-ic"><i class="ph ph-steps"></i></div>
+            <div><div class="sc-h">Postęp prac</div><div class="sc-s">${escapeHtml(stDesc)}</div></div>
+            <i class="ph ph-caret-right sc-arrow"></i></div>
+        </button>`);
+        if (P.merchantPanel) {
+            tiles.push(`<button type="button" class="sc-tile" onclick="enterView('sklep')">
+                <div class="sc-top"><div class="hc-ic"><i class="ph ph-storefront"></i></div>
+                <div><div class="sc-h">Panel sklepu</div><div class="sc-s">Zamówienia, produkty, ustawienia</div></div>
+                <i class="ph ph-caret-right sc-arrow"></i></div>
+            </button>`);
+        }
+        sec.classList.toggle('hidden', !tiles.length);
+        sec.innerHTML = tiles.length ? `<div class="sc-grid">${tiles.join('')}</div>` : '';
     }
     // ── Bramka zgody na rozpoczęcie prac (jedna decyzja: potwierdzam) ──────────
     function buildConsent(prompt) {
@@ -904,6 +1094,7 @@
         const frontDef = defsForStage(front === Infinity ? nums[nums.length - 1] : front)[0];
         const stageLabel = frontDef ? frontDef.stage_label : '';
         $('p-stage').textContent = front === Infinity ? 'Gotowe' : ('Etap ' + front + ' z ' + nums.length);
+        $('sn-status').textContent = front === Infinity ? 'Wszystkie etapy ukończone' : ('Etap ' + front + ' z ' + nums.length + ' · ' + pct + '%');
         $('p-stageline').innerHTML = front === Infinity
             ? 'Wszystkie etapy za nami — sklep działa.'
             : `Jesteśmy na etapie: <b style="color:#fff">${escapeHtml(stageLabel)}</b>`;
@@ -913,6 +1104,9 @@
         renderMerchantPanel();
         renderStageNav();
         renderCeny();
+        renderNav();
+        renderShortcuts();
+        applyView(viewHashGet());
         if (pr.deadline_at) { const d = new Date(pr.deadline_at); if (!isNaN(d)) $('p-deadline').textContent = 'Planowane domknięcie: ' + d.toLocaleDateString('pl-PL'); }
         $('tv-brand').textContent = pr.name || pr.customer_name || 'Wasz sklep';
     }
@@ -1157,9 +1351,13 @@
         return `<div class="ceny-hurt">💡 <b>Potencjał hurtowy:</b> kupując hurtowo (zwykle 30–50% taniej), zysk na sztuce mógłby wynieść od <b>${fmtZl(wf.profit_lo)} zł</b> do <b>${fmtZl(wf.profit_hi)} zł</b>.</div>`;
     }
 
+    // ⛔ Sekcja cen SCHOWANA do odwołania (decyzja Tomka 23.07: „na razie tego nie pokazuj
+    // po stronie panelu — być może do tego wrócimy"). Kod i edge (set_client_cost) zostają
+    // nietknięte — powrót = przestawienie flagi na true.
+    const CENY_SECTION_ENABLED = false;
     function renderCeny() {
         const sec = $('sec-ceny');
-        const list = cenyProducts();
+        const list = CENY_SECTION_ENABLED ? cenyProducts() : [];
         if (!list.length) { sec.classList.add('hidden'); $('ceny-list').innerHTML = ''; return; }
         sec.classList.remove('hidden');
         $('ceny-count').textContent = list.length + ' ' + plProd(list.length);
@@ -1296,8 +1494,8 @@
         const s = p.toString();
         return location.pathname + location.search + (s ? '#' + s : '');
     }
-    function _showTasksDom() { ensureChatMounted(); $('tasks-view').classList.remove('hidden'); document.querySelector('.wrap').classList.add('hidden'); window.scrollTo(0, 0); }
-    function _showHomeDom() { parkChat(); $('tasks-view').classList.add('hidden'); document.querySelector('.wrap').classList.remove('hidden'); }
+    function _showTasksDom() { ensureChatMounted(); $('tasks-view').classList.remove('hidden'); document.querySelector('.wrap').classList.add('hidden'); document.body.classList.remove('nav-on'); window.scrollTo(0, 0); }
+    function _showHomeDom() { parkChat(); $('tasks-view').classList.add('hidden'); document.querySelector('.wrap').classList.remove('hidden'); document.body.classList.add('nav-on'); }
 
     // wejście na ekran zadań; key = zadanie do otwarcia (opcjonalnie)
     function enterTasks(key) {
@@ -1315,14 +1513,14 @@
     }
     // powrót: cofnij historię (żeby wstecz przeglądarki działało spójnie), fallback = pokaż panel
     function exitTasks() { if (tasksHashOn()) { history.back(); } else { _showHomeDom(); } }
-    // synchronizacja z hashem (popstate / deep-link #…v=zadania)
-    function syncTasksView() {
+    // synchronizacja z hashem (popstate / deep-link #…v=zadania|strony|postep|sklep)
+    function syncView() {
         if (tasksHashOn()) {
             if (!tvActive) { const t = tvTasks(); const u = t.find(d => taskUnlocked(d) && !isTaskDone(d)); tvActive = u ? u.key : '__done__'; }
             _showTasksDom(); renderTasksView();
-        } else { _showHomeDom(); }
+        } else { _showHomeDom(); applyView(viewHashGet()); }
     }
-    window.addEventListener('popstate', () => { if (!$('content').classList.contains('hidden')) syncTasksView(); });
+    window.addEventListener('popstate', () => { if (!$('content').classList.contains('hidden')) syncView(); });
 
     function selectTask(key) {
         // klik w krok spoza listy (np. ukryte „przejęcia" z boxów etapu) → pierwsze niezrobione
