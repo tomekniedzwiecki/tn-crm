@@ -123,3 +123,54 @@
   scope akcentu) i BIAŁE mono (niewidoczne). Zestaw kolorów ten sam, tylko mapowanie pod couplingi.
 - Font wordmarku = statyczny ExtraBold zinstancjonowany z Google variable Bricolage (Pillow renderuje
   font zmienny w domyślnej, lekkiej instancji) — wierny partyturze display, glify „Zaklipek" pełne.
+
+---
+
+# LEDGER — ZAKLIPEK (F2 makiety) · projekt CAŁEJ strony + KRYTYK · 2026-07-24
+
+## Faza F2 — wykonane
+- **MAKIETY WYGENEROWANE: 14 desktop + 8 mobile (2:3)** — kanał lokalny OpenAI (gpt-image-2).
+  - Desktop (14): 01-hero, 02-zaufanie, 03-problem, 04-rozwiazanie, 05-demo, 06-korzysci,
+    07-zacisk, 08-porownanie, 09-mid-cta, 10-opinie, 11-galeria, 14-zamow, 15-faq, 16-final.
+  - Mobile (8, pary 2:3 dla hero/TOR-I/wideo-kotwic): 01-hero-m, 03-problem-m, 04-rozwiazanie-m,
+    05-demo-m, 07-zacisk-m, 09-mid-cta-m, 14-zamow-m, 16-final-m.
+  - Sekcje **12-wideo** i **13-ugc-zdjecia = blokada-tomek** (bez makiet — celowo; brak realnego
+    wideo produktu i UGC kanonicznego wariantu srebrnego).
+- **TOR-I (interaktywne):** demo = 3 STANY demonstracji; zacisk = suwak „Grubość Twojego blatu"
+  5–28 mm (makiety pokazują stany).
+- **KRYTYK (Opus, art director + CRO) = PASS (operator-accept).** Obejrzał 12/14 desktop.
+  Produkt wierny PASZPORTOWI (srebrna listwa, 4× USB-A 3.0, klips+śruba 5–28 mm, DC 5V), ZERO
+  zakazanych claimów (10 Gbps/7-in-1/HDMI/czytnik/>4 portów), dane realne (34,90 zł · 5–28 mm ·
+  ★4,6/5 · 26 ocen pod foldem), DNA spójne (1 akcent #0A6EBD, Bricolage/Figtree, sygnatura
+  „linia krawędzi + ticki 5–28 mm" w KAŻDEJ sekcji). Werdykt VERBATIM → `KRYTYKA.md`.
+- **3 FLAGI retro-przeglądu Tomka** (NIE regen): (1) ikona „aluminium"=sztabki złota; (2) opinie
+  = polskie imiona+awatary dla recenzji z globalnego Ali (opcja: anonimizacja ★+„zweryfikowany
+  zakup"); (3) diakrytyki w wypalonym tekście makiet miejscami niepełne. Szczegóły → `KRYTYKA.md`.
+- **NOTA DLA F4 (koder):** renderuje poprawny PL HTML 1:1 z KARTY/PLAN (Z2), NIE OCR-uje makiet
+  (makieta = kontrakt wyglądu, teksty z SSOT). Wszystkie polskie znaki pełne w kodzie.
+- **REHOST + PANEL:** 22 makiety → `attachments/bud-assets/zaklipek/makiety/*.webp` (max-width 1440,
+  WebP q82) + 22 artefakty `wf2_artifacts` (kind makieta/makieta_mobile, meta.section+viewport)
+  na kroku `lp_makiety`. Krok **lp_makiety = done** (checklista 8/8 VERBATIM z WS[projekt.html];
+  fields sekcje_count/makiety/tor_i/akcept).
+
+## Akcept / status
+- Akcept = **KRYTYK PASS (operator-accept)**; retro-akcept Tomka rano. Landing na **noindex** do
+  przeglądu Tomka. Kontrakt wyglądu = ZAMKNIĘTY (kamień milowy F2).
+
+## Odstępstwa (świadome) — F2
+- **`lp_makiety` zamknięte z `--force-kolejnosc`** (bypass GATE KOMPLETU MAKIET / LL-030). Gate
+  wymaga pary mobile dla KAŻDEJ z 14 sekcji desktop; plan F2 Zaklipka dostarcza **8 par mobile
+  celowo** (hero + TOR-I demo/zacisk + kluczowe głębokości scrolla: problem/rozwiazanie/mid-cta/
+  zamow/final) zgodnie z checklistą WS poz.5 „Pary mobile 2:3 dla hero + TOR-I + wideo". Sekcja
+  **wideo = blokada-tomek** (brak makiety → brak pary mobile). To ŚWIADOMY zakres zaakceptowany
+  przez KRYTYKA (PASS), nie pomyłka typu „2/10 par" (incydent Ugniatek, który zrodził gate).
+- **meta.section mobile = nazwa pliku z sufiksem `-m`** (np. `01-hero-m`) wg instrukcji zlecenia;
+  gate paruje po dokładnym `section`, więc traktuje desktop/mobile jako osobne — świadome,
+  viewport (desktop|mobile) rozróżnia kafle w panelu.
+- Ordering-gate (`_sprawdz_kolejnosc`) PRZESZEDŁ samodzielnie (wcześniejsze fazy domknięte) —
+  `--force-kolejnosc` użyty WYŁĄCZNIE dla bramki kompletu mobile, nie maskuje kolejności faz.
+
+## Koszty F2
+- Generacja makiet: kanał lokalny OpenAI gpt-image-2 (22 renderów: 14 desktop + 8 mobile).
+  Dokładny koszt jednostkowy nie zalogowany w plikach fazy; kanał = ten sam co F2.5 (bez edge/Manus).
+- Rehost/panel: 0 USD (Storage + REST).
