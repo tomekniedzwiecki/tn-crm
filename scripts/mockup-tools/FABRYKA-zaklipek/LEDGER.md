@@ -174,3 +174,60 @@
 - Generacja makiet: kanał lokalny OpenAI gpt-image-2 (22 renderów: 14 desktop + 8 mobile).
   Dokładny koszt jednostkowy nie zalogowany w plikach fazy; kanał = ten sam co F2.5 (bez edge/Manus).
 - Rehost/panel: 0 USD (Storage + REST).
+
+---
+
+# F3 — GRAFIKI PRODUKCYJNE (sceny + packshot + galeria + OG) · 2026-07-24
+
+## Zasada wykonania: CROP-FIRST
+Makiety Zaklipka mają JUŻ czyste rendery scen (tekst leży OBOK sceny, nie na niej) → **16 assetów
+= CROP pixel-perfect z zaakceptowanych makiet ($0, jedyna pixel-perfect ścieżka)**; **2 assety
+= REGEN** (mid-cta, final — tam tekst leżał NA scenie). Skrypty: `assets/_crop.py` (CROP),
+`assets/_regen.py` (REGEN), `assets/_og.py` (OG), `assets/_rehost.py` (Storage+panel), `assets/_step.py`.
+
+## CROP (16) — źródło → asset
+- `packshot-base.png` (+ `-transparent`) ← CROP lewej `14-zamow.png` (czysty srebrny hub na bieli).
+- `sc-hero-d/-m` ← prawa/góra `01-hero(.-m)`; `sc-problem/-m` ← lewa/góra `03-problem(.-m)` (BEZ produktu);
+  `sc-rozwiazanie/-m` ← prawa/góra `04-rozwiazanie(.-m)`; `sc-demo-01/02/03` ← 3 kafle `05-demo`;
+  `sc-zacisk/-m` ← lewa/góra `07-zacisk(.-m)`; `gal-01..04` ← 4 kafle `11-galeria`.
+- Korekty granic po inspekcji: hero-d left 700→735 (ghost narożnika karty), rozwiazanie left 548→700
+  (fragmenty nagłówka „edzi-" do x=688).
+
+## REGEN (2) — prompty czysto scenowe (prompt-lint PASS, `--expect-product-ref`)
+Ref = ZAAKCEPTOWANA makieta jako baza `/v1/images/edits` (produkt już wierny w makiecie), gpt-image-2 HIGH, 1536x1024.
+- **sc-midcta** (prompt `assets/p-midcta.txt`): „Image 1 is the EXACT reference — reproduce it unchanged:
+  … remove every text headline, price, button, badge … fill with natural continuation of the dark wall
+  and desk surface …". prompt-lint: ✓ OK (prefiks referencji, zero opisu produktu).
+- **sc-final** (prompt `assets/p-final.txt`): „Image 1 is the EXACT reference — reproduce it unchanged:
+  … remove every text headline, button, star rating … fill with natural continuation of the wall and desk …".
+  prompt-lint: ✓ OK. Obie sceny czyste za 1. podejściem (rundy=1).
+
+## F3A — BRAMKA WIERNOŚCI (DWIE pary oczu) → `WIERNOSC.md`
+- pass-1 (orchestrator) + pass-2 (ŚWIEŻY Sonnet, bez promptów/werdyktu-1) — trójkąt: grafika + PASZPORT
+  (K=7 cech) + realny kadr `_product-ref.png`. **15/15 grafik produktowych = ZGODNA** (zbieżność pass-1==pass-2,
+  zero rozjazdu). Zero czerwonych flag (brak czarnego wariantu / ORICO / Eswirepro / >4 portów / czytnika kart /
+  HDMI / „10 Gbps" / bryły sześciennej). Dłonie (hero/demo-01/demo-02/zacisk) anatomia OK. `sc-problem/-m` =
+  S-kontekst BEZ produktu (poza gate). OG poza tabelą (doktryna).
+
+## Anty-monotonia / budżet
+- **≥13 distinct product views** (min 5) — patrz `MAPA-ASSETOW.md`; żaden kadr 1:1 nie powtórzony.
+- Waga 1. ekranu (sc-hero-d 37.3 KB + packshot-base 20.5 KB) = **57.7 KB « próg 350 KB** (WebP q82).
+
+## Rehost + panel
+- 20 assetów → `attachments/bud-assets/zaklipek/assets/*.webp` (OG jako `.png` — social-safe) + 20
+  `wf2_artifacts` (kind scena/image, meta section/viewport/rola) na kroku `lp_grafiki`.
+- Doki `MAPA-ASSETOW.md`, `WIERNOSC.md` → PRYWATNY `wf2-docs/zaklipek/` (chipy w panelu).
+- Krok **`lp_grafiki` = done** (checklista 7/7 VERBATIM z WS; fields assets_dir/distinct_views/mapa_url/waga_first).
+
+## Odstępstwa (świadome) — F3
+- **Hero = 2 warianty dedykowane** (desktop 3:2 + mobile 2:3) zamiast 3. Tablet (~1:1) = reframe
+  `object-fit:cover` z desktop-cropa w F4 (`<picture>` 2 źródła obsługują 3 breakpointy) — checklista poz.3
+  odhaczona funkcjonalnie, zgodnie z zakresem zlecenia F3 (sc-hero-d + sc-hero-m).
+- **Galeria = CROP renderów z makiety F2** (nie realne kadry Ali `gallery_curated`) — plan §11 zakładał
+  realne kadry po retuszu, ale F2 dostarczył czyste rendery AI galerii (klasa S), wierne PASZPORTOWI (pass-2 TAK).
+- **Mobile scen problem/rozwiazanie/zacisk = CROP** (bonus poza jawną listą nazw) — bo makiety `-m` istnieją
+  i F4 `<picture>` ich potrzebuje; demo mobile pominięte (3 stany desktopu reużywalne w stacku pionowym).
+
+## Koszty F3
+- CROP + OG + rehost = **0 USD** (PIL + Storage/REST, kanał lokalny).
+- REGEN 2 sceny: 2× gpt-image-2 HIGH edits (kanał lokalny OpenAI, jak F2) — koszt jednostkowy jak makiety F2.
