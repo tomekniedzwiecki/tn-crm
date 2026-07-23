@@ -5480,10 +5480,23 @@
       stroke-linejoin: round;
     }
 
+    /* FIX 23.07 (feedback Tomka: „źle ostylowany checkout"): moduł kasy jest projektowany
+       na kontener ~900px — w kolumnie ~600px jego wewnętrzny grid kolapsował main do 192px
+       (łamane CTA/suma), a karta modułu dublowała się z .zm-checkout-card. Scoped #zamow:
+       jedna karta (outer), zero sekcyjnego paddingu, formularz jednokolumnowy. */
+    #zamow .zc-checkout { padding: 0; background: transparent; }
+    #zamow .zc-checkout .zc-card { border: 0; background: transparent; box-shadow: none; padding: 0; max-width: none; margin: 0; }
+    #zamow .zc-checkout .zc-form { display: flex; flex-direction: column; }
+    @media (min-width: 900px) {
+      #zamow .zc-checkout .zc-form { grid-template-columns: none; }
+      #zamow .zc-checkout .zc-summary { position: static; }
+    }
+
     #zamow .zm-checkout-card {
       min-height: 180px;
       overflow: hidden;
       box-shadow: var(--shadow-lg);
+      padding: var(--s4);
     }
 
     /* Skin modułu checkout-inline@2 */

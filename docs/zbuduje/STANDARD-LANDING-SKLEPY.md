@@ -1492,6 +1492,23 @@ z widoczną etykietą i strefą pod cenę) — brief F2 tych czterech sekcji **j
 a KRYTYK makiet sprawdza jego obecność (brak zaprojektowanego CTA na tych makietach = regen). Przycisk
 pojawiający się dopiero w kodzie na makiecie bez CTA = rozjazd makieta↔kod (goły re-CTA = FAIL projektowy).
 
+**OSADZENIE MODUŁU KASY (Tomek 23.07, Brzuszek: „w ogóle widzę, że jest źle ostylowany
+checkout. Zgłaszam Ci to już kolejny raz"):** moduł checkout-inline jest PROJEKTOWANY na
+kontener **~900 px** na desktopie (wewnętrzny grid `minmax(0,1fr) 314px` reaguje na VIEWPORT,
+nie na kontener!). Root cause Brzuszka: custom layout `#zamow` (2 kolumny 5fr/7fr) wcisnął
+moduł w ~600 px → main skolapsował do 192 px (łamane CTA i „Razem do zapłaty"), karta modułu
+zdublowała się z kartą wrappera, sekcyjny padding modułu zrobił martwe białe pasy. REGUŁY:
+1. Osadzenie kanoniczne (moduł = cała sekcja, kontener ≥860 px) — domyślne i preferowane.
+2. Osadzenie w węższej kolumnie custom = OBOWIĄZKOWY skin jednokolumnowy scoped `#zamow`
+   (wzorzec Brzuszek 23.07): `.zc-checkout{padding:0;background:transparent}` ·
+   `.zc-card{border:0;background:transparent;box-shadow:none;padding:0;max-width:none;margin:0}`
+   · `.zc-form{display:flex;flex-direction:column}` + `@media(min-width:900px){grid-template-
+   columns:none; .zc-summary{position:static}}` · JEDNA karta (wrapper z paddingiem).
+3. **„Mechanika nietykalna" ≠ „wygląd nieoceniany"**: sekcja `#zamow` WCHODZI do oceny
+   wizualnej jak każda inna — dopasowanie F7.1 i finisz MUSZĄ mieć w dowodach screenshot
+   `#zamow` desktop 1280 + mobile 390 z werdyktem (łamane CTA / karta-w-karcie / martwe
+   pasy / ściśnięte pola = FAIL). CSS skórki wolno naprawiać; JS/submit — nigdy.
+
 **PŁATNOŚCI**: pełen wachlarz (BLIK/karta/COD) — COD jako główny risk-reversal w narracji,
 nie jedyna forma. Pokazujemy TYLKO metody realnie dostępne w checkoucie platformy.
 
