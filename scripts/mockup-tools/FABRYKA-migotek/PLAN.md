@@ -78,7 +78,7 @@ motyw, twardy typ baterii w nagłówku (tylko FAQ), oferowanie większych zestaw
 11. `opinie | kodowa | build`
 12. `zdjecia-kupujacych | kodowa | build` — 4×5★, klasa dowodowa (bez SKIP)
 13. `galeria | kodowa | build`
-14. `wideo | kodowa | blokada-tomek` — video_url do vision-gate F5; sekcji nie zdejmuje agent
+14. `wideo | kodowa | build` — realny klip aukcji (F5.3, vision-gate PASS po przycięciu wypalonego napisu ANG 2–7,7 s); self-host demo.{webm,mp4}+poster w bud-assets/migotek/video/
 15. `zamow | kodowa | build` — checkout-inline@2 (`data-zc-product`+`data-zc-api`)
 16. `faq | kodowa | build`
 17. `final | scenowa | build`

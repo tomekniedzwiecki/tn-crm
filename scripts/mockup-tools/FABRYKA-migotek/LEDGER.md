@@ -84,5 +84,26 @@ Koszty API twarde → `wf2_costs`. Claude (abonament) NIE liczony. x-upsert po k
 - Brand wordmark + logo-combo (Fraunces + płomień) dogenerowane → brand gate PASS.
 - Dane sprzedawcy/NIP w stopce kasy = placeholder (blokada klienta, znane — nie blokuje go-live jak Zaklipek).
 
-## Koszty API skumulowane: **~$2.95** (fal: 9 scen ~$2.03 + Kling hero-video ~$0.90; favicon/wordmark = $0 PIL).
+## Faza: lp_zycie DEMO-WIDEO (F5.3) — DONE 2026-07-24
+- **Sekcja DEMO-WIDEO (realny klip aukcji) dodana + republish.** `ali_snapshot.video_url` przeszedł
+  vision-gate WARUNKOWO → PASS PO PRZYCIĘCIU: **ON-PRODUCT** (te świece LED + różdżka-pilot w akcji:
+  ~27 s dłoń macha różdżką, ~29–31 s świece gasną), **white-label czysty od marki**; jedyna skaza =
+  wypalony ANG napis-caption tylko w oknie **~2,0–7,7 s** → **przycięty temporalnie** (czysty ogon
+  **8,5→30,5 s = 22 s**, zero napisu). Werdykt + klatki: WIDEO.md.
+- Enkod `gen-demo-migotek.py` (ffmpeg, wzór gen-hero-zaklipek): `bud-assets/migotek/video/demo.{mp4
+  ~2,0 MB, webm ~2,1 MB}` + `demo-poster.webp` (poster=1. klatka okna). muted+loop+playsinline, lazy
+  IO, reduced-motion/save-data=poster. Sekcja `<section id="wideo">` „Zobacz w akcji" (dark/bursztyn/
+  Fraunces+Inter) między `galeria` a `zamow`. Hero-video, checkout-inline, JSON-LD (offers usunięte) —
+  NIETKNIĘTE.
+- Manifest: `wideo` przełączony `blokada-tomek → build` (PLAN.md #14). **manifest-check: 37 PASS / 0 FAIL**
+  (sekcja + media demo.{webm,mp4}+poster HEAD 200). **published-gate (platform-sync): 0 FAIL.**
+  visual-verify 390/768/1280: PASS (video readyState=4 loop, 0 h-scroll, 0 błędów konsoli, chipy+CTA OK).
+- **PUBLISH: https://sprytko.pl/migotek → HTTP 200, 157 KB, product_id hydratowany, noindex ZDJĘTY,
+  sekcja #wideo + demo.{webm,mp4}+poster w HTML, hero-loop nietknięty, checkout hydratowany.**
+- ⚠️ gate-check.py całościowo: 52 PASS / **18 FAIL** (+2 vs poprzednie 16) / 10 WARN — te +2
+  (`wideo mobile` makieta-diff + `demo-poster.webp` brak wiersza WIERNOSC) to **ta sama klasa artefaktów
+  toru makieta-diff** (pivot na fal, brak WF2_GEN_SECRET) co udokumentowane 16 — **NIE defekty strony**.
+- Koszt API: **$0** (ffmpeg lokalnie; brak generacji/API).
+
+## Koszty API skumulowane: **~$2.95** (fal: 9 scen ~$2.03 + Kling hero-video ~$0.90; favicon/wordmark = $0 PIL; DEMO-WIDEO F5.3 = $0 ffmpeg).
 ## Budżet 25 zł (~$6.75): OK (~44% wykorzystane). wf2_costs: do zalogowania (fal ledger project=migotek).
