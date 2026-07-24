@@ -444,7 +444,7 @@ function sampleSession(): any {
   }
 }
 
-const SESSION_COLS = 'id, email, name, verdict, paid_at, full_paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, created_at, is_test, gen_error_count'
+const SESSION_COLS = 'id, email, name, verdict, paid_at, full_paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, created_at, is_test, gen_error_count, wniosek_status'
 
 // Po tylu NIEUDANYCH ponowieniach generacji (reveal wisi w 'generating', artefakt
 // nie powstaje) uznajemy odsłonę za PADŁĄ: status 'failed' + alert #sparing.
@@ -708,6 +708,19 @@ Deno.serve(async (req) => {
 
     // 2) przetwórz due reveale (pending/generating, due_at<=now) z bramką
     const nowIso = new Date().toISOString()
+    // 2a) Reaktywacja najmocniejszych assetów dla ZAKWALIFIKOWANYCH: landing/prototyp
+    // porzucone (skipped) — bo lead wypadł z sekwencji zanim się zakwalifikował, albo
+    // zakwalifikował się po jej wygaśnięciu. Wniosek przyjęty = argument domykający
+    // należy się mimo bramki. skipped → pending (idempotentne: po wysyłce = sent, nie wraca).
+    const { data: qSess } = await supabase.from('spar_sessions')
+      .select('id').eq('is_test', false).eq('verdict', 'zielony').eq('wniosek_status', 'accepted')
+      .is('paid_at', null).is('full_paid_at', null).is('sequence_cancelled_at', null).limit(200)
+    const qIds = (qSess || []).map((x: { id: string }) => x.id)
+    if (qIds.length) {
+      await supabase.from('spar_reveals')
+        .update({ status: 'pending', due_at: nowIso, error_count: 0, last_error: null, updated_at: nowIso })
+        .in('session_id', qIds).in('key', ['landing', 'prototyp']).eq('status', 'skipped')
+    }
     const { data: due } = await supabase.from('spar_reveals')
       .select('*').in('status', ['pending', 'generating']).lte('due_at', nowIso).order('due_at').order('seq').limit(120)
     let fired = 0
@@ -730,7 +743,12 @@ Deno.serve(async (req) => {
       // artefakt); twardo zimny po LOST_WINDOW → zamknij, by reveal nie wisiał wiecznie.
       const step = REVEAL_PLAN.find((p) => p.key === rv.key)
       const gate = step ? step.gate : 'none'
-      if (gate !== 'none') {
+      // Zakwalifikowani (wniosek przyjęty, brak rezerwacji) dostają najmocniejsze
+      // assety (landing/prototyp) BEZ bramki zaangażowania — powiedzieli „tak", więc
+      // generacja jest uzasadniona, a prototyp to argument domykający rezerwację.
+      // Ich też NIE zamykamy jako „przegranych" po 7 dniach ciszy.
+      const qualified = s.wniosek_status === 'accepted'
+      if (gate !== 'none' && !qualified) {
         const inactive = Date.now() - await lastActivityMs(supabase, s)
         if (inactive >= LOST_WINDOW_DAYS * 86400000) { await closeLost(supabase, s.id, nowIso); lostNow.add(s.id); continue }
         if (gate === 'visits2' && (s.panel_visits || 0) < PANEL_VISITS_GATE) continue       // <2 wizyt → czekaj
@@ -754,7 +772,10 @@ Deno.serve(async (req) => {
       const { data: s } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
       if (!s || s.paid_at || s.full_paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
       const inactive = Date.now() - await lastActivityMs(supabase, s)
-      if (inactive >= LOST_WINDOW_DAYS * 86400000) {
+      // Zakwalifikowanych NIE zamykamy jako przegranych — wznawiamy ich odsłony niezależnie od ciszy.
+      if (s.wniosek_status === 'accepted') {
+        await supabase.from('spar_reveals').update({ status: 'pending', due_at: nowIso, updated_at: nowIso }).eq('id', rv.id)
+      } else if (inactive >= LOST_WINDOW_DAYS * 86400000) {
         await closeLost(supabase, s.id, nowIso); closedLost.add(s.id)   // przegrany → koniec
       } else if (inactive < ENGAGE_WINDOW_DAYS * 86400000) {
         await supabase.from('spar_reveals').update({ status: 'pending', due_at: nowIso, updated_at: nowIso }).eq('id', rv.id)  // wrócił → wznów
