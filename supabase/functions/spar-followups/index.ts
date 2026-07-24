@@ -46,6 +46,25 @@ const CORS: Record<string, string> = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-secret, x-cron-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
+// Slack przez slack-notify (self-contained; nigdy nie rzuca). Dodane 2026-07-24:
+// commit FALA 5 (ea1b8e62) wołał tę funkcję w acceptAndInvite bez definicji →
+// ReferenceError ucinał cron po 1. kandydacie 4d. Kopia z bud-drip.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[spar-followups] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[spar-followups] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[spar-followups] slack-notify ${type} exception:`, err)
+  }
+}
+
 function jsonResponse(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -220,7 +239,7 @@ interface SessionRow {
 //    Audyt 23.07: reclose/nurture pchały „zarezerwuj 500 zł" sesjom bez kwalifikacji.
 //    Pending = decyzja Tomka w toku → maili płatnościowych nie wysyłamy wcale
 //    (po akcepcie i tak idzie wniosek_accepted).
-const PAY_CTA_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2']
+const PAY_CTA_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2', 'paywall_rescue', 'wniosek_reminder', 'wniosek_last']
 function wniosekAccepted(s: SessionRow): boolean { return s.wniosek_status === 'accepted' }
 const WNIOSEK_GOAL_OVERRIDE = ' UWAGA — DWUSTOPNIOWY FILTR: ten rozmówca NIE przeszedł jeszcze kwalifikacji zgłoszenia. NIE wolno wzywać do rezerwacji ani wymieniać kwoty 500 zł. Jedyne CTA: BEZPŁATNE zgłoszenie projektu do kwalifikacji — przycisk „Zgłaszam projekt" przy karcie projektu w rozmowie (link LINK_VIEW). Wspomnij, że Tomek osobiście przegląda każde zgłoszenie.'
 
@@ -301,11 +320,14 @@ function followupView(kind: string, s: SessionRow): string {
   if (kind === 'komplet_gotowy') return chatLink(s.id, 'komplet_gotowy', '#projekt')
   if (kind === 'reclose_1' || kind === 'reclose_2') return chatLink(s.id, kind, '#projekt')
   if (kind === 'wniosek_accepted') return chatLink(s.id, kind, '#projekt')
+  if (kind === 'paywall_rescue') return chatLink(s.id, 'paywall_rescue', '#wspolpraca')
+  if (kind === 'left_screen_back') return chatLink(s.id, 'left_screen_back') // powrót do ROZMOWY (projekt jeszcze nie zbudowany)
+  if (kind === 'wniosek_reminder' || kind === 'wniosek_last') return chatLink(s.id, kind, '#projekt')
   if (kind.startsWith('nurture_')) return chatLink(s.id, kind, '#projekt')
   return chatLink(s.id, kind) // abandoned_chat / abandoned_chat_2 / abandoned_chat_3 → utm_campaign per mail
 }
 function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
-const RESERVE_PANEL_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2', 'wniosek_accepted']
+const RESERVE_PANEL_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2', 'wniosek_accepted', 'paywall_rescue', 'wniosek_reminder', 'wniosek_last']
 function reserveFor(kind: string, s: SessionRow): string | null {
   // Bez zaakceptowanego zgłoszenia link rezerwacji nie istnieje (dwustopniowy filtr)
   if (PAY_CTA_KINDS.includes(kind) && !wniosekAccepted(s)) return null
@@ -341,6 +363,10 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     wniosek_accepted: s.wniosek_auto === false
       ? { subject: `${n}: przejrzałem Twój projekt — wchodzę w rozmowę`, body: `Cześć${im}!\n\nOsobiście przejrzałem Twoje zgłoszenie — kartę projektu ${n} i wynik badania rynku. Kwalifikuję je do wspólnej rozmowy: chcę ten projekt z Tobą przegadać.\n\nNastępny krok to [rezerwacja rozmowy](LINK_RESERVE) — 500 zł, w pełni zwrotne (nie wejdziemy we współpracę → wraca w całości). Po rezerwacji przygotowuję plan przedsięwzięcia i odzywam się osobiście. [Projekt masz w panelu](LINK_VIEW).` }
       : { subject: `${n}: projekt przeszedł kwalifikację — zapraszam do rozmowy`, body: `Cześć${im}!\n\nTwój projekt ${n} przeszedł kwalifikację: karta projektu i wynik badania rynku na żywo bronią się na tyle, że chcę go z Tobą przegadać.\n\nNastępny krok to [rezerwacja rozmowy](LINK_RESERVE) — 500 zł, w pełni zwrotne (nie wejdziemy we współpracę → wraca w całości). Po rezerwacji osobiście przygotowuję plan przedsięwzięcia i odzywam się do Ciebie. [Projekt masz w panelu](LINK_VIEW).` },
+    paywall_rescue: { subject: `${n}: byłeś o krok — dokończ rezerwację`, body: `Cześć${im}!\n\nWidziałem, że otworzyłeś rezerwację wspólnej rozmowy dla ${n}, ale nie doszła do końca — czasem to tylko chwila wahania albo coś przerwie. Nic straconego.\n\n500 zł jest w pełni zwrotne, a umowę podpisujemy dopiero po naszej rozmowie — więc realnie nic nie ryzykujesz. [Dokończ rezerwację tutaj](LINK_RESERVE), a [projekt masz w panelu](LINK_VIEW).` },
+    left_screen_back: { subject: 'Wróć tam, gdzie skończyliśmy', body: `Cześć${im}!\n\nZaczęliśmy rozmawiać o Twoim pomyśle i coś Cię oderwało — rozmowa jest zapisana, wracasz dokładnie w to samo miejsce. Zostało kilka minut do kompletu: karta projektu, pierwsze ekrany i sprawdzony na żywo rynek. Nic za to nie płacisz.\n\n[Wróć i dokończ](LINK_VIEW).` },
+    wniosek_reminder: { subject: `${n}: rezerwacja wciąż czeka`, body: `Cześć${im}!\n\nTwój projekt ${n} przeszedł kwalifikację — następny krok to rezerwacja wspólnej rozmowy. Wiem, że łatwo to odłożyć, więc tylko przypominam: 500 zł jest w pełni zwrotne, a po rezerwacji przygotowuję plan przedsięwzięcia i odzywam się osobiście.\n\n[Zarezerwuj rozmowę](LINK_RESERVE) — [projekt masz w panelu](LINK_VIEW).` },
+    wniosek_last: { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie chcę się naprzykrzać — projekt ${n} jest zakwalifikowany i czeka, kiedy będziesz gotowy. Rozmowa jest niezobowiązująca, a 500 zł w pełni zwrotne.\n\nJeśli zechcesz to ruszyć, [rezerwacja jest tutaj](LINK_RESERVE), a [projekt w panelu](LINK_VIEW).` },
   }
   let t = T[kind] || T.abandoned_chat
   // Dwustopniowy filtr: bez akceptu zgłoszenia CTA płatności podmieniamy na bezpłatne zgłoszenie
@@ -417,6 +443,20 @@ function followupBrief(kind: string, s: SessionRow): { goal: string; facts: stri
   if (kind === 'payment_rescue') {
     return { goal: MAIL_CELE['payment_rescue'] || '', facts: `narzędzie: ${n}` }
   }
+  // ── LEFT SCREEN — rozmowa W TOKU (przed werdyktem): nawiąż do tego, o czym
+  //    rozmawialiśmy; projekt jeszcze NIE zbudowany (guard w `links`+convo). ──
+  if (kind === 'left_screen_back') {
+    const k = s.problem_summary as Record<string, unknown> | null
+    const f = (key: string) => (k && typeof k[key] === 'string') ? k[key] as string : ''
+    const facts = [`narzędzie/temat: ${n}`, f('dla_kogo') && `dla kogo: ${f('dla_kogo')}`, f('problem') && `problem: ${f('problem')}`].filter(Boolean).join('; ')
+    return { goal: MAIL_CELE['left_screen_back'] || '', facts }
+  }
+  // ── PAYWALL RESCUE + DOMKNIĘCIE PO AKCEPCIE (projekt gotowy, zielony) ──
+  if (kind === 'paywall_rescue' || kind === 'wniosek_reminder' || kind === 'wniosek_last') {
+    const plan = s.business_plan; let liczba = ''
+    if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
+    return { goal: MAIL_CELE[kind] || '', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
+  }
   return { goal: MAIL_CELE['paid_welcome'] || '', facts: `narzędzie: ${n}` }
 }
 
@@ -452,7 +492,7 @@ async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: strin
   if (!EMAIL_SYSTEM) return null // prompty z settings nie załadowane → statyczny fallback (bezpiecznik)
   const brief = followupBrief(kind, s)
   const b = s.preview_brief || {}
-  const resume = kind.startsWith('abandoned_chat')
+  const resume = kind.startsWith('abandoned_chat') || kind === 'left_screen_back'
   const links = resume
     // Segment „w toku": pomysł NIE jest jeszcze zbudowany — link wraca do ROZMOWY,
     // nie do gotowego projektu. Bez tego model dopisuje „masz podgląd ekranów".
@@ -493,9 +533,9 @@ async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: strin
 // logUsage=false → PODGLĄD w adminie: generuj treść, ale NIE zaliczaj kosztu do
 // statystyk (inaczej każde otwarcie podglądu zawyżałoby koszt rozmowy).
 async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: string, s: SessionRow, logUsage = true): Promise<{ subject: string; html: string }> {
-  const GPT_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'komplet_gotowy', 'verdict_last_call', 'paid_welcome', 'reclose_1', 'reclose_2', 'payment_rescue']
+  const GPT_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'komplet_gotowy', 'verdict_last_call', 'paid_welcome', 'reclose_1', 'reclose_2', 'payment_rescue', 'paywall_rescue', 'left_screen_back', 'wniosek_reminder', 'wniosek_last']
   if (GPT_KINDS.includes(kind) || kind.startsWith('nurture_')) {
-    const convo = kind.startsWith('abandoned_chat') ? await fetchConvo(supabase, s.id) : ''
+    const convo = (kind.startsWith('abandoned_chat') || kind === 'left_screen_back') ? await fetchConvo(supabase, s.id) : ''
     const gen = await generateFollowupEmail(kind, s, viewFor(kind, s), reserveFor(kind, s), convo)
     if (gen) {
       if (gen.usage && logUsage) { try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('spar_usage').insert({ session_id: s.id, kind: 'email', model: OPENAI_MODEL, input_tokens: gen.usage.i, cached_tokens: gen.usage.c, output_tokens: gen.usage.o, cost_usd: (Math.max(0, gen.usage.i - gen.usage.c) * p.i + gen.usage.c * p.c + gen.usage.o * p.o) / 1_000_000, meta: { view: 'followup_email', kind } }) } catch (uErr) { console.error('[spar-followups] email usage:', uErr) } }
@@ -1172,6 +1212,40 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── 2c) LEFT SCREEN — MAIL FALLBACK: szybki dotyk po wyjściu z ekranu badania/
+    //   ekranów dla leadów, których SMS NIE złapie (brak telefonu/zgody/opt-out —
+    //   ~80% wyjść). Trigger = beacon left_screen_at 0.5–4h temu, NIE wrócił, jest
+    //   mail, brak wpłaty, rozmowa w toku (verdict null/żółty). Treść GPT (głos Tomka,
+    //   nawiązuje do rozmowy; convo w getEmailFor). Idempotencja spar_emails, bramka ≥10h. ──
+    {
+      const { data: lsCands, error: lsErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .or('verdict.is.null,verdict.eq.zolty')
+        .is('paid_at', null)
+        .is('full_paid_at', null)
+        .is('sequence_cancelled_at', null)
+        .not('email', 'is', null)
+        .not('left_screen_at', 'is', null)
+        .gte('left_screen_at', hoursAgo(4))
+        .lte('left_screen_at', hoursAgo(0.5))
+        .limit(60)
+      if (lsErr) console.error('[spar-followups] left_screen mail cands error:', lsErr)
+      const lsRows = ((lsCands || []) as SessionRow[])
+        .filter((s) => !s.phone || !s.sms_consent_at || s.sms_opt_out) // tylko ci, których SMS nie łapie
+        .filter((s) => s.pipeline_override !== 'resigned' && s.pipeline_override !== 'lost')
+      const lsTouch = await loadTouches(supabase, lsRows.map((s) => s.id))
+      for (const s of lsRows) {
+        // wrócił po wyjściu (aktywność po beaconie) → nie nudź
+        if (s.last_user_at && s.left_screen_at && Date.parse(s.last_user_at) > Date.parse(s.left_screen_at)) continue
+        const t = lsTouch.get(s.id)
+        if (t?.kinds.has('left_screen_back')) continue
+        if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
+        await sendOnce('left_screen_back', s)
+      }
+    }
+
     // ── 3) ZIELONY WERDYKT BEZ WPŁATY (verdict_no_payment) — WYŁĄCZONE ────
     //   Odpalało się 20–96 h po rozmowie, czyli wprost w czasie pierwszych
     //   odsłon dripu (rynek +1 dz., economics +3 dz.) → dwójka maili w tym
@@ -1324,6 +1398,69 @@ Deno.serve(async (req) => {
           if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
           await acceptAndInvite(s, 'null')
         }
+      }
+    }
+
+    // ── 4f) PAYWALL RESCUE: szybki mail do leada, który OTWORZYŁ kartę rezerwacji
+    //   (paywall_opened_at) i nie zapłacił — najgorętszy sygnał intencji. Dziś taki
+    //   lead czeka do reclose_1 (+48h); tu łapiemy go w oknie 2–24h. Wniosek już
+    //   zaakceptowany (karta 500 pokazuje się tylko po akcepcie → link rezerwacji
+    //   istnieje). Sygnał paywall_abandoned_at jest niewiarygodny (ustawia się też
+    //   płacącym) — używamy paywall_opened_at + brak paid_at. Treść GPT (głos Tomka).
+    //   Idempotencja spar_emails, bramka ≥10h. ──
+    {
+      const { data: pwRows, error: pwErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .eq('verdict', 'zielony')
+        .eq('wniosek_status', 'accepted')
+        .is('paid_at', null)
+        .is('full_paid_at', null)
+        .is('sequence_cancelled_at', null)
+        .not('email', 'is', null)
+        .not('paywall_opened_at', 'is', null)
+        .gte('paywall_opened_at', hoursAgo(24))
+        .lte('paywall_opened_at', hoursAgo(2))
+        .limit(40)
+      if (pwErr) console.error('[spar-followups] paywall_rescue fetch error:', pwErr)
+      const pwSess = ((pwRows || []) as SessionRow[]).filter((s) => s.pipeline_override !== 'resigned' && s.pipeline_override !== 'lost')
+      const pwTouch = await loadTouches(supabase, pwSess.map((s) => s.id))
+      for (const s of pwSess) {
+        const t = pwTouch.get(s.id)
+        if (t?.kinds.has('paywall_rescue')) continue
+        if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
+        await sendOnce('paywall_rescue', s)
+      }
+    }
+
+    // ── 4e) DOMKNIĘCIE PO AKCEPCIE ZGŁOSZENIA: wniosek zaakceptowany, rezerwacji brak.
+    //   (0) NADRÓB brakujące zaproszenie (wniosek_accepted) dla sesji zaakceptowanych,
+    //       które go nigdy nie dostały (np. akcept sprzed bloków 4c/4d). (1) przypomnienie
+    //       +2 dni. (2) spokojne domknięcie +5 dni od decyzji. GPT (głos Tomka), idempotencja
+    //       spar_emails, bramka ≥10h, STOP przy paid/rezygnacji. ──
+    {
+      const { data: accRows, error: accErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .eq('wniosek_status', 'accepted')
+        .is('paid_at', null)
+        .is('full_paid_at', null)
+        .is('sequence_cancelled_at', null)
+        .not('email', 'is', null)
+        .gte('wniosek_decided_at', hoursAgo(24 * 30))
+        .limit(80)
+      if (accErr) console.error('[spar-followups] wniosek closing fetch error:', accErr)
+      const accSess = ((accRows || []) as SessionRow[]).filter((s) => s.pipeline_override !== 'resigned' && s.pipeline_override !== 'lost')
+      const accTouch = await loadTouches(supabase, accSess.map((s) => s.id))
+      for (const s of accSess) {
+        const t = accTouch.get(s.id)
+        if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
+        const daysDecided = s.wniosek_decided_at ? (now - Date.parse(s.wniosek_decided_at)) / 86_400_000 : 0
+        if (!t?.kinds.has('wniosek_accepted')) { await sendOnce('wniosek_accepted', s); continue } // (0) nadrób zaproszenie
+        if (!t?.kinds.has('wniosek_reminder')) { if (daysDecided >= 2) await sendOnce('wniosek_reminder', s); continue } // (1) +2 dni
+        if (!t?.kinds.has('wniosek_last')) { if (daysDecided >= 5) await sendOnce('wniosek_last', s) } // (2) +5 dni
       }
     }
 
