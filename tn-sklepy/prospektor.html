@@ -351,7 +351,7 @@
             { key:'wf2p_prompt_research', kind:'prompt', label:'Prompt — research sprzedawcy', hint:'System prompt researchera B2B (min. 200 znaków).', rows:9 },
             { key:'wf2p_prompt_pitch',   kind:'prompt', label:'Prompt — pitch (kąt + kanał + haczyk)', hint:'System prompt stratega sprzedaży (min. 200 znaków).', rows:8 },
             { key:'wf2p_prompt_message', kind:'prompt', label:'Prompt — pierwszy kontakt', hint:'System prompt copy 1. kontaktu — bez cen/linków (min. 200 znaków).', rows:8 },
-            { key:'wf2p_scoring_weights', kind:'json', label:'Wagi scoringu 4-filarowego', hint:'JSON: { wagi:{brandowalnosc,dowod_popytu,luka,decydent}, progi_segmentow:{A,B,C}, sufit_reseller }.', rows:8 },
+            { key:'wf2p_scoring_weights', kind:'json', label:'Wagi scoringu 2-osiowego', hint:'JSON: { nagroda:{brandowalnosc,luka,skala}, dotarcie:{decydent,ambicja,bol}, progi:{reward_high,reach_high}, sufit_reseller }. Progi = kwadrant A/B/C/D.', rows:9 },
             { key:'wf2p_models', kind:'json', label:'Modele AI per krok', hint:'JSON: { research, pitch, message } — score jest deterministyczny (bez AI).', rows:5 },
             { key:'wf2p_oferta', kind:'text', label:'Opis oferty (SSOT dla wiadomości)', hint:'Co budujemy sprzedawcy — używane w prompcie 1. kontaktu (bez cen/linków). Klucz musi być dozwolony w silniku — patrz nota niżej.', rows:8 },
         ];
@@ -902,29 +902,47 @@
                 ${p.uzasadnienie?`<div class="text-[11.5px] text-zinc-500 leading-snug">${esc(p.uzasadnienie)}</div>`:''}
             </div>`;
         }
+        function axisHead(label, axis, color){
+            const sco = (axis&&axis.score!=null)?axis.score:'—';
+            const cov = (axis&&axis.coverage!=null)?axis.coverage:'—';
+            const covLow = (axis&&axis.coverage!=null&&axis.coverage<40);
+            return `<div class="flex items-center justify-between gap-3 mt-3.5 mb-1.5">
+                <span class="text-[12px] font-semibold" style="color:${color}">${esc(label)}</span>
+                <span class="text-[11px] font-mono ${covLow?'text-[#f5b955]':'text-zinc-500'}">${sco}/100 · pokrycie ${cov}%</span>
+            </div>`;
+        }
         function renderScoring(s){
             const sc = s.scoring || {};
             const seg = s.segment || sc.segment;
             const score = (s.score!=null) ? s.score : sc.score;
             const m = SEGMENT_META[seg] || SEGMENT_META.D;
             const segBig = `<div class="seg-big ${m.cls}">${esc(seg||'?')}</div>`;
+            const nag = sc.nagroda || {}, dot = sc.dotarcie || {};
+            const nagF = nag.filary || {}, dotF = dot.filary || {};
             const capNote = sc.reseller_cap_applied
-                ? `<div class="text-[11.5px] text-[#f5b955] bg-[#f5a623]/8 border border-[#f5a623]/25 rounded-lg px-2.5 py-1.5 mt-2"><i class="ph ph-shield-warning"></i> Zastosowano twardy sufit dla resellera cudzej marki (filar brandowalności).</div>`
+                ? `<div class="text-[11.5px] text-[#f5b955] bg-[#f5a623]/8 border border-[#f5a623]/25 rounded-lg px-2.5 py-1.5 mt-2"><i class="ph ph-shield-warning"></i> Twardy sufit resellera cudzej marki (filar brandowalności).</div>`
+                : '';
+            const lowCov = ((nag.coverage!=null&&nag.coverage<40)||(dot.coverage!=null&&dot.coverage<40))
+                ? `<div class="text-[11.5px] text-[#f5b955] bg-[#f5a623]/8 border border-[#f5a623]/25 rounded-lg px-2.5 py-1.5 mt-2"><i class="ph ph-warning-circle"></i> Niskie pokrycie danych — ocena wstępna, wzbogać sprzedawcę.</div>`
                 : '';
             return `<div class="dw-sec">
-                <div class="dw-sec-h"><i class="ph ph-gauge"></i> Scoring 4-filarowy</div>
-                <div class="flex items-center gap-4 mb-4">
+                <div class="dw-sec-h"><i class="ph ph-gauge"></i> Scoring 2-osiowy (Nagroda × Dotarcie)</div>
+                <div class="flex items-center gap-4 mb-1">
                     ${segBig}
                     <div class="min-w-0">
                         <div class="text-white font-semibold text-[15px]">Segment ${esc(seg||'—')} <span class="text-zinc-500 font-normal text-[13px]">· ${esc(score!=null?score:'—')}/100</span></div>
-                        <div class="text-[11.5px] text-zinc-500">${esc(m.desc)}</div>
+                        <div class="text-[11.5px] text-zinc-500">${esc(sc.kwadrant || m.desc)}</div>
                     </div>
                 </div>
-                ${pillarRow('Produkt brandowalny + kontrola podaży', sc.brandowalnosc)}
-                ${pillarRow('Dowód popytu (metryki Allegro)', sc.dowod_popytu)}
-                ${pillarRow('Luka jakościowa ekosystemu', sc.luka)}
-                ${pillarRow('Decydent dostępny + ambitny', sc.decydent)}
-                ${capNote}
+                ${axisHead('NAGRODA — wartość × dopasowanie', nag, '#45a557')}
+                ${pillarRow('Brandowalność + kontrola podaży', nagF.brandowalnosc)}
+                ${pillarRow('Luka jakościowa ekosystemu', nagF.luka)}
+                ${pillarRow('Skala / dowód popytu', nagF.skala)}
+                ${axisHead('DOTARCIE — szansa na rozmowę', dot, '#0070f3')}
+                ${pillarRow('Decydent dostępny', dotF.decydent)}
+                ${pillarRow('Ambicja / sygnały wzrostu', dotF.ambicja)}
+                ${pillarRow('Ból / uzależnienie od Allegro', dotF.bol)}
+                ${capNote}${lowCov}
                 ${s.score_reason?`<div class="text-[11.5px] text-zinc-500 mt-3 pt-3 border-t border-[#161616] italic leading-relaxed">„${esc(s.score_reason)}"</div>`:''}
             </div>`;
         }
@@ -1180,7 +1198,7 @@
             if (!n) return '';
             let s = '';
             for (let i=1;i<=5;i++) s += `<i class="ph-fill ph-star pri-star ${i<=n?'on':''}"></i>`;
-            return `<span title="Priorytet ${n}/5 (1 = najwyższy)" class="inline-flex items-center gap-0.5">${s}</span>`;
+            return `<span title="Priorytet ${n}/5 (5 = najwyższy)" class="inline-flex items-center gap-0.5">${s}</span>`;
         }
         function filteredVerticals(){
             let rows = verticals.slice();
@@ -1196,10 +1214,10 @@
             if (!verticals.length){ wrap.innerHTML = '<div class="text-zinc-600 text-sm">Brak wertykali. Dodaj pierwszy powyżej.</div>'; return; }
             const rows = filteredVerticals();
             if (!rows.length){ wrap.innerHTML = '<div class="card p-8 text-center text-zinc-600">Brak wertykali dla tych filtrów.</div>'; return; }
-            // grupowanie po priorytecie (1 = najwyższy → 5 → bez priorytetu)
+            // grupowanie po priorytecie (5 = najwyższy → 1 → bez priorytetu)
             const byPri = {};
             rows.forEach(v => { const k = (parseInt(v.priority,10)||0) || 0; (byPri[k] = byPri[k] || []).push(v); });
-            const priKeys = Object.keys(byPri).map(Number).sort((a,b)=> (a===0?99:a)-(b===0?99:b));
+            const priKeys = Object.keys(byPri).map(Number).sort((a,b)=> (b===0?-1:b)-(a===0?-1:a));
             wrap.innerHTML = priKeys.map(k => wtPriBlock(k, byPri[k])).join('');
         }
         function wtPriBlock(pri, list){
@@ -1308,7 +1326,7 @@
                 <div class="kpi-tile"><div class="kpi-n">${noVertNowy}</div><div class="kpi-l"><span class="kpi-dot" style="background:#f5a623"></span>Seedy bez wertykalu</div></div>
             </div>`;
             // lista kategorii do skanu z licznikiem surowych seedów
-            const catRows = verticals.slice().sort((a,b)=> (parseInt(a.priority,10)||99)-(parseInt(b.priority,10)||99) || (a.name||'').localeCompare(b.name||'','pl')).map(v => {
+            const catRows = verticals.slice().sort((a,b)=> ((parseInt(b.priority,10)||-1)-(parseInt(a.priority,10)||-1)) || (a.name||'').localeCompare(b.name||'','pl')).map(v => {
                 const vc = vCounts[v.id] || { nowy:0, total:0 };
                 const st = v.status || 'katalogowy';
                 const meta = VERT_STATUS[st] || VERT_STATUS.katalogowy;
