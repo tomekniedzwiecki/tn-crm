@@ -64,7 +64,10 @@
                                 <div class="flex items-center gap-3.5 min-w-0">
                                     <div id="p-avatar" class="w-11 h-11 rounded-lg bg-[#111] border border-[#262626] text-white text-lg font-semibold flex items-center justify-center flex-shrink-0 select-none">·</div>
                                     <div class="min-w-0">
-                                        <h1 id="p-name" class="text-xl font-semibold text-white tracking-tight leading-tight truncate">…</h1>
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <h1 id="p-name" class="text-xl font-semibold text-white tracking-tight leading-tight truncate min-w-0">…</h1>
+                                            <span id="p-old-name" class="hidden"></span>
+                                        </div>
                                         <div id="p-meta" class="text-zinc-500 text-[11px] mt-1 flex items-center gap-x-2.5 gap-y-1 flex-wrap"></div>
                                     </div>
                                 </div>
@@ -684,7 +687,16 @@
         function renderHeader() {
             document.getElementById('hdr-name').textContent = project.customer_name || '(bez klienta)';
             document.getElementById('p-name').textContent = project.customer_name || '(bez klienta)';
-            document.getElementById('p-avatar').textContent = ((project.name || project.customer_name || '?').trim()[0] || '?').toUpperCase();
+            // avatar = favicon marki (gdy gotowy) w miejscu inicjału; fallback = inicjał klienta
+            const av = document.getElementById('p-avatar');
+            const avLetter = ((project.customer_name || project.name || '?').trim()[0] || '?').toUpperCase();
+            if (project.favicon_url) {
+                av.classList.add('overflow-hidden');
+                av.innerHTML = `<img src="${escapeHtml(project.favicon_url)}" alt="" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.textContent='${avLetter.replace(/'/g,'')}'">`;
+            } else {
+                av.classList.remove('overflow-hidden');
+                av.textContent = avLetter;
+            }
             const sel = document.getElementById('p-status');
             sel.innerHTML = PROJECT_STATUSES.map(s=>`<option value="${s}" ${project.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('');
             // badge stanu cyklu życia obok statusu pipeline — tylko gdy ≠ aktywny
@@ -699,9 +711,17 @@
                     lcEl.innerHTML = `<i class="ph ${m.icon}"></i>${m.label}`;
                 }
             }
+            // znacznik OLD — pigułka outline tuż obok nazwiska (klient z Workflow 1, inne tempo)
+            const oldNameEl = document.getElementById('p-old-name');
+            if (oldNameEl) {
+                if (project.is_old) {
+                    oldNameEl.className = 'inline-flex items-center gap-1 flex-shrink-0 whitespace-nowrap';
+                    oldNameEl.style.cssText = "padding:3px 9px;border-radius:999px;border:1px solid rgba(197,168,110,.32);color:#c9b483;font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.06em";
+                    oldNameEl.title = 'Klient przeniesiony z TN Workflow 1 — obsługa w innym tempie niż nowi';
+                    oldNameEl.innerHTML = '<i class="ph ph-clock-counter-clockwise" style="font-size:11px"></i>OLD';
+                } else { oldNameEl.className = 'hidden'; oldNameEl.innerHTML = ''; }
+            }
             const meta = [];
-            // znacznik OLD — klient z Workflow 1: cichy chip prowadzący linię meta (obsługa w innym tempie)
-            if (project.is_old) meta.push(`<span class="flex items-center gap-1" style="color:#c9b483" title="Klient przeniesiony z TN Workflow 1 — obsługa w innym tempie niż nowi"><i class="ph ph-clock-counter-clockwise"></i>Workflow 1 · OLD</span>`);
             if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
             if (project.customer_phone) {
                 const waNum = project.customer_phone.replace(/\D/g, '').replace(/^00/, '');

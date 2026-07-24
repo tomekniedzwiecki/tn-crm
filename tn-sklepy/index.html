@@ -45,12 +45,19 @@
         .pcard.is-demo .pc-title { color:#c4c4c4; }
         /* nagłówek */
         .pc-head { display:flex; align-items:flex-start; gap:11px; min-width:0; }
-        .pc-mono { width:42px; height:42px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+        .pc-mono { width:42px; height:42px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;
             font:600 15px/1 'Inter',sans-serif; color:#fff; background:linear-gradient(135deg,#1a1a1a,#111); border:1px solid #262626; }
+        .pc-mono-img { width:100%; height:100%; object-fit:contain; }
         .pc-tt { flex:1; min-width:0; }
+        .pc-title-row { display:flex; align-items:center; gap:7px; min-width:0; }
         .pc-title { color:#fff; font-weight:600; font-size:16.5px; letter-spacing:-.01em; line-height:1.25;
-            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .pc-client { color:#8b8b94; font-size:13px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+        /* podlinia: e-mail (skraca się) + WhatsApp + cicha nazwa marki */
+        .pc-client { display:flex; align-items:center; gap:6px; color:#8b8b94; font-size:13px; margin-top:2px; min-width:0; }
+        .pc-cl-email { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .pc-cl-brand { flex:0 0 auto; display:inline-flex; align-items:center; gap:3px; max-width:44%; color:#6b6b74; font-size:11.5px;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .pc-cl-brand i { font-size:12px; opacity:.75; flex-shrink:0; }
         .wa-ic { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:6px;
             color:#25D366; vertical-align:-5px; margin-left:2px; transition:background .15s ease; }
         .wa-ic:hover { background:rgba(37,211,102,.14); }
@@ -397,7 +404,7 @@
                 fetchAllSteps(),
                 supabaseClient.from('wf2_activities').select('project_id, created_at, action, description').order('created_at', { ascending: false }).range(0, 499),
                 supabaseClient.from('wf2_orders').select('project_id').range(0, 4999),
-                supabaseClient.from('wf2_feedback').select('project_id').eq('status', 'new').range(0, 4999),
+                supabaseClient.from('wf2_feedback').select('project_id, created_at, status').range(0, 4999),
             ]);
             stepDefs = defsQ.data || [];
             defByKey = {}; buildKeys = new Set(); maxStage = 1;
@@ -419,11 +426,23 @@
             // liczba zamówień per projekt
             const orders = {};
             (ordQ.data || []).forEach(o => { orders[o.project_id] = (orders[o.project_id] || 0) + 1; });
-            // liczba NOWYCH uwag klienta per projekt (badge „świeci się" na karcie)
+            // liczba NOWYCH uwag klienta per projekt (badge „świeci się") + najnowsza uwaga (dowolny status)
             const newFb = {};
-            (fbQ.data || []).forEach(f => { newFb[f.project_id] = (newFb[f.project_id] || 0) + 1; });
+            const lastFb = {};
+            (fbQ.data || []).forEach(f => {
+                if (f.status === 'new') newFb[f.project_id] = (newFb[f.project_id] || 0) + 1;
+                if (f.created_at && (!lastFb[f.project_id] || f.created_at > lastFb[f.project_id])) lastFb[f.project_id] = f.created_at;
+            });
+            // najnowszy ISTOTNY ruch w aktywnościach (pomijamy szum: utworzenie/oznaczenie OLD) — sygnał
+            // „ktoś coś zrobił" po stronie Tomka LUB klienta (portal: wizyty, zadania, odpowiedzi)
+            const ACT_NOISE = new Set(['created', 'flag_old', 'unflag_old']);
+            const lastRealAct = {};
+            (actQ.data || []).forEach(a => {
+                if (ACT_NOISE.has(a.action)) return;
+                if (a.created_at && (!lastRealAct[a.project_id] || a.created_at > lastRealAct[a.project_id])) lastRealAct[a.project_id] = a.created_at;
+            });
 
-            computeAgg(lastAct, orders, newFb);
+            computeAgg(lastAct, orders, newFb, lastRealAct, lastFb);
             buildSearchIndex();
             renderStages();
             renderLifecycleChips();
@@ -450,11 +469,19 @@
         }
 
         // Postęp, segmenty etapów, aktualny krok, licznik tempa — wszystko z jednego przebiegu.
-        function computeAgg(lastAct, orders, newFb) {
+        function computeAgg(lastAct, orders, newFb, lastRealAct, lastFb) {
+            lastRealAct = lastRealAct || {}; lastFb = lastFb || {};
             const defOrder = stepDefs.map(d => d.key);
             aggByProj = {};
             projects.forEach(p => {
                 const steps = stepsByProj[p.id] || [];
+
+                // najnowsze ukończenie kroku = „coś zostało zrobione" w fabryce
+                let progressAt = null;
+                steps.forEach(s => { if (s.status === 'done' && s.completed_at && (!progressAt || s.completed_at > progressAt)) progressAt = s.completed_at; });
+                // lastTouched = najświeższy realny ruch z DOWOLNEJ strony (postęp / aktywność / uwaga klienta);
+                // null = z projektem nic się (jeszcze) nie działo → ląduje na dole listy
+                const lastTouched = [progressAt, lastRealAct[p.id], lastFb[p.id]].filter(Boolean).sort().pop() || null;
 
                 // postęp globalny (bez skipped w mianowniku, bez sub_of — spójne z paskiem 7 segmentów)
                 const countable = steps.filter(s => s.status !== 'skipped' && defByKey[s.step_key] && !defByKey[s.step_key].sub_of);
@@ -488,6 +515,7 @@
                     orders: orders[p.id] || 0,
                     newFeedback: (newFb && newFb[p.id]) || 0,
                     lastAct: lastAct[p.id] || null,
+                    lastTouched,
                     tempo: computeTempo(p, steps),
                 };
             });
@@ -652,12 +680,15 @@
             rows.sort((a, b) => {
                 const ra = LC_RANK[lifecycleOf(a)], rb = LC_RANK[lifecycleOf(b)];
                 if (ra !== rb) return ra - rb;                        // active → paused → completed → cancelled
-                // w obrębie stanu: świeży klient (0) → OLD/Workflow 1 (1) → DEMO (2)
-                const da = isDemo(a) ? 2 : (a.is_old ? 1 : 0), db = isDemo(b) ? 2 : (b.is_old ? 1 : 0);
+                const da = isDemo(a) ? 1 : 0, db = isDemo(b) ? 1 : 0; // DEMO/test zawsze na końcu swojej grupy
                 if (da !== db) return da - db;
-                // aktywne, świeże (nie-OLD, nie-DEMO) sortujemy wg zapasu tempa 14 dni; reszta wg daty
-                if (ra === 0 && da === 0) return (aggByProj[a.id]?.tempo?.slack ?? 999) - (aggByProj[b.id]?.tempo?.slack ?? 999);
-                return new Date(b.created_at) - new Date(a.created_at);
+                // GŁÓWNE: na górze to, co ma NAJŚWIEŻSZY realny ruch (postęp Tomka lub akcja klienta —
+                // uwagi/odpowiedzi/wizyty w portalu); projekty bez żadnego ruchu spadają na dół
+                const ta = aggByProj[a.id]?.lastTouched, tb = aggByProj[b.id]?.lastTouched;
+                if (ta && tb) { if (ta !== tb) return ta < tb ? 1 : -1; } // ISO desc — nowszy wyżej
+                else if (ta) return -1;                                   // a ma ruch, b nie → a wyżej
+                else if (tb) return 1;                                    // b ma ruch, a nie → b wyżej
+                return new Date(b.created_at) - new Date(a.created_at);   // brak ruchu po obu → nowszy projekt
             });
 
             document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
@@ -698,9 +729,16 @@
                     <div class="pc-menu-sep"></div>
                     <button class="pc-menu-it pc-menu-del" onclick="askDeleteProject('${p.id}')"><i class="ph ph-trash"></i>Usuń projekt</button>
                 </div></div>`;
-            const brand = (p.name || '').trim() || p.customer_name || '(bez marki)';
-            // linia klienta: unikaj powtórki gdy marka = nazwa klienta
-            const clientLine = (p.name && p.name.trim() && p.customer_name) ? p.customer_name : (p.customer_email || p.customer_name || '');
+            // TYTUŁ = imię i nazwisko klienta (łatwiej zapamiętać); marka pokazywana ciszej w podlinii.
+            const person = (p.customer_name || '').trim();
+            const brandName = (p.name || '').trim();
+            const title = person || brandName || p.customer_email || '(bez klienta)';
+            const email = p.customer_email || '';
+            const showBrand = brandName && brandName !== title;
+            // monogram = favicon marki (gdy gotowy) w miejscu inicjałów; fallback = inicjały tytułu
+            const monoInner = p.favicon_url
+                ? `<img class="pc-mono-img" src="${escapeHtml(p.favicon_url)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${escapeHtml(initials(title))}'">`
+                : escapeHtml(initials(title));
             // ikona WhatsApp obok klienta (gdy jest numer) — klik nie otwiera projektu
             function waIcon(pr) {
                 if (!pr.customer_phone) return '';
@@ -733,19 +771,24 @@
                 : `<span class="pc-portlabel text-zinc-700">Brak portfela</span>`;
 
             const ordersHtml = agg.orders > 0 ? `<span class="pc-orders"><i class="ph ph-shopping-cart"></i>${agg.orders}</span>` : '';
-            const actHtml = agg.lastAct ? `<span class="pc-act"><i class="ph ph-clock-countdown"></i>${escapeHtml(relDate(agg.lastAct.created_at))}</span>` : '';
+            const actHtml = agg.lastTouched ? `<span class="pc-act"><i class="ph ph-clock-countdown"></i>${escapeHtml(relDate(agg.lastTouched))}</span>` : '';
             const fbHtml = agg.newFeedback > 0 ? `<span class="pc-fb" title="${agg.newFeedback} ${agg.newFeedback === 1 ? 'nowa uwaga klienta' : 'nowych uwag klienta'}"><i class="ph ph-chat-dots"></i>${agg.newFeedback}</span>` : '';
 
             return `<div class="pcard${demo ? ' is-demo' : ''}${idle ? ' is-idle' : ''}" onclick="location.href='projekt.html?id=${p.id}'">
                 ${demo ? '<span class="demo-tag" style="right:38px">DEMO</span>' : ''}
                 ${menuHtml}
                 <div class="pc-head">
-                    <div class="pc-mono">${escapeHtml(initials(brand))}</div>
+                    <div class="pc-mono">${monoInner}</div>
                     <div class="pc-tt">
-                        <div class="pc-title" style="${demo ? ((lcBadge || oldBadge) ? 'padding-right:6px' : 'padding-right:66px') : ''}">${escapeHtml(brand)}</div>
-                        <div class="pc-client">${escapeHtml(clientLine) || '&nbsp;'}${waIcon(p)}</div>
+                        <div class="pc-title-row" style="${demo && !lcBadge ? 'padding-right:60px' : ''}">
+                            <span class="pc-title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>${oldBadge}
+                        </div>
+                        <div class="pc-client">
+                            <span class="pc-cl-email">${escapeHtml(email) || '&nbsp;'}</span>${waIcon(p)}
+                            ${showBrand ? `<span class="pc-cl-brand" title="Marka: ${escapeHtml(brandName)}"><i class="ph ph-storefront"></i>${escapeHtml(brandName)}</span>` : ''}
+                        </div>
                     </div>
-                    ${(demo && !lcBadge && !oldBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}${lcBadge}${oldBadge}</div>`}
+                    ${(demo && !lcBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}${lcBadge}</div>`}
                 </div>
 
                 <div>
