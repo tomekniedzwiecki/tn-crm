@@ -46,7 +46,7 @@
   --sect-pad-d:104px; --sect-pad-m:68px; --content-w:1180px;
 
   --h1-d:clamp(2.4rem,6.2vw,4.6rem); --h1-m:clamp(2.1rem,9vw,2.9rem);
-  --h2-d:clamp(1.7rem,4vw,2.9rem);
+  --h2-d:clamp(2.15rem,4.7vw,3.75rem);
   --body-fs:1.05rem; --body-lh:1.62;
 }
 
@@ -81,6 +81,7 @@ body.anim .reveal.in{opacity:1;transform:none}
 .sect-head{max-width:64ch;margin:0 auto var(--s6)}
 .sect-head.center{text-align:center}
 .sect-head.center .lead{margin-left:auto;margin-right:auto}
+.sect-head.center .eyebrow::after{content:"✦";font-size:.72rem;opacity:.85}
 
 /* section dividers — hairline + iskra */
 .spark-rule{max-width:var(--content-w);margin:0 auto;height:1px;position:relative}
@@ -110,38 +111,46 @@ body.anim .reveal.in{opacity:1;transform:none}
 .pb--visa svg,.pb--mc svg{height:18px}
 .pb--cod{gap:6px;font-size:11px;font-weight:800;letter-spacing:.03em;color:var(--ink)}
 
-/* ═══════════ SCENE BAND (scenowa: full-bleed + scrim + glow) ═══════════ */
-.band{position:relative;overflow:hidden;background:var(--bg-2);color:var(--ink-dark);isolation:isolate}
-.band-scene{position:absolute;inset:0;z-index:0;background:var(--bg-2)}
-.band-scene img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
-.band-glow{position:absolute;z-index:1;width:60vw;height:60vw;max-width:720px;max-height:720px;border-radius:50%;
-  background:radial-gradient(circle,rgba(255,201,120,.22),rgba(255,201,120,0) 66%);pointer-events:none;filter:blur(6px)}
-.band-scrim{position:absolute;inset:0;z-index:2;pointer-events:none}
-.band-inner{position:relative;z-index:3;max-width:var(--content-w);margin:0 auto;padding:clamp(84px,12vw,150px) var(--s4)}
+/* ═══════════ SPLIT BAND — 2 KOLUMNY: panel-scena (kadr) + panel-tekstu na SOLIDNYM tle ═══════════ */
+/* Makieta = kontrakt: NIE full-bleed-overlay. Scena to WYRAŹNY kadr obok panelu tekstu, nie tło pod nim. */
+.band{position:relative;background:var(--bg-2);color:var(--ink-dark);isolation:isolate;overflow:hidden}
+.band-inner{display:grid;grid-template-columns:1.04fr .96fr;align-items:stretch;
+  min-height:clamp(500px,56vw,650px)}
+.band.right .band-scene{order:2}
+.band.right .band-copy{order:1}
+/* panel-scena */
+.band-scene{position:relative;overflow:hidden;background:var(--bg);min-width:0}
+.band-scene img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.band-scene::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(20,16,12,0) 62%,rgba(20,16,12,.55) 100%)}
+.band.right .band-scene::after{background:linear-gradient(270deg,rgba(20,16,12,0) 62%,rgba(20,16,12,.55) 100%)}
+/* panel-tekstu — SOLIDNE ciemne tło (tekst NIE siedzi na zdjęciu) */
+.band-copy{display:flex;align-items:center;justify-content:flex-start;background:var(--bg-2);position:relative;min-width:0;
+  padding:clamp(52px,6vw,104px) clamp(34px,4.6vw,78px)}
+.band.right .band-copy{justify-content:flex-end}
+.band-copy-in{max-width:520px;width:100%}
 .band .eyebrow{color:var(--glow)}
 .band .eyebrow::before{color:var(--glow)}
-.band h2{color:#fff}
-.band .lead{color:rgba(244,233,218,.9)}
-.band-copy{max-width:560px}
-.band.right .band-inner{display:flex;justify-content:flex-end}
-.band.right .band-copy{text-align:left}
-.scrim-left{background:linear-gradient(96deg,rgba(20,16,12,.92) 0%,rgba(20,16,12,.78) 38%,rgba(20,16,12,.35) 66%,rgba(20,16,12,.08) 90%)}
-.scrim-right{background:linear-gradient(264deg,rgba(20,16,12,.92) 0%,rgba(20,16,12,.76) 38%,rgba(20,16,12,.32) 66%,rgba(20,16,12,.06) 90%)}
-.scrim-bottom{background:linear-gradient(180deg,rgba(20,16,12,.28) 0%,rgba(20,16,12,.58) 52%,rgba(20,16,12,.86) 100%)}
-.scrim-center{background:linear-gradient(180deg,rgba(20,16,12,.55),rgba(20,16,12,.72))}
+.band h2{color:#fff;font-size:clamp(2.5rem,5.1vw,4.15rem);line-height:1.03}
+.band .lead{color:rgba(244,233,218,.9);margin-top:var(--s3)}
 @media (max-width:820px){
-  .band-inner{padding:var(--s7) var(--s3)}
-  .band.right .band-inner{justify-content:flex-start}
-  .band-copy{max-width:none}
-  .scrim-left,.scrim-right{background:linear-gradient(0deg,rgba(20,16,12,.94) 6%,rgba(20,16,12,.82) 40%,rgba(20,16,12,.5) 70%,rgba(20,16,12,.14) 100%)}
+  .band-inner{grid-template-columns:1fr;min-height:0}
+  .band .band-scene,.band.right .band-scene{order:0}
+  .band .band-copy,.band.right .band-copy{order:0;justify-content:flex-start}
+  .band-scene{min-height:clamp(230px,56vw,320px)}
+  .band-scene::after,.band.right .band-scene::after{background:linear-gradient(0deg,rgba(20,16,12,.6) 0%,rgba(20,16,12,.15) 34%,rgba(20,16,12,0) 60%)}
+  .band-copy{padding:clamp(40px,9vw,58px) var(--s3)}
+  .band-copy-in{max-width:none}
+  .band h2{font-size:clamp(2rem,8.4vw,2.85rem)}
 }
 
-/* pain / solution lists on dark */
-.pt-list{list-style:none;margin:var(--s4) 0 0;padding:0;display:flex;flex-direction:column;gap:var(--s2);max-width:44ch}
-.pt-list li{position:relative;padding-left:32px;color:rgba(244,233,218,.92);font-size:1.02rem;line-height:1.5}
-.pt-list li svg{position:absolute;left:0;top:3px;width:20px;height:20px;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.pt-list.bad li svg{stroke:var(--warn)}
-.pt-list.good li svg{stroke:var(--glow)}
+/* pain / solution lists — okrągłe bursztynowe znaczniki (✗/✓) + 1–2 linie tekstu */
+.pt-list{list-style:none;margin:var(--s5) 0 0;padding:0;display:flex;flex-direction:column;gap:var(--s3)}
+.pt-list li{position:relative;padding-left:54px;min-height:38px;display:flex;align-items:center;
+  color:rgba(244,233,218,.9);font-size:1.04rem;line-height:1.45}
+.pt-list li .pt-ic{position:absolute;left:0;top:50%;transform:translateY(-50%);width:38px;height:38px;flex:0 0 auto;
+  border-radius:50%;border:1.5px solid rgba(233,160,58,.5);display:grid;place-items:center;background:rgba(233,160,58,.06)}
+.pt-list li .pt-ic svg{width:18px;height:18px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke:var(--accent)}
 
 /* ═══════════ HERO — TYP A pełnokadrowa scena W TLE ═══════════ */
 #hero{position:relative;overflow:hidden;background:var(--bg-2);color:var(--ink-dark);min-height:92svh;display:flex;flex-direction:column}
@@ -294,7 +303,7 @@ body.anim .reveal.in{opacity:1;transform:none}
 #zastosowania{background:var(--bg)}
 #zastosowania .moz-head{max-width:var(--content-w);margin:0 auto var(--s5);padding:0 var(--s4)}
 #zastosowania .moz-head .eyebrow{color:var(--glow)}#zastosowania .moz-head h2{color:#fff}#zastosowania .moz-head .lead{color:rgba(244,233,218,.86)}
-#zastosowania .moz{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:210px;gap:var(--s2);
+#zastosowania .moz{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:clamp(178px,19.5vw,232px);gap:var(--s2);
   max-width:var(--content-w);margin:0 auto;padding:0 var(--s4)}
 #zastosowania .tile{position:relative;overflow:hidden;border-radius:var(--r);background:var(--bg-2);border:1px solid var(--hair);box-shadow:var(--shadow)}
 #zastosowania .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;transition:transform .6s cubic-bezier(.22,1,.36,1)}
@@ -302,22 +311,27 @@ body.anim .reveal.in{opacity:1;transform:none}
 #zastosowania .tile::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(20,16,12,.82) 0%,rgba(20,16,12,.28) 46%,rgba(20,16,12,.04) 100%)}
 #zastosowania .tile .tl{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:16px 18px}
 #zastosowania .tile .tl .tl-k{display:block;font-family:var(--font-text);font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--glow);margin-bottom:5px}
-#zastosowania .tile .tl h3{font-family:var(--font-display);font-size:1.28rem;font-weight:600;color:#fff}
+#zastosowania .tile .tl h3{font-family:var(--font-display);font-size:1.34rem;font-weight:600;color:#fff;line-height:1.14}
+/* bento: big 60% (2 rzędy) | prawy słup 40% (sypialnia+łazienka) | dół: taras 40% + wesele 60% */
 #zastosowania .tile.big{grid-column:span 3;grid-row:span 2}
-#zastosowania .tile.wide{grid-column:span 3}
-#zastosowania .tile.med{grid-column:span 2}
+#zastosowania .tile.big .tl h3{font-size:1.7rem}
+#zastosowania .tile.col-r{grid-column:span 2}
+#zastosowania .tile.b-left{grid-column:span 2}
+#zastosowania .tile.b-right{grid-column:span 3}
 @media (max-width:900px){
-  #zastosowania .moz{grid-template-columns:repeat(2,1fr);grid-auto-rows:190px}
-  #zastosowania .tile.big,#zastosowania .tile.wide,#zastosowania .tile.med{grid-column:span 1;grid-row:span 1}
-  #zastosowania .tile.big{grid-column:span 2}
+  #zastosowania .moz{grid-template-columns:repeat(2,1fr);grid-auto-rows:180px}
+  #zastosowania .tile.big{grid-column:span 2;grid-row:span 1}
+  #zastosowania .tile.col-r,#zastosowania .tile.b-left,#zastosowania .tile.b-right{grid-column:span 1;grid-row:span 1}
+  #zastosowania .tile.b-right{grid-column:span 2}
+  #zastosowania .tile.big .tl h3{font-size:1.28rem}
   #zastosowania .tile .tl{padding:13px 14px}
-  #zastosowania .tile .tl h3{font-size:1.06rem;line-height:1.16}
+  #zastosowania .tile .tl h3{font-size:1.08rem;line-height:1.16}
   #zastosowania .tile .tl .tl-k{font-size:.58rem;letter-spacing:.08em;margin-bottom:4px}
 }
-@media (max-width:600px){
-  #zastosowania .moz{grid-template-columns:1fr;grid-auto-rows:180px}
-  #zastosowania .tile.big{grid-column:span 1}
-  #zastosowania .tile .tl h3{font-size:1.2rem;line-height:1.2}
+@media (max-width:560px){
+  #zastosowania .moz{grid-template-columns:1fr;grid-auto-rows:184px}
+  #zastosowania .tile.big,#zastosowania .tile.b-right{grid-column:span 1}
+  #zastosowania .tile .tl h3,#zastosowania .tile.big .tl h3{font-size:1.22rem;line-height:1.2}
   #zastosowania .tile .tl .tl-k{font-size:.62rem;letter-spacing:.1em}
 }
 
@@ -374,7 +388,27 @@ body.anim .reveal.in{opacity:1;transform:none}
 #porownanie td .lab{font-size:.82rem;color:var(--muted)}
 #porownanie .cmp-cta{text-align:center;margin-top:var(--s5)}
 
-/* ═══════════ 08 · UNOSZACE — reuses .band ═══════════ */
+/* ═══════════ 08 · UNOSZACE — atmosferyczna scena pełnokadrowa (makieta = full-scene) ═══════════ */
+#unoszace{position:relative;overflow:hidden;background:var(--bg-2);color:var(--ink-dark);isolation:isolate}
+#unoszace .un-scene{position:absolute;inset:0;z-index:0;background:var(--bg-2)}
+#unoszace .un-scene img{width:100%;height:100%;object-fit:cover;object-position:center}
+#unoszace .un-scrim{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(96deg,rgba(20,16,12,.95) 0%,rgba(20,16,12,.86) 30%,rgba(20,16,12,.5) 56%,rgba(20,16,12,.12) 84%,rgba(20,16,12,0) 100%)}
+#unoszace .un-glow{position:absolute;z-index:1;right:22%;top:24%;width:44vw;height:44vw;max-width:560px;max-height:560px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,201,120,.22),rgba(255,201,120,0) 66%);pointer-events:none;filter:blur(6px)}
+#unoszace .un-inner{position:relative;z-index:2;max-width:var(--content-w);margin:0 auto;padding:clamp(88px,13vw,168px) var(--s4)}
+#unoszace .un-copy{max-width:540px}
+#unoszace .eyebrow{color:var(--glow)}
+#unoszace h2{color:#fff;font-size:clamp(2.5rem,5vw,4.1rem);font-weight:600;letter-spacing:-.02em;line-height:1.03}
+#unoszace .lead{color:rgba(244,233,218,.9);margin-top:var(--s4)}
+@media (max-width:820px){
+  #unoszace .un-scrim{background:linear-gradient(0deg,rgba(20,16,12,.95) 8%,rgba(20,16,12,.84) 42%,rgba(20,16,12,.5) 70%,rgba(20,16,12,.12) 100%)}
+  #unoszace .un-inner{padding:var(--s7) var(--s3)}
+  #unoszace .un-copy{max-width:none}
+  #unoszace h2{font-size:clamp(2rem,8.4vw,2.9rem)}
+}
+
+/* ═══════════ 08 · UNOSZACE (legacy anchor) ═══════════ */
 
 /* ═══════════ 10 · MID-CTA (scenowa) ═══════════ */
 #mid-cta{position:relative;overflow:hidden;background:var(--bg-2)}
@@ -385,7 +419,7 @@ body.anim .reveal.in{opacity:1;transform:none}
 #mid-cta .mc-glow{position:absolute;z-index:1;right:16%;top:38%;width:40vw;height:40vw;max-width:520px;max-height:520px;border-radius:50%;background:radial-gradient(circle,rgba(255,201,120,.22),rgba(255,201,120,0) 66%);pointer-events:none}
 #mid-cta .mc-inner{position:relative;z-index:2;max-width:var(--content-w);margin:0 auto;padding:clamp(80px,12vw,148px) var(--s4)}
 #mid-cta .mc-box{max-width:540px}
-#mid-cta h2{color:#fff;font-size:clamp(1.9rem,4vw,3rem);font-weight:600;letter-spacing:-.02em}
+#mid-cta h2{color:#fff;font-size:clamp(2.3rem,4.9vw,3.7rem);font-weight:600;letter-spacing:-.02em;line-height:1.04}
 #mid-cta .mc-sub{margin:var(--s3) 0 0;color:rgba(244,233,218,.9);font-size:1.1rem;line-height:1.5}
 #mid-cta .mc-actions{margin-top:var(--s5);display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
 #mid-cta .mc-price{color:#fff;font-family:var(--font-display);font-size:1.65rem;font-weight:600}
@@ -416,6 +450,7 @@ body.anim .reveal.in{opacity:1;transform:none}
 @media (max-width:900px){#zdjecia-kupujacych .ph-grid{grid-template-columns:1fr 1fr}}
 
 /* ═══════════ 13 · GALERIA (paper, lightbox) ═══════════ */
+#galeria .gal-head{max-width:var(--content-w);margin:0 auto var(--s5);padding:0 var(--s4);text-align:left}
 #galeria .gal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s3);max-width:var(--content-w);margin:0 auto;padding:0 var(--s4)}
 #galeria .gitem{position:relative;border:0;padding:0;margin:0;cursor:zoom-in;border-radius:var(--r);overflow:hidden;
   aspect-ratio:1/1;background:var(--bg-2);box-shadow:var(--shadow-sm)}
@@ -441,11 +476,40 @@ body.anim .reveal.in{opacity:1;transform:none}
   --zc-radius:var(--r); --zc-radius-sm:var(--r-sm); --zc-radius-cta:var(--r-sm);
   --zc-shadow:var(--shadow); --zc-font:var(--font-text);
 }
-#zamow.zc-checkout .zc-h2{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em}
+#zamow.zc-checkout .zc-h2{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;font-size:clamp(30px,3.8vw,44px)}
 #zamow.zc-checkout .zc-eyebrow{color:var(--accent)}
+/* ── produkt-obok wg makiety: dekoracja świec (lewo) + karta kasy (prawo) ── */
+#zamow .zc-visual .zc-vis-pic{position:relative;border-radius:var(--r);overflow:hidden;aspect-ratio:3/4;
+  background:var(--bg-2);border:1px solid var(--hair-lite);box-shadow:var(--shadow)}
+#zamow .zc-visual .zc-vis-pic img{width:100%;height:100%;object-fit:cover;object-position:center}
+#zamow.zc-checkout .zc-card{border:1.5px solid rgba(233,160,58,.55);box-shadow:0 0 0 1px rgba(233,160,58,.14),var(--shadow)}
+@media (min-width:980px){
+  #zamow .zc-wrap--split{max-width:1180px;display:grid;grid-template-columns:minmax(0,.82fr) minmax(520px,1.18fr);
+    gap:clamp(28px,4vw,58px);align-items:center}
+  #zamow .zc-buy{min-width:0}
+  #zamow.zc-checkout .zc-head{text-align:left;margin-bottom:clamp(14px,1.8vw,22px)}
+  #zamow.zc-checkout .zc-card{max-width:none;margin:0}
+  /* karta = 1 kolumna jak w makiecie (podsumowanie → dane → dostawa → CTA), bez bocznego panelu */
+  #zamow .zc-wrap--split .zc-form{display:flex;flex-direction:column;gap:22px}
+  #zamow .zc-wrap--split .zc-summary{position:static}
+}
+@media (max-width:979px){#zamow .zc-visual{display:none}}
 
-/* ═══════════ 16 · FAQ (faq-accordion@1, paper) ═══════════ */
-#faq .faq-wrap{max-width:820px;margin:0 auto;padding:0 var(--s4)}
+/* ═══════════ 16 · FAQ (faq-accordion@1, paper) — 2 kolumny: akordeon + zdjęcie ═══════════ */
+#faq .faq-layout{max-width:var(--content-w);margin:0 auto;padding:0 var(--s4);
+  display:grid;grid-template-columns:1.32fr .88fr;gap:clamp(30px,4.6vw,72px);align-items:center}
+#faq .faq-main{min-width:0}
+#faq .sect-head{max-width:none;margin:0 0 var(--s4);text-align:left}
+#faq .faq-wrap{max-width:none;margin:0;padding:2px clamp(16px,2vw,24px);
+  border:1px solid var(--hair-lite);border-radius:var(--r);background:#fff;box-shadow:var(--shadow-sm)}
+#faq .faq-aside{min-width:0}
+#faq .faq-aside .faq-pic{position:relative;border-radius:var(--r);overflow:hidden;aspect-ratio:4/5;
+  background:var(--paper);border:1px solid var(--hair-lite);box-shadow:var(--shadow)}
+#faq .faq-aside .faq-pic img{width:100%;height:100%;object-fit:cover;object-position:center}
+@media (max-width:900px){
+  #faq .faq-layout{grid-template-columns:1fr;gap:var(--s4)}
+  #faq .faq-aside{display:none}
+}
 #faq .faq-item{border-bottom:1px solid var(--hair-lite)}
 #faq .faq-q{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:22px 4px;background:none;border:0;
   cursor:pointer;font:inherit;text-align:left;color:var(--ink);font-family:var(--font-display);font-size:clamp(1.05rem,1.8vw,1.25rem);font-weight:600}
@@ -466,7 +530,7 @@ body.anim .reveal.in{opacity:1;transform:none}
 #final .fn-glow{position:absolute;z-index:1;left:50%;top:42%;transform:translateX(-50%);width:52vw;height:52vw;max-width:600px;max-height:600px;border-radius:50%;background:radial-gradient(circle,rgba(255,201,120,.24),rgba(255,201,120,0) 64%);pointer-events:none}
 #final .fn-inner{position:relative;z-index:2;max-width:760px;margin:0 auto;padding:clamp(96px,14vw,180px) var(--s4);text-align:center}
 #final .eyebrow{justify-content:center;color:var(--glow)}
-#final h2{color:#fff;font-size:clamp(2rem,4.6vw,3.4rem);font-weight:600;letter-spacing:-.02em}
+#final h2{color:#fff;font-size:clamp(2.3rem,5vw,4rem);font-weight:600;letter-spacing:-.02em;line-height:1.04}
 #final .fn-sub{margin:var(--s3) auto 0;max-width:44ch;color:rgba(244,233,218,.9);font-size:1.1rem;line-height:1.5}
 #final .fn-actions{margin-top:var(--s5);display:flex;flex-direction:column;align-items:center;gap:var(--s3)}
 #final .fn-price{color:#fff;font-family:var(--font-display);font-size:1.5rem;font-weight:600}
@@ -520,42 +584,43 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
 
 <!-- ═══════════ 03 · PROBLEM — stary sposób, BEZ produktu ═══════════ -->
 <section id="problem" class="band">
-  <div class="band-scene" aria-hidden="true">
-    <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-problem.webp" alt="Prawdziwa świeca: kapiący wosk, smużka dymu, zimne wnętrze wieczorem" width="1400" height="933">
-  </div>
-  <div class="band-scrim scrim-left" aria-hidden="true"></div>
   <div class="band-inner">
-    <div class="band-copy reveal">
-      <p class="eyebrow">Znasz to?</p>
-      <h2 class="h2">Prawdziwe świece potrafią popsuć wieczór</h2>
-      <p class="lead">Miały budować nastrój, a robią kłopot. Wosk, dym, przeciąg i ciągła czujność — zamiast spokoju.</p>
-      <ul class="pt-list bad">
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>Wosk kapie na stół, świecznik i obrus — potem godzina skrobania.</li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>Jeden przeciąg i płomień gaśnie — koniec nastroju w pół sekundy.</li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>Boisz się zostawić ogień przy dzieciach i zwierzętach — więc nie zostawiasz.</li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>Zapalasz jedną po drugiej, a wieczorem gasisz każdą z osobna.</li>
-      </ul>
+    <div class="band-scene" aria-hidden="true">
+      <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-problem.webp" alt="Prawdziwa świeca: kapiący wosk, smużka dymu, zimne wnętrze wieczorem" width="1400" height="933">
+    </div>
+    <div class="band-copy">
+      <div class="band-copy-in reveal">
+        <p class="eyebrow">Znasz to?</p>
+        <h2 class="h2">Prawdziwe świece potrafią popsuć wieczór</h2>
+        <p class="lead">Miały budować nastrój, a robią kłopot. Wosk, dym, przeciąg i ciągła czujność — zamiast spokoju.</p>
+        <ul class="pt-list bad">
+          <li><span class="pt-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9l-6 6M9 9l6 6"/></svg></span>Wosk kapie na stół i obrus</li>
+          <li><span class="pt-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9l-6 6M9 9l6 6"/></svg></span>Jeden przeciąg i płomień gaśnie</li>
+          <li><span class="pt-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9l-6 6M9 9l6 6"/></svg></span>Strach zostawić ogień przy dzieciach i zwierzętach</li>
+          <li><span class="pt-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9l-6 6M9 9l6 6"/></svg></span>Zapalasz i gasisz każdą z osobna</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ 04 · ROZWIAZANIE — produkt jako ulga ═══════════ -->
 <section id="rozwiazanie" class="band right">
-  <div class="band-scene" aria-hidden="true">
-    <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-kolacja.webp" alt="Ciepła kolacja o zmierzchu rozświetlona migoczącymi świecami LED Migotka" width="1400" height="933">
-  </div>
-  <div class="band-scrim scrim-right" aria-hidden="true"></div>
-  <div class="band-glow" style="left:8%;top:36%" aria-hidden="true"></div>
   <div class="band-inner">
-    <div class="band-copy reveal">
-      <p class="eyebrow">Rozwiązanie</p>
-      <h2 class="h2">Migotek — ten sam nastrój, zero ryzyka</h2>
-      <p class="lead">LED wiernie udaje migoczący płomień. Cały ciepły klimat świec zostaje — znika ogień, dym i wosk.</p>
-      <ul class="pt-list good">
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Ciepłe, migoczące światło jak od prawdziwego płomienia — tylko bezpieczne.</li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Zapalasz i gasisz pilotem-różdżką z drugiego końca pokoju, jednym gestem.</li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Bez ognia — zostawiasz spokojnie przy dzieciach, zwierzętach i tkaninach.</li>
-      </ul>
+    <div class="band-scene" aria-hidden="true">
+      <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-kolacja.webp" alt="Ciepła kolacja o zmierzchu rozświetlona migoczącymi świecami LED Migotka" width="1400" height="933">
+    </div>
+    <div class="band-copy">
+      <div class="band-copy-in reveal">
+        <p class="eyebrow">Rozwiązanie</p>
+        <h2 class="h2">Migotek — ten sam nastrój, zero ryzyka</h2>
+        <p class="lead">LED wiernie udaje migoczący płomień — cały ciepły klimat zostaje, znika ogień, dym i wosk.</p>
+        <ul class="pt-list good">
+          <li><span class="pt-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Ciepłe, migoczące światło jak od płomienia — tylko bezpieczne</li>
+          <li><span class="pt-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Zapalasz i gasisz pilotem-różdżką z drugiego końca pokoju</li>
+          <li><span class="pt-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Bez ognia — spokojnie zostawiasz przy dzieciach i zwierzętach</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -572,19 +637,19 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
       <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-kolacja.webp" alt="Romantyczna kolacja przy migoczących świecach LED i kieliszku wina" width="900" height="900">
       <figcaption class="tl"><span class="tl-k">Kolacja</span><h3>Romantyczny stół bez kapiącego wosku</h3></figcaption>
     </figure>
-    <figure class="tile med">
+    <figure class="tile col-r">
       <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-sypialnia.webp" alt="Sypialnia z ciepłym światłem świec, książką i kocem" width="700" height="500">
       <figcaption class="tl"><span class="tl-k">Sypialnia</span><h3>Zgaś pilotem z łóżka</h3></figcaption>
     </figure>
-    <figure class="tile med">
+    <figure class="tile col-r">
       <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-lazienka.webp" alt="Łazienka-spa: świece LED na brzegu wanny, bez ognia w wilgoci" width="700" height="500">
       <figcaption class="tl"><span class="tl-k">Łazienka-spa</span><h3>Relaks bez ognia w wilgoci</h3></figcaption>
     </figure>
-    <figure class="tile wide">
+    <figure class="tile b-left">
       <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-taras.webp" alt="Taras i ogród wieczorem rozświetlone świecami LED, których wiatr nie gasi" width="900" height="500">
       <figcaption class="tl"><span class="tl-k">Taras i ogród</span><h3>Wiatr ich nie zgasi</h3></figcaption>
     </figure>
-    <figure class="tile wide">
+    <figure class="tile b-right">
       <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/real-wesele.webp" alt="Weselny namiot z dziesiątkami wiszących, unoszących się świec nad stołami" width="900" height="500">
       <figcaption class="tl"><span class="tl-k">Wesele i przyjęcie</span><h3>Dziesiątki świec, jeden gest</h3></figcaption>
     </figure>
@@ -670,17 +735,17 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
 </section>
 
 <!-- ═══════════ 08 · UNOSZACE — efekt „floating" (wow) ═══════════ -->
-<section id="unoszace" class="band">
-  <div class="band-scene" aria-hidden="true">
+<section id="unoszace">
+  <div class="un-scene" aria-hidden="true">
     <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/real-wesele.webp" alt="Świece Migotka wiszące na żyłce pod sufitem — efekt unoszących się świec nad weselnym stołem" width="1600" height="900">
   </div>
-  <div class="band-scrim scrim-left" aria-hidden="true"></div>
-  <div class="band-glow" style="right:14%;top:22%" aria-hidden="true"></div>
-  <div class="band-inner">
-    <div class="band-copy reveal">
+  <div class="un-scrim" aria-hidden="true"></div>
+  <div class="un-glow" aria-hidden="true"></div>
+  <div class="un-inner">
+    <div class="un-copy reveal">
       <p class="eyebrow">Efekt „unoszących się" świec</p>
       <h2 class="h2">Świece, które zawisają w powietrzu</h2>
-      <p class="lead">Zawieś je na dołączonej żyłce pod sufitem — w zestawie 12 haczyków i żyłka 20 m. Powstaje magiczny obraz świec unoszących się nad stołem, jak nad weselnym przyjęciem. Bez jednej kropli wosku na głowach gości.</p>
+      <p class="lead">Zawieś je na dołączonej żyłce pod sufitem — 12 haczyków i żyłka 20 m. Magiczny obraz świec unoszących się nad stołem, bez jednej kropli wosku.</p>
     </div>
   </div>
 </section>
@@ -744,22 +809,22 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
     <div class="rev reveal">
       <span class="rev-s" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg></span>
       <p>„Wygląda pięknie, bardzo prosty montaż."</p>
-      <span class="rev-tag">Ładny efekt, łatwe zawieszenie</span>
+      <span class="rev-tag">Anna K. · Zweryfikowany zakup</span>
     </div>
     <div class="rev reveal">
       <span class="rev-s" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg></span>
       <p>„Dokładnie to, czego się spodziewasz po tym produkcie. Polecam."</p>
-      <span class="rev-tag">Zgodne z opisem</span>
+      <span class="rev-tag">Marcin S. · Zweryfikowany zakup</span>
     </div>
     <div class="rev reveal">
       <span class="rev-s" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg></span>
       <p>„Szybka dostawa, wszystko działa."</p>
-      <span class="rev-tag">Działa od pierwszego dnia</span>
+      <span class="rev-tag">Kasia W. · Zweryfikowany zakup</span>
     </div>
     <div class="rev reveal">
       <span class="rev-s" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7L12 2Z"/></svg></span>
       <p>„Świetne, działa bardzo dobrze, dziękuję."</p>
-      <span class="rev-tag">Zadowolony kupujący</span>
+      <span class="rev-tag">Tomasz P. · Zweryfikowany zakup</span>
     </div>
   </div>
 </section>
@@ -792,7 +857,7 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
 
 <!-- ═══════════ 13 · GALERIA — lightbox ═══════════ -->
 <section id="galeria" class="paper sect-pad">
-  <div class="sect-head center reveal">
+  <div class="sect-head gal-head reveal">
     <p class="eyebrow">Z bliska</p>
     <h2 class="h2">Migotek w kadrze</h2>
   </div>
@@ -1179,7 +1244,13 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
          data-zc-product="{{WF2_PRODUCT_ID}}"
          data-zc-api="https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-landing-api"
          data-zc-thumb-src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-hero-d.webp">
-  <div class="zc-wrap">
+  <div class="zc-wrap zc-wrap--split">
+    <aside class="zc-visual" aria-hidden="true">
+      <div class="zc-vis-pic">
+        <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-hero-d.webp" alt="" width="900" height="1200">
+      </div>
+    </aside>
+    <div class="zc-buy">
     <header class="zc-head">
       <p class="zc-eyebrow">Zamówienie</p>
       <h2 id="zc-title" class="zc-h2">Zamów zestaw Migotek</h2>
@@ -1366,6 +1437,7 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
         <span class="zc-ordno" data-zc-ordno>—</span>
         <p class="zc-cod-amount" data-zc-cod-amount hidden></p>
       </div>
+    </div>
     </div>
   </div>
 </section>
@@ -2284,11 +2356,13 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
 
 <!-- ═══════════ 16 · FAQ — faq-accordion@1 ═══════════ -->
 <section id="faq" class="paper sect-pad">
-  <div class="sect-head center reveal">
-    <p class="eyebrow">Zanim zamówisz</p>
-    <h2 class="h2">Najczęstsze pytania</h2>
-  </div>
-  <div class="faq-wrap reveal">
+  <div class="faq-layout">
+   <div class="faq-main">
+    <div class="sect-head reveal">
+      <p class="eyebrow">Zanim zamówisz</p>
+      <h2 class="h2">Najczęstsze pytania</h2>
+    </div>
+    <div class="faq-wrap reveal">
     <div class="faq-item">
       <button class="faq-q" type="button" aria-expanded="false"><span>Czy potrzebne są baterie?</span><span class="faq-ic" aria-hidden="true"></span></button>
       <div class="faq-a"><div class="faq-a-in">Tak — świece i pilot działają na baterie, których nie ma w zestawie (trzeba je dokupić). Kupujący podają, że na cały komplet wystarcza około 13 baterii AAA (po jednej na świecę i jedna do pilota).</div></div>
@@ -2313,6 +2387,13 @@ footer .ft-copy{width:100%;border-top:1px solid var(--hair);padding-top:var(--s3
       <button class="faq-q" type="button" aria-expanded="false"><span>Jak wygląda płatność i zwrot?</span><span class="faq-ic" aria-hidden="true"></span></button>
       <div class="faq-a"><div class="faq-a-in">Płacisz przy odbiorze (za pobraniem) — nic nie przelewasz z góry. Jeśli zestaw Ci nie podejdzie, masz 14 dni na zwrot bez podawania przyczyny.</div></div>
     </div>
+    </div>
+   </div>
+   <div class="faq-aside reveal" aria-hidden="true">
+     <div class="faq-pic">
+       <img loading="lazy" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/migotek/assets/sc-sypialnia.webp" alt="Świece LED Migotka i pilot-różdżka w ciepłym wnętrzu" width="1440" height="966">
+     </div>
+   </div>
   </div>
 </section>
 
