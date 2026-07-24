@@ -108,6 +108,11 @@
         .lc-badge { flex-shrink:0; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;
             border:1px solid; font-size:10.5px; font-weight:600; letter-spacing:.01em; white-space:nowrap; }
         .lc-badge i { font-size:11px; }
+        /* ── znacznik OLD — klient przeniesiony z Workflow 1 (sepia-neutral, ≠ kolory stanów) ── */
+        .old-badge { flex-shrink:0; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;
+            border:1px solid #3a352c; background:#16130d; color:#c2b8a3; font:600 10.5px/1 'JetBrains Mono',monospace;
+            letter-spacing:.06em; white-space:nowrap; }
+        .old-badge i { font-size:11px; }
         .pcard.is-idle { opacity:.6; }
         .pcard.is-idle:hover { opacity:.82; }
         /* menu ⋯ w rogu karty (zmiana stanu bez wchodzenia w projekt) */
@@ -438,6 +443,7 @@
                 if (p.customer_phone) { const d = String(p.customer_phone).replace(/\D/g, ''); if (d) parts.push(d); }
                 parts.push(STATUS_META[p.status]?.label || p.status || '');
                 parts.push(LC_META[lifecycleOf(p)].label);
+                if (p.is_old) parts.push('old stary klient workflow1 przeniesiony');
                 (productsByProj[p.id] || []).forEach(pr => { if (pr.name) parts.push(pr.name); if (pr.slug) parts.push(pr.slug); });
                 p._idx = foldStr(parts.join(' '));
             });
@@ -646,9 +652,11 @@
             rows.sort((a, b) => {
                 const ra = LC_RANK[lifecycleOf(a)], rb = LC_RANK[lifecycleOf(b)];
                 if (ra !== rb) return ra - rb;                        // active → paused → completed → cancelled
-                const da = isDemo(a) ? 1 : 0, db = isDemo(b) ? 1 : 0;
-                if (da !== db) return da - db;                         // DEMO na końcu swojej grupy
-                if (ra === 0) return (aggByProj[a.id]?.tempo?.slack ?? 999) - (aggByProj[b.id]?.tempo?.slack ?? 999); // aktywne wg zapasu tempa
+                // w obrębie stanu: świeży klient (0) → OLD/Workflow 1 (1) → DEMO (2)
+                const da = isDemo(a) ? 2 : (a.is_old ? 1 : 0), db = isDemo(b) ? 2 : (b.is_old ? 1 : 0);
+                if (da !== db) return da - db;
+                // aktywne, świeże (nie-OLD, nie-DEMO) sortujemy wg zapasu tempa 14 dni; reszta wg daty
+                if (ra === 0 && da === 0) return (aggByProj[a.id]?.tempo?.slack ?? 999) - (aggByProj[b.id]?.tempo?.slack ?? 999);
                 return new Date(b.created_at) - new Date(a.created_at);
             });
 
@@ -677,6 +685,10 @@
             const idle = (lc === 'paused' || lc === 'cancelled'); // wyszarz jak DEMO
             const lcBadge = lc !== 'active'
                 ? `<span class="lc-badge" style="color:${lcM.color};border-color:${lcM.color}59;background:${lcM.color}14"><i class="ph ${lcM.icon}"></i>${lcM.label}</span>`
+                : '';
+            // znacznik OLD — klient z Workflow 1 (obsługa w innym tempie)
+            const oldBadge = p.is_old
+                ? `<span class="old-badge" title="Klient przeniesiony z TN Workflow 1 — obsługa w innym tempie niż nowi"><i class="ph ph-clock-counter-clockwise"></i>OLD</span>`
                 : '';
             const menuHtml = `<div class="pc-menu" id="menu-${p.id}" onclick="event.stopPropagation()">
                 <button class="pc-menu-btn" title="Zmień stan projektu" onclick="toggleMenu(event,'${p.id}')"><i class="ph ph-dots-three-outline"></i></button>
@@ -730,10 +742,10 @@
                 <div class="pc-head">
                     <div class="pc-mono">${escapeHtml(initials(brand))}</div>
                     <div class="pc-tt">
-                        <div class="pc-title" style="${demo ? (lcBadge ? 'padding-right:6px' : 'padding-right:66px') : ''}">${escapeHtml(brand)}</div>
+                        <div class="pc-title" style="${demo ? ((lcBadge || oldBadge) ? 'padding-right:6px' : 'padding-right:66px') : ''}">${escapeHtml(brand)}</div>
                         <div class="pc-client">${escapeHtml(clientLine) || '&nbsp;'}${waIcon(p)}</div>
                     </div>
-                    ${(demo && !lcBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}${lcBadge}</div>`}
+                    ${(demo && !lcBadge && !oldBadge) ? '' : `<div class="flex flex-col items-end gap-1 flex-shrink-0">${demo ? '' : `<span class="pc-badge ${sm.cls}">${sm.label}</span>`}${lcBadge}${oldBadge}</div>`}
                 </div>
 
                 <div>
@@ -780,6 +792,10 @@
                         <span class="tempo-paused"><i class="ph ph-pause"></i>Wstrzymany · dzień ${day} z ${BUILD_DAYS}</span>
                     </div>
                     <div class="tempo-bar"><span style="width:${w}%;background:#3f3f46"></span></div>`;
+            }
+            // klient OLD (Workflow 1) obsługiwany w innym tempie — licznik 14 dni tu wprowadza w błąd
+            if (p.is_old) {
+                return `<div class="tempo-closed"><i class="ph ph-clock-counter-clockwise"></i>Klient z Workflow 1 — obsługa w innym tempie</div>`;
             }
             return renderTempo(agg.tempo);
         }

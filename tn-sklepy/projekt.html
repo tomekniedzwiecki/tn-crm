@@ -69,6 +69,7 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 flex-shrink-0 self-start flex-wrap justify-end">
+                                    <span id="p-old-badge" class="hidden"></span>
                                     <span id="p-lc-badge" class="hidden"></span>
                                     <select id="p-status" onchange="saveStatus()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none"></select>
                                 </div>
@@ -470,6 +471,12 @@
                 <div><label class="text-xs text-zinc-500 block mb-1">Domena</label><input id="set-domain" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Konto reklamowe (act_…)</label><input id="set-act" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Pixel ID</label><input id="set-pixel" class="fld"></div>
+                <div class="md:col-span-2 flex items-center gap-2 pt-1">
+                    <input id="set-old" type="checkbox" class="w-4 h-4 accent-[#c2b8a3] cursor-pointer">
+                    <label for="set-old" class="text-xs text-zinc-400 select-none cursor-pointer flex items-center gap-1.5">
+                        <i class="ph ph-clock-counter-clockwise text-[#c2b8a3]"></i>Klient OLD — przeniesiony z TN Workflow 1 (obsługa w innym tempie)
+                    </label>
+                </div>
             </div>
 
             <!-- Portal klienta: podgląd 1:1 + mail z dostępem (draft w Gmailu) -->
@@ -692,6 +699,16 @@
                     lcEl.style.cssText = `color:${m.color};border:1px solid ${m.color}59;background:${m.color}14`;
                     lcEl.innerHTML = `<i class="ph ${m.icon}"></i>${m.label}`;
                 }
+            }
+            // znacznik OLD — klient przeniesiony z TN Workflow 1 (obsługa w innym tempie)
+            const oldEl = document.getElementById('p-old-badge');
+            if (oldEl) {
+                if (project.is_old) {
+                    oldEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap';
+                    oldEl.style.cssText = 'color:#c2b8a3;border:1px solid #3a352c;background:#16130d';
+                    oldEl.title = 'Klient przeniesiony z TN Workflow 1 — obsługa w innym tempie niż nowi';
+                    oldEl.innerHTML = '<i class="ph ph-clock-counter-clockwise"></i>OLD · Workflow 1';
+                } else { oldEl.className = 'hidden'; oldEl.innerHTML = ''; }
             }
             const meta = [];
             if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
@@ -2959,6 +2976,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             document.getElementById('set-domain').value = project.domain || '';
             document.getElementById('set-act').value = project.meta_ad_account_id || '';
             document.getElementById('set-pixel').value = project.pixel_id || '';
+            document.getElementById('set-old').checked = project.is_old === true;
             const plnk = portalLink();
             document.getElementById('set-portal-link').value = plnk || 'brak tokenu projektu';
             document.getElementById('set-portal-link').title = plnk || '';
@@ -3063,6 +3081,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
         }
         async function saveSettings() {
             const prevLc = lifecycleOf(project);
+            const prevOld = project.is_old === true;
             const payload = {
                 lifecycle: document.getElementById('set-lifecycle').value || 'active',
                 customer_name: document.getElementById('set-customer').value.trim() || null,
@@ -3073,11 +3092,13 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 domain: document.getElementById('set-domain').value.trim() || null,
                 meta_ad_account_id: document.getElementById('set-act').value.trim() || null,
                 pixel_id: document.getElementById('set-pixel').value.trim() || null,
+                is_old: document.getElementById('set-old').checked === true,
             };
             const { error } = await supabaseClient.from('wf2_projects').update(payload).eq('id', projectId);
             if (error) { showToast('Błąd: '+error.message,'error'); return; }
             Object.assign(project, payload);
             if (payload.lifecycle !== prevLc) logActivity('lifecycle_changed', 'Stan projektu: ' + (LC_META[payload.lifecycle]?.label || payload.lifecycle));
+            if (payload.is_old !== prevOld) logActivity(payload.is_old ? 'flag_old' : 'unflag_old', payload.is_old ? 'Oznaczono jako klient OLD (Workflow 1)' : 'Zdjęto oznaczenie OLD');
             closeSettings(); renderHeader(); renderFields(); showToast('Zapisano','success');
         }
         async function deleteProject() {
