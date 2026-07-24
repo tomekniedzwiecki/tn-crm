@@ -548,7 +548,14 @@ Deno.serve(async (req) => {
     // dlatego kroki Resend API wykonuje funkcja; DNS dodaje operator lokalnie
     // (vercel dns add) na podstawie zwróconych rekordów. Domena STAŁA (hardcode).
     if (action === "domain") {
-      const WFP_DOMAIN = "kontakt.tomekniedzwiecki.pl";
+      // Domena wysyłkowa: domyślnie subdomena odbiorcza; opcjonalnie apex do wysyłki z ceo@.
+      // Biała lista — NIE otwieramy akcji na dowolną domenę (bezpieczeństwo).
+      const ALLOWED_DOMAINS = ["kontakt.tomekniedzwiecki.pl", "tomekniedzwiecki.pl"];
+      const reqDomain = isStr(body.domain) ? body.domain.trim().toLowerCase() : "";
+      if (reqDomain && !ALLOWED_DOMAINS.includes(reqDomain)) {
+        return json({ error: "domena_niedozwolona", message: `Dozwolone: ${ALLOWED_DOMAINS.join(", ")}` }, 400, c);
+      }
+      const WFP_DOMAIN = reqDomain || "kontakt.tomekniedzwiecki.pl";
       const RESEND_KEY = Deno.env.get("resend_api_key") || Deno.env.get("RESEND_API_KEY");
       if (!RESEND_KEY) return json({ error: "brak_klucza", message: "Brak resend_api_key w env funkcji." }, 500, c);
       const rfetch = (path: string, init: RequestInit = {}) =>
