@@ -121,21 +121,32 @@ body.anim .reveal.in{opacity:1;transform:none}
 .pb svg{height:22px;width:auto;display:block}
 .pb--visa svg,.pb--mc svg{height:18px}
 
-/* ═══════════ HERO — archetyp B split 55/45 ═══════════ */
-#hero{position:relative;background:var(--paper);color:var(--ink);overflow:hidden}
+/* ═══════════ HERO — TYP A: scena full-bleed W TLE + copy na scrimie ═══════════ */
+#hero{position:relative;background:var(--paper);color:var(--ink);overflow:hidden;min-height:90svh;display:flex;flex-direction:column}
 #hero .hero-topbar{position:relative;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
-  max-width:var(--content-w);margin:0 auto;padding:var(--s3) var(--s4);min-height:72px}
+  max-width:var(--content-w);margin:0 auto;width:100%;padding:var(--s3) var(--s4);min-height:72px}
 #hero .hero-wordmark{font-family:var(--font-display);font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);text-decoration:none;line-height:1}
 #hero .hero-topbar-promise{color:var(--body);font-size:13.5px;font-weight:600;text-align:right;line-height:1.3}
-#hero .hero-inner{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:var(--s6);align-items:center;
-  max-width:var(--content-w);margin:0 auto;padding:var(--s5) var(--s4) var(--s7)}
+/* scena W TLE (full-bleed pod hero-video) */
+#hero .hero-bg{position:absolute;inset:0;z-index:0}
+#hero .hero-scene-picture,#hero .hero-scene-picture img{position:absolute;inset:0;width:100%;height:100%}
+#hero .hero-scene-picture img{object-fit:cover;object-position:72% center}
+#hero .hero-video-inject{position:absolute;inset:0;z-index:1}
+#hero .hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:72% center;opacity:0;
+  transition:opacity .8s cubic-bezier(.22,1,.36,1);pointer-events:none}
+#hero .hero-video.on{opacity:1}
+#hero .hero-scrim{position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(96deg,var(--paper) 0%,rgba(247,248,250,.95) 30%,rgba(247,248,250,.62) 50%,rgba(247,248,250,.14) 72%,rgba(247,248,250,0) 90%)}
+/* copy na wierzchu sceny */
+#hero .hero-inner{position:relative;z-index:3;flex:1;display:flex;align-items:center;
+  max-width:var(--content-w);margin:0 auto;width:100%;padding:var(--s5) var(--s4) var(--s7)}
+#hero .hero-copy{max-width:560px}
 #hero .hero-eyebrow{margin:0 0 var(--s3);font-family:var(--font-text);font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--cta)}
 #hero .hero-title{font-family:var(--font-display);font-size:var(--h1-d);font-weight:800;letter-spacing:-.03em;line-height:.98;color:var(--ink);max-width:15ch}
 #hero .hero-title .hi{position:relative;white-space:nowrap;color:var(--cta)}
-#hero .hero-sub{margin:var(--s4) 0 0;max-width:44ch;color:var(--body);font-size:clamp(17px,1.4vw,19px);line-height:1.5}
-
+#hero .hero-sub{margin:var(--s4) 0 0;max-width:42ch;color:var(--body);font-size:clamp(17px,1.4vw,19px);line-height:1.5}
 #hero .hero-offer{margin-top:var(--s5);padding:var(--s4);border:1px solid var(--line);border-radius:var(--radius-lg);
-  background:#fff;box-shadow:var(--shadow-md);max-width:440px}
+  background:#fff;box-shadow:var(--shadow-lg);max-width:420px}
 #hero .hero-offer-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:var(--s3)}
 #hero .hero-price{font-family:var(--font-text);font-size:clamp(38px,4.4vw,50px);font-weight:800;letter-spacing:-.03em;color:var(--ink);line-height:1}
 #hero .hero-price-note{font-size:14px;color:var(--body);font-weight:600}
@@ -143,27 +154,25 @@ body.anim .reveal.in{opacity:1;transform:none}
 #hero .hero-checkout-note{margin:var(--s2) 0 var(--s3);text-align:center;font-size:14px;color:var(--body)}
 #hero .hero-payrow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 
-#hero .hero-scene{position:relative;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg);
-  background:var(--paper-3);aspect-ratio:4/5;isolation:isolate}
-#hero .hero-scene-picture,#hero .hero-scene-picture img{position:absolute;inset:0;width:100%;height:100%}
-#hero .hero-scene-picture img{object-fit:cover;object-position:center}
-#hero .hero-video-inject{position:absolute;inset:0;z-index:2}
-#hero .hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;
-  transition:opacity .8s cubic-bezier(.22,1,.36,1);pointer-events:none}
-#hero .hero-video.on{opacity:1}
-#hero .hero-scene-edge{position:absolute;left:0;right:0;bottom:0;z-index:3;height:16px;pointer-events:none;
-  border-bottom:1px solid rgba(255,255,255,.35);
-  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 1px,transparent 1px 26px);background-position:bottom;background-size:auto 9px;background-repeat:repeat-x}
-
 @media (max-width:900px){
-  #hero .hero-inner{grid-template-columns:1fr;gap:var(--s4);padding:var(--s4) var(--s3) var(--s6)}
+  #hero{min-height:94svh}
+  #hero .hero-scene-picture img,#hero .hero-video{object-position:center}
+  #hero .hero-scrim{background:linear-gradient(0deg,var(--paper) 4%,rgba(247,248,250,.95) 32%,rgba(247,248,250,.74) 54%,rgba(247,248,250,.16) 78%,rgba(247,248,250,0) 100%)}
+  #hero .hero-inner{align-items:flex-end;padding:var(--s6) var(--s3) var(--s5)}
+  #hero .hero-copy{max-width:none}
   #hero .hero-topbar-promise{max-width:180px;font-size:12px}
-  #hero .hero-scene{order:1;aspect-ratio:auto;height:45svh;min-height:300px}
-  #hero .hero-copy{order:2}
   #hero .hero-title{font-size:var(--h1-m);max-width:none}
   #hero .hero-sub{max-width:none;margin-top:var(--s3)}
-  #hero .hero-offer{margin-top:var(--s4);margin-left:auto;margin-right:auto;position:relative;z-index:5}
+  #hero .hero-offer{margin-top:var(--s4);max-width:none}
   #hero .hero-price{text-align:left}
+}
+/* krótkie desktopy (np. 1366×768) — kompresja, żeby CTA było above the fold */
+@media (min-width:901px) and (max-height:860px){
+  #hero{min-height:auto}
+  #hero .hero-inner{padding-top:var(--s3);padding-bottom:var(--s5)}
+  #hero .hero-title{font-size:clamp(38px,4vw,52px)}
+  #hero .hero-sub{margin-top:var(--s3)}
+  #hero .hero-offer{margin-top:var(--s4)}
 }
 
 /* ═══════════ ZAUFANIE (trust nad foldem) ═══════════ */
@@ -414,6 +423,14 @@ footer .ft-copy{width:100%;border-top:1px solid rgba(255,255,255,.12);padding-to
     <a class="hero-wordmark" href="/" aria-label="Zaklipek">Zaklipek</a>
     <span class="hero-topbar-promise">Płatność przy odbiorze · 14 dni na zwrot · wysyłka z Polski</span>
   </header>
+  <div class="hero-bg" aria-hidden="true">
+    <picture class="hero-scene-picture">
+      <source media="(max-width:900px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/zaklipek/assets/sc-hero-m.webp">
+      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/zaklipek/assets/sc-hero-d.webp" alt="Dłoń wpina pendrive w hub Zaklipek zaciśnięty na krawędzi biurka; obok monitor i kubek" width="1600" height="1000" fetchpriority="high">
+    </picture>
+    <div class="hero-video-inject"></div>
+    <div class="hero-scrim"></div>
+  </div>
   <div class="hero-inner">
     <div class="hero-copy">
       <p class="hero-eyebrow">Przyklipsowy hub USB do biurka</p>
@@ -432,14 +449,6 @@ footer .ft-copy{width:100%;border-top:1px solid rgba(255,255,255,.12);padding-to
           <span class="tp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>Z Polski</span>
         </div>
       </div>
-    </div>
-    <div class="hero-scene">
-      <picture class="hero-scene-picture">
-        <source media="(max-width:900px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/zaklipek/assets/sc-hero-m.webp">
-        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/zaklipek/assets/sc-hero-d.webp" alt="Dłoń wpina pendrive w hub Zaklipek zaciśnięty na krawędzi biurka; obok monitor i kubek" width="1200" height="1500" fetchpriority="high">
-      </picture>
-      <div class="hero-video-inject" aria-hidden="true"></div>
-      <div class="hero-scene-edge" aria-hidden="true"></div>
     </div>
   </div>
 </section>
