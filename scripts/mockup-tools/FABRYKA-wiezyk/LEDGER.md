@@ -37,5 +37,26 @@ landing pokazuje MINI-MARKĘ produktu, nie parasol). Radar `bud_tt_products.id =
   ICP-GRUPA-DOCELOWA.md · LEDGER.md.
 - **Cena PL 379,00 zł** [ODCZYT wf2_products.price; fabryka NIE zmienia]. Koszt 323,19 zł.
 
+## F1 — PLAN + PRZEWODNIK (2026-07-24)
+- **PLAN.md** przez gpt-5.6-sol (effort high; edge 504 → fallback lokalny OpenAI Responses API; output
+  ucięty na §5 grafik → §5–7 dopisane przez agenta). Motyw: „Pionowe królestwo kota — od azylu na dole
+  po punkt obserwacyjny na szczycie" (≠ clean e-commerce).
+- **MANIFEST:** 14 sekcji `build` (7 scenowych + 7 kodowych) + 2 `blokada-tomek` (wideo, zdjęcia
+  kupujących). TOR-I: anatomia-wiezy, trzy-kolory. → **28 makiet F2** (14 d + 14 m).
+- **PARTYTURA (różnicowanie cross-landing):** archetyp **D** (packshot centralny) · akcent **bursztyn
+  `#B0710E`** (z produktu; ΔE ≥15 DO POTWIERDZENIA skryptem w F2.5) · font **Newsreader + Source Sans 3**
+  (serif vs sans poprzedników) · tło ciepła kość `#FBF6EC`. **Osie różnicy: 4/5 realne** (archetyp/font/
+  akcent/świat; ⚠️ tło ~ nakrecik `#FAF7F1` → F2.5 lekko zaróżowić tło, oddalić od nakrecika).
+- **PRZEWODNIK-GRAFICZNY.md** — łuk, matryca osi (konteksty 5/skale 3/światła 3/człowiek ~60%/persp. 4),
+  anty-szew zig-zag (pazury-L / azyl-P / ruch-L), ANIM-3 (hero + azyl-drzemka + final; koty statyczne =
+  anty-morfing Kling).
+- **KRYTYK PRZEWODNIKA (subagent Opus, otwarty osąd) = PASS.** Wdrożone 3 poprawki nice-to-have:
+  (1) ruch-widok odseparowany od azyl-drzemka (perspektywa z dołu ku górze + jaśniejsze światło);
+  (2) hero beat amplituda podbita (firana faluje NIEUSTANNIE, ogon kota = mikro-akcent; próg diff≥8.0);
+  (3) global NEG w każdym seedzie (no raw wooden trunk/branch, no wheels, no litter box).
+
 ## Odstępstwa świadome
-- (brak na F0)
+- (brak na F0/F1)
+
+## Koszty API (twarde)
+- F1 plan: gpt-5.6-sol Responses — input 11 995 tok, output 12 000 tok (usage log). Szac. koszt → wf2_costs.
