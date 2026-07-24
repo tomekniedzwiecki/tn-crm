@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prospektor B2B · TN Sklepy</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-sklepy/favicon.svg?v=2">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.91.0"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.2/src/index.js" integrity="sha384-J7cw2fbG1T4C5MirTVUxsZGaMfw2m0XsCgOQEqUvB1OF9VIsHWuZF1GmyVRzs7eu" crossorigin="anonymous"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
+        .animate-enter { animation: fadeIn .4s ease-out forwards; }
+
+        /* ── Zakładki ─────────────────────────────────────────── */
+        .tab-btn { position:relative; display:inline-flex; align-items:center; gap:7px; padding:12px 4px; margin:0 12px;
+            font-size:13.5px; color:#8b8b94; border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap; transition:color .15s; }
+        .tab-btn:first-child { margin-left:0; }
+        .tab-btn:hover { color:#e4e4e7; }
+        .tab-btn.active { color:#fff; border-bottom-color:#0070f3; }
+        .tab-btn .tb-n { font:600 10.5px/1 'JetBrains Mono',monospace; min-width:17px; height:17px; padding:0 4px; border-radius:5px;
+            display:inline-flex; align-items:center; justify-content:center; background:#f5a623; color:#000; }
+        .tab-btn .tb-n.hidden { display:none; }  /* .tb-n definiuje display — bez tego Tailwindowy .hidden przegrywa i pill „0" zawsze widoczny */
+
+        /* ── KPI kafle ────────────────────────────────────────── */
+        .kpi-tile { background:#0a0a0a; border:1px solid #1f1f1f; border-radius:10px; padding:11px 13px; min-width:0; }
+        .kpi-n { font:600 21px/1 'Inter',sans-serif; color:#fff; letter-spacing:-.02em; }
+        .kpi-l { font-size:11px; color:#71717a; margin-top:4px; display:flex; align-items:center; gap:5px; }
+        .kpi-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+        /* ── Wspólne kontrolki ────────────────────────────────── */
+        .inp { width:100%; background:#0a0a0a; border:1px solid #262626; border-radius:8px; padding:8px 11px; font-size:13px; color:#fff; }
+        .inp:focus { outline:none; border-color:rgba(0,112,243,.6); }
+        textarea.inp { resize:vertical; line-height:1.5; font-family:inherit; }
+        select.inp { appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+        .lbl { font-size:10.5px; color:#71717a; display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+        .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:8px; padding:8px 14px; font-size:13px;
+            font-weight:600; cursor:pointer; transition:all .15s ease; border:1px solid transparent; white-space:nowrap; }
+        .btn-p { background:#0070f3; color:#fff; } .btn-p:hover { background:#3b8bf5; }
+        .btn-w { background:#fff; color:#000; } .btn-w:hover { background:#e4e4e7; }
+        .btn-g { background:#111; border-color:#2a2a2a; color:#d4d4d8; } .btn-g:hover { background:#18181b; border-color:#3f3f46; color:#fff; }
+        .btn-s { background:#45a557; color:#fff; } .btn-s:hover { background:#4fb763; }
+        .btn-d { background:transparent; border-color:#e5484d; color:#f26d78; } .btn-d:hover { background:rgba(229,72,77,.12); }
+        .btn-sm { padding:5px 10px; font-size:12px; border-radius:7px; }
+        .btn:disabled { opacity:.45; cursor:not-allowed; }
+        .card { background:#0a0a0a; border:1px solid #1f1f1f; border-radius:12px; }
+        .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:6px; border:1px solid; font-size:11px; font-weight:600; white-space:nowrap; }
+        .chip { display:inline-flex; align-items:center; gap:6px; border:1px solid #232323; background:#0a0a0a; color:#8b8b94;
+            border-radius:7px; padding:6px 11px; font-size:12px; cursor:pointer; transition:all .15s ease; user-select:none; }
+        .chip:hover { color:#e4e4e7; border-color:#333; }
+        .chip.on { color:#fff; border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.1); }
+        .chip .c-n { font:600 10.5px/1 'JetBrains Mono',monospace; color:#6b6b74; }
+        .chip.on .c-n { color:#c9c9d0; }
+
+        /* ── Tabela sprzedawców ───────────────────────────────── */
+        .pv-tbl { width:100%; border-collapse:collapse; min-width:880px; }
+        .pv-tbl th { text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:#52525b; font-weight:600;
+            padding:9px 12px; border-bottom:1px solid #1f1f1f; white-space:nowrap; }
+        .pv-tbl td { padding:11px 12px; border-bottom:1px solid #141414; font-size:13px; vertical-align:middle; }
+        .pv-tbl tbody tr { cursor:pointer; transition:background .12s; }
+        .pv-tbl tbody tr:hover { background:#0c0c0c; }
+
+        /* ── Drawer ───────────────────────────────────────────── */
+        #drawer { position:fixed; top:0; right:0; height:100%; width:100%; max-width:620px; background:#070707; border-left:1px solid #1f1f1f;
+            transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1); z-index:80; display:flex; flex-direction:column; }
+        #drawer.open { transform:translateX(0); }
+        #drawer-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(2px); z-index:75; }
+        .dw-sec { border:1px solid #1a1a1a; border-radius:12px; padding:15px; background:#0a0a0a; }
+        .dw-sec-h { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#71717a; font-weight:700; margin-bottom:11px; display:flex; align-items:center; gap:7px; }
+        .kv { display:grid; grid-template-columns:130px 1fr; gap:8px; padding:4px 0; font-size:12.5px; }
+        .kv .k { color:#71717a; } .kv .v { color:#d4d4d8; word-break:break-word; }
+        .minichip { display:inline-block; background:#141414; border:1px solid #232323; border-radius:5px; padding:2px 7px; font-size:11px; color:#c4c4c4; margin:0 4px 4px 0; }
+
+        @media (max-width: 640px) {
+            #drawer { max-width:100%; }
+            .kv { grid-template-columns:1fr; gap:2px; }
+        }
+        .link-a { color:#52a8ff; text-decoration:underline; text-underline-offset:2px; word-break:break-all; }
+        .link-a:hover { color:#8bc4ff; }
+
+        /* ── miernik 1-5 (sub-oceny filarów) ───────────────────── */
+        .m5 { display:inline-flex; gap:3px; }
+        .m5 span { width:18px; height:6px; border-radius:2px; background:#1f1f1f; }
+        .m5 span.on { background:#0070f3; }
+
+        /* ── duży badge segmentu ───────────────────────────────── */
+        .seg-big { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:11px; border:1px solid;
+            font:700 22px/1 'Inter',sans-serif; }
+
+        /* ── puls „w skanie" ───────────────────────────────────── */
+        @keyframes vpulse { 0%,100% { opacity:1; } 50% { opacity:.45; } }
+        .vt-pulse { animation:vpulse 1.15s ease-in-out infinite; }
+
+        /* ── gwiazdki priority ─────────────────────────────────── */
+        .pri-star { font-size:12px; color:#3a3a3f; }
+        .pri-star.on { color:#f5b955; }
+
+        /* ── akordeony ─────────────────────────────────────────── */
+        details > summary { list-style:none; }
+        details > summary::-webkit-details-marker { display:none; }
+        .vt-cat > summary { list-style:none; cursor:pointer; }
+        .vt-cat > summary::-webkit-details-marker { display:none; }
+        .vt-cat > summary .caret { transition:transform .2s; }
+        .vt-cat[open] > summary .caret { transform:rotate(90deg); }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3 min-w-0">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
+                <span class="text-zinc-500 text-xs font-mono truncate">tn-sklepy / <span class="text-zinc-300">prospektor</span></span>
+            </div>
+            <button onclick="loadAll()" class="inline-flex items-center gap-2 border border-[#2a2a2a] bg-[#111] hover:bg-[#18181b] text-zinc-300 hover:text-white rounded-md px-3.5 py-2 text-xs font-medium transition-colors">
+                <i class="ph ph-arrows-clockwise"></i> Odśwież
+            </button>
+        </header>
+
+        <!-- Pasek zakładek -->
+        <div class="border-b border-white/5 bg-black/40 px-6 flex items-center overflow-x-auto flex-shrink-0">
+            <button class="tab-btn active" data-tab="pipeline"  onclick="showTab('pipeline')"><i class="ph ph-funnel"></i> Pipeline</button>
+            <button class="tab-btn"        data-tab="kolejka"   onclick="showTab('kolejka')"><i class="ph ph-check-square-offset"></i> Kolejka <span id="ko-tabn" class="tb-n hidden">0</span></button>
+            <button class="tab-btn"        data-tab="wertykale" onclick="showTab('wertykale')"><i class="ph ph-squares-four"></i> Wertykale</button>
+            <button class="tab-btn"        data-tab="skan"      onclick="showTab('skan')"><i class="ph ph-radar"></i> Skan <span id="sk-tabn" class="tb-n hidden">0</span></button>
+            <button class="tab-btn"        data-tab="ustawienia" onclick="showTab('ustawienia')"><i class="ph ph-gear"></i> Ustawienia</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto">
+            <div id="boot" class="p-10 text-center text-zinc-600 text-sm"><i class="ph ph-circle-notch animate-spin"></i> Ładuję…</div>
+
+            <!-- ══════════ PIPELINE ══════════ -->
+            <section id="tab-pipeline" class="tabpanel hidden p-5 lg:p-8 max-w-[1500px] mx-auto animate-enter">
+                <div id="kpi-wrap" class="mb-6"></div>
+
+                <div class="card p-4 mb-4">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <label class="flex items-center gap-2 bg-[#0a0a0a] border border-[#1f1f1f] focus-within:border-[#0070f3]/50 rounded-lg px-3 py-2 flex-1 min-w-[220px]">
+                            <i class="ph ph-magnifying-glass text-zinc-500"></i>
+                            <input id="pv-search" type="text" oninput="renderList()" placeholder="Szukaj: firma, marka, login Allegro, miasto, NIP…" class="bg-transparent outline-none text-white text-sm w-full">
+                        </label>
+                        <select id="pv-seg" onchange="renderList()" class="inp !w-auto min-w-[150px]">
+                            <option value="">Każdy segment</option>
+                            <option value="A">Segment A</option><option value="B">Segment B</option><option value="C">Segment C</option><option value="D">Segment D</option>
+                        </select>
+                        <select id="pv-vert" onchange="renderList()" class="inp !w-auto min-w-[170px]"><option value="">Wszystkie wertykale</option></select>
+                        <label class="chip" style="cursor:pointer"><input id="pv-optout" type="checkbox" onchange="renderList()" class="accent-[#0070f3]"> Pokaż opt-out</label>
+                    </div>
+                    <div id="pv-status-chips" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Batch -->
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                    <label class="flex items-center gap-2 text-xs text-zinc-400"><input id="pv-selall" type="checkbox" onchange="toggleSelectAll(this.checked)" class="accent-[#0070f3]"> Zaznacz widoczne</label>
+                    <span id="pv-selcount" class="text-xs text-zinc-600"></span>
+                    <button id="pv-batch-btn" onclick="runBatch()" class="btn btn-p btn-sm" disabled><i class="ph ph-stack"></i> Przetwórz (research → score → pitch)</button>
+                    <div id="batch-progress-wrap" class="hidden flex items-center gap-3 flex-1 min-w-[240px]">
+                        <div class="flex-1 h-2 bg-[#141414] rounded-full overflow-hidden"><div id="batch-bar" class="h-full bg-[#0070f3] transition-all" style="width:0%"></div></div>
+                        <span id="batch-text" class="text-xs text-zinc-400 whitespace-nowrap"></span>
+                        <button onclick="batchStop=true" class="btn btn-d btn-sm"><i class="ph ph-stop"></i> Stop</button>
+                    </div>
+                    <span id="pv-count" class="text-xs text-zinc-600 font-mono ml-auto"></span>
+                </div>
+
+                <div class="card overflow-x-auto">
+                    <table class="pv-tbl">
+                        <thead><tr>
+                            <th style="width:34px"></th>
+                            <th>Sprzedawca</th><th>Wertykał</th><th>Miasto</th><th>Status</th>
+                            <th>Segment</th><th class="text-right">Score</th><th class="text-right">Koszt AI</th><th>Aktywność</th>
+                        </tr></thead>
+                        <tbody id="pv-rows"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ══════════ KOLEJKA ══════════ -->
+            <section id="tab-kolejka" class="tabpanel hidden p-5 lg:p-8 max-w-[920px] mx-auto animate-enter">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-white tracking-tight">Kolejka akceptacji</h1>
+                        <p class="text-zinc-500 text-sm mt-0.5">Ocenieni sprzedawcy segmentu A/B do przejrzenia. Zaakceptuj → trafia do kontaktu handlowca. Nic nie wychodzi automatycznie.</p>
+                    </div>
+                    <span id="ko-counter" class="badge bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40 text-[12.5px]">0 czeka na Ciebie</span>
+                </div>
+                <div id="ko-list" class="space-y-4"></div>
+            </section>
+
+            <!-- ══════════ WERTYKALE ══════════ -->
+            <section id="tab-wertykale" class="tabpanel hidden p-5 lg:p-8 max-w-[1200px] mx-auto animate-enter">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-white tracking-tight">Wertykale</h1>
+                        <p class="text-zinc-500 text-sm mt-0.5">Kategorie Allegro do skanu (brandowalne), grupowane po priorytecie. „→ Do prospectingu" włącza kategorię w lejek.</p>
+                    </div>
+                    <details class="card">
+                        <summary class="cursor-pointer text-[12.5px] text-zinc-300 hover:text-white flex items-center gap-2 px-4 py-3"><i class="ph ph-plus"></i> Dodaj wertykał</summary>
+                        <div class="px-4 pb-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto] items-end">
+                            <div><label class="lbl">Nazwa</label><input id="wt-newname" class="inp" placeholder="np. Świece sojowe"></div>
+                            <div><label class="lbl">Fraza skanu (allegro_query)</label><input id="wt-newquery" class="inp" placeholder="świece sojowe zapachowe"></div>
+                            <button onclick="addVertical()" class="btn btn-w"><i class="ph ph-plus"></i> Dodaj</button>
+                        </div>
+                    </details>
+                </div>
+                <div class="card p-4 mb-4">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <label class="flex items-center gap-2 bg-[#0a0a0a] border border-[#1f1f1f] focus-within:border-[#0070f3]/50 rounded-lg px-3 py-2 flex-1 min-w-[200px]">
+                            <i class="ph ph-magnifying-glass text-zinc-500"></i>
+                            <input id="wt-search" type="text" oninput="renderWertykale()" placeholder="Szukaj: nazwa, fraza, uzasadnienie…" class="bg-transparent outline-none text-white text-sm w-full">
+                        </label>
+                        <select id="wt-fstatus" onchange="renderWertykale()" class="inp !w-auto min-w-[160px]"><option value="">Wszystkie statusy</option></select>
+                    </div>
+                </div>
+                <div id="wt-list" class="space-y-3"></div>
+            </section>
+
+            <!-- ══════════ SKAN ══════════ -->
+            <section id="tab-skan" class="tabpanel hidden p-5 lg:p-8 max-w-[1100px] mx-auto animate-enter">
+                <div class="mb-5">
+                    <h1 class="text-2xl font-semibold text-white tracking-tight">Skan Allegro</h1>
+                    <p class="text-zinc-500 text-sm mt-0.5">Widok stanu harvestu. Sam skan wykonuje operator w przeglądarce (chrome-devtools) poza panelem — tu widać kategorie do skanu i surowe seedy czekające na research.</p>
+                </div>
+                <div id="sk-body"></div>
+            </section>
+
+            <!-- ══════════ USTAWIENIA ══════════ -->
+            <section id="tab-ustawienia" class="tabpanel hidden p-5 lg:p-8 max-w-[1000px] mx-auto animate-enter">
+                <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Ustawienia</h1>
+                <p class="text-zinc-500 text-sm mb-6">Prompty AI, wagi scoringu, modele i opis oferty. Zapis tworzy kopię zapasową poprzedniej wartości (klucz <code>&lt;key&gt;_backup_RRRRMMDDHHMMSS</code>).</p>
+                <div id="set-wrap" class="space-y-5"></div>
+
+                <div class="card p-5 mt-8">
+                    <div class="dw-sec-h"><i class="ph ph-scales"></i> Zasady (human-in-the-loop + RODO)</div>
+                    <ul class="text-[13px] text-zinc-400 space-y-2 leading-relaxed list-none">
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> System NIGDY nie wysyła sam. Handlowiec realizuje kontakt ręcznie (LinkedIn DM / telefon / mail imienny).</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Pierwszy kontakt bez cen i bez linków — serwer wycina URL-e ze wszystkich pól wiadomości.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Dane firmowe sprzedawcy B2B są jawne (obowiązek informacyjny). Stopka RODO art. 14 doklejana serwerowo dopiero przy realnej wysyłce.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Opt-out (STOP) nieodwracalny — rekord nie wraca do pipeline'u.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Reseller cudzej marki → filar „brandowalność" ma twardy sufit (nie zbudujemy jego marki).</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Jakość &gt; ilość — jeden handlowiec, minimalne wolumeny, dzienny limit generacji AI chroni wspólną quotę.</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Drawer szczegółu -->
+    <div id="drawer-backdrop" class="hidden" onclick="closeDrawer()"></div>
+    <aside id="drawer">
+        <div class="flex items-center justify-between px-5 h-14 border-b border-[#1a1a1a] flex-shrink-0">
+            <div class="min-w-0 flex items-center gap-2.5">
+                <i class="ph ph-crosshair-simple text-[#52a8ff]"></i>
+                <span id="dw-title" class="text-white font-semibold truncate"></span>
+            </div>
+            <button onclick="closeDrawer()" class="p-2 -mr-2 text-zinc-500 hover:text-white"><i class="ph ph-x text-lg"></i></button>
+        </div>
+        <div id="dw-body" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
+    </aside>
+
+    <!-- Modal potwierdzenia (uiConfirm) -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)cmClose(false)">
+        <div class="w-full max-w-md card p-6">
+            <div class="flex items-start gap-3.5 mb-5">
+                <div id="cm-icon" class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(0,112,243,.12);border:1px solid rgba(0,112,243,.4)"><i class="ph ph-question text-[20px] text-[#52a8ff]"></i></div>
+                <div class="min-w-0">
+                    <div id="cm-title" class="text-white font-semibold text-[15.5px]"></div>
+                    <div id="cm-body" class="text-zinc-400 text-[13px] mt-1.5 leading-relaxed"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2.5">
+                <button onclick="cmClose(false)" class="btn btn-g">Anuluj</button>
+                <button id="cm-ok" onclick="cmClose(true)" class="btn btn-w">Potwierdź</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const WF2_ENGINE = SUPABASE_URL + '/functions/v1/wf2-prospektor';
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        // ═══════════ STAŁE / META ═══════════
+        // Statusy sprzedawcy (advance-only w edge). Zieleń TYLKO dla 'deal'. ZERO fioletu/rose (styl Geist).
+        const STATUS_ORDER = ['nowy','research','oceniony','zaakceptowany','kontakt','rozmowa','deal','odpadl','opt_out'];
+        const STATUS_META = {
+            nowy:         { label:'Nowy',          cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',   dot:'#a1a1aa' },
+            research:     { label:'Zbadany',       cls:'bg-sky-500/10 text-sky-300 border-sky-500/30',       dot:'#38bdf8' },
+            oceniony:     { label:'Oceniony',      cls:'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40', dot:'#0070f3' },
+            zaakceptowany:{ label:'Zaakceptowany', cls:'bg-teal-500/10 text-teal-300 border-teal-500/30',    dot:'#2dd4bf' },
+            kontakt:      { label:'Kontakt',       cls:'bg-[#0891b2]/10 text-[#3fc5e0] border-[#0891b2]/40', dot:'#0891b2' },
+            rozmowa:      { label:'Rozmowa',       cls:'bg-orange-500/10 text-orange-300 border-orange-500/30', dot:'#fb923c' },
+            deal:         { label:'Deal',          cls:'bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40', dot:'#45a557' },
+            odpadl:       { label:'Odpadł',        cls:'bg-zinc-600/15 text-zinc-500 border-zinc-600/30',    dot:'#52525b' },
+            opt_out:      { label:'Opt-out',       cls:'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40', dot:'#e5484d' },
+        };
+        const RANK = { nowy:0, research:1, oceniony:2, zaakceptowany:3, kontakt:4, rozmowa:5, deal:6 };
+        // Segment (task: A zielony / B niebieski / C żółty / D szary — świadome odstępstwo od „zieleń tylko done" dla badge segmentu).
+        const SEGMENT_META = {
+            A: { label:'A', cls:'bg-[#45a557]/15 text-[#62c073] border-[#45a557]/50', dot:'#45a557', desc:'kontakt teraz (kanał osobisty)' },
+            B: { label:'B', cls:'bg-[#0070f3]/12 text-[#52a8ff] border-[#0070f3]/45', dot:'#0070f3', desc:'kolejka (spersonalizowany pitch)' },
+            C: { label:'C', cls:'bg-[#f5a623]/12 text-[#f5b955] border-[#f5a623]/45', dot:'#f5a623', desc:'nurture' },
+            D: { label:'D', cls:'bg-zinc-600/15 text-zinc-400 border-zinc-600/40',    dot:'#6b6b74', desc:'odłóż / dyskwalifikacja' },
+        };
+        // Statusy wertykala (cykl życia skanu). „Zieleń tylko done" → w_prospectingu = niebieski.
+        const VERT_STATUS = {
+            katalogowy:     { label:'Katalogowy',      cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',            dot:'#a1a1aa' },
+            w_skanie:       { label:'W skanie',        cls:'bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40 vt-pulse',dot:'#f5a623' },
+            zeskanowany:    { label:'Zeskanowany',     cls:'bg-sky-500/10 text-sky-300 border-sky-500/30',               dot:'#38bdf8' },
+            w_prospectingu: { label:'Do prospectingu', cls:'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40',         dot:'#0070f3' },
+            wstrzymany:     { label:'Wstrzymany',      cls:'bg-zinc-600/15 text-zinc-500 border-zinc-600/30',            dot:'#52525b' },
+            odrzucony:      { label:'Odrzucony',       cls:'bg-[#e5484d]/10 text-[#f26d78]/80 border-[#e5484d]/30',      dot:'#e5484d' },
+        };
+        const VERT_STATUS_ORDER = ['katalogowy','w_skanie','zeskanowany','w_prospectingu','wstrzymany','odrzucony'];
+        // Słowniki domenowe
+        const LEGAL_FORM_PL = { jdg:'JDG', sp_zoo:'Sp. z o.o.', sa:'S.A.', inne:'Inne' };
+        const OWN_SHOP_PL = { brak:'Brak (tylko Allegro)', prowizorka:'Prowizorka', pro:'Pro (dopracowany)' };
+        const PITCH_KAT_PL = { budowa_od_zera:'Budowa od zera', upgrade_prowizorki:'Upgrade prowizorki', skalowanie:'Skalowanie' };
+        const PITCH_KANAL_PL = { linkedin:'LinkedIn DM', telefon:'Telefon', mail_imienny:'Mail imienny' };
+        const CONTACT_CHANNEL_PL = { linkedin:'LinkedIn', email:'E-mail', phone:'Telefon' };
+        const STEP_PL = { research:'research', score:'scoring', pitch:'pitch', message:'wiadomość' };
+        // Kody błędów silnika → komunikaty PL (fallback = json.message z serwera).
+        const ERR_PL = {
+            dzienny_limit:  'Osiągnięto dzienny limit generacji AI. Chronimy wspólną quotę OpenAI — spróbuj później.',
+            zbyt_szybko:    'Za szybko — ta sama akcja przed chwilą. Poczekaj kilka sekund.',
+            opted_out:      'Sprzedawca na liście wykluczeń (opt-out) — akcje AI i zmiana statusu zablokowane.',
+            odpadl:         'Sprzedawca odrzucony — akcje AI zablokowane. Zmień status, aby wznowić.',
+            brak_researchu: 'Najpierw zbadaj sprzedawcę („Zbadaj") — scoring i pitch czerpią z researchu.',
+            brak_oceny:     'Najpierw policz score — pitch dopasowuje się do segmentu.',
+            brak_pitcha:    'Najpierw wygeneruj rekomendację (pitch) — z niej bierzemy kanał i kąt.',
+            brak_kanalu:    'Przy statusie „kontakt" wybierz kanał (LinkedIn / e-mail / telefon).',
+            klucz_niedozwolony: 'Ten klucz ustawienia nie jest dozwolony przez silnik.',
+            za_krotkie:     'Treść za krótka (min. 200 znaków — zabezpieczenie przed wyczyszczeniem).',
+        };
+        const SETTING_KEYS = [
+            { key:'wf2p_prompt_research', kind:'prompt', label:'Prompt — research sprzedawcy', hint:'System prompt researchera B2B (min. 200 znaków).', rows:9 },
+            { key:'wf2p_prompt_pitch',   kind:'prompt', label:'Prompt — pitch (kąt + kanał + haczyk)', hint:'System prompt stratega sprzedaży (min. 200 znaków).', rows:8 },
+            { key:'wf2p_prompt_message', kind:'prompt', label:'Prompt — pierwszy kontakt', hint:'System prompt copy 1. kontaktu — bez cen/linków (min. 200 znaków).', rows:8 },
+            { key:'wf2p_scoring_weights', kind:'json', label:'Wagi scoringu 4-filarowego', hint:'JSON: { wagi:{brandowalnosc,dowod_popytu,luka,decydent}, progi_segmentow:{A,B,C}, sufit_reseller }.', rows:8 },
+            { key:'wf2p_models', kind:'json', label:'Modele AI per krok', hint:'JSON: { research, pitch, message } — score jest deterministyczny (bez AI).', rows:5 },
+            { key:'wf2p_oferta', kind:'text', label:'Opis oferty (SSOT dla wiadomości)', hint:'Co budujemy sprzedawcy — używane w prompcie 1. kontaktu (bez cen/linków). Klucz musi być dozwolony w silniku — patrz nota niżej.', rows:8 },
+        ];
+
+        // ═══════════ STAN ═══════════
+        let verticals = [];
+        let sellers = [];
+        let usageBySeller = {};     // id -> suma cost_usd
+        let statusCounts = {}, segmentCounts = {};
+        let vCounts = {};           // vertical_id -> {total, byStatus, nowy}
+        let kpi = null, kpiOk = false;
+        let usdPln = 4.0;           // fallback
+        let settingsCache = {};
+        let statusFilter = new Set();
+        const selected = new Set();
+        const busyIds = new Set();
+        let curDrawerId = null;
+        let msgBuf = {};
+        let batchRunning = false, batchStop = false;
+
+        // ═══════════ HELPERY ═══════════
+        function escapeHtml(str){
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        const esc = escapeHtml;
+        // Tylko http/https w href — chroni przed javascript:/data: (escapeHtml tego nie łapie).
+        function safeUrl(u){ return (u && /^https?:\/\//i.test(String(u).trim())) ? String(u).trim() : '#'; }
+        function foldStr(s){
+            return (s||'').toLowerCase()
+                .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e').replace(/ł/g,'l')
+                .replace(/ń/g,'n').replace(/ó/g,'o').replace(/ś/g,'s').replace(/ż/g,'z').replace(/ź/g,'z');
+        }
+        function showToast(message, type='info'){
+            const t = document.createElement('div');
+            const bg = type==='success' ? '#45a557' : type==='error' ? '#e5484d' : '#0070f3';
+            t.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;max-width:380px;background:${bg};color:#fff;padding:12px 18px;border-radius:8px;font:13.5px/1.4 Inter,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);transition:opacity .3s`;
+            t.textContent = message;
+            document.body.appendChild(t);
+            setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, type==='error'?4200:2600);
+        }
+        function fmtUsdToPln(usd){ const v = (Number(usd)||0)*usdPln; return v>=100 ? v.toFixed(0)+' zł' : v.toFixed(2)+' zł'; }
+        function fmtDate(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return '—';
+            return d.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}); }
+        function relDate(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d)) return '—';
+            const diff=Math.round((Date.now()-d.getTime())/86400000);
+            if(diff<=0) return 'dziś'; if(diff===1) return 'wczoraj'; if(diff<7) return diff+' dni temu';
+            if(diff<30) return Math.floor(diff/7)+' tyg. temu'; return Math.floor(diff/30)+' mies. temu'; }
+        function verticalName(id){ const v=verticals.find(x=>x.id===id); return v ? v.name : '—'; }
+        function statusBadge(s){ const m=STATUS_META[s]||{label:s,cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'}; return `<span class="badge ${m.cls}">${esc(m.label)}</span>`; }
+        function segmentBadge(seg){ const m=SEGMENT_META[seg]; if(!m) return '<span class="text-zinc-700">—</span>'; return `<span class="badge ${m.cls}" title="${esc(m.desc)}">${esc(m.label)}</span>`; }
+        function slugify(s){ return foldStr(s).trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60); }
+        function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+        function normWww(w){ if(!w) return ''; return String(w).trim().replace(/^https?:\/\//i,'').replace(/^www\./i,'').replace(/\/+$/,'').toLowerCase(); }
+        function wwwHref(w){ if(!w) return '#'; return /^https?:/i.test(w) ? w : 'https://'+normWww(w); }
+        const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        function meter5(n){ n=Math.max(0,Math.min(5,parseInt(n,10)||0)); let s=''; for(let i=1;i<=5;i++) s+=`<span class="${i<=n?'on':''}"></span>`; return `<span class="m5">${s}</span>`; }
+
+        // .rpc() nie ma .catch() — owijamy w Promise.resolve().then(ok,err).
+        function safeRpc(name, args){ return Promise.resolve(supabaseClient.rpc(name, args)).then(r=>r, e=>({data:null, error:e})); }
+
+        async function checkAuth(){
+            const { data:{ session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            const { error:userErr } = await supabaseClient.auth.getUser();
+            if (userErr) { await supabaseClient.auth.signOut(); window.location.href = Sidebar.getLoginPath(); return null; }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const me = (data||[]).find(m => m.user_id === session.user.id);
+            if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
+            Sidebar.showAdminNav(me?.role === 'admin');
+            return session;
+        }
+
+        // Wywołanie silnika wf2-prospektor (JWT sesji + apikey). Body zawsze zawiera sellerId (nie prospectId).
+        async function callEngine(body){
+            const { data:{ session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); throw new Error('Brak sesji'); }
+            const res = await fetch(WF2_ENGINE, {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token, 'apikey':SUPABASE_ANON_KEY },
+                body: JSON.stringify(body)
+            });
+            let json = null; try { json = await res.json(); } catch(_) {}
+            if (!res.ok){
+                const code = json && json.error;
+                const msg = ERR_PL[code] || (json && json.message) || ('Błąd '+res.status);
+                const e = new Error(msg); e.code = code; e.status = res.status; e.json = json; throw e;
+            }
+            return json || {};
+        }
+
+        // ═══════════ MODAL POTWIERDZENIA ═══════════
+        let _cmResolve = null;
+        function uiConfirm({ title, body, confirmLabel='Potwierdź', danger=false }){
+            return new Promise(res => {
+                _cmResolve = res;
+                document.getElementById('cm-title').textContent = title;
+                document.getElementById('cm-body').textContent = body || '';
+                const icon = document.getElementById('cm-icon');
+                icon.style.background = danger ? 'rgba(229,72,77,.12)' : 'rgba(0,112,243,.12)';
+                icon.style.border = danger ? '1px solid rgba(229,72,77,.4)' : '1px solid rgba(0,112,243,.4)';
+                icon.innerHTML = danger ? '<i class="ph ph-warning text-[20px] text-[#f26d78]"></i>' : '<i class="ph ph-question text-[20px] text-[#52a8ff]"></i>';
+                const ok = document.getElementById('cm-ok');
+                ok.textContent = confirmLabel; ok.className = 'btn ' + (danger ? 'btn-d' : 'btn-w');
+                document.getElementById('confirm-modal').classList.remove('hidden');
+            });
+        }
+        function cmClose(v){ document.getElementById('confirm-modal').classList.add('hidden'); if(_cmResolve){ const r=_cmResolve; _cmResolve=null; r(v); } }
+
+        // ═══════════ ZAKŁADKI ═══════════
+        function showTab(name){
+            document.querySelectorAll('.tabpanel').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
+            const panel = document.getElementById('tab-'+name); if (panel) panel.classList.remove('hidden');
+            if (name==='kolejka') renderKolejka();
+            if (name==='wertykale') renderWertykale();
+            if (name==='skan') renderSkan();
+            if (name==='ustawienia') renderSettings();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const cm = document.getElementById('confirm-modal');
+            if (cm && !cm.classList.contains('hidden')) { cmClose(false); return; }
+            const dr = document.getElementById('drawer');
+            if (dr && dr.classList.contains('open')) closeDrawer();
+        });
+
+        // ═══════════ ŁADOWANIE DANYCH ═══════════
+        // PostgREST tnie do 1000 wierszy — pełna paginacja (NIE polegamy na domyślnym limicie).
+        async function fetchAllSellers(){
+            const all = []; const PAGE = 1000;
+            for (let from=0; ; from+=PAGE){
+                const { data, error } = await supabaseClient.from('wf2p_sellers').select('*')
+                    .order('updated_at',{ ascending:false }).range(from, from+PAGE-1);
+                if (error){ console.error('wf2p_sellers', from, error); showToast('Błąd listy sprzedawców: '+error.message,'error'); break; }
+                all.push(...(data||[]));
+                if (!data || data.length < PAGE) break;
+            }
+            return all;
+        }
+        async function fetchAllUsage(){
+            const map = {}; const PAGE = 1000;
+            for (let from=0; ; from+=PAGE){
+                const { data, error } = await supabaseClient.from('wf2p_usage').select('seller_id, cost_usd').range(from, from+PAGE-1);
+                if (error){ console.warn('wf2p_usage', error); break; }
+                (data||[]).forEach(r => { if (r.seller_id) map[r.seller_id] = (map[r.seller_id]||0) + (Number(r.cost_usd)||0); });
+                if (!data || data.length < PAGE) break;
+            }
+            return map;
+        }
+        function buildIdx(s){
+            s._idx = foldStr([s.company_name, s.brand_name, s.allegro_login, s.email, s.city, s.contact_person, s.contact_role, s.nip, s.product_category, verticalName(s.vertical_id)].filter(Boolean).join(' '));
+        }
+        function recompute(){
+            statusCounts = {}; segmentCounts = {}; vCounts = {};
+            sellers.forEach(s => {
+                if (s.is_test) return;
+                statusCounts[s.status] = (statusCounts[s.status]||0)+1;
+                if (s.segment) segmentCounts[s.segment] = (segmentCounts[s.segment]||0)+1;
+                const vid = s.vertical_id || '__none';
+                if (!vCounts[vid]) vCounts[vid] = { total:0, byStatus:{}, nowy:0 };
+                vCounts[vid].total++;
+                vCounts[vid].byStatus[s.status] = (vCounts[vid].byStatus[s.status]||0)+1;
+                if (s.status==='nowy') vCounts[vid].nowy++;
+            });
+        }
+        async function loadKpi(){
+            const { data, error } = await safeRpc('wf2p_kpi');
+            if (error || !data){ kpiOk = false; kpi = null; if (error) console.warn('wf2p_kpi', error); }
+            else { kpi = data; kpiOk = true; }
+            renderKpi();
+        }
+        async function loadAll(){
+            // settings współdzielone (kurs USD/PLN) — cichy fallback gdy RLS nie odda.
+            try {
+                const { data:sr } = await supabaseClient.from('settings').select('key,value').in('key', ['usd_pln_rate']);
+                const map = {}; (sr||[]).forEach(r => map[r.key] = r.value);
+                if (map.usd_pln_rate){ const n = parseFloat(map.usd_pln_rate); if (!isNaN(n) && n>0) usdPln = n; }
+            } catch(_) {}
+
+            const vq = await supabaseClient.from('wf2p_verticals').select('*').order('name');
+            if (vq.error){ console.error('wf2p_verticals', vq.error); showToast('Błąd wertykali: '+vq.error.message,'error'); }
+            verticals = vq.data || [];
+
+            const [sRows, uMap] = await Promise.all([ fetchAllSellers(), fetchAllUsage() ]);
+            sellers = sRows; usageBySeller = uMap;
+            sellers.forEach(buildIdx);
+            recompute();
+
+            const boot = document.getElementById('boot'); if (boot) boot.classList.add('hidden');
+            fillVerticalSelects();
+            fillVertFilters();
+            renderStatusChips();
+            renderList();
+            updateKoTabBadge();
+            updateSkTabBadge();
+            await loadKpi();
+            const active = document.querySelector('.tab-btn.active');
+            showTab(active ? active.dataset.tab : 'pipeline');
+        }
+
+        // Odśwież pojedynczy rekord + jego koszt AI po akcji silnika.
+        async function refetchSeller(id){
+            const { data, error } = await supabaseClient.from('wf2p_sellers').select('*').eq('id', id).maybeSingle();
+            if (error){ console.warn('refetch seller', error); return null; }
+            if (data){
+                const i = sellers.findIndex(x => x.id===id);
+                if (i>=0) sellers[i] = data; else sellers.unshift(data);
+                buildIdx(data);
+            }
+            try {
+                const { data:u } = await supabaseClient.from('wf2p_usage').select('cost_usd').eq('seller_id', id);
+                usageBySeller[id] = (u||[]).reduce((s,r)=>s+(Number(r.cost_usd)||0),0);
+            } catch(_) {}
+            recompute(); renderStatusChips(); renderList(); updateKoTabBadge(); updateSkTabBadge();
+            return data;
+        }
+
+        function fillVerticalSelects(){
+            const pvAll = '<option value="">Wszystkie wertykale</option>' + verticals.map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('');
+            const pv = document.getElementById('pv-vert'); if (pv){ const cur=pv.value; pv.innerHTML=pvAll; pv.value=cur; }
+        }
+        function fillVertFilters(){
+            const st = document.getElementById('wt-fstatus');
+            if (st){ const cur=st.value;
+                st.innerHTML = '<option value="">Wszystkie statusy</option>' + VERT_STATUS_ORDER.map(s => `<option value="${s}">${esc(VERT_STATUS[s].label)}</option>`).join('');
+                st.value = cur; }
+        }
+
+        (async () => {
+            const session = await checkAuth();
+            if (!session) return;
+            await loadAll();
+            openDeepLink();
+        })();
+
+        // ═══════════ KPI ═══════════
+        function cnt(status){
+            if (kpiOk && kpi && kpi.counts_per_status && kpi.counts_per_status[status]!==undefined) return kpi.counts_per_status[status]||0;
+            return statusCounts[status]||0;
+        }
+        function segCnt(seg){
+            if (kpiOk && kpi && kpi.counts_per_segment && kpi.counts_per_segment[seg]!==undefined) return kpi.counts_per_segment[seg]||0;
+            return segmentCounts[seg]||0;
+        }
+        function agingVal(){
+            if (kpiOk && kpi && kpi.aging_oceniony_3d!==undefined && kpi.aging_oceniony_3d!==null) return kpi.aging_oceniony_3d;
+            const now = Date.now();
+            return sellers.filter(s => !s.is_test && s.status==='oceniony' && (now - new Date(s.updated_at||s.created_at).getTime()) > 3*86400000).length;
+        }
+        function renderKpi(){
+            const wrap = document.getElementById('kpi-wrap'); if (!wrap) return;
+            const costUsd = (kpiOk && kpi && kpi.costs && kpi.costs.total_usd!==undefined)
+                ? kpi.costs.total_usd
+                : Object.values(usageBySeller).reduce((s,v)=>s+v,0);
+            const tile = (n, label, dot) => `<div class="kpi-tile"><div class="kpi-n">${n}</div><div class="kpi-l">${dot?`<span class="kpi-dot" style="background:${dot}"></span>`:''}${esc(label)}</div></div>`;
+            const tiles = [
+                tile(cnt('nowy'),'Nowe (seedy)', STATUS_META.nowy.dot),
+                tile(cnt('research'),'Zbadane', STATUS_META.research.dot),
+                tile(cnt('oceniony'),'Ocenione', STATUS_META.oceniony.dot),
+                tile(cnt('zaakceptowany'),'Zaakceptowane', STATUS_META.zaakceptowany.dot),
+                tile(cnt('kontakt'),'W kontakcie', STATUS_META.kontakt.dot),
+                tile(cnt('rozmowa'),'Rozmowy', STATUS_META.rozmowa.dot),
+                tile(cnt('deal'),'Deale', STATUS_META.deal.dot),
+                tile(segCnt('A'),'Segment A', SEGMENT_META.A.dot),
+                tile(segCnt('B'),'Segment B', SEGMENT_META.B.dot),
+                tile(segCnt('C'),'Segment C', SEGMENT_META.C.dot),
+                tile(segCnt('D'),'Segment D', SEGMENT_META.D.dot),
+                tile(fmtUsdToPln(costUsd),'Koszt AI', '#f5a623'),
+            ];
+            const aging = agingVal();
+            if (aging>0) tiles.push(tile(aging,'Ocenione zalega >3 dni', '#e5484d'));
+            let html = `<div class="grid gap-2.5" style="grid-template-columns:repeat(auto-fill,minmax(118px,1fr))">${tiles.join('')}</div>`;
+            if (!kpiOk) html += `<div class="text-[11px] text-zinc-600 mt-2"><i class="ph ph-warning-circle"></i> KPI z RPC niedostępne — liczniki z załadowanej listy (pełna paginacja).</div>`;
+            // Rozbicie kosztu per krok (z wf2p_kpi().costs.per_kind).
+            const perKind = (kpiOk && kpi && kpi.costs && kpi.costs.per_kind) ? kpi.costs.per_kind : null;
+            if (perKind && Object.keys(perKind).length){
+                html += `<div class="mt-2 flex flex-wrap gap-2 items-center text-[11px] text-zinc-500"><span class="text-zinc-600">Koszt per krok:</span>`
+                    + Object.entries(perKind).map(([k,v]) => `<span class="minichip" style="margin:0">${esc(STEP_PL[k]||k)}: <b class="text-zinc-300">${esc(fmtUsdToPln(v))}</b></span>`).join('') + `</div>`;
+            }
+            wrap.innerHTML = html;
+        }
+
+        // ═══════════ FILTRY / CHIPY STATUSU ═══════════
+        function renderStatusChips(){
+            const wrap = document.getElementById('pv-status-chips'); if (!wrap) return;
+            wrap.innerHTML = STATUS_ORDER.filter(s=>s!=='opt_out').map(s => {
+                const m = STATUS_META[s]; const n = statusCounts[s]||0; const on = statusFilter.has(s);
+                return `<button class="chip ${on?'on':''}" onclick="toggleStatusFilter('${s}')"><span class="kpi-dot" style="background:${m.dot}"></span>${esc(m.label)}<span class="c-n">${n}</span></button>`;
+            }).join('') + (statusFilter.size ? `<button class="chip" onclick="clearStatusFilter()"><i class="ph ph-x"></i> Wyczyść</button>` : '');
+        }
+        function toggleStatusFilter(s){ if (statusFilter.has(s)) statusFilter.delete(s); else statusFilter.add(s); renderStatusChips(); renderList(); }
+        function clearStatusFilter(){ statusFilter.clear(); renderStatusChips(); renderList(); }
+
+        // ═══════════ LISTA SPRZEDAWCÓW ═══════════
+        function filteredSellers(){
+            let rows = sellers.slice();
+            const showOpt = document.getElementById('pv-optout')?.checked;
+            if (!showOpt) rows = rows.filter(s => !s.opted_out && s.status!=='opt_out');
+            if (statusFilter.size) rows = rows.filter(s => statusFilter.has(s.status));
+            const sf = document.getElementById('pv-seg')?.value;
+            if (sf) rows = rows.filter(s => s.segment===sf);
+            const vf = document.getElementById('pv-vert')?.value;
+            if (vf) rows = rows.filter(s => s.vertical_id===vf);
+            const q = foldStr((document.getElementById('pv-search')?.value||'').trim());
+            if (q){ const toks=q.split(/\s+/).filter(Boolean); rows = rows.filter(s => toks.every(t => (s._idx||'').includes(t))); }
+            rows.sort((a,b)=> new Date(b.updated_at||b.created_at) - new Date(a.updated_at||a.created_at));
+            return rows;
+        }
+        function renderList(){
+            const tbody = document.getElementById('pv-rows'); if (!tbody) return;
+            const rows = filteredSellers();
+            document.getElementById('pv-count').textContent = rows.length + ' ' + (rows.length===1?'sprzedawca':(rows.length<5&&rows.length>1?'sprzedawców':'sprzedawców'));
+            if (!rows.length){ tbody.innerHTML = `<tr><td colspan="9" class="text-center text-zinc-600 py-10">Brak sprzedawców dla tych filtrów.</td></tr>`; }
+            else tbody.innerHTML = rows.map(rowHtml).join('');
+            const visIds = rows.map(r=>r.id);
+            const allSel = visIds.length>0 && visIds.every(id => selected.has(id));
+            const selall = document.getElementById('pv-selall'); if (selall) selall.checked = allSel;
+            updateSelCount();
+        }
+        function rowHtml(s){
+            const cost = usageBySeller[s.id] ? fmtUsdToPln(usageBySeller[s.id]) : '<span class="text-zinc-700">—</span>';
+            const score = (s.score!==null && s.score!==undefined) ? `<span class="font-mono text-zinc-300">${s.score}</span>` : '<span class="text-zinc-700">—</span>';
+            const optFlag = s.opted_out ? ' <i class="ph ph-prohibit text-[#f26d78]" title="opt-out"></i>' : '';
+            const testFlag = s.is_test ? ' <span class="minichip" style="margin:0;padding:1px 5px;font-size:9.5px">test</span>' : '';
+            const checked = selected.has(s.id) ? 'checked' : '';
+            const title = s.company_name || s.brand_name || s.allegro_login || 'Sprzedawca';
+            const sub = [s.brand_name && s.company_name ? s.brand_name : null, s.allegro_login ? '@'+s.allegro_login : null].filter(Boolean).join(' · ');
+            return `<tr onclick="openDrawer('${s.id}')">
+                <td onclick="event.stopPropagation()"><input type="checkbox" ${checked} onchange="toggleRowSelect('${s.id}',this.checked)" class="accent-[#0070f3]"></td>
+                <td><div class="text-white font-medium truncate max-w-[260px]">${esc(title)}${optFlag}${testFlag}</div>
+                    <div class="text-zinc-600 text-[11px] truncate max-w-[260px]">${esc(sub||'—')}</div></td>
+                <td class="text-zinc-400 text-[12.5px]">${esc(verticalName(s.vertical_id))}</td>
+                <td class="text-zinc-400 text-[12.5px]">${esc(s.city||'—')}</td>
+                <td>${statusBadge(s.status)}</td>
+                <td>${segmentBadge(s.segment)}</td>
+                <td class="text-right">${score}</td>
+                <td class="text-right text-[12px] text-zinc-400 font-mono">${cost}</td>
+                <td class="text-zinc-500 text-[12px] whitespace-nowrap">${esc(relDate(s.updated_at||s.created_at))}</td>
+            </tr>`;
+        }
+
+        // ═══════════ ZAZNACZANIE / BATCH ═══════════
+        function toggleRowSelect(id, on){ if (on) selected.add(id); else selected.delete(id); updateSelCount(); }
+        function toggleSelectAll(on){ filteredSellers().forEach(s => { if (on) selected.add(s.id); else selected.delete(s.id); }); renderList(); }
+        function updateSelCount(){
+            const n = selected.size;
+            document.getElementById('pv-selcount').textContent = n ? (n+' zaznaczonych') : '';
+            const btn = document.getElementById('pv-batch-btn'); if (btn) btn.disabled = n===0 || batchRunning;
+        }
+        function setBatchText(txt, pct){ document.getElementById('batch-text').textContent = txt; document.getElementById('batch-bar').style.width = Math.max(0,Math.min(100,pct))+'%'; }
+        async function runBatch(){
+            const ids = filteredSellers().filter(s => selected.has(s.id)).map(s => s.id);
+            if (!ids.length){ showToast('Zaznacz sprzedawców do przetworzenia','error'); return; }
+            batchRunning = true; batchStop = false;
+            document.getElementById('pv-batch-btn').disabled = true;
+            document.getElementById('batch-progress-wrap').classList.remove('hidden');
+            const steps = ['research','score','pitch']; const total = ids.length;
+            for (let i=0; i<ids.length; i++){
+                if (batchStop) break;
+                const s = sellers.find(x => x.id===ids[i]); if (!s) continue;
+                const name = s.company_name || s.allegro_login || '—';
+                if (s.opted_out || s.status==='opt_out' || s.status==='odpadl'){ setBatchText(`${i+1}/${total}: ${name} — pominięto`, (i+1)/total*100); continue; }
+                for (const st of steps){
+                    if (batchStop) break;
+                    setBatchText(`${i+1}/${total}: ${name} — ${STEP_PL[st]}…`, (i+ steps.indexOf(st)/steps.length)/total*100);
+                    try {
+                        await callEngine({ action:st, sellerId:s.id });
+                        await refetchSeller(s.id);
+                    } catch(e){
+                        if (e.code==='dzienny_limit'){ showToast(ERR_PL.dzienny_limit,'error'); batchStop=true; break; }
+                        if (e.code==='zbyt_szybko'){ await sleep(1300);
+                            try { await callEngine({ action:st, sellerId:s.id }); await refetchSeller(s.id); continue; } catch(_){ break; } }
+                        showToast(`${name} (${STEP_PL[st]}): ${e.message}`,'error'); break;
+                    }
+                }
+                setBatchText(`${i+1}/${total} przetworzono`, (i+1)/total*100);
+            }
+            batchRunning = false;
+            document.getElementById('batch-progress-wrap').classList.add('hidden');
+            renderList(); loadKpi();
+            showToast(batchStop ? 'Przetwarzanie przerwane' : 'Przetwarzanie zakończone', batchStop ? 'info' : 'success');
+        }
+
+        // ═══════════ DRAWER ═══════════
+        function closeDrawer(){
+            curDrawerId = null;
+            document.getElementById('drawer').classList.remove('open');
+            document.getElementById('drawer-backdrop').classList.add('hidden');
+            if (location.search) history.replaceState(null,'',location.pathname);
+        }
+        function openDrawer(id){
+            const s = sellers.find(x => x.id===id); if (!s){ showToast('Nie znaleziono sprzedawcy','error'); return; }
+            curDrawerId = id;
+            const mg = s.message || {};
+            msgBuf = { kanal:mg.kanal||'', temat:mg.temat||'', tresc:mg.tresc||'', wariant_b:mg.wariant_b||'',
+                linkedin_invite:mg.linkedin_invite||'', telefon_skrypt:mg.telefon_skrypt||'' };
+            document.getElementById('drawer').classList.add('open');
+            document.getElementById('drawer-backdrop').classList.remove('hidden');
+            renderDrawer(s);
+            loadHistory(id);
+        }
+        function renderDrawer(s){
+            document.getElementById('dw-title').textContent = s.company_name || s.brand_name || ('@'+(s.allegro_login||'sprzedawca'));
+            const parts = [
+                renderDataSection(s),
+                renderAllegroSection(s),
+                renderAiSection(s),
+                s.research ? renderResearch(s) : '',
+                s.scoring ? renderScoring(s) : '',
+                s.pitch ? renderPitch(s) : '',
+                s.message ? renderMessageSection(s) : '',
+                renderStatusSection(s),
+                renderDangerSection(s),
+                `<div class="dw-sec"><div class="dw-sec-h"><i class="ph ph-clock-counter-clockwise"></i> Historia</div><div id="dw-history" class="text-[12px] text-zinc-500">Ładuję…</div></div>`
+            ];
+            document.getElementById('dw-body').innerHTML = parts.join('');
+        }
+
+        function fld(label, id, val, ph){
+            return `<div><label class="lbl">${esc(label)}</label><input id="${id}" class="inp" value="${esc(val||'')}" placeholder="${esc(ph||'')}"></div>`;
+        }
+        function sel(label, id, val, opts){
+            const o = opts.map(([v,t]) => `<option value="${esc(v)}" ${String(val??'')===String(v)?'selected':''}>${esc(t)}</option>`).join('');
+            return `<div><label class="lbl">${esc(label)}</label><select id="${id}" class="inp">${o}</select></div>`;
+        }
+        // (a) Dane firmy — edytowalne + baner opt-out
+        function renderDataSection(s){
+            const optBanner = s.opted_out
+                ? `<div class="mb-3 flex items-center gap-2 text-[12px] text-[#f26d78] bg-[#e5484d]/10 border border-[#e5484d]/30 rounded-lg px-3 py-2"><i class="ph ph-prohibit"></i> Na liście wykluczeń (opt-out ${esc(fmtDate(s.opted_out_at))}). Akcje AI i zmiana statusu zablokowane.</div>`
+                : '';
+            const vOpts = '<option value="">— brak —</option>' + verticals.map(v => `<option value="${esc(v.id)}" ${s.vertical_id===v.id?'selected':''}>${esc(v.name)}</option>`).join('');
+            const brandOwnedVal = s.brand_owned===true ? 'true' : s.brand_owned===false ? 'false' : '';
+            return `<div class="dw-sec">
+                ${optBanner}
+                <div class="dw-sec-h"><i class="ph ph-buildings"></i> Dane firmy ${statusBadge(s.status)}</div>
+                <div class="space-y-2.5">
+                    ${fld('Nazwa firmy','dw-company_name',s.company_name)}
+                    <div class="grid grid-cols-2 gap-2.5">${fld('NIP','dw-nip',s.nip)}${sel('Forma prawna','dw-legal_form',s.legal_form,[['',' — ? — '],['jdg','JDG'],['sp_zoo','Sp. z o.o.'],['sa','S.A.'],['inne','Inne']])}</div>
+                    <div class="grid grid-cols-2 gap-2.5">${fld('Miasto','dw-city',s.city)}${fld('Region','dw-region',s.region)}</div>
+                    ${fld('WWW (własny sklep)','dw-www',s.www,'firma.pl')}
+                    <div class="grid grid-cols-2 gap-2.5">
+                        ${sel('Jakość własnego sklepu','dw-own_shop_quality',s.own_shop_quality,[['',' — ? — '],['brak','Brak (tylko Allegro)'],['prowizorka','Prowizorka'],['pro','Pro (dopracowany)']])}
+                        ${sel('Marka własna?','dw-brand_owned',brandOwnedVal,[['',' — ? — '],['true','Tak (producent / marka własna)'],['false','Nie (reseller cudzej marki)']])}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5">${fld('Nazwa marki','dw-brand_name',s.brand_name)}${fld('Kategoria produktu','dw-product_category',s.product_category)}</div>
+                    <div class="grid grid-cols-2 gap-2.5">${fld('E-mail','dw-email',s.email)}${fld('Telefon','dw-phone',s.phone)}</div>
+                    <div class="grid grid-cols-2 gap-2.5">${fld('Osoba (decydent)','dw-contact_person',s.contact_person)}${fld('Rola','dw-contact_role',s.contact_role)}</div>
+                    ${fld('LinkedIn URL','dw-linkedin_url',s.linkedin_url,'https://linkedin.com/in/…')}
+                    <div><label class="lbl">Wertykał</label><select id="dw-vertical_id" class="inp">${vOpts}</select></div>
+                    <div><label class="lbl">Notatki</label><textarea id="dw-notes" class="inp" rows="2">${esc(s.notes||'')}</textarea></div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="saveSeller('${s.id}')" class="btn btn-w btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz dane</button>
+                        ${s.linkedin_url ? `<a href="${safeUrl(s.linkedin_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-g btn-sm"><i class="ph ph-linkedin-logo"></i> LinkedIn</a>` : ''}
+                        ${s.www ? `<a href="${safeUrl(wwwHref(s.www))}" target="_blank" rel="noopener noreferrer" class="btn btn-g btn-sm"><i class="ph ph-globe"></i> Strona</a>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }
+        // (b) Dane Allegro — read-only
+        function renderAllegroSection(s){
+            const superBadge = s.allegro_super===true
+                ? '<span class="badge bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40"><i class="ph ph-seal-check"></i> Super Sprzedawca</span>'
+                : (s.allegro_super===false ? '<span class="text-zinc-600 text-[12px]">nie</span>' : '<span class="text-zinc-700 text-[12px]">—</span>');
+            const rows = [
+                kvline('Login Allegro', s.allegro_login ? `<span class="font-mono text-zinc-200">@${esc(s.allegro_login)}</span>` : '<span class="text-zinc-700">—</span>'),
+                kvline('Super Sprzedawca', superBadge),
+                kvline('Ocena / poleceń', s.allegro_rating!=null ? `${esc(s.allegro_rating)}%` : '<span class="text-zinc-700">—</span>'),
+                kvline('Liczba ocen', s.allegro_reviews!=null ? esc(s.allegro_reviews) : '<span class="text-zinc-700">—</span>'),
+                kvline('Staż', esc(s.allegro_since||'—')),
+                kvline('Liczba ofert', s.allegro_offers_count!=null ? esc(s.allegro_offers_count) : '<span class="text-zinc-700">—</span>'),
+                kvline('Przykładowy produkt', esc(s.sample_product||'—')),
+            ];
+            const links = [];
+            if (s.allegro_url) links.push(`<a href="${safeUrl(s.allegro_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-g btn-sm"><i class="ph ph-storefront"></i> Sklep Allegro</a>`);
+            if (s.sample_offer_url) links.push(`<a href="${safeUrl(s.sample_offer_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-g btn-sm"><i class="ph ph-tag"></i> Oferta</a>`);
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-storefront"></i> Dane Allegro <span class="text-zinc-700" style="margin-left:auto;font-weight:400;text-transform:none">seed ze skanu</span></div>
+                ${rows.join('')}
+                ${links.length?`<div class="flex flex-wrap gap-2 mt-3">${links.join('')}</div>`:''}
+            </div>`;
+        }
+        // (c) Akcje AI
+        function renderAiSection(s){
+            const blocked = s.opted_out || s.status==='opt_out' || s.status==='odpadl';
+            const dis = blocked ? 'disabled' : '';
+            const hasResearch = !!(s.research && typeof s.research==='object');
+            const hasScoring = !!(s.scoring && typeof s.scoring==='object');
+            const hasPitch = !!(s.pitch && typeof s.pitch==='object');
+            const scoreDis = (blocked || !hasResearch) ? 'disabled' : '';
+            const pitchDis = (blocked || !hasResearch || !hasScoring) ? 'disabled' : '';
+            const msgDis = (blocked || !hasResearch || !hasPitch) ? 'disabled' : '';
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-sparkle"></i> Akcje AI</div>
+                <div id="dw-aistate" class="hidden mb-3 text-[12.5px] text-[#52a8ff] bg-[#0070f3]/10 border border-[#0070f3]/30 rounded-lg px-3 py-2"></div>
+                <div class="flex flex-wrap gap-2">
+                    <button class="dw-aibtn btn btn-g btn-sm" ${dis} onclick="runAi('${s.id}','research')"><i class="ph ph-magnifying-glass"></i> Zbadaj</button>
+                    <button class="dw-aibtn btn btn-g btn-sm" ${scoreDis} ${!hasResearch?'title="Najpierw research"':''} onclick="runAi('${s.id}','score')"><i class="ph ph-gauge"></i> Policz score</button>
+                    <button class="dw-aibtn btn btn-g btn-sm" ${pitchDis} ${(!hasResearch||!hasScoring)?'title="Wymaga research + score"':''} onclick="runAi('${s.id}','pitch')"><i class="ph ph-target"></i> Pitch</button>
+                    <button class="dw-aibtn btn btn-g btn-sm" ${msgDis} ${(!hasResearch||!hasPitch)?'title="Wymaga research + pitch"':''} onclick="runAi('${s.id}','message')"><i class="ph ph-envelope"></i> Napisz wiadomość</button>
+                </div>
+                ${blocked ? '<div class="text-[11px] text-zinc-600 mt-2">Sprzedawca zablokowany (opt-out / odpadł) — akcje AI wyłączone.</div>'
+                    : '<div class="text-[11px] text-zinc-600 mt-2">Kolejność: research → score (deterministyczny) → pitch → wiadomość. Score bez AI, pitch/wiadomość dopasowują się do segmentu.</div>'}
+            </div>`;
+        }
+
+        function kvline(k,v){ return `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`; }
+        function chips(arr){ return (Array.isArray(arr)&&arr.length) ? arr.map(x => `<span class="minichip">${esc(x)}</span>`).join('') : '<span class="text-zinc-700 text-[12px]">—</span>'; }
+
+        // (d) Research
+        function renderResearch(s){
+            const r = s.research || {};
+            const brandOwned = r.brand_owned===true ? 'Tak — producent / marka własna' : r.brand_owned===false ? 'Nie — reseller cudzej marki' : '—';
+            const osq = OWN_SHOP_PL[r.own_shop_quality] || r.own_shop_quality || '—';
+            const lf = LEGAL_FORM_PL[r.legal_form] || r.legal_form || '—';
+            const zrodla = Array.isArray(r.zrodla) ? r.zrodla : [];
+            const bOc = r.brandowalnosc_ocena;
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-file-magnifying-glass"></i> Research
+                    ${r.pewnosc?`<span class="badge bg-zinc-500/15 text-zinc-300 border-zinc-500/30" style="margin-left:auto">pewność: ${esc(r.pewnosc)}</span>`:''}</div>
+                ${r.podsumowanie?`<div class="text-[12.5px] text-zinc-300 mb-3 leading-relaxed">${esc(r.podsumowanie)}</div>`:''}
+                ${kvline('Własny sklep (www)', r.www ? `<a href="${safeUrl(wwwHref(r.www))}" target="_blank" rel="noopener noreferrer" class="link-a">${esc(r.www)}</a>` : '<span class="text-zinc-700">—</span>')}
+                ${kvline('Jakość sklepu', esc(osq))}
+                ${kvline('Marka własna', esc(brandOwned))}
+                ${r.brand_name?kvline('Nazwa marki', esc(r.brand_name)):''}
+                ${kvline('Forma prawna', esc(lf))}
+                ${kvline('Kategoria', esc(r.product_category||'—'))}
+                ${kvline('Decydent', esc(r.contact_person||'—')+(r.contact_role?` (${esc(r.contact_role)})`:''))}
+                ${r.linkedin_url?kvline('LinkedIn', `<a href="${safeUrl(r.linkedin_url)}" target="_blank" rel="noopener noreferrer" class="link-a">${esc(r.linkedin_url)}</a>`):''}
+                ${(r.email||r.phone)?kvline('Kontakt', [r.email?esc(r.email):'', r.phone?esc(r.phone):''].filter(Boolean).join(' · ')||'—'):''}
+                ${bOc!=null?kvline('Brandowalność', `${meter5(bOc)} <span class="text-zinc-500">${esc(bOc)}/5</span>${r.brandowalnosc_uzasadnienie?` — <span class="text-zinc-400">${esc(r.brandowalnosc_uzasadnienie)}</span>`:''}`):''}
+                ${r.sygnaly_founder_led?kvline('Sygnały founder-led', esc(r.sygnaly_founder_led)):''}
+                ${zrodla.length?`<div class="mt-2"><div class="text-[11px] uppercase text-zinc-600 font-semibold mb-1.5">Źródła</div>
+                    <div class="space-y-1">${zrodla.map(u=>`<div><a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer" class="link-a text-[12px]">${esc(u)}</a></div>`).join('')}</div></div>`:''}
+            </div>`;
+        }
+
+        // (e) Scoring 4-filarowy
+        function pillarRow(label, p){
+            p = p || {};
+            return `<div class="mb-2.5">
+                <div class="flex items-center justify-between gap-3 mb-1">
+                    <span class="text-[12.5px] text-zinc-300">${esc(label)}</span>
+                    <span class="flex items-center gap-2">${meter5(p.ocena)} <span class="text-[11px] text-zinc-500 font-mono">${p.ocena!=null?esc(p.ocena)+'/5':'—'}</span></span>
+                </div>
+                ${p.uzasadnienie?`<div class="text-[11.5px] text-zinc-500 leading-snug">${esc(p.uzasadnienie)}</div>`:''}
+            </div>`;
+        }
+        function renderScoring(s){
+            const sc = s.scoring || {};
+            const seg = s.segment || sc.segment;
+            const score = (s.score!=null) ? s.score : sc.score;
+            const m = SEGMENT_META[seg] || SEGMENT_META.D;
+            const segBig = `<div class="seg-big ${m.cls}">${esc(seg||'?')}</div>`;
+            const capNote = sc.reseller_cap_applied
+                ? `<div class="text-[11.5px] text-[#f5b955] bg-[#f5a623]/8 border border-[#f5a623]/25 rounded-lg px-2.5 py-1.5 mt-2"><i class="ph ph-shield-warning"></i> Zastosowano twardy sufit dla resellera cudzej marki (filar brandowalności).</div>`
+                : '';
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-gauge"></i> Scoring 4-filarowy</div>
+                <div class="flex items-center gap-4 mb-4">
+                    ${segBig}
+                    <div class="min-w-0">
+                        <div class="text-white font-semibold text-[15px]">Segment ${esc(seg||'—')} <span class="text-zinc-500 font-normal text-[13px]">· ${esc(score!=null?score:'—')}/100</span></div>
+                        <div class="text-[11.5px] text-zinc-500">${esc(m.desc)}</div>
+                    </div>
+                </div>
+                ${pillarRow('Produkt brandowalny + kontrola podaży', sc.brandowalnosc)}
+                ${pillarRow('Dowód popytu (metryki Allegro)', sc.dowod_popytu)}
+                ${pillarRow('Luka jakościowa ekosystemu', sc.luka)}
+                ${pillarRow('Decydent dostępny + ambitny', sc.decydent)}
+                ${capNote}
+                ${s.score_reason?`<div class="text-[11.5px] text-zinc-500 mt-3 pt-3 border-t border-[#161616] italic leading-relaxed">„${esc(s.score_reason)}"</div>`:''}
+            </div>`;
+        }
+
+        // (f) Pitch
+        function renderPitch(s){
+            const p = s.pitch || {};
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-target"></i> Pitch — rekomendacja</div>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40"><i class="ph ph-strategy"></i> ${esc(PITCH_KAT_PL[p.kat]||p.kat||'—')}</span>
+                    <span class="badge bg-teal-500/10 text-teal-300 border-teal-500/30"><i class="ph ph-paper-plane-tilt"></i> ${esc(PITCH_KANAL_PL[p.kanal]||p.kanal||'—')}</span>
+                </div>
+                ${kvline('Haczyk', esc(p.hak||'—'))}
+                ${kvline('Uzasadnienie', esc(p.uzasadnienie||'—'))}
+                ${p.wygenerowano_at?`<div class="text-[10.5px] text-zinc-600 mt-2">AI: ${esc(fmtDate(p.wygenerowano_at))}</div>`:''}
+            </div>`;
+        }
+
+        // (g) Pierwszy kontakt (message) — edytowalne kopie robocze + „Kopiuj"
+        function copyRow(label, key, editable){
+            const val = msgBuf[key]||'';
+            const head = `<div class="flex items-center justify-between mb-1"><label class="lbl" style="margin:0">${esc(label)}</label><button onclick="copyBuf('${key}')" class="text-[11px] text-[#52a8ff] hover:text-white"><i class="ph ph-copy"></i> Kopiuj</button></div>`;
+            if (editable==='input') return `<div>${head}<input class="inp" value="${esc(val)}" oninput="msgBuf.${key}=this.value"></div>`;
+            if (editable==='textarea') return `<div>${head}<textarea class="inp" rows="7" oninput="msgBuf.${key}=this.value">${esc(val)}</textarea></div>`;
+            return `<div>${head}<div class="text-[12px] text-zinc-300 whitespace-pre-wrap bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5">${esc(val)||'<span class="text-zinc-700">—</span>'}</div></div>`;
+        }
+        function renderMessageSection(s){
+            const kanal = msgBuf.kanal;
+            return `<div class="dw-sec">
+                <div class="dw-sec-h"><i class="ph ph-envelope-simple"></i> Pierwszy kontakt
+                    ${kanal?`<span class="badge bg-teal-500/10 text-teal-300 border-teal-500/30" style="margin-left:auto"><i class="ph ph-paper-plane-tilt"></i> ${esc(PITCH_KANAL_PL[kanal]||kanal)}</span>`:''}</div>
+                <div class="text-[11px] text-zinc-600 mb-3">System nie wysyła sam. Skopiuj treść i zrealizuj kontakt ręcznie kanałem z pitcha. Bez cen i linków (serwer je wycina). Edycje są robocze (do skopiowania) — nie zapisują się.</div>
+                <div class="space-y-2.5">
+                    ${copyRow('Temat (mail)', 'temat', 'input')}
+                    ${copyRow('Treść', 'tresc', 'textarea')}
+                    ${copyRow('Wariant B (alternatywa)', 'wariant_b', 'textarea')}
+                </div>
+                <div class="mt-3 grid gap-2.5 sm:grid-cols-2">
+                    ${copyRow('Zaproszenie LinkedIn', 'linkedin_invite', 'ro')}
+                    ${copyRow('Skrypt telefoniczny', 'telefon_skrypt', 'ro')}
+                </div>
+            </div>`;
+        }
+        function copyBuf(key){
+            const txt = msgBuf[key]||'';
+            if (!txt){ showToast('Nic do skopiowania','info'); return; }
+            navigator.clipboard.writeText(txt).then(()=>showToast('Skopiowano','success'), ()=>showToast('Nie udało się skopiować','error'));
+        }
+
+        // (h) Status + opt-out + historia
+        function renderStatusSection(s){
+            if (s.status==='opt_out') return '';
+            // Advance-only: pokazujemy statusy „w przód" (edge i tak nie cofnie). odpadl zawsze dostępny.
+            const opts = ['zaakceptowany','kontakt','rozmowa','deal','odpadl']
+                .map(x => `<option value="${x}">${esc(STATUS_META[x].label)}</option>`).join('');
+            return `<div class="dw-sec"><div class="dw-sec-h"><i class="ph ph-arrows-left-right"></i> Status</div>
+                <div class="flex items-end gap-2">
+                    <div class="flex-1"><label class="lbl">Ustaw status</label>
+                        <select id="dw-status-sel" class="inp" onchange="toggleChannelSel(this.value)"><option value="">— wybierz —</option>${opts}</select></div>
+                    <button onclick="applyStatus('${s.id}')" class="btn btn-g btn-sm"><i class="ph ph-check"></i> Zastosuj</button>
+                </div>
+                <div id="dw-channel-wrap" class="hidden mt-2.5">
+                    <label class="lbl">Kanał kontaktu (wymagany dla „Kontakt")</label>
+                    <select id="dw-channel-sel" class="inp">
+                        <option value="linkedin">LinkedIn</option><option value="email">E-mail</option><option value="phone">Telefon</option>
+                    </select>
+                </div>
+                <div class="text-[11px] text-zinc-600 mt-2">Status idzie tylko w przód (advance-only). „Kontakt" wymaga kanału i zapisuje datę kontaktu.</div>
+            </div>`;
+        }
+        function toggleChannelSel(v){ const w=document.getElementById('dw-channel-wrap'); if (w) w.classList.toggle('hidden', v!=='kontakt'); }
+
+        function renderDangerSection(s){
+            if (s.opted_out || s.status==='opt_out') return '';
+            return `<div class="dw-sec" style="border-color:rgba(229,72,77,.35)">
+                <div class="dw-sec-h" style="color:#f26d78"><i class="ph ph-prohibit"></i> STOP / opt-out</div>
+                <div class="text-[12px] text-zinc-500 mb-2.5">Wpis trafia na listę wykluczeń (suppression). Nieodwracalne z panelu — rekord nigdy nie wróci do pipeline'u.</div>
+                <button onclick="optOut('${s.id}')" class="btn btn-d btn-sm"><i class="ph ph-hand-palm"></i> Dodaj do wykluczeń (STOP)</button>
+            </div>`;
+        }
+
+        async function loadHistory(id){
+            const { data, error } = await supabaseClient.from('wf2p_events').select('*').eq('seller_id', id).order('created_at',{ascending:false}).limit(200);
+            const box = document.getElementById('dw-history'); if (!box) return;
+            if (error){ box.innerHTML = '<span class="text-[#f26d78]">Błąd historii: '+esc(error.message)+'</span>'; return; }
+            box.innerHTML = renderHistory(data||[]);
+        }
+        function renderHistory(ev){
+            if (!ev.length) return '<span class="text-zinc-700">Brak zdarzeń.</span>';
+            const actorIc = { admin:'ph-user', ai:'ph-sparkle', auto:'ph-robot' };
+            return `<div class="space-y-2">${ev.map(e => `<div class="flex gap-2.5">
+                <i class="ph ${actorIc[e.actor]||'ph-dot'} text-zinc-600 mt-0.5"></i>
+                <div class="min-w-0"><div class="text-zinc-300 text-[12px]"><span class="text-zinc-500">${esc(e.kind)}</span>${e.description?' — '+esc(e.description):''}</div>
+                <div class="text-zinc-600 text-[10.5px]">${esc(fmtDate(e.created_at))}</div></div></div>`).join('')}</div>`;
+        }
+
+        // ═══════════ AKCJE DRAWERA ═══════════
+        async function runAi(id, action){
+            if (busyIds.has(id)){ showToast('Akcja w toku — poczekaj','info'); return; }
+            busyIds.add(id);
+            const bar = document.getElementById('dw-aistate');
+            const label = { research:'Badam sprzedawcę', score:'Liczę score', pitch:'Tworzę pitch', message:'Piszę wiadomość' }[action];
+            let sec = 0;
+            document.querySelectorAll('.dw-aibtn').forEach(b => b.disabled = true);
+            if (bar){ bar.classList.remove('hidden'); bar.innerHTML = `<i class="ph ph-circle-notch animate-spin"></i> ${label}… <span id="dw-aisec">0</span> s`; }
+            const timer = setInterval(()=>{ sec++; const el=document.getElementById('dw-aisec'); if(el) el.textContent=sec; }, 1000);
+            try {
+                await callEngine({ action, sellerId:id });
+                await refetchSeller(id);
+                showToast(label+' — gotowe','success');
+                if (curDrawerId===id) openDrawer(id);
+                loadKpi();
+            } catch(e){
+                showToast(e.message||'Błąd akcji','error');
+                document.querySelectorAll('.dw-aibtn').forEach(b => b.disabled = false);
+                if (bar) bar.classList.add('hidden');
+            } finally {
+                clearInterval(timer); busyIds.delete(id);
+            }
+        }
+
+        async function saveSeller(id){
+            const g = k => (document.getElementById('dw-'+k)?.value ?? '').trim();
+            const gv = k => { const v = document.getElementById('dw-'+k)?.value; return (v===''||v==null) ? null : v; };
+            const boVal = document.getElementById('dw-brand_owned')?.value;
+            const upd = {
+                company_name: g('company_name')||null,
+                nip: g('nip')||null,
+                legal_form: gv('legal_form'),
+                city: g('city')||null, region: g('region')||null,
+                www: normWww(g('www'))||null,
+                own_shop_quality: gv('own_shop_quality'),
+                brand_owned: boVal==='true' ? true : boVal==='false' ? false : null,
+                brand_name: g('brand_name')||null,
+                product_category: g('product_category')||null,
+                email: g('email')? g('email').toLowerCase():null,
+                phone: g('phone')||null,
+                contact_person: g('contact_person')||null,
+                contact_role: g('contact_role')||null,
+                linkedin_url: g('linkedin_url')||null,
+                vertical_id: document.getElementById('dw-vertical_id')?.value||null,
+                notes: g('notes')||null
+            };
+            if (upd.email && !EMAIL_RE.test(upd.email)){ showToast('Nieprawidłowy e-mail','error'); return; }
+            const { error } = await supabaseClient.from('wf2p_sellers').update(upd).eq('id', id);
+            if (error){ showToast('Błąd zapisu: '+error.message,'error'); return; }
+            await refetchSeller(id); showToast('Zapisano','success'); if (curDrawerId===id) openDrawer(id);
+        }
+
+        async function applyStatus(id){
+            const s = document.getElementById('dw-status-sel')?.value;
+            if (!s){ showToast('Wybierz status','error'); return; }
+            const body = { action:'status_change', sellerId:id, status:s };
+            if (s==='kontakt'){ const ch = document.getElementById('dw-channel-sel')?.value; if (!ch){ showToast('Wybierz kanał kontaktu','error'); return; } body.channel = ch; }
+            if (s==='odpadl'){ const ok = await uiConfirm({ title:'Oznaczyć jako odpadł?', body:'Sprzedawca zostanie oznaczony jako odpadł — akcje AI zablokowane.', confirmLabel:'Tak, odpadł', danger:true }); if (!ok) return; }
+            try {
+                await callEngine(body);
+                await refetchSeller(id); if (curDrawerId===id) openDrawer(id); renderKolejka(); loadKpi();
+                showToast('Status: '+STATUS_META[s].label,'success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        async function optOut(id){
+            const ok = await uiConfirm({ title:'Dodać do wykluczeń (STOP)?', body:'Nieodwracalne z panelu. Rekord trafi na suppression list i nigdy nie wróci do lejka.', confirmLabel:'Tak, STOP', danger:true });
+            if (!ok) return;
+            try {
+                await callEngine({ action:'status_change', sellerId:id, optOut:true });
+                await refetchSeller(id); if (curDrawerId===id) openDrawer(id); renderKolejka(); loadKpi();
+                showToast('Dodano do wykluczeń','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        // ═══════════ KOLEJKA (oceniony, segment A/B) ═══════════
+        function koRows(){
+            return sellers.filter(s => s.status==='oceniony' && (s.segment==='A'||s.segment==='B') && !s.opted_out && !s.is_test)
+                .sort((a,b)=> (b.score||0)-(a.score||0) || new Date(b.updated_at) - new Date(a.updated_at));
+        }
+        function updateKoTabBadge(){
+            const n = koRows().length;
+            const el = document.getElementById('ko-tabn'); if (!el) return;
+            el.textContent = n; el.classList.toggle('hidden', n===0);
+        }
+        function renderKolejka(){
+            const wrap = document.getElementById('ko-list'); if (!wrap) return;
+            const rows = koRows();
+            const cnt = document.getElementById('ko-counter'); if (cnt) cnt.textContent = rows.length + ' czeka na Ciebie';
+            updateKoTabBadge();
+            if (!rows.length){ wrap.innerHTML = `<div class="card p-10 text-center text-zinc-600"><i class="ph ph-check-circle text-3xl block mb-2 text-zinc-700"></i>Nic nie czeka w kolejce akceptacji (ocenieni segmentu A/B).</div>`; return; }
+            wrap.innerHTML = rows.map(koCard).join('');
+        }
+        function koCard(s){
+            const p = s.pitch || {};
+            const hasPitch = !!(s.pitch && typeof s.pitch==='object');
+            const title = s.company_name || s.brand_name || ('@'+(s.allegro_login||'sprzedawca'));
+            const sub = [s.allegro_login?'@'+s.allegro_login:'', verticalName(s.vertical_id), s.city].filter(Boolean).join(' · ');
+            const pitchBox = hasPitch
+                ? `<div class="bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 mb-3">
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            <span class="badge bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40"><i class="ph ph-strategy"></i> ${esc(PITCH_KAT_PL[p.kat]||p.kat||'—')}</span>
+                            <span class="badge bg-teal-500/10 text-teal-300 border-teal-500/30"><i class="ph ph-paper-plane-tilt"></i> ${esc(PITCH_KANAL_PL[p.kanal]||p.kanal||'—')}</span>
+                        </div>
+                        <div class="text-[12.5px] text-zinc-300 mb-1"><span class="text-zinc-600">Haczyk:</span> ${esc(p.hak||'—')}</div>
+                        <div class="text-[11.5px] text-zinc-500">${esc(p.uzasadnienie||'')}</div>
+                    </div>`
+                : `<div class="text-[12px] text-zinc-500 bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 mb-3 flex items-center justify-between gap-2">
+                        <span><i class="ph ph-info text-zinc-600"></i> Brak pitcha — wygeneruj rekomendację przed akceptacją.</span>
+                        <button onclick="koPitch('${s.id}')" class="btn btn-g btn-sm"><i class="ph ph-target"></i> Wygeneruj pitch</button>
+                    </div>`;
+            return `<div class="card p-4">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">${segmentBadge(s.segment)}<span class="text-white font-semibold truncate">${esc(title)}</span><span class="text-zinc-600 text-[11px] font-mono">${s.score!=null?s.score+'/100':''}</span></div>
+                        <div class="text-zinc-600 text-[11px] mt-0.5">${esc(sub||'—')}</div>
+                    </div>
+                    <button onclick="openDrawer('${s.id}')" class="btn btn-g btn-sm flex-shrink-0"><i class="ph ph-arrow-square-out"></i> Szczegóły</button>
+                </div>
+                ${pitchBox}
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="koAccept('${s.id}')" class="btn btn-s btn-sm"><i class="ph ph-check"></i> Zaakceptuj</button>
+                    <button onclick="koReject('${s.id}')" class="btn btn-d btn-sm"><i class="ph ph-x"></i> Odrzuć</button>
+                </div>
+            </div>`;
+        }
+        async function koPitch(id){
+            try {
+                showToast('Generuję pitch…','info');
+                await callEngine({ action:'pitch', sellerId:id });
+                await refetchSeller(id); renderKolejka(); loadKpi();
+                showToast('Pitch gotowy','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+        async function koAccept(id){
+            try {
+                await callEngine({ action:'status_change', sellerId:id, status:'zaakceptowany' });
+                await refetchSeller(id); renderKolejka(); loadKpi();
+                showToast('Zaakceptowano — do kontaktu handlowca','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+        async function koReject(id){
+            const ok = await uiConfirm({ title:'Odrzucić sprzedawcę?', body:'Status zostanie zmieniony na „odpadł".', confirmLabel:'Odrzuć', danger:true });
+            if (!ok) return;
+            try {
+                await callEngine({ action:'status_change', sellerId:id, status:'odpadl' });
+                await refetchSeller(id); renderKolejka(); loadKpi();
+                showToast('Odrzucono','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        // ═══════════ WERTYKALE ═══════════
+        function priorityStars(pri){
+            const n = Math.max(0, Math.min(5, parseInt(pri,10)||0));
+            if (!n) return '';
+            let s = '';
+            for (let i=1;i<=5;i++) s += `<i class="ph-fill ph-star pri-star ${i<=n?'on':''}"></i>`;
+            return `<span title="Priorytet ${n}/5 (1 = najwyższy)" class="inline-flex items-center gap-0.5">${s}</span>`;
+        }
+        function filteredVerticals(){
+            let rows = verticals.slice();
+            const fs = document.getElementById('wt-fstatus')?.value;
+            if (fs) rows = rows.filter(v => (v.status||'katalogowy')===fs);
+            const q = foldStr((document.getElementById('wt-search')?.value||'').trim());
+            if (q){ const toks=q.split(/\s+/).filter(Boolean);
+                rows = rows.filter(v => { const idx = foldStr([v.name,v.key,v.allegro_query,v.brandability_note,v.notes].filter(Boolean).join(' ')); return toks.every(t => idx.includes(t)); }); }
+            return rows;
+        }
+        function renderWertykale(){
+            const wrap = document.getElementById('wt-list'); if (!wrap) return;
+            if (!verticals.length){ wrap.innerHTML = '<div class="text-zinc-600 text-sm">Brak wertykali. Dodaj pierwszy powyżej.</div>'; return; }
+            const rows = filteredVerticals();
+            if (!rows.length){ wrap.innerHTML = '<div class="card p-8 text-center text-zinc-600">Brak wertykali dla tych filtrów.</div>'; return; }
+            // grupowanie po priorytecie (1 = najwyższy → 5 → bez priorytetu)
+            const byPri = {};
+            rows.forEach(v => { const k = (parseInt(v.priority,10)||0) || 0; (byPri[k] = byPri[k] || []).push(v); });
+            const priKeys = Object.keys(byPri).map(Number).sort((a,b)=> (a===0?99:a)-(b===0?99:b));
+            wrap.innerHTML = priKeys.map(k => wtPriBlock(k, byPri[k])).join('');
+        }
+        function wtPriBlock(pri, list){
+            list = list.slice().sort((a,b)=> (a.name||'').localeCompare(b.name||'','pl'));
+            const label = pri ? `Priorytet ${pri}` : 'Bez priorytetu';
+            const nProsp = list.filter(v=>v.status==='w_prospectingu').length;
+            const counters = [
+                `<span class="minichip" style="margin:0">${list.length} kategorii</span>`,
+                nProsp?`<span class="minichip" style="margin:0;color:#52a8ff">${nProsp} w prospectingu</span>`:''
+            ].filter(Boolean).join(' ');
+            return `<details class="vt-cat card" open>
+                <summary class="flex items-center gap-3 px-4 py-3">
+                    <i class="ph ph-caret-right caret text-zinc-500"></i>
+                    ${pri?priorityStars(pri):''}
+                    <span class="text-white font-semibold">${esc(label)}</span>
+                    <span class="flex flex-wrap gap-1.5 ml-auto text-[11px]">${counters}</span>
+                </summary>
+                <div class="px-4 pb-4 grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(330px,1fr))">${list.map(wtCard).join('')}</div>
+            </details>`;
+        }
+        function wtCard(v){
+            const vc = vCounts[v.id] || { total:0, byStatus:{}, nowy:0 };
+            const st = v.status || 'katalogowy';
+            const meta = VERT_STATUS[st] || VERT_STATUS.katalogowy;
+            const statusSel = VERT_STATUS_ORDER.map(s => `<option value="${s}" ${st===s?'selected':''}>${esc(VERT_STATUS[s].label)}</option>`).join('');
+            const byS = STATUS_ORDER.filter(s => (vc.byStatus[s]||0)>0).map(s => `<span class="minichip">${esc(STATUS_META[s].label)}: <b class="text-zinc-300">${vc.byStatus[s]}</b></span>`).join('') || '<span class="text-zinc-700 text-[11px]">brak seedów</span>';
+            const toProspBtn = st!=='w_prospectingu'
+                ? `<button class="btn btn-p btn-sm" onclick="toProspecting('${v.id}')"><i class="ph ph-arrow-right"></i> Do prospectingu</button>` : '';
+            const prospActive = st==='w_prospectingu' ? `<span class="badge bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40"><i class="ph ph-broadcast"></i> Prospecting aktywny</span>` : '';
+            return `<div class="card p-4" style="background:#0c0c0c">
+                <div class="flex items-start justify-between gap-2 mb-1.5">
+                    <div class="min-w-0"><div class="text-white font-semibold text-[13.5px] leading-tight">${esc(v.name)}</div>
+                        <div class="text-zinc-600 text-[10.5px] font-mono mt-0.5">${esc(v.key)} · ${vc.total} seedów</div></div>
+                    <span class="badge ${meta.cls} flex-shrink-0">${esc(meta.label)}</span>
+                </div>
+                <div class="mb-2">${priorityStars(v.priority)}</div>
+                ${v.allegro_query?`<div class="text-[11.5px] text-zinc-400 bg-[#080808] border border-[#1a1a1a] rounded-lg px-2.5 py-1.5 mb-2 font-mono"><i class="ph ph-magnifying-glass text-zinc-600"></i> ${esc(v.allegro_query)}</div>`:''}
+                ${v.brandability_note?`<div class="text-[11.5px] text-zinc-500 leading-snug mb-2">${esc(v.brandability_note)}</div>`:''}
+                <div class="flex flex-wrap gap-1.5 my-2">${byS}</div>
+                <div class="flex flex-wrap gap-2 mb-2">${toProspBtn}${prospActive}</div>
+                <details class="mt-1">
+                    <summary class="cursor-pointer text-[11.5px] text-zinc-500 hover:text-zinc-300"><i class="ph ph-gear-six"></i> Status ręczny · fraza · notatki</summary>
+                    <div class="space-y-2 mt-2">
+                        <div><label class="lbl">Status skanu</label><select id="wt-${v.id}-status" class="inp" onchange="saveVerticalStatus('${v.id}',this.value)">${statusSel}</select></div>
+                        <div><label class="lbl">Fraza skanu (allegro_query)</label><input id="wt-${v.id}-query" class="inp" value="${esc(v.allegro_query||'')}"></div>
+                        <div><label class="lbl">Notatki</label><textarea id="wt-${v.id}-notes" class="inp" rows="2">${esc(v.notes||'')}</textarea></div>
+                        <button onclick="saveVerticalMeta('${v.id}')" class="btn btn-g btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz</button>
+                    </div>
+                </details>
+            </div>`;
+        }
+        async function addVertical(){
+            const name = (document.getElementById('wt-newname')?.value||'').trim();
+            const query = (document.getElementById('wt-newquery')?.value||'').trim();
+            if (!name){ showToast('Podaj nazwę wertykalu','error'); return; }
+            const key = slugify(name);
+            if (!key){ showToast('Nazwa nie daje poprawnego slug','error'); return; }
+            if (verticals.some(v => v.key===key)){ showToast('Wertykał o tym kluczu już istnieje','error'); return; }
+            const { data, error } = await supabaseClient.from('wf2p_verticals').insert({ name, key, allegro_query:query||null, status:'katalogowy' }).select('*').single();
+            if (error){ showToast('Błąd dodawania: '+error.message,'error'); return; }
+            verticals.push(data); verticals.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+            const n=document.getElementById('wt-newname'); if(n) n.value=''; const q=document.getElementById('wt-newquery'); if(q) q.value='';
+            fillVerticalSelects(); fillVertFilters(); renderWertykale(); showToast('Wertykał dodany','success');
+        }
+        async function saveVerticalStatus(id, status){
+            const { error } = await supabaseClient.from('wf2p_verticals').update({ status }).eq('id', id);
+            if (error){ showToast('Błąd: '+error.message,'error'); renderWertykale(); return; }
+            const v = verticals.find(x=>x.id===id); if (v) v.status = status;
+            fillVertFilters(); renderWertykale(); renderSkan(); showToast('Status wertykalu: '+(VERT_STATUS[status]?.label||status),'success');
+        }
+        async function toProspecting(id){
+            const { error } = await supabaseClient.from('wf2p_verticals').update({ status:'w_prospectingu' }).eq('id', id);
+            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            const v = verticals.find(x=>x.id===id); if (v) v.status = 'w_prospectingu';
+            fillVertFilters(); renderWertykale(); renderSkan(); showToast('Wertykał w prospectingu','success');
+        }
+        async function saveVerticalMeta(id){
+            const allegro_query = (document.getElementById('wt-'+id+'-query')?.value||'').trim()||null;
+            const notes = (document.getElementById('wt-'+id+'-notes')?.value||'').trim()||null;
+            const { error } = await supabaseClient.from('wf2p_verticals').update({ allegro_query, notes }).eq('id', id);
+            if (error){ showToast('Błąd: '+error.message,'error'); return; }
+            const v = verticals.find(x=>x.id===id); if (v){ v.allegro_query=allegro_query; v.notes=notes; }
+            renderWertykale(); renderSkan(); showToast('Zapisano','success');
+        }
+
+        // ═══════════ SKAN (widok stanu harvestu) ═══════════
+        function nowyTotal(){ return sellers.filter(s => s.status==='nowy' && !s.is_test).length; }
+        function updateSkTabBadge(){
+            const n = nowyTotal();
+            const el = document.getElementById('sk-tabn'); if (!el) return;
+            el.textContent = n; el.classList.toggle('hidden', n===0);
+        }
+        function renderSkan(){
+            const body = document.getElementById('sk-body'); if (!body) return;
+            updateSkTabBadge();
+            const totalNowy = nowyTotal();
+            // seedy 'nowy' bez przypisanego wertykalu
+            const noVertNowy = sellers.filter(s => s.status==='nowy' && !s.is_test && !s.vertical_id).length;
+            // kafle stanu
+            const scanReady = verticals.filter(v => v.status==='w_prospectingu' || v.status==='w_skanie').length;
+            const catalog = verticals.filter(v => (v.status||'katalogowy')==='katalogowy').length;
+            const kpiRow = `<div class="grid gap-2.5 mb-5" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+                <div class="kpi-tile"><div class="kpi-n">${totalNowy}</div><div class="kpi-l"><span class="kpi-dot" style="background:${STATUS_META.nowy.dot}"></span>Surowe seedy (nowy)</div></div>
+                <div class="kpi-tile"><div class="kpi-n">${scanReady}</div><div class="kpi-l"><span class="kpi-dot" style="background:#0070f3"></span>Kategorie w lejku/skanie</div></div>
+                <div class="kpi-tile"><div class="kpi-n">${catalog}</div><div class="kpi-l"><span class="kpi-dot" style="background:${STATUS_META.nowy.dot}"></span>Kategorie katalogowe</div></div>
+                <div class="kpi-tile"><div class="kpi-n">${noVertNowy}</div><div class="kpi-l"><span class="kpi-dot" style="background:#f5a623"></span>Seedy bez wertykalu</div></div>
+            </div>`;
+            // lista kategorii do skanu z licznikiem surowych seedów
+            const catRows = verticals.slice().sort((a,b)=> (parseInt(a.priority,10)||99)-(parseInt(b.priority,10)||99) || (a.name||'').localeCompare(b.name||'','pl')).map(v => {
+                const vc = vCounts[v.id] || { nowy:0, total:0 };
+                const st = v.status || 'katalogowy';
+                const meta = VERT_STATUS[st] || VERT_STATUS.katalogowy;
+                return `<tr onclick="showTab('wertykale')" style="cursor:pointer">
+                    <td><div class="text-white font-medium">${esc(v.name)}</div><div class="text-zinc-600 text-[10.5px] font-mono">${esc(v.key)}</div></td>
+                    <td class="text-zinc-400 text-[12px] font-mono">${esc(v.allegro_query||'—')}</td>
+                    <td>${priorityStars(v.priority)||'<span class="text-zinc-700 text-[12px]">—</span>'}</td>
+                    <td><span class="badge ${meta.cls}">${esc(meta.label)}</span></td>
+                    <td class="text-right font-mono ${vc.nowy?'text-[#f5b955]':'text-zinc-600'}">${vc.nowy||0}</td>
+                    <td class="text-right text-zinc-400 font-mono">${vc.total||0}</td>
+                </tr>`;
+            }).join('');
+            const table = `<div class="card overflow-x-auto"><table class="pv-tbl" style="min-width:720px">
+                <thead><tr><th>Kategoria</th><th>Fraza skanu (allegro_query)</th><th>Priorytet</th><th>Status</th><th class="text-right">Nowe seedy</th><th class="text-right">Wszystkie</th></tr></thead>
+                <tbody>${catRows || '<tr><td colspan="6" class="text-center text-zinc-600 py-8">Brak kategorii.</td></tr>'}</tbody>
+            </table></div>`;
+            const procedure = `<div class="card p-5 mt-5 text-[12.5px] text-zinc-400 leading-relaxed">
+                <div class="dw-sec-h"><i class="ph ph-info"></i> Jak działa harvest (poza panelem)</div>
+                <ol class="list-decimal pl-5 space-y-1.5">
+                    <li>Operator otwiera listing Allegro dla frazy kategorii (chrome-devtools MCP — prawdziwa przeglądarka, panel „O sprzedającym" blokuje boty).</li>
+                    <li>Grupuje oferty po sprzedawcy, wchodzi w panel „O sprzedającym" i odczytuje dane firmowe (jawne z mocy prawa): nazwa, NIP, miasto, Super Sprzedawca, oceny, staż.</li>
+                    <li>Zapisuje surowe wiersze do <code>wf2p_sellers</code> ze statusem <b>nowy</b> (anchor = login Allegro). Tu pojawiają się jako „surowe seedy".</li>
+                    <li>Dalej: research → score → pitch w pipeline (zakładka Pipeline / drawer). ⛔ Bez masowego scrapingu — jakość &gt; ilość, ręczny/nadzorowany odczyt.</li>
+                </ol>
+            </div>`;
+            body.innerHTML = kpiRow + table + procedure;
+        }
+
+        // ═══════════ USTAWIENIA ═══════════
+        async function renderSettings(){
+            const wrap = document.getElementById('set-wrap'); if (!wrap) return;
+            try {
+                const { data, error } = await supabaseClient.from('settings').select('key,value').in('key', SETTING_KEYS.map(s=>s.key));
+                if (error) console.warn('settings read', error);
+                settingsCache = {}; (data||[]).forEach(r => { settingsCache[r.key] = r.value; });
+            } catch(e){ console.warn('settings', e); }
+            wrap.innerHTML = SETTING_KEYS.map(s => {
+                const val = settingsCache[s.key];
+                const missing = (val===undefined || val===null);
+                const ofertaNote = s.key==='wf2p_oferta'
+                    ? `<div class="text-[11px] text-[#f5b955] mt-1"><i class="ph ph-warning"></i> Zapis tego klucza wymaga dopisania <code>wf2p_oferta</code> do allowlisty w silniku (save_setting). Bez tego serwer zwróci „klucz niedozwolony".</div>`
+                    : '';
+                return `<div class="card p-4">
+                    <div class="flex items-center justify-between mb-1"><label class="lbl" style="margin:0">${esc(s.label)}</label>
+                        <span class="text-[10px] text-zinc-600 font-mono">${esc(s.key)}</span></div>
+                    <div class="text-[11px] text-zinc-600 mb-2">${esc(s.hint)}</div>
+                    <textarea id="set-${esc(s.key)}" class="inp ${s.kind==='json'?'font-mono text-[12px]':''}" rows="${s.rows}">${esc(val||'')}</textarea>
+                    ${missing?'<div class="text-[11px] text-[#f5b955] mt-1"><i class="ph ph-warning"></i> Klucz nie odczytany (RLS/brak wpisu). Zapis utworzy/nadpisze wartość.</div>':''}
+                    ${ofertaNote}
+                    <div class="mt-2"><button onclick="saveSetting('${esc(s.key)}')" class="btn btn-g btn-sm"><i class="ph ph-floppy-disk"></i> Zapisz</button></div>
+                </div>`;
+            }).join('');
+        }
+        async function saveSetting(key){
+            const meta = SETTING_KEYS.find(s => s.key===key) || {};
+            const val = (document.getElementById('set-'+key)?.value||'');
+            // Miękki guard klienta (serwer i tak waliduje).
+            if (meta.kind==='prompt'){
+                if (val.trim().length < 200){ showToast('Prompt musi mieć min. 200 znaków','error'); return; }
+            } else if (meta.kind==='json'){
+                try { const o = JSON.parse(val); if (!o || typeof o!=='object' || Array.isArray(o)) throw 0;
+                    if (key==='wf2p_scoring_weights' && (!o.wagi || typeof o.wagi!=='object')){ showToast('Brakuje obiektu „wagi" w JSON','error'); return; }
+                } catch(_){ showToast('Nieprawidłowy JSON','error'); return; }
+            }
+            try {
+                await callEngine({ action:'save_setting', key, value:val });
+                settingsCache[key] = val;
+                showToast('Zapisano (utworzono kopię zapasową poprzedniej wartości)','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        // Deep-link ?id=<seller> — otwórz drawer jednorazowo po pierwszym załadowaniu.
+        function openDeepLink(){
+            const id = new URLSearchParams(location.search).get('id');
+            if (id && sellers.some(s => s.id===id)) openDrawer(id);
+        }
+    </script>
+</body>
+</html>
