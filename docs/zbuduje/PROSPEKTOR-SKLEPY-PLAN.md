@@ -100,9 +100,19 @@ Stack: statyczny HTML + Tailwind CDN + supabase-js@2.91.0 + Phosphor + `../compo
 
 ---
 
-## §7. Kontakt + human-in-the-loop + RODO/PKE
+## §7. Kadencja + synchronizacja bot ↔ handlowiec + RODO/PKE  *(v2 — 2026-07-24, DECYZJA Tomka)*
 
-System **NIGDY nie wysyła sam** — handlowiec akceptuje każdą wiadomość (wzorzec fabryki). B2B: kanał częściej ręczny (LinkedIn DM / telefon / mail imienny), niż masowy Resend. Przy mailu: stopka RODO art. 14 + „STOP"=opt-out doklejane serwerowo, PKE-compliant (bez cen/linków w 1. kontakcie). Suppression nieodwracalne.
+**Zmiana modelu:** bot **wysyła maile automatycznie** z `maciej@tomekniedzwiecki.pl` (Resend), przeplatane osobistymi kontaktami handlowca. Trzy warstwy ortogonalne na `wf2p_sellers`:
+- **status** (lejek): nowy→…→zaakceptowany→kontakt→**odpowiedzial**→rozmowa→deal (+nurture/odpadl/opt_out)
+- **cadence_state** (engagement): active / paused / finished / nurture / opted_out
+- **owner_mode** (własność): auto / human / hybrid
+
+**Kadencja** (`settings.wf2p_cadence`, kanało-adaptacyjna — kroki bez kanału pomijane):
+0. Mail #1 bota (spersonalizowany `message`) · 1. LinkedIn handlowiec · 2. Mail #2 bota (szablon) · 3. Telefon handlowiec · 4. Mail #3 break-up bota · 5. LinkedIn ostatnia próba.
+
+**Silnik** = edge `tick` (pg_cron `wf2p-tick` co 20 min, bramka `x-cron-secret`). Kroki `auto`→mail Resend; kroki `human`→zadanie w `wf2p_tasks` (kolejka handlowca w panelu, zakładka „Zadania"). **Handoff:** `inbound` (przycisk „Odpowiedział") → kadencja `paused` + status `odpowiedzial` + zadanie `reply_handling`.
+
+**Bezpieczniki (wszystkie OFF na starcie):** `wf2p_pipeline_enabled` (cały tick) · `wf2p_send_enabled` (tylko realny mail) · `wf2p_send_daily_cap=25` · suppression przed każdym mailem · stopka RODO art. 14 doklejana serwerowo · **twardy blok wysyłki bez `wf2p_dane_nadawcy`** (placeholder = brak wysyłki). PKE art. 398: świadoma decyzja Tomka o wysyłce automatycznej (bot=nadawca).
 
 ---
 
@@ -116,18 +126,23 @@ System **NIGDY nie wysyła sam** — handlowiec akceptuje każdą wiadomość (w
 
 ---
 
-## §9. STAN WDROŻENIA
+## §9. STAN WDROŻENIA  *(akt. 2026-07-24)*
 
-- [x] Kontrakt (ten plik) — v1 2026-07-24
-- [x] Migracja schematu `20260724a_wf2p_prospektor.sql` — tabele + RLS + KPI + seed 10 wertykali + wagi/modele/prompty (napisana; **NIE zaaplikowana**)
-- [x] Skrypt `scripts/apply-wf2p.mjs`
-- [x] Edge `wf2-prospektor` (research → deterministyczny score 4-filarowy → pitch → message)
-- [x] Nawigacja `NAV_ITEMS_SKLEPY` (Prospektor B2B) + vercel rewrite `/tn-sklepy/prospektor`
-- [ ] Panel `tn-sklepy/prospektor.html` (w budowie)
-- [ ] Warstwa harvest Allegro (procedura + pierwszy realny skan) — po apply migracji (tabele muszą istnieć)
-- [ ] `deploy:wf2-prospektor` w `package.json`
-- [ ] Akcept Tomka → apply migracji (`node scripts/apply-wf2p.mjs`) → git push (deploy panelu + edge)
+**Baza + scoring + wzbogacanie (LIVE):**
+- [x] Migracja `20260724a_wf2p_prospektor.sql` — **ZAAPLIKOWANA** (tabele + RLS + KPI)
+- [x] Katalog **92 wertykali** (`PROSPEKTOR-SKLEPY-WERTYKALE.md`, priorytet 5=najwyższy) + **105 sprzedawców** (seed testowy)
+- [x] Scoring **2-osiowy** (Nagroda×Dotarcie + renormalizacja available-case) — zweryfikowany
+- [x] Edge `wf2-prospektor` (research → score deterministyczny → pitch → message) + `deploy:wf2-prospektor`
+- [x] Panel `tn-sklepy/prospektor.html` (Pipeline/Kolejka/Zadania/Wertykale/Skan/Ustawienia) + nawigacja + rewrite
 
-### Świadomie odroczone (nie blokuje MVP)
-- **Trwała suppression** (`wf2p_suppression` + check w kodzie) — dziś opt-out to flaga wiersza (`opted_out`/`status='opt_out'`). Nieodwracalna lista przeżywająca usunięcie rekordu jest potrzebna **dopiero przy realnej wysyłce maili**; B2B kontaktuje głównie ręcznie (LinkedIn/telefon). Dodać PRZED pierwszym mailowym kontaktem masowym.
-- **Obieg mailowy** (send/inbox/outbox/Resend/stopka RODO art.14) — poza MVP; kanał B2B startuje ręcznie z rekomendacji `pitch`. Stopkę doklejać serwerowo dopiero przy akcji `send`.
+**Pipeline kadencji (LIVE, wyłączony switchami):**
+- [x] Migracja `20260724c_wf2p_pipeline.sql` — **ZAAPLIKOWANA** (`wf2p_tasks`/`wf2p_outbox`/`wf2p_suppression`, pola kadencji, status +odpowiedzial/nurture)
+- [x] Edge: akcje `enroll` / `tick` (CRON) / `task_done` / `inbound` + wysyłka Resend + suppression — **zweryfikowane E2E**
+- [x] Panel: zakładka „Zadania" (kolejka handlowca), enroll z kolejki, sekcja Kadencja w drawerze, karta „Sterowanie wysyłką"
+- [x] `settings`: kadencja, szablony follow-up, switche, dane nadawcy (placeholder), `wf2p-tick` pg_cron co 20 min
+- [x] Sekret `WF2P_CRON_SECRET` ustawiony
+- [ ] **Panel: git push** (commit `c9b983da` lokalny — czeka na wypchnięcie, sweepnie też pracę drugiej sesji)
+- [ ] **Dane nadawcy** (`wf2p_dane_nadawcy`) — Tomek uzupełnia (imię+nazwisko/firma/adres/NIP) PRZED wysyłką (RODO art. 14; silnik blokuje)
+- [ ] **Włączenie:** switch `wf2p_pipeline_enabled`→true (zadania handlowca), potem `wf2p_send_enabled`→true (maile bota)
+
+**Odłożone (nie blokuje):** metryki Allegro (Super/oceny/staż) + walidacja loginów — **on-demand dla leadów A/B**, nie masowo; scoring renormalizuje brak metryk (pokrycie %).
