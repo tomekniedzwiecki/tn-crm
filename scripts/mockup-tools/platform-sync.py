@@ -261,13 +261,20 @@ def cmd_product(a):
         log("⚠️ kasa nie odpowiada 200 — sprawdź za kilka minut (materializacja) i ponów")
 
 
-def _substitute(html, wf2_product_id, canonical, pixel_id, checkout_url, strip_noindex):
+def _substitute(html, wf2_product_id, canonical, pixel_id, checkout_url, strip_noindex, merchant_info=None):
     html = html.replace("{{WF2_PRODUCT_ID}}", wf2_product_id or "")
     html = html.replace("{{CANONICAL_URL}}", canonical)
     if checkout_url:
         html = html.replace("{{CHECKOUT_URL}}", checkout_url)
     if pixel_id:
         html = html.replace("{{PIXEL_ID}}", pixel_id)
+    # Dane sprzedawcy w kasie (.zc-merchant) = OBOWIĄZKOWA identyfikacja prawna sprzedawcy
+    # (firma · adres · NIP). Kanon szablonu checkout-inline@3 = {{MERCHANT_INFO}}; podstawiamy
+    # z danych sklepu/produktu jeśli są. Gdy brak — placeholder ZOSTAJE i _published_gate go
+    # blokuje (regex {{...}} + seller-placeholder) — fail-closed, żeby 'NIP 000-000-00-00' NIE
+    # wyszedł live (LL-079, wyciek szablonu na ~13 landingów u 3 sprzedawców).
+    if merchant_info:
+        html = html.replace("{{MERCHANT_INFO}}", merchant_info)
     # Stopka → strony prawne (ścieżki względne = działają na każdej domenie). 4 systemowe
     # nadpisujemy własnym HTML + 3 custom — komplet publikuje legal-forge.py (krok pl_prawne,
     # PRZED landingami w kolejności kroków; SSOT docs/zbuduje/PRAWNE.md).
@@ -441,7 +448,8 @@ def cmd_publish(a):
     path = a.path if a.path is not None else p["slug"]
     canonical = f"https://{dom}/{path}" if path else f"https://{dom}"
     strip = a.strip_noindex or custom
-    html = _substitute(html, p["id"], canonical, pr.get("pixel_id"), p.get("checkout_url"), strip)
+    html = _substitute(html, p["id"], canonical, pr.get("pixel_id"), p.get("checkout_url"), strip,
+                       merchant_info=(p.get("merchant_info") or pr.get("merchant_info")))
     if getattr(a, "gate_assets", False):
         # BRAMKA ASSETÓW (opt-in do czasu migracji oryginałów do prywatnego bucketa —
         # dopóki oryginały są publiczne, bramka jest omijalna po jawnej ścieżce; patrz

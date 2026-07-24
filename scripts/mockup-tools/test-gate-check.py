@@ -539,5 +539,37 @@ class TestTrustedSources(unittest.TestCase):
         self.assertTrue(GC.is_trusted_source("DETAIL"))
 
 
+class TestSellerPlaceholderGate(unittest.TestCase):
+    """published-gate: placeholder danych sprzedawcy ('NIP 000-000-00-00' / 'nazwa firmy')
+       NIE moze wyjsc live (LL-079 — wyciek szablonu checkout-inline na ~13 landingow u 3
+       sprzedawcow; brak identyfikacji sprzedawcy w kasie). Pinuje regex w gate-manifest."""
+
+    def setUp(self):
+        import re as _re
+        rules = load_manifest()["published"]["fail_regex"]
+        seller = [r for r in rules if "sprzedawc" in r["label"].lower()]
+        self.assertTrue(seller, "brak reguly seller-placeholder w published.fail_regex")
+        self.rx = seller[0]["regex"]
+        self.brace = [r for r in rules if r["label"].startswith("nierozwiazany placeholder")][0]["regex"]
+        self._re = _re
+
+    def _hit(self, rx, text):
+        return bool(self._re.search(rx, text, self._re.I))
+
+    def test_placeholder_zerowy_nip_blokowany(self):
+        self.assertTrue(self._hit(self.rx,
+            'Sprzedawca: nazwa firmy · adres · NIP 000-000-00-00. Ceny zawierają VAT.'))
+
+    def test_realne_dane_sprzedawcy_przechodza(self):
+        # Tomek (Sprytko) + hipotetyczny klient — realny NIP NIGDY nie jest samymi zerami.
+        for t in ('Sprzedawca: Tomasz Niedźwiecki AI · NIP 6972240255 · REGON 302211341 · ul. Grawerska 30L, 51-180 Wrocław. Ceny zawierają VAT.',
+                  'Sprzedawca: Rafał Hoffa Sp. z o.o. · NIP 8992918273 · ul. Testowa 1, 50-001 Wrocław. Ceny zawierają VAT.'):
+            self.assertFalse(self._hit(self.rx, t), "realne dane nie moga byc FAIL: %r" % t[:50])
+
+    def test_token_merchant_info_lapany_przez_brace_regex(self):
+        # nowy kanon szablonu = {{MERCHANT_INFO}} — jesli niepodstawiony, blokuje go istniejacy {{...}} gate
+        self.assertTrue(self._hit(self.brace, 'Sprzedawca: {{MERCHANT_INFO}}. Ceny zawierają VAT.'))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
