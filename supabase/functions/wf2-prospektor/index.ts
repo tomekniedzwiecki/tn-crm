@@ -5,26 +5,33 @@
 // Sami znajdujemy sprzedawców (SKAN ALLEGRO — poza tą funkcją, chrome-devtools),
 // TU: AI research → deterministyczny scoring 4-filarowy → pitch → 1. kontakt.
 //
-// Jedna funkcja, action-based (wzorzec 1:1 z wfp-engine):
-//   research / score / pitch / message / save_setting / status_change.
+// Jedna funkcja, action-based (wzorzec 1:1 z wfp-engine). Akcje:
+//   Wzbogacanie:  research / score / pitch / message
+//   Pipeline:     enroll / tick / task_done / inbound / status_change
+//   Konfiguracja: save_setting
 //
-// GATE: verifyTeamMember (_shared/admin-files.ts). ZERO service-role — brak inbound
-//   webhooka (w przeciwieństwie do wfp, gdzie classify_reply szło z waitUntil).
+// GATE: verifyTeamMember (_shared/admin-files.ts) dla WSZYSTKICH akcji z UI. Wyjątek:
+//   `tick` (silnik kadencji, CRON) — bramka SEKRETEM (x-cron-secret == WF2P_CRON_SECRET),
+//   bo leci bez użytkownika. `tick` używa service-role (odczyt/zapis całej kolejki).
 //
-// Human-in-the-loop TWARDY: system NIGDY nie wysyła sam. `message` produkuje TYLKO
-//   draft (jsonb) — kanał (LinkedIn DM / telefon / mail imienny) realizuje handlowiec.
-//   Stopka RODO art. 14 dokleja się serwerowo dopiero PRZY realnej wysyłce (poza zakresem
-//   tej funkcji — nie ma tu akcji send/draft; §7 kontraktu).
+// WYSYŁKA (§7): bot wysyła maile automatycznie z konta maciej@ (Resend), ale ZA dwoma
+//   twardymi switchami w settings:
+//     wf2p_pipeline_enabled — gasi CAŁY tick (kadencja + zadania handlowca),
+//     wf2p_send_enabled     — gasi TYLKO realny mail (tick nadal robi zadania human).
+//   Kroki 'human' kadencji → zadania w kolejce handlowca (wf2p_tasks). Handoff na
+//   odpowiedź (inbound) wstrzymuje kadencję i oddaje leada człowiekowi. Stopka RODO
+//   art. 14 (settings.wf2p_stopka_prawna) doklejana serwerowo przy każdej wysyłce.
+//   Suppression (wf2p_suppression) sprawdzana przed każdym mailem; STOP/opt-out trwałe.
 //
-// Kontrakt (SSOT): docs/zbuduje/PROSPEKTOR-SKLEPY-PLAN.md (§2 model, §4 pipeline, §5 scoring).
-// Schemat: supabase/migrations/20260724a_wf2p_prospektor.sql (tabele wf2p_*, settings
-//   wf2p_scoring_weights / wf2p_models / wf2p_daily_cap).
+// Kontrakt (SSOT): docs/zbuduje/PROSPEKTOR-SKLEPY-PLAN.md (§2 model, §4 pipeline, §5 scoring, §7 kadencja).
+// Schemat: migrations 20260724a_wf2p_prospektor.sql (bazowe) + 20260724c_wf2p_pipeline.sql
+//   (wf2p_tasks/outbox/suppression, pola kadencji, status +odpowiedzial/nurture).
 //
 // ⚠️ DEPLOY: ZAWSZE z flagą --no-verify-jwt (własna bramka team_members):
 //   npm run deploy:wf2-prospektor
 //
-// Sekrety: OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY. Opcjonalne modele
-//   nadpisywalne bez redeployu z settings.wf2p_models.
+// Sekrety: OPENAI_API_KEY, RESEND_API_KEY, WF2P_CRON_SECRET, SUPABASE_URL,
+//   SUPABASE_SERVICE_ROLE_KEY. Modele/kadencja/switche nadpisywalne z settings bez redeployu.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
@@ -64,13 +71,18 @@ const PRICES: Record<string, { i: number; c: number; o: number }> = {
 };
 
 // Statusy sprzedawcy (migracja wf2p_sellers): advance-only — dane wolno nadpisać, status nie cofa.
+// 'odpowiedzial' = twardy kamień handoffu (między kontakt a rozmowa). 'nurture' poza rankiem (sink).
 const STATUS_RANK: Record<string, number> = {
-  nowy: 0, research: 1, oceniony: 2, zaakceptowany: 3, kontakt: 4, rozmowa: 5, deal: 6,
+  nowy: 0, research: 1, oceniony: 2, zaakceptowany: 3, kontakt: 4, odpowiedzial: 5, rozmowa: 6, deal: 7,
 };
 // Statusy dozwolone ręcznie w status_change (opt_out osobnym flagiem optOut).
 const MANUAL_STATUSES = new Set([
   "research", "oceniony", "zaakceptowany", "kontakt", "rozmowa", "deal", "odpadl",
 ]);
+// Typy zadań handlowca (wf2p_tasks) i dozwolone wyniki.
+const TASK_TYPES = new Set(["first_touch", "follow_up", "reply_handling", "call_back"]);
+const TASK_OUTCOMES = new Set(["connected", "no_answer", "positive", "negative", "meeting_booked"]);
+const INBOUND_CHANNELS = new Set(["email", "linkedin", "telefon", "allegro"]);
 
 // Enumy z migracji (twarda walidacja przy zapisie kolumn z AI).
 const OWN_SHOP_Q = new Set(["brak", "prowizorka", "pro"]);
@@ -550,6 +562,278 @@ function buildMessageContext(p: Record<string, unknown>, research: unknown, pitc
   return parts.join("\n");
 }
 
+// ═══════════════════════ PIPELINE: kadencja + wysyłka (§7 kontraktu) ═════════
+// Trzy warstwy ortogonalne: status (lejek) · cadence_state (engagement) · owner_mode
+// (własność). Kroki 'auto' = mail bota (Resend, maciej@). Kroki 'human' = zadanie w
+// kolejce handlowca (wf2p_tasks). Handoff na odpowiedź: inbound → cadence paused +
+// status 'odpowiedzial' + reply_handling task. Wszystko ZA dwoma switchami:
+//   wf2p_pipeline_enabled (cała kadencja/tick) · wf2p_send_enabled (tylko realny mail).
+type CadStep = {
+  idx: number; mode: "auto" | "human"; channel: string;
+  kind?: string; type?: string; delay_days: number; requires?: string; label: string;
+};
+type Cadence = { steps: CadStep[]; nurture_days: number };
+
+// Domyślna sekwencja: przeplot bot-mail ↔ osobisty kontakt handlowca. Kroki bez
+// dostępnego kanału (requires) są POMIJANE (kanało-adaptacyjna). Nadpisywalna z
+// settings.wf2p_cadence bez redeployu.
+const DEFAULT_CADENCE: Cadence = {
+  steps: [
+    { idx: 0, mode: "auto",  channel: "email",    kind: "first",   delay_days: 0, requires: "email",        label: "Mail #1 — pierwszy kontakt (bot)" },
+    { idx: 1, mode: "human", channel: "linkedin", type: "first_touch", delay_days: 2, requires: "linkedin_url", label: "LinkedIn — zaproszenie + nota (handlowiec)" },
+    { idx: 2, mode: "auto",  channel: "email",    kind: "second",  delay_days: 4, requires: "email",        label: "Mail #2 — follow-up wartość (bot)" },
+    { idx: 3, mode: "human", channel: "telefon",  type: "call_back",  delay_days: 3, requires: "phone",       label: "Telefon — rozmowa (handlowiec)" },
+    { idx: 4, mode: "auto",  channel: "email",    kind: "breakup", delay_days: 5, requires: "email",        label: "Mail #3 — break-up (bot)" },
+    { idx: 5, mode: "human", channel: "linkedin", type: "follow_up",  delay_days: 7, requires: "linkedin_url", label: "LinkedIn — ostatnia próba (handlowiec)" },
+  ],
+  nurture_days: 90,
+};
+
+async function getCadence(sb: SB): Promise<Cadence> {
+  try {
+    const raw = await getSetting(sb, "wf2p_cadence");
+    if (!raw) return DEFAULT_CADENCE;
+    const p = JSON.parse(raw);
+    if (!Array.isArray(p?.steps) || !p.steps.length) return DEFAULT_CADENCE;
+    const steps: CadStep[] = p.steps.map((st: Record<string, unknown>, i: number) => ({
+      idx: i,
+      mode: st.mode === "human" ? "human" : "auto",
+      channel: isStr(st.channel) ? st.channel : "email",
+      kind: isStr(st.kind) ? st.kind : undefined,
+      type: isStr(st.type) && TASK_TYPES.has(st.type) ? st.type : undefined,
+      delay_days: Math.max(0, num(st.delay_days, 0)),
+      requires: isStr(st.requires) ? st.requires : undefined,
+      label: isStr(st.label) ? st.label.slice(0, 120) : `Krok ${i}`,
+    }));
+    return { steps, nurture_days: Math.max(0, num(p.nurture_days, 90)) };
+  } catch { return DEFAULT_CADENCE; }
+}
+
+function boolVal(v: string): boolean { const t = (v || "").trim().toLowerCase(); return t === "true" || t === "1" || t === "on" || t === "yes"; }
+async function boolSetting(sb: SB, key: string): Promise<boolean> { return boolVal(await getSetting(sb, key)); }
+
+function stepChannelReady(step: CadStep, seller: Record<string, unknown>): boolean {
+  switch (step.requires) {
+    case "email": return isStr(seller.email) && (seller.email as string).includes("@");
+    case "linkedin_url": return isStr(seller.linkedin_url) && (seller.linkedin_url as string).trim().length > 0;
+    case "phone": return isStr(seller.phone) && (seller.phone as string).trim().length > 0;
+    default: return true;
+  }
+}
+// Indeks następnego kroku wykonalnego od `from` (pomija kroki bez kanału). -1 = koniec kadencji.
+function nextRunnableIdx(cad: Cadence, seller: Record<string, unknown>, from: number): number {
+  for (let i = Math.max(0, from); i < cad.steps.length; i++) if (stepChannelReady(cad.steps[i], seller)) return i;
+  return -1;
+}
+// Zaplanuj następny krok po `afterIdx`. Koniec → cadence_state 'finished'.
+function scheduleNext(cad: Cadence, seller: Record<string, unknown>, afterIdx: number): Record<string, unknown> {
+  const nextIdx = nextRunnableIdx(cad, seller, afterIdx + 1);
+  if (nextIdx === -1) return { cadence_step: cad.steps.length, cadence_state: "finished", next_action_at: null, locked_until: null };
+  const delayMs = cad.steps[nextIdx].delay_days * 86400 * 1000;
+  return { cadence_step: nextIdx, cadence_state: "active", next_action_at: new Date(Date.now() + delayMs).toISOString(), next_action_channel: cad.steps[nextIdx].channel, locked_until: null };
+}
+
+function escapeHtml(str: string): string {
+  return (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+const firstName = (full: unknown): string => {
+  if (!isStr(full)) return "";
+  const t = full.trim().split(/\s+/)[0] || "";
+  return t.length > 1 ? t : "";
+};
+function fillTpl(tpl: string, seller: Record<string, unknown>): string {
+  const imie = firstName(seller.contact_person);
+  const firma = s(seller.brand_name, 120) || s(seller.company_name, 160) || s(seller.allegro_login, 120);
+  return (tpl || "")
+    .replace(/\{\{\s*imie\s*\}\}/gi, imie || "Dzień dobry")
+    .replace(/\{\{\s*firma\s*\}\}/gi, firma);
+}
+
+// Treść maila auto wg kroku: 'first' = spersonalizowany message (jsonb); 'second'/'breakup' = szablon.
+async function buildAutoMail(sb: SB, seller: Record<string, unknown>, step: CadStep): Promise<{ subject: string; body: string } | null> {
+  if (step.kind === "first") {
+    const m = isObj(seller.message) ? seller.message as Record<string, unknown> : null;
+    const tresc = m && isStr(m.tresc) ? m.tresc.trim() : "";
+    if (!tresc) return null; // brak 1. maila → tick zrobi zadanie ręczne (fallback)
+    const subject = m && isStr(m.temat) && m.temat.trim()
+      ? m.temat.trim()
+      : `Współpraca — ${s(seller.brand_name, 80) || s(seller.company_name, 120) || "Twój sklep"}`;
+    return { subject: subject.slice(0, 160), body: stripUrls(tresc) };
+  }
+  try {
+    const raw = await getSetting(sb, "wf2p_mail_templates");
+    const tpls = raw ? JSON.parse(raw) : {};
+    const t = tpls?.[step.kind || ""];
+    if (isObj(t) && isStr(t.tresc) && (t.tresc as string).trim()) {
+      const subject = isStr(t.temat) && (t.temat as string).trim() ? fillTpl(t.temat as string, seller) : "Re: współpraca";
+      return { subject: subject.slice(0, 160), body: stripUrls(fillTpl(t.tresc as string, seller)) };
+    }
+  } catch { /* zły JSON szablonu — brak follow-upu */ }
+  return null;
+}
+
+async function isSuppressed(sb: SB, email: unknown): Promise<boolean> {
+  if (!isStr(email) || !email.includes("@")) return false;
+  try {
+    const { data } = await sb.from("wf2p_suppression").select("email_lower").eq("email_lower", email.trim().toLowerCase()).maybeSingle();
+    return !!data;
+  } catch { return false; }
+}
+
+// Pozostały budżet wysyłki dziś (wf2p_send_daily_cap − wysłane w 24 h). Twardy hamulec.
+async function sendDailyRemaining(sb: SB): Promise<number> {
+  try {
+    const cap = parseInt(await getSetting(sb, "wf2p_send_daily_cap"), 10);
+    const limit = Number.isFinite(cap) && cap > 0 ? cap : 25;
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { count } = await sb.from("wf2p_outbox").select("id", { count: "exact", head: true }).eq("status", "sent").gte("created_at", since);
+    return Math.max(0, limit - (count || 0));
+  } catch { return 0; }
+}
+
+// Wysyłka maila przez Resend z konta maciej@. Dokleja stopkę RODO (art. 14). Loguje wf2p_outbox.
+async function sendMail(sb: SB, seller: Record<string, unknown>, kind: string, subject: string, bodyText: string): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const RESEND = Deno.env.get("RESEND_API_KEY") || Deno.env.get("resend_api_key");
+  if (!RESEND) return { ok: false, error: "brak_resend_key" };
+  const to = isStr(seller.email) ? seller.email.trim() : "";
+  if (!to.includes("@")) return { ok: false, error: "brak_email" };
+  const fromEmail = (await getSetting(sb, "wf2p_from_email")) || "maciej@tomekniedzwiecki.pl";
+  const fromName = (await getSetting(sb, "wf2p_from_name")) || "Maciej";
+  const replyTo = (await getSetting(sb, "wf2p_reply_to")) || fromEmail;
+  const stopka = await getSetting(sb, "wf2p_stopka_prawna");
+  const nadawca = (await getSetting(sb, "wf2p_dane_nadawcy")) || "";
+  // BEZPIECZNIK PRAWNY: stopka RODO art. 14 wymaga tożsamości administratora (nazwa+adres).
+  // Bez uzupełnionych danych nadawcy NIE wysyłamy — nawet przy włączonym switchu.
+  if (!nadawca.trim() || /UZUPE[ŁL]NI[ĆC]|TODO|PLACEHOLDER/i.test(nadawca)) {
+    return { ok: false, error: "brak_danych_nadawcy" };
+  }
+  const footer = stopka ? stopka.replace(/\{\{\s*DANE_NADAWCY\s*\}\}/g, nadawca) : "";
+  const fullText = footer ? `${bodyText}\n\n${footer}` : bodyText;
+  const htmlBody =
+    `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1a1a1a;white-space:pre-wrap">${escapeHtml(bodyText)}</div>` +
+    (footer ? `<hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0"><div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:11px;line-height:1.45;color:#8a8a8a;white-space:pre-wrap">${escapeHtml(footer)}</div>` : "");
+  let resendId: string | null = null, err: string | null = null, okFlag = false;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: `${fromName} <${fromEmail}>`, to: [to], reply_to: replyTo, subject, text: fullText, html: htmlBody }),
+    });
+    const jr = await res.json().catch(() => ({}));
+    okFlag = res.ok && !!jr?.id;
+    resendId = jr?.id || null;
+    if (!okFlag) err = String(jr?.message || `resend_${res.status}`).slice(0, 200);
+  } catch (e) { err = String((e as Error)?.message || e).slice(0, 200); }
+  try {
+    await sb.from("wf2p_outbox").insert({ seller_id: seller.id, kind, to_email: to, subject, body: fullText, resend_id: resendId, status: okFlag ? "sent" : "failed", error: err });
+  } catch (e) { console.error("[wf2-prospektor] outbox insert error", e); }
+  return { ok: okFlag, id: resendId || undefined, error: err || undefined };
+}
+
+// Priorytet zadania handlowca = score + premia za segment (A/B > C > D). Sortuje kolejkę.
+function taskPriority(seller: Record<string, unknown>): number {
+  const score = num(seller.score, 0);
+  const seg = isStr(seller.segment) ? seller.segment : "";
+  const bonus = seg === "A" ? 40 : seg === "B" ? 20 : seg === "C" ? 10 : 0;
+  return Math.round(score + bonus);
+}
+function pitchContextLine(seller: Record<string, unknown>): string {
+  const p = isObj(seller.pitch) ? seller.pitch as Record<string, unknown> : null;
+  const seg = isStr(seller.segment) ? seller.segment : "?";
+  const kat = p && isStr(p.kat) ? p.kat : "";
+  const hak = p && isStr(p.hak) ? p.hak : "";
+  return `Segment ${seg}${kat ? " · " + kat : ""}${hak ? " · Haczyk: " + hak : ""}`.slice(0, 800);
+}
+async function createTask(sb: SB, seller: Record<string, unknown>, opts: { channel: string; type: string; context?: string; sourceStep?: string; dueAt?: string | null }): Promise<void> {
+  await sb.from("wf2p_tasks").insert({
+    seller_id: seller.id, channel: opts.channel, type: opts.type,
+    assigned_to: isStr(seller.assigned_to) ? seller.assigned_to : null,
+    due_at: opts.dueAt ?? new Date().toISOString(),
+    priority: taskPriority(seller),
+    context: opts.context ? opts.context.slice(0, 800) : null,
+    source_step: opts.sourceStep || null,
+  });
+}
+
+// ── tick — silnik kadencji (CRON). Przetwarza wymagalnych sprzedawców małą paczką. ──
+async function handleTick(sb: SB, c: Record<string, string>): Promise<Response> {
+  if (!(await boolSetting(sb, "wf2p_pipeline_enabled"))) {
+    return json({ ok: true, skipped: "pipeline_wylaczony" }, 200, c);
+  }
+  const cad = await getCadence(sb);
+  const nowIso = new Date().toISOString();
+  const BATCH = 40;
+  const { data: due, error } = await sb.from("wf2p_sellers").select("*")
+    .eq("cadence_state", "active")
+    .lte("next_action_at", nowIso)
+    .or(`locked_until.is.null,locked_until.lt.${nowIso}`)
+    .order("next_action_at", { ascending: true })
+    .limit(BATCH);
+  if (error) { console.error("[wf2-prospektor] tick fetch error", error); return json({ error: "blad_serwera", message: "Błąd odczytu kolejki." }, 500, c); }
+
+  const sendOn = await boolSetting(sb, "wf2p_send_enabled");
+  let sendRemaining = await sendDailyRemaining(sb);
+  let sent = 0, tasks = 0, finished = 0, held = 0, suppressed = 0;
+
+  for (const seller of (due || [])) {
+    try {
+      const idx = nextRunnableIdx(cad, seller, seller.cadence_step);
+      if (idx === -1) {
+        await sb.from("wf2p_sellers").update({ cadence_state: "finished", next_action_at: null, locked_until: null }).eq("id", seller.id);
+        await logEvent(sb, seller.id, "system", "cadence", "Kadencja zakończona (brak dalszych kroków)", {});
+        finished++; continue;
+      }
+      const step = cad.steps[idx];
+
+      if (step.mode === "auto" && step.channel === "email") {
+        if (await isSuppressed(sb, seller.email)) {
+          await sb.from("wf2p_sellers").update({ cadence_state: "opted_out", next_action_at: null, status: "opt_out", opted_out: true }).eq("id", seller.id);
+          await logEvent(sb, seller.id, "system", "opt_out", "Adres na liście suppression — wstrzymano kadencję", {});
+          suppressed++; continue;
+        }
+        const mail = await buildAutoMail(sb, seller, step);
+        if (!mail) { // brak treści → zadanie ręczne dla handlowca + przesuń kadencję
+          await createTask(sb, seller, { channel: "email_imienny", type: "first_touch", context: `Auto-mail „${step.label}" bez gotowej treści — napisz i wyślij ręcznie.`, sourceStep: String(idx) });
+          const nx = scheduleNext(cad, seller, idx);
+          await sb.from("wf2p_sellers").update({ ...nx, status: advanceStatus(seller.status, "kontakt") }).eq("id", seller.id);
+          tasks++; continue;
+        }
+        if (!sendOn) { held++; continue; }          // master-switch wysyłki OFF — zostaw wymagalne
+        if (sendRemaining <= 0) { held++; continue; } // limit dzienny wyczerpany — jutro
+        const r = await sendMail(sb, seller, step.kind || "first", mail.subject, mail.body);
+        if (r.ok) {
+          sendRemaining--;
+          const nx = scheduleNext(cad, seller, idx);
+          const chTried = isObj(seller.channels_tried) ? { ...seller.channels_tried as Record<string, unknown> } : {};
+          chTried["email"] = nowIso;
+          await sb.from("wf2p_sellers").update({ ...nx, status: advanceStatus(seller.status, "kontakt"), channels_tried: chTried, contacted_at: seller.contacted_at || nowIso, contacted_channel: seller.contacted_channel || "email" }).eq("id", seller.id);
+          await logEvent(sb, seller.id, "bot", "send", `Wysłano mail „${step.label}" → ${seller.email}`, { kind: step.kind, resend_id: r.id });
+          sent++;
+        } else {
+          await logEvent(sb, seller.id, "bot", "send_fail", `Błąd wysyłki „${step.label}": ${r.error}`, { error: r.error });
+          await sb.from("wf2p_sellers").update({ next_action_at: new Date(Date.now() + 6 * 3600 * 1000).toISOString() }).eq("id", seller.id); // backoff 6 h
+          held++;
+        }
+      } else {
+        // krok human → zadanie w kolejce handlowca; lock i czekaj na task_done
+        await createTask(sb, seller, { channel: step.channel, type: step.type || "follow_up", context: pitchContextLine(seller), sourceStep: String(idx) });
+        await sb.from("wf2p_sellers").update({
+          cadence_step: idx, next_action_at: null, next_action_channel: step.channel,
+          locked_until: new Date(Date.now() + 21 * 86400 * 1000).toISOString(),
+          status: advanceStatus(seller.status, "kontakt"),
+        }).eq("id", seller.id);
+        await logEvent(sb, seller.id, "system", "task", `Zadanie handlowca: ${step.label}`, { channel: step.channel, step: idx });
+        tasks++;
+      }
+    } catch (e) {
+      console.error("[wf2-prospektor] tick seller error", seller?.id, e);
+      // nie blokuj całej paczki — przesuń tego sprzedawcę o 6 h
+      try { await sb.from("wf2p_sellers").update({ next_action_at: new Date(Date.now() + 6 * 3600 * 1000).toISOString() }).eq("id", seller.id); } catch { /* ignore */ }
+    }
+  }
+  return json({ ok: true, due: (due || []).length, sent, tasks, finished, held, suppressed, send_enabled: sendOn, send_remaining: sendRemaining }, 200, c);
+}
+
 // ── Handler ──────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   const c = cors(req.headers.get("origin"));
@@ -561,13 +845,23 @@ Deno.serve(async (req) => {
   if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: "brak_konfiguracji", message: "Brak konfiguracji bazy." }, 500, c);
   const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  // ── GATE: TYLKO członek team_members (ZERO service-role — brak inbound webhooka) ──
-  const member = await verifyTeamMember(req, sb);
-  if (!member) return json({ error: "brak_uprawnien", message: "Wymagane logowanie członka zespołu." }, 401, c);
-
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json({ error: "nieprawidlowy_json", message: "Nieprawidłowy JSON." }, 400, c); }
   const action = isStr(body.action) ? body.action.trim() : "";
+
+  // ── CRON: tick (silnik kadencji) — bramka SEKRETEM crona, nie team_members ──
+  if (action === "tick") {
+    const expected = Deno.env.get("WF2P_CRON_SECRET") || "";
+    if (!expected || (req.headers.get("x-cron-secret") || "") !== expected) {
+      return json({ error: "brak_uprawnien", message: "Zły sekret crona." }, 401, c);
+    }
+    try { return await handleTick(sb, c); }
+    catch (e) { console.error("[wf2-prospektor] tick ERROR:", e); return json({ error: "blad_serwera", message: "Błąd tick." }, 500, c); }
+  }
+
+  // ── GATE: pozostałe akcje — TYLKO członek team_members (ZERO service-role z UI) ──
+  const member = await verifyTeamMember(req, sb);
+  if (!member) return json({ error: "brak_uprawnien", message: "Wymagane logowanie członka zespołu." }, 401, c);
 
   try {
     // ═══════════════════════ save_setting ═══════════════════════════════════
@@ -575,10 +869,12 @@ Deno.serve(async (req) => {
       const key = isStr(body.key) ? body.key.trim() : "";
       const value = isStr(body.value) ? body.value : "";
       const PROMPT_KEYS = new Set(["wf2p_prompt_research", "wf2p_prompt_pitch", "wf2p_prompt_message"]);
-      const JSON_KEYS = new Set(["wf2p_scoring_weights", "wf2p_models"]);
-      const NUM_KEYS = new Set(["wf2p_daily_cap"]);
-      const TEXT_KEYS = new Set(["wf2p_oferta"]); // blok SSOT oferty czytany przez akcję message; bez progu 200 zn.
-      if (!PROMPT_KEYS.has(key) && !JSON_KEYS.has(key) && !NUM_KEYS.has(key) && !TEXT_KEYS.has(key)) {
+      const JSON_KEYS = new Set(["wf2p_scoring_weights", "wf2p_models", "wf2p_cadence", "wf2p_mail_templates"]);
+      const NUM_KEYS = new Set(["wf2p_daily_cap", "wf2p_send_daily_cap"]);
+      const BOOL_KEYS = new Set(["wf2p_pipeline_enabled", "wf2p_send_enabled"]);
+      // Teksty bez progu 200 zn.: SSOT oferty + konfiguracja nadawcy/stopki/właściciela.
+      const TEXT_KEYS = new Set(["wf2p_oferta", "wf2p_from_email", "wf2p_from_name", "wf2p_reply_to", "wf2p_dane_nadawcy", "wf2p_default_owner", "wf2p_stopka_prawna"]);
+      if (!PROMPT_KEYS.has(key) && !JSON_KEYS.has(key) && !NUM_KEYS.has(key) && !BOOL_KEYS.has(key) && !TEXT_KEYS.has(key)) {
         return json({ error: "klucz_niedozwolony", message: "Niedozwolony klucz ustawienia." }, 400, c);
       }
       if (PROMPT_KEYS.has(key) && value.length < 200) {
@@ -587,15 +883,24 @@ Deno.serve(async (req) => {
       if (JSON_KEYS.has(key)) {
         try {
           const parsed = JSON.parse(value);
+          if (!isObj(parsed)) return json({ error: "zla_struktura", message: "Wartość musi być obiektem JSON." }, 400, c);
           if (key === "wf2p_scoring_weights" && !isObj(parsed.nagroda)) {
             return json({ error: "zla_struktura", message: "wf2p_scoring_weights musi mieć obiekt „nagroda” (2 osie: nagroda/dotarcie/progi)." }, 400, c);
           }
-          if (!isObj(parsed)) return json({ error: "zla_struktura", message: "Wartość musi być obiektem JSON." }, 400, c);
+          if (key === "wf2p_cadence" && !Array.isArray(parsed.steps)) {
+            return json({ error: "zla_struktura", message: "wf2p_cadence musi mieć tablicę „steps”." }, 400, c);
+          }
         } catch { return json({ error: "zly_json", message: "Nieprawidłowy JSON." }, 400, c); }
       }
       if (NUM_KEYS.has(key)) {
         const n = parseInt(value, 10);
         if (!Number.isFinite(n) || n <= 0) return json({ error: "zla_liczba", message: "Wartość musi być dodatnią liczbą całkowitą." }, 400, c);
+      }
+      if (BOOL_KEYS.has(key) && value.trim().toLowerCase() !== "true" && value.trim().toLowerCase() !== "false") {
+        return json({ error: "zla_wartosc", message: "Wartość musi być „true” albo „false”." }, 400, c);
+      }
+      if (key === "wf2p_stopka_prawna" && value.length < 100) {
+        return json({ error: "za_krotkie", message: "Stopka prawna za krótka (min 100 znaków — wymóg RODO art. 14)." }, 400, c);
       }
       // Backup PRZED zapisem (timestamp do sekund — historia wielu edycji dziennie).
       const { data: cur } = await sb.from("settings").select("value").eq("key", key).maybeSingle();
@@ -621,9 +926,16 @@ Deno.serve(async (req) => {
       if (body.optOut === true) {
         if (seller.opted_out) return json({ ok: true, already: true }, 200, c);
         const now = new Date().toISOString();
-        const { error } = await sb.from("wf2p_sellers").update({ opted_out: true, opted_out_at: now, status: "opt_out" }).eq("id", sellerId);
+        const { error } = await sb.from("wf2p_sellers").update({ opted_out: true, opted_out_at: now, status: "opt_out", cadence_state: "opted_out", next_action_at: null, locked_until: null }).eq("id", sellerId);
         if (error) { console.error("[wf2-prospektor] opt_out error", error); return json({ error: "blad_zapisu", message: "Nie udało się zapisać opt-out." }, 500, c); }
-        await logEvent(sb, sellerId, "admin", "opt_out", "Opt-out — usunięty z pipeline'u (nieodwracalne)", {});
+        // Trwała lista wykluczeń — przeżywa usunięcie sprzedawcy; sprawdzana przed KAŻDĄ wysyłką.
+        if (isStr(seller.email) && seller.email.includes("@")) {
+          try { await sb.from("wf2p_suppression").upsert({ email_lower: seller.email.trim().toLowerCase(), reason: "opt_out" }, { onConflict: "email_lower" }); }
+          catch (e) { console.error("[wf2-prospektor] suppression upsert error", e); }
+        }
+        // Zamknij otwarte zadania handlowca (już nie kontaktujemy).
+        try { await sb.from("wf2p_tasks").update({ status: "canceled" }).eq("seller_id", sellerId).in("status", ["open", "in_progress", "snoozed"]); } catch { /* ignore */ }
+        await logEvent(sb, sellerId, "admin", "opt_out", "Opt-out — usunięty z pipeline'u + suppression (nieodwracalne)", {});
         return json({ ok: true, status: "opt_out", opted_out: true }, 200, c);
       }
 
@@ -654,6 +966,85 @@ Deno.serve(async (req) => {
       const evKind = target === "kontakt" ? "contact" : "status";
       await logEvent(sb, sellerId, "admin", evKind, `Status: ${seller.status} → ${target}${evPayload.channel ? " (" + evPayload.channel + ")" : ""}`, evPayload);
       return json({ ok: true, status: target }, 200, c);
+    }
+
+    // ═══════════════════════ enroll (Tomek akceptuje leada → do kadencji) ════
+    if (action === "enroll") {
+      const blk = aiBlockCode(seller);
+      if (blk) return json({ error: blk, message: blk === "opted_out" ? "Sprzedawca na liście opt-out." : "Sprzedawca odrzucony." }, 409, c);
+      if (seller.cadence_state === "active") return json({ ok: true, already: true, message: "Sprzedawca już w kadencji." }, 200, c);
+      const cad = await getCadence(sb);
+      const idx0 = nextRunnableIdx(cad, seller, 0);
+      if (idx0 === -1) return json({ error: "brak_kanalu", message: "Brak jakiegokolwiek kanału (email/LinkedIn/telefon) — najpierw wzbogać dane." }, 409, c);
+      const ownerMode = isStr(body.ownerMode) && ["auto", "human", "hybrid"].includes(body.ownerMode) ? body.ownerMode : "auto";
+      const assignedTo = trimStr(body.assignedTo, 120) || (await getSetting(sb, "wf2p_default_owner")) || null;
+      const firstDelayMs = cad.steps[idx0].delay_days * 86400 * 1000;
+      const upd: Record<string, unknown> = {
+        cadence_id: "default", cadence_step: idx0, cadence_state: "active",
+        next_action_at: new Date(Date.now() + firstDelayMs).toISOString(),
+        next_action_channel: cad.steps[idx0].channel,
+        owner_mode: ownerMode, assigned_to: assignedTo, locked_until: null,
+        status: advanceStatus(seller.status, "zaakceptowany"),
+      };
+      const { error: e } = await sb.from("wf2p_sellers").update(upd).eq("id", sellerId);
+      if (e) { console.error("[wf2-prospektor] enroll error", e); return json({ error: "blad_zapisu", message: "Nie udało się wpisać do kadencji." }, 500, c); }
+      await logEvent(sb, sellerId, "admin", "enroll", `Wpisano do kadencji (krok ${idx0}: ${cad.steps[idx0].label}, tryb ${ownerMode})`, { owner_mode: ownerMode, first_step: idx0, assigned_to: assignedTo });
+      return json({ ok: true, cadence_step: idx0, next_action_at: upd.next_action_at, owner_mode: ownerMode, first_step_label: cad.steps[idx0].label }, 200, c);
+    }
+
+    // ═══════════════════════ inbound (odpowiedź sprzedawcy → handoff) ═════════
+    if (action === "inbound") {
+      const channel = isStr(body.channel) && INBOUND_CHANNELS.has(body.channel) ? body.channel : "email";
+      const note = trimStr(body.note, 800);
+      const now = new Date().toISOString();
+      const upd: Record<string, unknown> = {
+        cadence_state: "paused", status: advanceStatus(seller.status, "odpowiedzial"),
+        last_inbound_at: now, last_inbound_channel: channel, locked_until: null,
+      };
+      const { error: e } = await sb.from("wf2p_sellers").update(upd).eq("id", sellerId);
+      if (e) { console.error("[wf2-prospektor] inbound error", e); return json({ error: "blad_zapisu", message: "Nie udało się zapisać odpowiedzi." }, 500, c); }
+      await createTask(sb, seller, { channel, type: "reply_handling", context: `Odpowiedź (${channel})${note ? ": " + note : ""} — oddzwoń/odpisz osobiście.`, sourceStep: "inbound", dueAt: now });
+      await logEvent(sb, sellerId, "admin", "inbound", `Odpowiedź od sprzedawcy (${channel}) — handoff do handlowca; kadencja wstrzymana`, { channel });
+      return json({ ok: true, status: "odpowiedzial", cadence: "paused" }, 200, c);
+    }
+
+    // ═══════════════════════ task_done (handlowiec zamyka zadanie) ════════════
+    if (action === "task_done") {
+      const taskId = isStr(body.taskId) ? body.taskId.trim() : "";
+      if (!taskId) return json({ error: "brak_taska", message: "Brak taskId." }, 400, c);
+      const { data: task } = await sb.from("wf2p_tasks").select("*").eq("id", taskId).maybeSingle();
+      if (!task) return json({ error: "nie_znaleziono", message: "Nie znaleziono zadania." }, 404, c);
+      if (task.seller_id !== sellerId) return json({ error: "niespojne", message: "Zadanie nie należy do tego sprzedawcy." }, 400, c);
+      if (task.status === "done") return json({ ok: true, already: true }, 200, c);
+      const outcome = isStr(body.outcome) && TASK_OUTCOMES.has(body.outcome) ? body.outcome : null;
+      const note = trimStr(body.note, 800);
+
+      await sb.from("wf2p_tasks").update({
+        status: "done", done_at: new Date().toISOString(), outcome,
+        context: note ? `${task.context ? task.context + " | " : ""}Wynik: ${note}` : task.context,
+      }).eq("id", taskId);
+
+      const chTried = isObj(seller.channels_tried) ? { ...seller.channels_tried as Record<string, unknown> } : {};
+      chTried[task.channel] = new Date().toISOString();
+
+      // Pozytywny wynik → handlowiec przejmuje (rozmowa), kadencja auto wstrzymana.
+      if (outcome === "positive" || outcome === "meeting_booked") {
+        await sb.from("wf2p_sellers").update({ status: advanceStatus(seller.status, "rozmowa"), cadence_state: "paused", locked_until: null, channels_tried: chTried }).eq("id", sellerId);
+        await logEvent(sb, sellerId, "admin", "task_done", `Zadanie (${task.channel}) → ${outcome}; kadencja wstrzymana (przejęcie)`, { outcome, task: taskId });
+        return json({ ok: true, outcome, cadence: "paused" }, 200, c);
+      }
+      // Obsłużona odpowiedź bez konwersji — status zostawiamy handlowcowi (osobny status_change).
+      if (task.type === "reply_handling") {
+        await sb.from("wf2p_sellers").update({ channels_tried: chTried }).eq("id", sellerId);
+        await logEvent(sb, sellerId, "admin", "task_done", `Obsłużono odpowiedź (${task.channel})${outcome ? " — " + outcome : ""}`, { outcome, task: taskId });
+        return json({ ok: true, outcome }, 200, c);
+      }
+      // Zwykły krok kadencji zakończony → następny krok, odblokuj lead.
+      const cad = await getCadence(sb);
+      const nx = scheduleNext(cad, seller, num(task.source_step, seller.cadence_step));
+      await sb.from("wf2p_sellers").update({ ...nx, channels_tried: chTried }).eq("id", sellerId);
+      await logEvent(sb, sellerId, "admin", "task_done", `Zadanie (${task.channel}) zamknięte${outcome ? " — " + outcome : ""}; kadencja → krok ${nx.cadence_step}`, { outcome, task: taskId, next_step: nx.cadence_step });
+      return json({ ok: true, outcome, cadence_step: nx.cadence_step, cadence_state: nx.cadence_state }, 200, c);
     }
 
     // ═══════════════════════ score (DETERMINISTYCZNY — bez AI) ═══════════════
