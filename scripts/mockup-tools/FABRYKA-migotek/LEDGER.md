@@ -27,4 +27,15 @@ Koszty API twarde → `wf2_costs`. Claude (abonament) NIE liczony. x-upsert po k
   „~13× AAA wg opinii" tylko w FAQ. Cło ryczałt 13 zł uwzględnione w marży netto.
 - Koszt API: $0 (F0 = dane + vision na pobranych kadrach).
 
+## Faza: lp_plan (F1 + F1.7) — DONE 2026-07-24
+- **PLAN.md**: motyw „ciepły blask jednym gestem, bez ognia"; PARTYTURA 8 poz. — rodzina tła
+  ciepła ciemność (#14100C/#1E1813 + pergamin #F5EEE3 dowodowo), akcent **bursztyn #E9A03A** (z
+  realnego koloru światła), kroje **Fraunces + Inter**, **archetyp-hero A** (≠ B/F/H/C ostatnich),
+  ANIM-3 (hero+unoszace+final). Tabela anty-mismatch CLAIM→ŹRÓDŁO. **MANIFEST 17 sekcji** (15 build,
+  1 blokada-tomek `wideo`, `zastosowania` SPEKTRUM, `zdjecia-kupujacych` dowodowa bez SKIP).
+- **PRZEWODNIK-GRAFICZNY.md**: łuk narracyjny, matryca osi różnorodności (≥5 kontekstów/≥3 skale/
+  2 światła/człowiek hero+demo+wesele), karty scen z seedami EN, casting z ICP, gate przewodnika OK.
+- Cross-landing partytura odbita od zaklipek(#0A6EBD,B,Bricolage)/ugniatek(#0B6B64,F,Space Grotesk).
+- Koszt API: $0.
+
 ## Koszty API skumulowane: $0.00 (do F2.5 favicon / F2 makiety).
