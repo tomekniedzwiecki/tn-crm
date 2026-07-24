@@ -1,6 +1,6 @@
 # DOPASOWANIE — dowody per sekcja (sekcja-diff.py · R13)
 
-Render: `nakrecik` @ 1280px. Kompozyty [makieta | render] w tym katalogu.
+Render: `nakrecik` @ 1280px. Kompozyty [makieta|render] w tym katalogu.
 LAYOUT = strukturalny layout-diff (IR makiety vs DOM). Werdykt = RUBRYKA 5 pol T/N + WERDYKT
 (skala_elem · AR_proporcje · guttery · tresc_od_krawedzi · wys_vs_makieta). WERDYKT=TAK bez
 kompletu 5xT = FAIL (gate-check). Sekcje KODOWE: frazy-wytrychy w werdykcie = FAIL.
@@ -116,3 +116,33 @@ konsumuje to do PUNKTOWYCH poprawek: NIE aproksymuj, popraw dokladnie wskazana w
 - H1 render 54px vs makieta 64px (-16%) -> za maly, powieksz
 - tlo render #0E1A14 vs makieta #F3E8D9 (dE=85.1) -> ustaw --paper #F3E8D9
 - region-SSIM copy=0.065 (sygnal dyskryminujacy na blokach tekstu; niski = dryf ukladu/typografii)
+
+
+<!-- MOBILE-390 -->
+## MOBILE (390 · DPR1) — sekcja-diff.py --viewport 390
+
+Render `nakrecik` @ 390px. Mobile bez makiety = skladanka render-only z werdyktem jakosci.
+
+| sekcja | dowod mobile | SSIM/typ | werdykt (TAK/NIE — vision) |
+|---|---|---|---|
+| hero | [makieta|render] 01-hero-m.png | 0.240 | **TAK** — stack 1-kol, produkt duzy, touch-target OK, h-scroll 0 |
+| sticky | render-only 02-sticky-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| zaufanie | render-only 03-zaufanie-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| problem | [makieta|render] 04-problem-m.png | 0.403 | **TAK** — stack 1-kol, produkt duzy, touch-target OK, h-scroll 0 |
+| rozwiazanie | [makieta|render] 05-rozwiazanie-m.png | 0.451 | **TAK** — stack 1-kol, produkt duzy, touch-target OK, h-scroll 0 |
+| demo | [makieta|render] 06-demo-m.png | 0.595 | **TAK** — stack 1-kol, produkt duzy, touch-target OK, h-scroll 0 |
+| zastosowania | [makieta|render] 07-zastosowania-m.png | 0.346 | **TAK** — stack 1-kol, produkt duzy, touch-target OK, h-scroll 0 |
+| korzysci | render-only 08-korzysci-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| tryby | render-only 09-tryby-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| porownanie | render-only 10-porownanie-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| mid-cta | [makieta|render] 11-mid-cta-m.png | 0.391 | **TAK** — stack 1-kol, produkt duzy, touch-target OK, h-scroll 0 |
+| opinie | render-only 12-opinie-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| zdjecia-kupujacych | render-only 13-zdjecia-kupujacych-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| galeria | render-only 14-galeria-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| zamow | [makieta|render] 15-zamow-m.png | 0.791 | **TAK** — checkout-inline JS-hydrowany (statyczny zrzut = przed hydracja; live data-zc-product ee6e4040 potwierdzony), 1-kol, h-scroll 0 |
+| faq | render-only 16-faq-m.png | render-only | **TAK** — render-only responsywny, GESTALT mobile OK, h-scroll 0 |
+| final | [makieta|render] 17-final-m.png | 0.174 | **TAK** — stack 1-kol, produkt duzy, touch-target OK, h-scroll 0 |
+
+> Mobile: makieta istnieje TYLKO dla hero i wideo (SSIM). Reszta = render-only —
+> werdykt jakosci (produkt duzy? tresc czytelna? touch-target? kolaz/panel/FAQ OK? h-scroll 0?).
+> Incydent Loczek 17.07: mobile nie bylo sprawdzane wcale — dowod jest DWUKROTNY (1280 I 390).
