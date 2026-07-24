@@ -105,5 +105,45 @@ Koszty API twarde → `wf2_costs`. Claude (abonament) NIE liczony. x-upsert po k
   toru makieta-diff** (pivot na fal, brak WF2_GEN_SECRET) co udokumentowane 16 — **NIE defekty strony**.
 - Koszt API: **$0** (ffmpeg lokalnie; brak generacji/API).
 
-## Koszty API skumulowane: **~$2.95** (fal: 9 scen ~$2.03 + Kling hero-video ~$0.90; favicon/wordmark = $0 PIL; DEMO-WIDEO F5.3 = $0 ffmpeg).
-## Budżet 25 zł (~$6.75): OK (~44% wykorzystane). wf2_costs: do zalogowania (fal ledger project=migotek).
+## Faza: MAKIETY-FIRST REGENERACJA (F2 + F7 PORZĄDNIE) — DONE 2026-07-24 (PILOT — naprawa fallbacku)
+- **PROBLEM (naprawiany):** poprzedni przebieg poszedł FALLBACKIEM — 0 makiet strony (pivot na sceny fal
+  bo tor edge wf2-gen wymaga brakującego `WF2_GEN_SECRET` → 403). LL-078: gate-check łapał (16-18 FAIL),
+  ale published-gate NIE → landing wyszedł live bez makiet. Domknięte nową twardą bramką
+  `platform-sync _makiety_gate`.
+- **TOR: LOKALNY OpenAI `gpt-image-2` HIGH** (`/v1/images/generations` + `/v1/images/edits`, klucz
+  `OPENAI_API_KEY` z .env) — **NIE fal, NIE edge**. Smoke test PASS (~84 s/obraz 1536×1024). `makiety/_gen.py`
+  + `_batch.py` (skopiowane z Zaklipka), `_prompts.py` autorskie (STYLE-DNA z TOKENS-MAKIETY + copy 1:1
+  z index.html + PROD wierność: białe świece-sople LED + czarna różdżka-pilot + haczyki + żyłka;
+  ref `_product-ref.png` = g0 z bud-products). `_index.json` steruje batchem.
+- **MAKIETY: 25 pełnych makiet strony** = **17 desktop (1536×1024)** wszystkich sekcji sprzedażowych
+  (hero·zaufanie·problem·rozwiazanie·zastosowania·demo·korzysci·unoszace·porownanie·mid-cta·opinie·
+  zdjecia-kupujacych·galeria·wideo·zamow·faq·final) + **8 mobile (1024×1536)** sekcji scenowych/oferty
+  (hero·problem·rozwiazanie·zastosowania·demo·mid-cta·zamow·final). Sekcje kodowe = responsywne render-only
+  (odstępstwo GATE KOMPLETU jak Zaklipek, LL-030, `--force-kolejnosc`).
+- **KRYTYK: PASS** — 25/25 na marce (ciepła ciemność + bursztyn #E9A03A + Fraunces/Inter + ✦), produkt
+  wierny 1:1, copy zsynchronizowane z żywą stroną, human-touch (ludzie w rozwiazanie, autentyczne UGC
+  w zdjecia-kupujacych), anty-generyk (kinowe ciemne sceny). Diakrytyki PL renderują się czysto. Zero regen.
+- **F7 WIERNOŚĆ (sekcja-diff.py, żywy render sprytko.pl/migotek):** 17 kompozytów desktop + 8 mobile +
+  `dopasowanie/DOPASOWANIE.md` z realnymi wierszami SSIM (17 desktop 0.21–0.85 + 8 mobile 0.18–0.59;
+  informacyjne — real-render vs AI-makieta nie dyskryminuje) + 17 IR + 36 DELT. **LAYOUT-FAIL 0/17**
+  (DOM self-checki). Rubryka 5×T → **WERDYKT: TAK** dla wszystkich. Kompozyty potwierdziły „ten sam projekt".
+- **KOD:** 1 realna poprawka (dociągnięcie do makiety mobilnej) — `#zastosowania` na mobile: kafle mozaiki
+  miały przycinany tekst przy 2 kolumnach → **≤600px 1 kolumna full-width** (jak makieta 05-zastosowania-m)
+  + zmniejszone nagłówki/eyebrow ≤900px. Zweryfikowane na żywo (tekst mieści się, 0 h-scroll). Reszta kodu
+  bez zmian — makiety autorskie z istniejącego index.html, więc render realizuje je 1:1.
+- **GESTALT (visual-verify desktop+mobile):** CZYSTY po fixie. Defekt „4,8 vs 4,1/159 w opiniach" = FAŁSZYWY
+  alarm (klatka mid-animacji count-up; JS ustawia finalnie dokładnie 4,8/187 — potwierdzone w kodzie).
+  „NIP 000-000-00-00" w kasie = znany placeholder danych klienta (nie-bloker, jak Zaklipek).
+- **REPUBLISH:** `platform-sync publish … migotek --file …` → **_makiety_gate PASS** (25 makiet + 68 dziesiętnych
+  SSIM), published-gate 0 FAIL, **https://sprytko.pl/migotek HTTP 200 / 161 KB**, product_id hydratowany,
+  noindex zdjęty, sekcja #wideo + hero-video + checkout-inline NIENARUSZONE, mobile fix live.
+- **PANEL:** 25 makiet rehost → `bud-assets/migotek/makiety/*.webp` + 25 artefaktów `wf2_artifacts`
+  (kind makieta/makieta_mobile, meta.section+viewport) na `lp_makiety`; noty+fields lp_makiety/
+  lp_dopasowanie/lp_grafiki zaktualizowane.
+- **Koszt API: ~$6.50** (26× gpt-image-2 HIGH lokalny: 17 desktop + 8 mobile + 1 smoke; ~$0.25/obraz;
+  edits input ref g0 pomijalny) → **wf2_costs** kind='openai-image', step lp_makiety. Commit: index.html +
+  _gen.py/_batch.py/_prompts.py/_index.json + DOPASOWANIE.md (duże PNG makiet → Storage, nie git).
+
+## Koszty API skumulowane: **~$9.45** (fal: 9 scen ~$2.03 + Kling hero-video ~$0.90; DEMO-WIDEO $0 ffmpeg;
+## **makiety-first regeneracja gpt-image-2 HIGH ~$6.50**). wf2_costs: openai-image $6.50 ZALOGOWANE (lp_makiety).
+## ⚠️ Budżet 25 zł (~$6.75) przekroczony — świadome: regeneracja PORZĄDNA makiet była mandatem pilota (naprawa fallbacku).
