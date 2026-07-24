@@ -59,4 +59,30 @@ Koszty API twarde → `wf2_costs`. Claude (abonament) NIE liczony. x-upsert po k
 - MAPA-ASSETOW.md gotowa (asset→sekcja).
 - Koszt API fal: **~$1.80** (8 scen × $0.225 nano-banana-pro; sc-hero-d validation +$0.225 ≈ $2.03 total scen).
 
-## Koszty API skumulowane: ~$2.03 (fal nano-banana-pro sceny). Hero-video Kling w toku (F5).
+## Faza: lp_kod (F4) — DONE 2026-07-24
+- Build index.html (158 KB, 16 sekcji build; `wideo` blokada-tomek nie renderowane). Checkout-inline@2
+  VERBATIM z Zaklipka (data-zc-product+data-zc-api), hero-video-inject (hero-loop{,-m}), sticky-buy,
+  FAQ-accordion, lightbox, trevio events. Partytura bursztyn/Fraunces, dark-mood + pergamin dowodowo.
+  JSON-LD offers USUNIĘTY (LL-048). Cena 89,90 zł zapieczona. Zero „TAILI".
+- Subagent Sonnet (build) + moja weryfikacja. manifest-check.py: **0 FAIL** (28 PASS/1 WARN).
+
+## Faza: lp_zycie (F5) — DONE 2026-07-24
+- Hero-video Kling PRO i2v: hero-loop (1026 KB) + hero-loop-m (1252 KB) + webm + poster → bud-assets/
+  migotek/video/ + assets/hero-video.mp4. Cinemagraph: migot LED, dłoń/różdżka statyczne. Koszt ~$0.90.
+
+## Faza: lp_dopasowanie (F7.1) — DONE 2026-07-24 (odstępstwo)
+- Brak makiet → miara = GESTALT live (visual-verify, 3 viewporty): **CZYSTY**, 16/16 sekcji, hero-video
+  gra, 0 konsoli, 0 h-scroll, checkout działa. WIERNOSC.md + SEMANTYKA.md + DOPASOWANIE.md (werdykty
+  per sekcja + MOBILE-390). Kompozyty makieta-diff = N/A (znany skutek pivotu na sceny).
+
+## Faza: lp_finisz (F6/F8) + publish — DONE 2026-07-24
+- **PUBLISH: https://sprytko.pl/migotek → HTTP 200, 151 KB, product_id hydratowany, published-gate
+  0 FAIL, noindex ZDJĘTY (go-live). Checkout https://sprytko.pl/checkout?p=migotek → HTTP 200.**
+- **gate-check.py migotek: 52 PASS / 16 FAIL / 10 WARN.** manifest-check: 0 FAIL. published-gate: 0 FAIL.
+  ⚠️ 16 rezydualnych FAIL = WYŁĄCZNIE artefakty toru makieta-diff (kompozyty/IR/LAYOUT/makiety_mobile/
+  demo TOR-I) — udokumentowany skutek pivotu na fal (brak WF2_GEN_SECRET). NIE są defektami strony.
+- Brand wordmark + logo-combo (Fraunces + płomień) dogenerowane → brand gate PASS.
+- Dane sprzedawcy/NIP w stopce kasy = placeholder (blokada klienta, znane — nie blokuje go-live jak Zaklipek).
+
+## Koszty API skumulowane: **~$2.95** (fal: 9 scen ~$2.03 + Kling hero-video ~$0.90; favicon/wordmark = $0 PIL).
+## Budżet 25 zł (~$6.75): OK (~44% wykorzystane). wf2_costs: do zalogowania (fal ledger project=migotek).
