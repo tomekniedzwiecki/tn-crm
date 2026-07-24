@@ -313,7 +313,7 @@ async function tryDetail(id: string, key: string): Promise<Record<string, unknow
 // na tym samym koncie (rapidapi.com/ecommdatahub/api/aliexpress-datahub, PRO $7.99).
 // Brak subskrypcji => 403 => cicho pomijamy (snapshot afiliacyjny zostaje pełnoprawny).
 const DATAHUB_HOST = 'aliexpress-datahub.p.rapidapi.com';
-async function tryDataHub(id: string, key: string): Promise<{ specs: Array<{ name: string; value: string }>; description: string; variants: string[]; sku_prices: Array<{ v: string; price: number | null }>; sold_volume: number | null } | null> {
+async function tryDataHub(id: string, key: string): Promise<{ title: string; images: string[]; main_image: string; price: { sale: number; original: number | null; currency: string | null } | null; specs: Array<{ name: string; value: string }>; description: string; variants: string[]; sku_prices: Array<{ v: string; price: number | null }>; sold_volume: number | null } | null> {
   try {
     // kaskada wersji endpointu (DataHub potrafi mieć 5040 na pojedynczej wersji;
     // sonda 17.07: item_detail_6 dziala i ma properties+description+sku)
@@ -354,7 +354,17 @@ async function tryDataHub(id: string, key: string): Promise<{ specs: Array<{ nam
       if (label) { sku_prices.push({ v: label, price: Number.isFinite(priceRaw) ? priceRaw : null }); for (const n of names) if (!variants.includes(n)) variants.push(n); }
     }
     const soldRaw = parseFloat(String(item.sales ?? ''));
-    return { specs, description, variants: variants.slice(0, 24), sku_prices, sold_volume: Number.isFinite(soldRaw) ? soldRaw : null };
+    // Tytuł/galeria/cena z DataHub — potrzebne, gdy DataHub jest PODSTAWOWYM źródłem
+    // (product-info afiliacyjny zwrócił "No information" — aukcja spoza indeksu afiliacyjnego).
+    const title = String((item as Record<string, unknown>).title ?? '').slice(0, 240);
+    let images: string[] = [];
+    const imgRaw = ((item as Record<string, unknown>).images ?? (item as Record<string, unknown>).itemImages ?? []) as unknown;
+    if (Array.isArray(imgRaw)) images = imgRaw.map((x) => typeof x === 'string' ? x : String((x as Record<string, unknown>)?.url ?? (x as Record<string, unknown>)?.imageUrl ?? '')).filter(Boolean);
+    images = [...new Set(images.map((u) => u.startsWith('//') ? 'https:' + u : u))].slice(0, 8);
+    const validDhPrices = sku_prices.filter((s) => s.price != null).map((s) => s.price as number);
+    const dhSale = validDhPrices.length ? Math.min(...validDhPrices) : null;
+    const price = dhSale != null ? { sale: dhSale, original: null, currency: 'USD' } : null;
+    return { title, images, main_image: images[0] || '', price, specs, description, variants: variants.slice(0, 24), sku_prices, sold_volume: Number.isFinite(soldRaw) ? soldRaw : null };
   } catch (e) { console.warn('[datahub]', (e as Error).message); return null; }
 }
 
@@ -524,9 +534,9 @@ Deno.serve(async (req) => {
     // + obraz/cover, które już mamy. Nigdy nie failujemy twardo — zawsze zapiszemy minimum.
     let detail: Record<string, unknown> | null = null;
     let enr: { title: string; images: string[]; price: { sale: number; original: number | null; currency: string | null } | null } | null = null;
+    let dhPrimary = false;
     if (id && RAPID_KEY) {
       detail = await tryDetail(id, RAPID_KEY);
-      if (!detail) enr = await searchEnrich(id, row.query || row.pl_name || '', RAPID_KEY);
       // DataHub: dociąga specs/opis/SKU, których warstwa afiliacyjna nie ma (patrz tryDataHub).
       if (detail) {
         const dh = await tryDataHub(id, RAPID_KEY);
@@ -536,6 +546,23 @@ Deno.serve(async (req) => {
           if (dh.variants.length && !(detail.variants as unknown[])?.length) detail.variants = dh.variants;
           if (dh.sku_prices.length && !(detail.sku_prices as unknown[])?.length) detail.sku_prices = dh.sku_prices;
           if (dh.sold_volume != null && (detail as Record<string, unknown>).sold_volume == null) (detail as Record<string, unknown>).sold_volume = dh.sold_volume;
+        }
+      } else {
+        // product-info (afiliacja) zwrócił "No information" — CZĘSTE dla aukcji spoza indeksu afiliacyjnego
+        // (incydent 24.07: 50% kandydatów haczyków, auto_match_rejected). DataHub ma pełny detail
+        // (properties/description/SKU/tytuł/galeria) → użyj go jako PODSTAWOWEGO źródła, żeby produkt
+        // był buildowalny (snapshot 'datahub' = detail-równoważny), zamiast degradować do 'search'/'have'.
+        const dh = await tryDataHub(id, RAPID_KEY);
+        if (dh && (dh.title || dh.images.length || dh.specs.length)) {
+          detail = {
+            title: dh.title, images: dh.images, main_image: dh.main_image,
+            specs: dh.specs, variants: dh.variants, sku_prices: dh.sku_prices,
+            price: dh.price, description: dh.description, sold_volume: dh.sold_volume,
+            video_url: null, shop: null, categories: null,
+          } as Record<string, unknown>;
+          dhPrimary = true;
+        } else {
+          enr = await searchEnrich(id, row.query || row.pl_name || '', RAPID_KEY);
         }
       }
     }
@@ -565,7 +592,7 @@ Deno.serve(async (req) => {
       shop: (detail as Record<string, unknown>)?.shop ?? null,
       categories: (detail as Record<string, unknown>)?.categories ?? null,
       product_id: id || null,
-      source: detail ? 'detail' : (enr ? 'search' : 'have'),
+      source: detail ? (dhPrimary ? 'datahub' : 'detail') : (enr ? 'search' : 'have'),
       fetched_at: new Date().toISOString(),
       // deno-lint-ignore no-explicit-any
       reviews: [] as any[],
@@ -577,7 +604,7 @@ Deno.serve(async (req) => {
     // detail search-sklejką, bo aukcje umarły od czasu pierwotnego pobrania). Zamrożony
     // snapshot detail = źródło prawdy na zawsze (galeria zrehostowana u nas) — świeży fetch,
     // który NIE jest detail, nigdy go nie zastępuje.
-    if (snapshot.source !== 'detail' && (row.ali_snapshot as Record<string, unknown> | null)?.source === 'detail') {
+    if (!['detail', 'datahub'].includes(snapshot.source) && (row.ali_snapshot as Record<string, unknown> | null)?.source === 'detail') {
       console.warn(`[bud-ali-snapshot] guard: odmowa degradacji detail->${snapshot.source} dla ${row.key}`);
       return json({ snapshot: row.ali_snapshot, product_id: id, kept_existing: true,
         note: 'świeży fetch nie dał detail — zachowano zamrożony snapshot detail (aukcja mogła umrzeć; do sprzedaży wymagana żywa aukcja)' }, 200, c);
