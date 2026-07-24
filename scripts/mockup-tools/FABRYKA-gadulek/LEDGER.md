@@ -67,3 +67,26 @@ Opus. Subagent Sonnet użyty tylko do wydobycia kontraktu narzędzi (I/O, nie os
   wordmark „Gadulek" OK (bez diakrytyków); **dla F4** nagłówki PL: użyć webfontu Fredoka Google Fonts (ma latin-ext).
 - **Koszty twarde API (F2.5):** styl-master ~$0.25 (HIGH 1536×1024) + 6 faviconów ~$1.00 (HIGH 1024²) = **~$1.25**.
 - **Model (Z8):** styl-master gate + favicon 6×T = vision osąd (Sonnet-equiv/agent); selektor @32px = skrypt.
+
+## F2 — MAKIETY (2026-07-24) · WYKONANE (lp_makiety = IN_PROGRESS, bramka Tomka)
+- **KOMPLET 24 makiet:** 12 sekcji build × **desktop (3:2) + mobile (2:3)** — tor LOKALNY gpt-image-2
+  (`gen-makiety.py` + `gen-mobile.py` + `genlib.py`/`common.py`); local HIGH → fallback edge MEDIUM.
+  0 FAIL. Rehost → `bud-assets/gadulek/makiety/` (webp). Sekcja `wideo` = blokada-tomek (bez makiety).
+- **TOR-I ze STANAMI:** `03-jak-dziala` (3 kroki 01/02/03 + malinowa fala „Ten sam kanał — połączone");
+  `06-anatomia` (hotspoty z calloutami + wymiar 12,4×5,4 cm + ABS).
+- **Krytyk makiet = subagent OPUS (×2 niezależnie):** werdykt **PASS całości**; oba wskazały ten sam
+  twardy REGEN — **07-porownanie-mobile** (rozjechana siatka: nagłówek 3 kol., ciało 2 kol.); jeden krytyk
+  dodatkowo miękki — **05-mid-cta** (cena wypalona w malinie zamiast charcoal, łamie scope akcentu).
+  **Pętla poprawek WYKONANA:** 07-porownanie-mobile → siatka 4-kol. wyrównana (malinowe ✓ Gadulka pod
+  własnym nagłówkiem); 05-mid-cta d+m → cena charcoal (malina tylko CTA+swash); bonus 04-zastosowania-mobile
+  → dołożony kafel „Zabawa efektami głosu" (potwór) pod obietnicę H2. Wszystkie 4 regeneracje zweryfikowane
+  wizualnie = OK. Anty-bleed czysty, wierność produktu wzorowa, DNA spójne, uczciwość (480P/100–400 m/
+  opóźnienie/nie wodoodporne/generyczny konkurent) trzyma kanon.
+- **Koszty twarde API (F2):** makiety **$5.86** (28 generacji: ~22 local-HIGH $0.25 + ~6 edge-MEDIUM $0.06;
+  24 finalne + 4 regeneracje). ⚠️ **Nota budżetu:** local HIGH podbił koszt ponad notę makiet ($1.7–2.0
+  zakładała edge-MEDIUM); tor local = zgodny z doktryną (⛔ zakaz fal-substytutu), jakość HIGH. Suma sesji
+  F1+F2.5+F2 ≈ **$7.36** (nieco ponad 25 zł/landing — świadome, jakość local HIGH).
+- **Model (Z8):** kod makiet = agent autorsko (Z4, bramkowane gate'ami/krytykiem); krytyk makiet = **Opus**.
+- ⏭️ **NASTĘPNE (poza tą sesją, po akcepcie Tomka):** F3 grafiki (czyste packshoty — galeria detail uboga),
+  F4 kod (⚠️ nagłówki PL: webfont Fredoka Google Fonts z latin-ext), F5 życie (ANIM-3: hero+mid-cta+final),
+  F6/F7/F8. `{{MERCHANT_INFO}}` w `zamow` wstrzyknąć realnie przed go-live (LL-079).
