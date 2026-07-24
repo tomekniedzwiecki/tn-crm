@@ -5,28 +5,25 @@ FAKTÓW+OPINII niezależnie od persony (ICP steruje kolejnością/castingiem, NI
 MAPA↔KARTA → wygrywa KARTA.
 
 ## FUNKCJE
-1. **Bezpłomieniowe światło nastrojowe** — ciepły, migoczący blask bez ognia, dymu, wosku
-   [SPEC Material=Plastic+LED · OPIS „warm white flashing" · g0].
-2. **Sterowanie na odległość (pilot-różdżka)** — zapal/zgaś cały zestaw jednym gestem, bez
-   podchodzenia [tytuł „Magic Wand Remote" · OPIS · g0 · rev2-0].
-3. **Efekt „unoszących się" świec** — zawieszenie pod sufitem na dołączonej żyłce (12 haczyków,
-   20 m) [OPIS „floating candle effect" · g0 · g2 · g3 · rev0-1].
-4. **Bezpieczeństwo (bez ognia)** — brak realnego płomienia → bezpieczne przy dzieciach,
-   zwierzętach, tkaninach, zasypianiu [OPIS „flameless" · SPEC Voltage=NO AC/DC · WNIOSEK].
-5. **Bezprzewodowość** — na baterie, zero kabli i gniazdek → stawiasz gdziekolwiek
-   [SPEC Voltage=NO AC/DC · OPIS „battery operated"].
+| # | Funkcja | Kotwica |
+|---|---|---|
+| 1 | Bezpłomieniowe światło nastrojowe (ciepły migot bez ognia/dymu/wosku) | [SPEC] Material=Plastic+LED; [OPIS] „warm white flashing"; g0 |
+| 2 | Sterowanie na odległość pilotem-różdżką (zapal/zgaś jednym gestem) | tytuł „Magic Wand Remote"; [OPIS]; rev2-0 |
+| 3 | Efekt „unoszących się" świec (zawieszenie na żyłce, 12 haczyków) | [OPIS] „floating candle effect"; g0/g2/g3; rev0-1 |
+| 4 | Bezpieczeństwo — brak realnego płomienia (dzieci/zwierzęta/tkaniny) | [OPIS] „flameless"; [SPEC] Voltage=NO AC/DC |
+| 5 | Bezprzewodowość — na baterie, zero kabli i gniazdek | [SPEC] Voltage=NO AC/DC; [OPIS] „battery operated" |
 
 ## ZASTOSOWANIA (klasa dowodu)
 | # | Zastosowanie / świat | Klasa dowodu |
 |---|---|---|
-| 1 | Kolacja / romantyczny stół — ciepły blask bez kapiącego wosku | [OPIS „tables"] · [OPINIE rev3-3] |
-| 2 | Sypialnia — nastrój i bezpieczne zasypianie (można zgasić pilotem z łóżka) | [FUNKCJA 2+4] · [WNIOSEK z „remote control"] |
-| 3 | Łazienka / relaks (spa w domu) — brak ognia i kabli w wilgoci | [FUNKCJA 4+5] · [OPIS „window candles"] |
-| 4 | Wesele / przyjęcie / event — dziesiątki wiszących świec, efekt „floating" | [OPIS „weddings"] · [SPEC Occasion=Wedding] · [GALERIA g2] |
-| 5 | Taras / balkon / ogród wieczorem — bezpiecznie, bez wiatru gaszącego płomień | [OPIS „outdoor decoration"] · [GALERIA g2] |
-| 6 | Święta / choinka / parapet — dekoracja sezonowa (jeden z wielu światów) | [SPEC „Christmas" · Occasion] · [OPINIE rev1-0] |
-| 7 | Prezent „magiczny" dla dzieci — świece + różdżka jak z filmu | [OPIS „perfect magical gift"] · [GALERIA g1/g4] |
-| 8 | Urodziny / chrzest / grand event | [SPEC Occasion=Birthday, Baptism, Grand Event] |
+| 1 | Kolacja / romantyczny stół — ciepły blask bez kapiącego wosku | [OPIS] „tables" · [OPINIE] rev3-3 |
+| 2 | Sypialnia — nastrój i bezpieczne zasypianie (gasisz pilotem z łóżka) | [WNIOSEK] z „remote control" + „flameless" |
+| 3 | Łazienka / relaks spa w domu — bez ognia i kabli w wilgoci | [OPIS] „window candles" · [WNIOSEK] |
+| 4 | Wesele / przyjęcie / event — dziesiątki wiszących świec, efekt „floating" | [OPIS] „weddings" · [SPEC] Occasion=Wedding |
+| 5 | Taras / balkon / ogród wieczorem — bezpiecznie, bez wiatru gaszącego płomień | [OPIS] „outdoor decoration" |
+| 6 | Święta / choinka / parapet — dekoracja sezonowa (jeden z wielu światów) | [KATEGORIA] Festive · [OPINIE] rev1-0 |
+| 7 | Prezent „magiczny" dla dzieci — świece + różdżka jak z filmu | [OPIS] „perfect magical gift" |
+| 8 | Urodziny / chrzest / grand event | [SPEC] Occasion=Birthday, Baptism, Grand Event |
 
 ## SHOWCASE (mapowanie świat → scena wizualna)
 - **hero:** ciepła, ciemna kolacja/wnętrze wieczorem, świece migoczą, pilot-różdżka w dłoni →
