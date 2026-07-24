@@ -395,6 +395,34 @@ def _platform_name_gate(p):
                          f"zakazany ('{m.group(0)}'): {name!r}. Przemianuj (LL-055).")
 
 
+def _makiety_gate(p):
+    """TWARDY STOP GO-LIVE — landing NIE moze isc live bez PRAWDZIWYCH makiet calej strony +
+    dowiedzionej wiernosci kod<->makieta (DOPASOWANIE SSIM). Domyka dziure (incydent 24.07, LL-078:
+    Migotek/Nakrecik poszly FALLBACKIEM — sceny/fal zamiast makiet strony; gate-check je lapal
+    (16-18 FAIL) ale published-gate NIE, wiec wyszly live). ZAKAZ SUBSTYTUTU: brak makiet = STOP,
+    NIE 'artefakt do zignorowania'. Makiety generuje sie torem LOKALNYM gpt-image (FABRYKA-*/makiety/
+    _gen.py, klucz OPENAI_API_KEY z .env) — NIGDY fal-sceny jako makiety. Brak escape'u (celowo).
+    SSOT: docs/zbuduje/STANDARD-LANDING-SKLEPY.md F2/F7."""
+    slug = p.get("slug") or ""
+    fab = os.path.join(_HERE, f"FABRYKA-{slug}")
+    mk = os.path.join(fab, "makiety")
+    page = [f for f in os.listdir(mk)] if os.path.isdir(mk) else []
+    page = [f for f in page if re.match(r"^\d{2}[-_].*\.(png|webp)$", f, re.I)]
+    dop_md = os.path.join(fab, "dopasowanie", "DOPASOWANIE.md")
+    ssim_rows = 0
+    if os.path.isfile(dop_md):
+        ssim_rows = len(re.findall(r"0[.,][0-9]{2}", open(dop_md, encoding="utf-8", errors="ignore").read()))
+    # PASS gdy realne makiety na dysku (>=6) LUB udowodniona wiernosc w DOPASOWANIE.md (>=12 SSIM,
+    # przezywa swiezy checkout gdy duze PNG w Storage). Fallback ma 0 makiet i 1-2 SSIM -> FAIL.
+    if len(page) < 6 and ssim_rows < 12:
+        raise SystemExit(
+            f"[platform-sync] MAKIETY-GATE FAIL — TWARDY STOP: FABRYKA-{slug} ma {len(page)} makiet strony "
+            f"(makiety/NN-*.png) i {ssim_rows} wierszy SSIM w DOPASOWANIE.md. Landing zrobiony BEZ makiet "
+            "(fallback sceny/fal) NIE idzie live. Wygeneruj PRAWDZIWE makiety calej strony torem LOKALNYM "
+            "gpt-image (FABRYKA-*/makiety/_gen.py, OPENAI_API_KEY) + odpal tor dopasowania (kompozyty+SSIM). "
+            "ZAKAZ substytutu. Patrz STANDARD-LANDING-SKLEPY.md F2/F7 + LL-078.")
+
+
 def cmd_publish(a):
     pr = _project(a.project)
     sid = _shop_id(pr)
@@ -408,6 +436,7 @@ def cmd_publish(a):
         raise SystemExit("[platform-sync] HTML bez {{WF2_PRODUCT_ID}} — brak runtime-snippetu (landing-runtime-snippet.html). Wymuszenie: --allow-no-runtime")
     _checkout_preflight(html)  # twarda bramka kontraktu kasy — patrz docstring
     _platform_name_gate(p)     # twarda bramka nazwy klientowej (LL-055)
+    _makiety_gate(p)           # twarda bramka MAKIET — zakaz go-live bez makiet+wiernosci (LL-078)
     dom, custom = _active_domain(sid)
     path = a.path if a.path is not None else p["slug"]
     canonical = f"https://{dom}/{path}" if path else f"https://{dom}"

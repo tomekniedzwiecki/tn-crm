@@ -41,6 +41,11 @@ ZAKRES = WSZYSTKO, NIE „jeden landing":
 PRÓG JAKOŚCI (twardy — patrz sekcja „JAKOŚĆ" w MASTER-PROMPT-WF2.md):
 • HERO = scena W TLE (full-bleed, TYP A), produkt osadzony w świecie strony. NIGDY pocztówka
   wycięta w ramce/kolumnie. Hero projektowany pod hero-video. [[feedback-hero-projektowany-pod-hero-video]]
+• MAKIETY OBOWIĄZKOWE (LL-078) — makiety CAŁEJ STRONY (sekcja po sekcji, desktop+mobile) torem
+  LOKALNYM gpt-image (wzorzec FABRYKA-*/makiety/_gen.py, OPENAI_API_KEY z .env; jak Zaklipek=22/ssawek=28).
+  ZAKAZ SUBSTYTUTU: sceny/fal ani puste makiety NIE zastępują makiet. Brak WF2_GEN_SECRET (tor edge) =
+  użyj lokalnego, a jeśli i to padnie → HARD STOP + zgłoś. Publish twardo bramkowany (_makiety_gate) —
+  bez makiet+wierności landing fizycznie nie wejdzie live. NIE dismiss gate-check FAIL jako „false positive".
 • Landing kompletny wg MANIFEST SEKCJI (klasa dowodowa, bez prawa SKIP) + GESTALT F7.4: finalny
   ŻYWY render ogląda świeże oko „oczami klienta" PRZED status=gotowy.
 • Gotowy landing PUBLIKUJ (na custom domenie = GO-LIVE) gdy tylko spełnione bramki — nie zostawiaj
