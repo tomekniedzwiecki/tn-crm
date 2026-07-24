@@ -39,3 +39,14 @@ Weryfikacja live https://sprytko.pl/migotek (visual-verify, 3 viewporty) — wer
 ## Wierność DANYCH (Karta → copy)
 Anty-mismatch: każdy claim zakotwiczony (patrz PLAN §anty-mismatch). Baterie = „do dokupienia"
 (nagłówek) + „~13× AAA wg opinii" (FAQ). Opinie 4,8/187 1:1. Zero zmyślonych liczb/specs.
+
+## Dopis 24.07 (wieczor) — packshot akcesoriow `zestaw-akcesoria.webp` (F3A)
+Incydent: `real-akcesoria.webp` = halloweenowa grafika g6 z Ali (duchy+dynie; kuracja blednie
+opisala g6 jako packshot haczykow — realnego packshotu NIE MA w galerii ani recenzjach).
+GESTALT live wykryl ja w #demo krok 02 + #galeria. Zastapiona GENEROWANYM packshotem:
+| Grafika | Klasa | Cechy (PASZPORT) | Rundy | pass-2 | WIERNOSC |
+|---|---|---|---|---|---|
+| zestaw-akcesoria.webp (demo krok-02 + galeria kafel) | P | 6/6 PASS: swiece-sople matowe+tip LED · rozdzka CZARNA · haczyki S x12 DOKLADNIE (policzone 6+6) · zylka szpulka · zero halloween/tekstu · krem katalogowy | 2 (v1: 10 haczykow = FAIL liczby → v2: 12 OK) | TAK (swiezy Sonnet, niezalezne policzenie 12) | **ZGODNA** |
+Tor: LOKALNY gpt-image-2 HIGH images/edits z `_product-ref.png` (_gen.py). Live zweryfikowane:
+3x nowy asset na sprytko.pl/migotek, 0x real-akcesoria. Nazwa celowo BEZ prefiksu `real-`
+(grafika generowana klasy P, nie realny kadr klasy REAL).
