@@ -25,6 +25,12 @@ kopiujemy strukturę/jakość/mechanikę, NIE treść. Model per faza wg Z8.
 | faza | co | koszt USD |
 |---|---|---|
 | F0 | 0 (dane/wizja) | 0 |
+| F1 | 0 (plan/przewodnik) | 0 |
+| F2.5 | styl-master + 6 favicon (gpt-image-2 HIGH); wordmark z fontu = 0 | ~$1,4 (szac.) |
+| F2/F3 | 17 scen produkcyjnych + 2 packshoty (gpt-image-2 HIGH; sceny=makieta+grafika) | ~$4,0 (szac.) |
+| F5 | hero-video 2× Kling PRO i2v (bud-fal-proxy) | ~$0,90 |
+| DEMO | pobranie/oględziny klipu Ali (ffmpeg) — ODRZUCONY | $0 |
+| **Σ** | **skumulowane** | **~$6,3 (~23 zł; budżet 25 zł OK)** |
 
 ## Odstępstwa (Z4/Z8)
 - **F1 PLAN + PRZEWODNIK autorsko agent (Opus)**, nie gpt-5.6-sol. Dozwolone (Z4: plan może pisać
@@ -42,3 +48,32 @@ kopiujemy strukturę/jakość/mechanikę, NIE treść. Model per faza wg Z8.
   5/5 osi ≠ zaklipek. MANIFEST: 17 sekcji (zdjecia-kupujacych=build — mamy 5 zdjęć ★5;
   wideo-ugc=blokada-tomek). TOR-I: demo 1-2-3 + tryby (przełącznik ujęć, flagowa). ANIM-3:
   hero + rozwiazanie(para) + final(park golden hour).
+
+## Log faz (wznowienie 2026-07-24 — agent #2, od F2.5)
+- **F2.5 lp_styl_marka — DONE 2026-07-24.** TOKENS-MAKIETY.md (:root partytura). Marka „Nakręcik"
+  (marka=done w F0). Favicon = **aperture „recording eye" emerald** (brand-forge, 6 kandydatów →
+  selektor @32px, top m2-0). Wordmark „Nakręcik" z fontu Space Grotesk (NIE gpt-image, diakrytyki PL).
+  logo-combo (aperture LEWA + wordmark PRAWA). brand/ wgrane do Storage `bud-assets/nakrecik/brand/`
+  (200 OK). Panel: lp_styl_marka done + artefakty.
+- **F2/F3 lp_makiety + lp_grafiki — DONE 2026-07-24.** ⚠️ ODSTĘPSTWO (jak migotek, `force-kolejnosc`):
+  tor **gpt-image-2 HIGH** (OpenAI /images/edits z ref g0+g3; /generations dla `problem` bez produktu)
+  — sceny = **makieta+grafika jednocześnie**, KRYTYK = wizualna inspekcja orkiestratora (samo-akcept
+  z logiem). **17 scen + 2 packshoty** (grafit+green, BEZ logo TELESIN). Wierność PASZPORT PASS
+  (grafit/green silikon, czarny pierścień magnetyczny, składane ramię, telefon; białe rogi kadru +
+  zielona kropka REC wpalone w sceny). Distinct views = 15 (≫5). Zig-zag + różnorodność (kuchnia/ulica/
+  park/warsztat/siłownia/rodzic/wideorozmowa; dzień + 2 sceny dark mid-cta/final). 5 zdjęć kupujących
+  ★5 rehostowane → `reviews/buy-1..5`. Rehost 22 assety → `asset-urls.json`. MAPA-ASSETOW.md gotowa.
+  Panel: lp_makiety+lp_grafiki done + artefakty (meta.section).
+- **F5 lp_zycie (hero-video) — DONE 2026-07-24.** Kling PRO i2v (bud-fal-proxy, `gen-hero-nakrecik.py`):
+  hero-loop (desktop, mp4 1483KB/webm 1129KB) + hero-loop-m (mobile, mp4 2116KB/webm 1953KB) + postery →
+  `bud-assets/nakrecik/video/` + `assets/hero-video.mp4` (200 OK). Cinemagraph ANTY-MORFING: osoba/dłonie/
+  uchwyt/telefon ZAMROŻONE (locked camera + NEG na ruch/morfing/logo), animacja = subtelny dryf światła
+  z okna. Gate morfingu PASS (bryła zachowana). Koszt ~$0,90.
+- **DEMO-WIDEO (F5.3) — ODRZUCONY 2026-07-24.** Klip `ali_snapshot.video_url` (41,6 s) obejrzany
+  (ffmpeg, 11 klatek): **wypalony wordmark „TELESIN" (cyan) w prawym-górnym rogu KAŻDEJ klatki 0→41 s**
+  + ANG napisy przez cały klip („Magnetic Neck Phone holder", „Quick release design", „Strong neodymium
+  magnet", „Fishing", „Mountaineering") + infografika TELESIN @37 s + logo-karta TELESIN @40 s + molowane
+  „TELESIN" na module w zbliżeniach. **Brak czystego okna temporalnego** (overlay rogu jest STAŁY — trim
+  nie usuwa; spatial-crop zostawia napisy dolne + molowanie + kadruje produkt). → white-label + rynek PL
+  nieratowalne. **Sekcja `wideo-ugc` = blokada-tomek** (zgodnie z PLAN #14). Ruch strony pokrywa hero-video
+  F5 (jak Zaklipek). Koszt $0.
