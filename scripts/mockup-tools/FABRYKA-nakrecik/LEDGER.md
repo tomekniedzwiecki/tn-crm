@@ -26,8 +26,19 @@ kopiujemy strukturę/jakość/mechanikę, NIE treść. Model per faza wg Z8.
 |---|---|---|
 | F0 | 0 (dane/wizja) | 0 |
 
+## Odstępstwa (Z4/Z8)
+- **F1 PLAN + PRZEWODNIK autorsko agent (Opus)**, nie gpt-5.6-sol. Dozwolone (Z4: plan może pisać
+  agent LUB gpt; Z8: F1 = osobna oś kosztu). Powód: spójność całości + pełna kontrola partytury/
+  manifestu pod ten produkt. Gate'y F6/F7 rozstrzygają jakość niezależnie od autora.
+
 ## Log faz
 - **F0 (dane/karta/kuracja/paszport/mapa/ICP/wideo) — DONE 2026-07-24.** source=detail ✓ (gate
   PASS). gallery_curated: 8 kadrów → 5 keep / 3 odrzuty. videos_curated: Ali video brandowane →
   hero-video F5; sekcja wideo-UGC = blokada-tomek. Bezpiecznik PASSED (wyżej). Bogaty produkt:
   20× ★5, 4,8/187/96,8%, 426 sold, wideo produktowe on-product, 10 zdjęć kupujących.
+- **F1 (plan + przewodnik) — DONE 2026-07-24.** Motyw „TWÓJ KADR, OBIE RĘCE WOLNE" (POV/wizjer).
+  Partytura: Space Grotesk (display) · Hanken Grotesk (text) · akcent emerald #12B76A (z wariantu
+  Green) · tło ciepła kość · archetyp hero A (full-bleed) · sygnatura wizjer/REC. Cross-landing
+  5/5 osi ≠ zaklipek. MANIFEST: 17 sekcji (zdjecia-kupujacych=build — mamy 5 zdjęć ★5;
+  wideo-ugc=blokada-tomek). TOR-I: demo 1-2-3 + tryby (przełącznik ujęć, flagowa). ANIM-3:
+  hero + rozwiazanie(para) + final(park golden hour).
