@@ -36,7 +36,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 #                 tor „Allegro→Marka", dodane 2026-07-23). 'search'/puste = NIEzaufane (STOP).
 # Ta lista jest zdublowana w panel-sync.py (kalkulacja) i ad-forge.py — wzorzec „kopia z notą"
 # jak lista zakazów detail-lint (gate-manifest.json _ssot_zakazow): zmiana = zmień WSZĘDZIE.
-TRUSTED_SNAPSHOT_SOURCES = ("detail", "allegro")
+# 'datahub' (24.07): DataHub item_detail pobrany po DOKŁADNYM itemId = ta sama klasa autentyczności
+# co 'detail' (jedna wskazana oferta, NIE sklejka 'search'); źródło podstawowe gdy afiliacyjny
+# product-info zwraca "No information" (patrz bud-ali-snapshot DataHub-primary, incydent 24.07).
+TRUSTED_SNAPSHOT_SOURCES = ("detail", "allegro", "datahub")
 
 def is_trusted_source(src):
     """True, gdy snapshot pochodzi z zaufanego, konkretnego źródła (TRUSTED_SNAPSHOT_SOURCES)."""

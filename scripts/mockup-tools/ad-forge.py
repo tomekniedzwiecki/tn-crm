@@ -430,10 +430,11 @@ def fetch_product_bundle(product_id):
                 break
 
     # DEZAMBIGUACJA PRODUKTU (fakty, nie zgadywanie z nazwy marki):
-    # tytuł aukcji TYLKO gdy source ZAUFANY: 'detail' (Ali) lub 'allegro' (konkretna oferta Allegro —
-    # tor Allegro→Marka, 23.07); zasada wierności źródła + alt_pl kadrów galerii (keep, max 3).
+    # tytuł aukcji TYLKO gdy source ZAUFANY: 'detail' (Ali), 'allegro' (konkretna oferta Allegro —
+    # tor Allegro→Marka, 23.07) lub 'datahub' (item_detail po dokładnym itemId, 24.07); zasada
+    # wierności źródła + alt_pl kadrów galerii (keep, max 3).
     snap = (tt or {}).get("ali_snapshot") or {}
-    snap_title = str(snap.get("title") or "").strip() if str(snap.get("source") or "").strip().lower() in ("detail", "allegro") else ""
+    snap_title = str(snap.get("title") or "").strip() if str(snap.get("source") or "").strip().lower() in ("detail", "allegro", "datahub") else ""
     alt_texts = []
     gc = (tt or {}).get("gallery_curated")
     gitems = gc.get("items") if isinstance(gc, dict) and isinstance(gc.get("items"), list) else []

@@ -524,6 +524,12 @@ class TestTrustedSources(unittest.TestCase):
         self.assertTrue(GC.is_trusted_source("allegro"))
         self.assertIn("allegro", GC.TRUSTED_SNAPSHOT_SOURCES)
 
+    def test_datahub_zaufane(self):
+        # DataHub item_detail po dokładnym itemId = autentyczność jak 'detail' (24.07, fallback
+        # gdy afiliacyjny product-info zwraca "No information"). Bez osłabiania 'detail'/'allegro'.
+        self.assertTrue(GC.is_trusted_source("datahub"))
+        self.assertIn("datahub", GC.TRUSTED_SNAPSHOT_SOURCES)
+
     def test_search_i_puste_niezaufane(self):
         for s in ("search", "", None, "   ", "allegro-fake", "aliexpress"):
             self.assertFalse(GC.is_trusted_source(s), "%r nie może być zaufane" % (s,))

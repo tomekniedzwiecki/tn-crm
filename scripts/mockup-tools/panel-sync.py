@@ -77,8 +77,10 @@ PRODUCT_META_WHITELIST = {
 
 # Źródła snapshotu ZAUFANE dla gate'u F0 (SSOT: gate-check.py TRUSTED_SNAPSHOT_SOURCES; doktryna
 # docs/zbuduje/GALERIA-ALI.md §0). 'detail'=żywa aukcja Ali; 'allegro'=konkretna oferta Allegro
-# (tor Allegro→Marka, 23.07). Kopia-z-notą (jak lista zakazów detail-lint) — zmiana = zmień też tam.
-TRUSTED_SNAPSHOT_SOURCES = ("detail", "allegro")
+# (tor Allegro→Marka, 23.07); 'datahub'=DataHub item_detail po dokładnym itemId (24.07, źródło
+# podstawowe gdy afiliacyjny product-info daje "No information" — autentyczność jak 'detail').
+# Kopia-z-notą (jak lista zakazów detail-lint) — zmiana = zmień też tam.
+TRUSTED_SNAPSHOT_SOURCES = ("detail", "allegro", "datahub")
 
 
 # ── Klucz service-role: .env (PYTHONEM) → fallback zmienna środowiskowa ──

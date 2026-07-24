@@ -22,9 +22,16 @@ Przed czymkolwiek sprawdź `bud_tt_products.ali_snapshot->>'source'`:
 - **DRUGIE ZAUFANE ŹRÓDŁO: `source='allegro'` (dodane 2026-07-23, tor „Allegro→Marka").**
   Snapshot w kształcie `ali_snapshot` zbudowany z KONKRETNEJ oferty Allegro (offerId + productId +
   galeria `/original/` + specs + opinie natywne PL) — dane z JEDNEJ, wskazanej aukcji = z definicji
-  autentyczne, dokładnie jak `detail`. Gate F0 traktuje więc `source ∈ {'detail','allegro'}` jako
-  ZAUFANE (nie wywołuje STOP-u ani `bud-ali-snapshot force`). Powód: to samo kryterium POCHODZENIA
+  autentyczne, dokładnie jak `detail`. Gate F0 traktuje więc `source ∈ {'detail','allegro','datahub'}`
+  jako ZAUFANE (nie wywołuje STOP-u ani `bud-ali-snapshot force`). Powód: to samo kryterium POCHODZENIA
   (jedna potwierdzona oferta, nie sklejka wyszukiwarki). Nadal NIEzaufane: `'search'`/puste = STOP.
+- **TRZECIE ZAUFANE ŹRÓDŁO: `source='datahub'` (dodane 2026-07-24).** DataHub `item_detail` pobrany
+  po DOKŁADNYM `itemId` (= product_id z chosen_link) — jedna wskazana oferta z pełnym detailem
+  (title/images/specs/description/SKU+ceny), NIE sklejka `search`. Używany jako źródło PODSTAWOWE gdy
+  afiliacyjny `product-info` zwraca „No information" (aukcja spoza indeksu afiliacyjnego — trafiło 50%
+  kandydatów w incydencie haczyków 24.07; patrz `bud-ali-snapshot` DataHub-primary fix). Autentyczność
+  = jak `detail` (kryterium POCHODZENIA spełnione po `itemId`). ⚠️ Galeria bywa doklejona okładką
+  wideo/cover z INNEGO produktu (pole `row.cover`) — F0.5 KURACJA GALERII to wyłapuje (jak przy `detail`).
   ⚠️ WHITE-LABEL: w torze Allegro landing dostaje NOWĄ mini-markę (F2.5) — marka i sprzedawca z
   aukcji (np. „Lehmann") NIGDY nie trafiają na stronę; czytelny nadruk marki na kadrze keep =
   RETUSZ obowiązkowy (§2 klasa „czytelny-brand"; lekcja Odpalak). SSOT listy źródeł zaufanych =
