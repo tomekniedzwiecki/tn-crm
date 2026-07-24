@@ -1220,12 +1220,13 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true }, 200, corsHeaders)
     }
 
-    // ── Wniosek o współpracę (dwustopniowy filtr rezerwacji, 2026-07-22) ─────
-    //   Po zielonym werdykcie user NAJPIERW bezpłatnie zgłasza projekt (klik w karcie).
-    //   Kwalifikacja: ocena „mocny" z badania rynku → akcept AUTOMATYCZNY (uczciwie:
-    //   to twarda bramka rynkowa, nie udawany człowiek); inaczej → pending, decyzję
-    //   podejmuje Tomek w panelu tn-aplikacje (mail po akcepcie wysyła spar-followups).
-    //   Karta rezerwacji 500 zł pokazuje się DOPIERO po statusie 'accepted'.
+    // ── Wniosek o współpracę (2026-07-24: akcept NATYCHMIASTOWY dla wszystkich) ─
+    //   Po zielonym werdykcie user bezpłatnie zgłasza projekt (klik w karcie) →
+    //   akceptujemy OD RAZU, żeby karta rezerwacji 500 zł pojawiła się PÓKI lead jest
+    //   nagrzany. (Poprzednie 2h „pending" dla projektów nie-„mocnych" gasiło zapał, a
+    //   0 odrzuceń w danych = nic nie filtrowało — decyzja Tomka 24.07.) Ręczne
+    //   odrzucenie Tomka w panelu tn-aplikacje = zawór post-hoc. Sygnał „mocny"/„średni"
+    //   z badania rynku idzie do Slacka informacyjnie.
     if (body.event === 'wniosek') {
       const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
       const { data: sess } = await sb
@@ -1240,13 +1241,13 @@ Deno.serve(async (req) => {
         return jsonResponse({ ok: true, status: sess.wniosek_status }, 200, corsHeaders)
       }
       const mocny = ((sess.assessment as Record<string, unknown> | null)?.ocena === 'mocny')
-      const status = mocny ? 'accepted' : 'pending'
+      const status = 'accepted' // akcept natychmiastowy dla wszystkich (24.07)
       const now = new Date().toISOString()
       await sb.from('spar_sessions').update({
         wniosek_at: now,
         wniosek_status: status,
-        wniosek_decided_at: mocny ? now : null,
-        wniosek_auto: mocny,
+        wniosek_decided_at: now,
+        wniosek_auto: true,
         updated_at: now,
       }).eq('id', sessionId).is('wniosek_status', null)
       if (!sess.is_test) {
@@ -1254,7 +1255,8 @@ Deno.serve(async (req) => {
           session_id: sessionId,
           name: sess.name, email: sess.email, phone: sess.phone,
           project_name: (sess.preview_brief as Record<string, unknown> | null)?.nazwa || null,
-          auto: mocny,
+          auto: true,
+          mocny,
         })
       }
       return jsonResponse({ ok: true, status }, 200, corsHeaders)
