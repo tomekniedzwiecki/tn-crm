@@ -139,7 +139,7 @@ TASKS = {
     'white input fields (1px hairline, radius 10): "Imie i nazwisko", "Telefon", "Ulica i numer", '
     '"Kod pocztowy", "Miejscowosc". Then a colour selector row of round swatches — THREE with real '
     'product photos (purple selected with a violet ring, black, red) and a few more as plain '
-    'coloured dots with SHORT NAME LABELS (never hex codes). A payment pill "Platnosc przy '
+    'coloured dots with SHORT NAME LABELS, exactly these five: "Jasnoniebieski", "Granatowy", "Rozowy", "Pomaranczowy", "Czarny B" (ONLY real SKU colours - NEVER invented colours like Bezowy/Bialy/Brazowy, NEVER hex codes). Total 8 swatches. A payment pill "Platnosc przy '
     'odbiorze" (selected) with a small row of pay badges "BLIK", "Visa", "Mastercard", "COD". A '
     'summary "Produkt: 19,90 zl". A full-width violet #7440A8 CTA button "Zamawiam — 19,90 zl" '
     '(white text) and under it "Platnosc przy odbiorze - Zwrot 14 dni". Faithful product. NEG: no '

@@ -13,3 +13,13 @@
 - Koszty F0: $0 (kuracja bez generacji; cropy lokalnie).
 - Model: main-loop (vision osąd zamknięty wg checklisty GALERIA-ALI).
 - Odstępstwa: brak.
+
+## F2 (24.07) — makiety + krytyk
+- 22 makiety (11 sekcji d+m), 2 regeny w przebiegu (kwiatek czarnego SKU na mid-cta; swatche nazwy).
+- KRYTYK (Opus): PASS-Z-POPRAWKAMI, „drogi projekt" 8/10 (FABRYKA-zapinek/KRYTYK-MAKIET.md).
+- P1 wykonane: slot-regen 10-zamow d+m — swatche z 8 REALNYCH SKU (było: zmyślone Beżowy/Biały/Brązowy).
+- P2 → noty dla F4 (kod): diakrytyki PL z webfontu; pigułki galerii jeden styl d==m (ciemne);
+  eyebrow charcoal wszędzie (fiolet tylko stitch/CTA/toggle); thumbnails swatchy czarny/czerwony
+  mają uproszczone kwiatki — kod używa realnych fot z g4.
+- „Płatność online" na zamow: ZGODNE z modelem płatności (checkout Trevio: BLIK/karty + COD) — zostaje.
+- lp_makiety: in_progress 7/8 — CZEKA NA AKCEPT TOMKA (bramka; kontrakt wyglądu).
