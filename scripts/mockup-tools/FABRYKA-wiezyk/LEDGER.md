@@ -58,5 +58,22 @@ landing pokazuje MINI-MARKĘ produktu, nie parasol). Radar `bud_tt_products.id =
 ## Odstępstwa świadome
 - (brak na F0/F1)
 
+## F2.5 — STYL-MASTER + BRANDING + TOKENY (2026-07-24)
+- **styl-master** (out/styl-master.png, lokalny gpt-image HIGH 1536×1024) = plansza DNA (paleta 6 chipów
+  z hexami · serif display + sans text + tabular „379,00 zł"/„162 cm" · product anchor: beżowa wieża
+  sizal · card 16px +marki · outline ikony · amber CTA · swash · sygnatura „levels axis 1–6"). **Gate
+  PASS** (motyw↔korzyść, jasne, DNA komplet, plansza NIE scena).
+- **TOKENS-MAKIETY.md** — KANON 1:1 + PARTYTURA z uzasadnieniami: Newsreader (display) + Source Sans 3
+  (text) · --paper #FBF3E6/#F3E8D6/#ECDFC9 + --card #FFFDF8 · --ink #2C2925 · **--cta #A5680C (bursztyn,
+  WCAG 4,58:1, ΔE≥36 vs 4 poprzednie)** · radius 16/8 · sygnatura pionowa oś poziomów · archetyp D.
+- **BRANDING (brand-forge, lokalny gpt-image):** 3 metafory × 2 = 6 faviconów. **TOP-1 (skrypt+vision) =
+  „forteca/wieża z kotem w łukowym wejściu"** (fav-m2-1) — genialna fuzja zamek+kot = „zamek/wieża kota".
+  **Werdykt 6×T/N = 6×TAK (PASS)** (czytelny 32/16, metafora=nazwa, flat, zero liter, mono OK). Najsłabsze:
+  @16px kot zlewa się z bryłą → czyta się jako sama forteca (kot = bonus od ~24px). Runner-up = kot na
+  szczycie wieży (fav-m1-1). **Wordmark „Wieżyk" Z FONTU Newsreader** — diakrytyki ż poprawne; lockup
+  favicon-LEWA + wordmark-PRAWA. Pliki → bud-assets/wiezyk/brand/ (11 plików) + brand-context.png (dowód).
+- **Fonty:** Newsreader + Source Sans 3 pobrane z Google Fonts (wariable → statyczne 600/700 przez fontTools).
+
 ## Koszty API (twarde)
-- F1 plan: gpt-5.6-sol Responses — input 11 995 tok, output 12 000 tok (usage log). Szac. koszt → wf2_costs.
+- F1 plan: gpt-5.6-sol Responses — input 11 995 tok, output 12 000 tok (usage log) → ~$0,13 (wf2_costs).
+- F2.5 obrazy: styl-master gpt-image HIGH (~$0,19) + 6 faviconów medium (~$0,30) → ~$0,49 (wf2_costs).
