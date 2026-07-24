@@ -72,6 +72,7 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 flex-shrink-0 self-start flex-wrap justify-end">
+                                    <button onclick="openAutopilot()" class="inline-flex items-center gap-1.5 bg-[#0070f3] hover:bg-[#0060df] text-white rounded-md px-3 py-1.5 text-xs font-semibold transition-colors" data-tip-title="Zleć agentowi realizację projektu" data-tip-desc="Autopilot: agent wykonuje wszystkie wykonalne kroki — wszystkie etapy i produkty — aż zostaną tylko decyzje ludzi. Po przerwaniu kliknij ponownie: polecenie wznowi dokładnie od miejsca, w którym agent skończył."><i class="ph ph-robot"></i> Zleć</button>
                                     <span id="p-lc-badge" class="hidden"></span>
                                     <select id="p-status" onchange="saveStatus()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none"></select>
                                 </div>
@@ -119,22 +120,6 @@
                                 <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">zamówienia</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- ══ AUTOPILOT: jeden przycisk — zleć agentowi realizację projektu do wyczerpania ══ -->
-                <div id="autopilot-card" class="relative overflow-hidden bg-[#0a0a0a] border border-[#0070f3]/40 rounded-lg mb-7">
-                    <div class="absolute inset-0 bg-gradient-to-r from-[#0070f3]/[.08] to-transparent pointer-events-none"></div>
-                    <div class="relative p-5 flex items-center gap-4 flex-wrap">
-                        <div class="w-11 h-11 rounded-lg bg-[#0070f3]/15 border border-[#0070f3]/40 text-[#52a8ff] text-xl flex items-center justify-center flex-shrink-0"><i class="ph ph-robot"></i></div>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <h3 class="text-white font-semibold">Autopilot projektu</h3>
-                                <span id="ap-badge" class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#0070f3]/40 text-[#52a8ff]">—</span>
-                            </div>
-                            <p id="ap-summary" class="text-zinc-500 text-[12.5px] mt-0.5">Agent wykona wszystkie wykonalne kroki — fundament, landingi, sklep, materiały i kampanie — aż zostaną tylko decyzje ludzi.</p>
-                        </div>
-                        <button onclick="openAutopilot()" class="inline-flex items-center gap-2 bg-[#0070f3] hover:bg-[#0060df] text-white rounded-md px-4 py-2.5 text-sm font-semibold transition-colors flex-shrink-0"><i class="ph ph-robot"></i> Zleć agentowi realizację</button>
                     </div>
                 </div>
 
@@ -397,8 +382,8 @@
             </div>
             <div id="ap-body" class="p-5 overflow-y-auto"></div>
             <div class="p-5 border-t border-[#1f1f1f] flex items-center justify-between gap-3 flex-wrap flex-shrink-0">
-                <label class="flex items-center gap-2 text-[12px] text-zinc-400 cursor-pointer select-none" data-tip-title="Tryb ciągły (steward)" data-tip-desc="Po pierwszym przebiegu sesja nie kończy — co ~30 min sprawdza, czy blokady zewnętrzne (zgoda, dane klienta, konto reklamowe, decyzje Tomka) ustąpiły, i dokańcza to, co się odblokowało.">
-                    <input id="ap-steward" type="checkbox" class="accent-[#0070f3]"> tryb ciągły (steward)
+                <label class="flex items-center gap-2 text-[12px] text-zinc-400 cursor-pointer select-none" data-tip-title="Tryb ciągły (steward)" data-tip-desc="Po pierwszym przebiegu sesja nie kończy — co ~30 min sprawdza, czy blokady zewnętrzne (zgoda, dane klienta, konto reklamowe, decyzje Tomka) ustąpiły, i dokańcza to, co się odblokowało. Domyślnie włączony.">
+                    <input id="ap-steward" type="checkbox" class="accent-[#0070f3]" checked> tryb ciągły (steward)
                 </label>
                 <button onclick="copyAutopilotPrompt()" class="inline-flex items-center gap-2 bg-[#0070f3] hover:bg-[#0060df] text-white rounded-md px-4 py-2.5 text-sm font-semibold transition-colors"><i class="ph ph-clipboard-text"></i> Kopiuj polecenie autopilota</button>
             </div>
@@ -681,7 +666,7 @@
                 const ttm = {}; (tts || []).forEach(t => ttm[t.id] = t);
                 products.forEach(p => { p.tiktoks = buildTiktoks(p.tt_product_id ? ttm[p.tt_product_id] : null); });
             } else { products.forEach(p => { p.tiktoks = []; }); }
-            syncP(); renderHeader(); renderConsentWarn(); renderLinks(); renderPortalChip(); renderPills(); renderNextStep(); renderStage(); renderAutopilotCard();
+            syncP(); renderHeader(); renderConsentWarn(); renderLinks(); renderPortalChip(); renderPills(); renderNextStep(); renderStage();
             renderActivity(actQ.data||[]); renderNotes(); renderFeedback(); renderSales(); renderCosts(); renderFields();
         }
 
@@ -2293,9 +2278,11 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
         // UWAGA o kolumnie owner: 'admin' NIE znaczy „Tomek robi ręcznie" — landingi/materiały
         // mają owner='admin', a wykonuje je AGENT (mają przycisk „Kopiuj prompt sesji"). Dlatego
         // prawdziwe bramki człowieka trzymamy w jawnym zbiorze, nie wnioskujemy ich z owner.
-        const AP_TOMEK_GATES = new Set(['wybor','ads_start','test_wynik','skalowanie','rotacja','ads_opieka','stery','wdrazanie','monthly']);
-        // Kroki, które agent PRODUKUJE, ale zamyka je akcept Tomka — w koszyku agenta z tagiem.
-        const AP_ACCEPT_STEPS = new Set(['lp_makiety','ads_grafiki','ads_kampanie']);
+        // (ads_opieka = koszyk agenta: higienę kampanii robi agent, Tomek tylko akceptuje karty wf2_proposals.)
+        const AP_TOMEK_GATES = new Set(['wybor','ads_start','test_wynik','skalowanie','rotacja','stery','wdrazanie','monthly']);
+        // Kroki, które agent PRODUKUJE, ale domyka je człowiek — w koszyku agenta z tagiem.
+        const AP_ACCEPT_STEPS = { lp_makiety:'→ Twój akcept', ads_grafiki:'→ Twój akcept', ads_kampanie:'→ start u Ciebie', ads_opieka:'→ karty decyzji' };
+        let apLastRun = null;   // ostatni wpis wf2_activities(action='autopilot') — kotwica wznowienia
 
         // Bramka zgody konsumenckiej: zwraca datę końca okna odstąpienia gdy BLOKUJE, inaczej null.
         function apConsentBlocked() {
@@ -2326,41 +2313,33 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             return { done, agent, tomek, client };
         }
 
-        // Odświeżenie karty nad steplerem (badge + jednolinijkowy bilans).
-        function renderAutopilotCard() {
-            const card = document.getElementById('autopilot-card');
-            if (!card) return;
-            const c = apCensus();
-            const consent = apConsentBlocked();
-            const noProducts = !products.length;
-            const badge = document.getElementById('ap-badge');
-            const sum = document.getElementById('ap-summary');
-            if (consent) {
-                badge.className = 'text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#e5484d]/40 text-[#f2787f]';
-                badge.textContent = 'zablokowane';
-            } else if (noProducts) {
-                badge.className = 'text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#f5a623]/40 text-[#f5b955]';
-                badge.textContent = 'najpierw portfel';
-            } else {
-                badge.className = 'text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#0070f3]/40 text-[#52a8ff]';
-                badge.textContent = c.agent.length + ' dla agenta';
-            }
-            sum.innerHTML = `🤖 <b class="text-zinc-300">${c.agent.length}</b> dla agenta · ⏳ <b class="text-zinc-300">${c.tomek.length}</b> Twoje decyzje · 👤 <b class="text-zinc-300">${c.client.length}</b> klient · ✓ ${c.done.length} gotowe`;
-        }
-
         function closeAutopilot() { document.getElementById('autopilot-modal').classList.add('hidden'); }
 
-        function openAutopilot() {
+        async function openAutopilot() {
+            // ŚWIEŻY stan przed spisem — panel mógł stać otwarty, gdy sesja agenta pracowała/padła;
+            // wznowienie MUSI liczyć się z bazy, nie z pamięci karty (wf2_steps = jedyne źródło postępu).
+            try {
+                const [stQ, actQ] = await Promise.all([
+                    supabaseClient.from('wf2_steps').select('*').eq('project_id', projectId).range(0, 2999),
+                    supabaseClient.from('wf2_activities').select('created_at, description').eq('project_id', projectId).eq('action', 'autopilot').order('created_at', { ascending: false }).limit(1),
+                ]);
+                if (Array.isArray(stQ.data)) { steps.length = 0; stQ.data.forEach(s => steps.push(s)); if (window.P) P.steps = steps; }
+                apLastRun = (actQ.data && actQ.data[0]) || null;
+            } catch (_) { /* offline → licz z tego, co jest */ }
             const c = apCensus();
             const consent = apConsentBlocked();
             const noProducts = !products.length;
             const item = (it, tagFn) => {
-                const { d, p } = it;
-                const tag = tagFn ? tagFn(it) : '';
+                const { d, p, st } = it;
+                const tags = [];
+                if (st && st.status === 'in_progress') tags.push('<span class="text-[10px] text-[#52a8ff] flex-shrink-0">⏸ w trakcie</span>');
+                if (st && st.status === 'blocked') tags.push('<span class="text-[10px] text-[#f26d78] flex-shrink-0">⛔ zablokowany</span>');
+                const t = tagFn ? tagFn(it) : '';
+                if (t) tags.push(`<span class="text-[10px] text-[#f5b955] flex-shrink-0">${t}</span>`);
                 return `<div class="flex items-center gap-2 text-[12px] py-1 border-b border-[#141414] last:border-0">
                     <span class="text-[9px] font-mono text-zinc-600 bg-[#111] rounded px-1 py-0.5 flex-shrink-0">E${d.stage}</span>
                     <span class="text-zinc-300 truncate">${escapeHtml(d.label)}${p ? ` <span class="text-zinc-500">· ${escapeHtml(p.name)}</span>` : ''}</span>
-                    ${tag ? `<span class="ml-auto text-[10px] text-[#f5b955] flex-shrink-0">${tag}</span>` : ''}
+                    ${tags.length ? `<span class="ml-auto inline-flex items-center gap-2">${tags.join('')}</span>` : ''}
                 </div>`;
             };
             const section = (icon, color, title, arr, empty, tagFn) => `
@@ -2375,12 +2354,21 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                         ${arr.length > 40 ? `<div class="text-[11px] text-zinc-600 py-1">+ ${arr.length - 40} więcej…</div>` : ''}
                     </div>
                 </div>`;
-            const acceptTag = it => AP_ACCEPT_STEPS.has(it.d.key) ? '→ Twój akcept' : '';
+            const acceptTag = it => AP_ACCEPT_STEPS[it.d.key] || '';
             let warn = '';
             if (consent) warn = `<div class="mb-4 rounded-md border border-[#e5484d]/40 bg-[#e5484d]/10 px-3 py-2.5 text-[12px] text-[#f2787f] flex items-start gap-2"><i class="ph ph-warning-octagon flex-shrink-0 mt-0.5"></i><span>Klient nie wyraził zgody na start prac — fabryka NIE ruszy (okno odstąpienia do ${consent}). Polecenie i tak możesz skopiować: agent zaraportuje blokadę i zajmie się tym, co dozwolone.</span></div>`;
             else if (noProducts) warn = `<div class="mb-4 rounded-md border border-[#f5a623]/40 bg-[#f5a623]/10 px-3 py-2.5 text-[12px] text-[#f5b955] flex items-start gap-2"><i class="ph ph-shopping-bag-open flex-shrink-0 mt-0.5"></i><span>Portfel jest pusty — <b>wybór produktów to Twoja bramka</b>. Dobierz portfel (przycisk „Produkty"), a agent ruszy z fundamentem, landingami i całą resztą.</span></div>`;
+            // Wznowienie: kotwica = ostatnie skopiowane zlecenie; spis i polecenie ZAWSZE liczone
+            // ze świeżego stanu, więc ponowny klik = kontynuacja od miejsca przerwania.
+            let resumeInfo = '';
+            if (apLastRun) {
+                const ts = new Date(apLastRun.created_at);
+                const doneSince = steps.filter(s => s.status === 'done' && s.completed_at && new Date(s.completed_at) > ts).length;
+                const inProg = c.agent.filter(it => it.st.status === 'in_progress').length;
+                resumeInfo = `<div class="mb-4 rounded-md border border-[#0070f3]/30 bg-[#0070f3]/[.06] px-3 py-2.5 text-[12px] text-zinc-300 flex items-start gap-2"><i class="ph ph-arrow-counter-clockwise text-[#52a8ff] flex-shrink-0 mt-0.5"></i><span>Poprzednie zlecenie: <b>${ts.toLocaleString('pl-PL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}</b> — od tego czasu ukończono <b>${doneSince}</b> kroków${inProg ? `, <b class="text-[#52a8ff]">${inProg} w trakcie</b>` : ''}. Spis poniżej i kopiowane polecenie to stan OD MIEJSCA PRZERWANIA — agent wznowi, nie zacznie od zera.</span></div>`;
+            }
             const body = `
-                ${warn}
+                ${resumeInfo}${warn}
                 <p class="text-[12.5px] text-zinc-400 mb-4 leading-relaxed">Kopiujesz jedno polecenie i wklejasz je w nowej sesji Claude Code (<span class="font-mono text-zinc-500">c:\\repos_tn\\tn-crm</span>). Sesja wykona <b class="text-zinc-200">wszystko, co da się zrobić bez Ciebie i klienta</b> — we wszystkich etapach i produktach — w pętli, aż zostaną tylko decyzje ludzi. Postęp widzisz tu, w panelu, na bieżąco.</p>
                 ${section('ph-robot', '#52a8ff', 'Agent zrobi to za Ciebie', c.agent, 'Nic wykonalnego teraz — wszystko zrobione albo czeka na człowieka.', acceptTag)}
                 ${section('ph-flag', '#f5b955', 'Wymaga Twojej decyzji', c.tomek, 'Brak otwartych decyzji.')}
@@ -2395,8 +2383,9 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             const grp = (arr) => {
                 if (!arr.length) return '  (brak)';
                 const byStage = {};
-                arr.forEach(({ d, p }) => {
-                    (byStage[d.stage] = byStage[d.stage] || []).push(d.label + (p ? ` [${p.name}]` : ''));
+                arr.forEach(({ d, p, st }) => {
+                    const flag = st && st.status === 'in_progress' ? ' ⏸W TRAKCIE' : (st && st.status === 'blocked' ? ' ⛔blocked' : '');
+                    (byStage[d.stage] = byStage[d.stage] || []).push(d.label + (p ? ` [${p.name}]` : '') + flag);
                 });
                 return Object.keys(byStage).sort((a, b) => a - b)
                     .map(s => `  · Etap ${s}: ${byStage[s].join(' · ')}`).join('\n');
@@ -2423,6 +2412,14 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 ? products.map(p => p.name + (p.slug ? ` (${p.slug})` : '')).join(', ')
                 : 'PUSTY — wybór produktów to bramka Tomka; bez portfela fabryka nie startuje';
 
+            // WZNOWIENIE: poprzednie zlecenie przerwane → agent kontynuuje od częściowego stanu,
+            // z uzgodnieniem rzeczywistości (sesja mogła paść PRZED syncem panelu).
+            const inProgList = c.agent.filter(it => it.st.status === 'in_progress')
+                .map(({ d, p }) => d.label + (p ? ` [${p.name}]` : ''));
+            const resumeTxt = apLastRun
+                ? `\n\n🔁 WZNOWIENIE PO PRZERWANIU: poprzednie zlecenie autopilota skopiowano ${new Date(apLastRun.created_at).toLocaleString('pl-PL')} — to NIE jest świeży start. Kroki ⏸W TRAKCIE = praca CZĘŚCIOWO wykonana${inProgList.length ? ` (${inProgList.join(' · ')})` : ''}. Zanim cokolwiek powtórzysz: (a) przeczytaj wf2_steps.data tych kroków (checklista/nota/pola) + wf2_artifacts + stan repo (katalogi FABRYKA-*, git log) i KONTYNUUJ od pierwszej niezrobionej pozycji checklisty — niczego nie rób od zera; (b) poprzednia sesja mogła paść PRZED syncem panelu — uzgodnij stan: porównaj artefakty na dysku/Storage z checklistami i odhacz (z dowodami) to, co realnie istnieje, dopiero potem pracuj dalej; (c) sprawdź wf2_activities od tej daty — zobaczysz, co poprzednia sesja zdążyła odnotować.`
+                : '';
+
             return `AUTOPILOT WF2 — projekt ${projectId} (klient: ${project.customer_name || '—'} · marka: ${project.name || '—'}). Doprowadź projekt do 100% WYKONALNOŚCI: wykonaj wszystkie kroki, które da się zrobić BEZ udziału Tomka i klienta — we wszystkich etapach i dla wszystkich produktów — w PĘTLI DO WYCZERPANIA.
 
 URUCHOMIENIE: nowa sesja Claude Code w c:\\repos_tn\\tn-crm. Przeczytaj CLAUDE.md (sekcja „TN Sklepy — workflow v2") oraz docs/zbuduje/AUTOPILOT-WF2.md.
@@ -2442,11 +2439,11 @@ PĘTLA (powtarzaj aż lista wykonalnych = 0):
 
 Kończysz DOPIERO, gdy lista wykonalnych = 0. Wtedy wypisz TABELĘ BLOKAD: krok → czego brakuje → kto odblokowuje (Tomek / klient / cron / sekret) i zrób JEDEN PushNotification do Tomka.
 
-🏁 BRAMKI TOMKA — NIGDY nie samo-akceptuj (przygotuj materiały i zostaw status in_progress z dowodami): wybór produktów · akcept makiet (lp_makiety) · akcept banerów (ads_grafiki) · start kampanii (ads_start) · wynik testu / skalowanie / rotacja · przekazanie sterów. Kampanie Meta ZAWSZE tworzone PAUSED (start = decyzja Tomka).
+🏁 BRAMKI TOMKA — NIGDY nie samo-akceptuj (przygotuj materiały i zostaw status in_progress z dowodami): wybór produktów · akcept makiet (lp_makiety) · akcept banerów (ads_grafiki) · start kampanii (ads_start) · wynik testu / skalowanie / rotacja · przekazanie sterów. Kampanie Meta ZAWSZE tworzone PAUSED (start = decyzja Tomka). Opiekę kampanii (ads_opieka) WYKONUJESZ (higiena/komentarze/odrzucone), ale karty decyzji wf2_proposals czekają na akcept Tomka — akcept NIE wykonuje zmian w Meta.
 
 ZAKAZY TWARDE: NIE PSUJ TPAY · zero publikacji/wpłat Meta · zero maili i draftów bez zlecenia · E2E checkout tylko sandbox/[Test] · dokumenty z marżami tylko prywatne buckety · operacje na platformie tylko przez wf2-platform (nigdy surowym kluczem API) · produkt na platformie NIE MA DELETE (ensure przed POST) · brak danych = STOP z notą, nie zmyślanie. Po zmianach w edge functions: deploy --no-verify-jwt + npm run test:webhooks.
 
-TRYB AUTONOMICZNY: nie pytaj; samoakcepty operatorskie z logiem (bramek Tomka NIE); decyzja biznesowa poza spec → INSERT wf2_notes tag='decyzja' z prefiksem „DO DECYZJI TOMKA" i jedź dalej z sensownym defaultem; lekcje natychmiast do SSOT. Wgląd Tomka = panel /tn-sklepy — emituj wszystko tam na bieżąco.${consentTxt}
+TRYB AUTONOMICZNY: nie pytaj; samoakcepty operatorskie z logiem (bramek Tomka NIE); decyzja biznesowa poza spec → INSERT wf2_notes tag='decyzja' z prefiksem „DO DECYZJI TOMKA" i jedź dalej z sensownym defaultem; lekcje natychmiast do SSOT. Wgląd Tomka = panel /tn-sklepy — emituj wszystko tam na bieżąco.${consentTxt}${resumeTxt}
 
 ZRZUT STANU NA DZIŚ (mapa startu — zweryfikuj z bazą, nie traktuj jako prawdy ostatecznej):
 🤖 WYKONALNE PRZEZ AGENTA (${c.agent.length}):
@@ -2460,9 +2457,16 @@ ${snap.client}
 
         function copyAutopilotPrompt() {
             const stewardEl = document.getElementById('ap-steward');
-            const txt = buildAutopilotPrompt(stewardEl && stewardEl.checked);
+            const steward = stewardEl && stewardEl.checked;
+            const txt = buildAutopilotPrompt(steward);
+            const c = apCensus();
             navigator.clipboard.writeText(txt)
-                .then(() => showToast('Polecenie autopilota skopiowane — wklej w nowej sesji Claude Code (c:\\repos_tn\\tn-crm)', 'success'))
+                .then(() => {
+                    showToast('Polecenie autopilota skopiowane — wklej w nowej sesji Claude Code (c:\\repos_tn\\tn-crm)', 'success');
+                    // Kotwica wznowienia: następne otwarcie modala pokaże „od tego czasu" i tryb kontynuacji.
+                    logActivity('autopilot', `Zlecenie autopilota skopiowane — ${c.agent.length} kroków dla agenta${steward ? ' (tryb ciągły)' : ''}`);
+                    apLastRun = { created_at: new Date().toISOString() };
+                })
                 .catch(() => { window.prompt('Skopiuj polecenie ręcznie (Ctrl+C):', txt); });
         }
 

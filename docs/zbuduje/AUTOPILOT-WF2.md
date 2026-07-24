@@ -5,17 +5,28 @@ wykonalne kroki projektu wf2 (wszystkich produktów) aż do stanu „100% albo w
 zewnętrzne". Odpowiedź na pytanie Tomka (22.07): „jak dokładnie mam wywołać robienie wszystkich
 kroków, które można zrobić".
 
-## ⚡ PRZYCISK W PANELU (od 24.07) — „Autopilot projektu"
-Nad steplerem etapów w `tn-sklepy/projekt.html` jest karta **Autopilot projektu** z jednym
-przyciskiem **„Zleć agentowi realizację"**. Modal pokazuje żywy spis kroków w 3 koszykach
-(🤖 wykonalne przez agenta · 🏁 decyzje/bramki Tomka · 👤 po stronie klienta) policzony z
-`wf2_steps`/`wf2_step_defs`, a przycisk **„Kopiuj polecenie autopilota"** składa gotową STOPKĘ
-SPAWNU z UUID projektu, kontekstem, żywym zrzutem stanu i otwartymi uwagami — do wklejenia w
-nowej sesji Claude Code (`c:\repos_tn\tn-crm`). Opcja „tryb ciągły (steward)" dokleja pętlę
-ScheduleWakeup. Klasyfikacja NIE opiera się na `owner` (landingi/materiały mają `owner='admin'`,
-a wykonuje je agent) — prawdziwe bramki człowieka są w jawnym zbiorze `AP_TOMEK_GATES`
-(wybór produktów · lp_makiety · ads_grafiki · ads_kampanie/ads_start · wynik testu · skalowanie ·
-rotacja · opieka · przekazanie sterów). Uruchomienie sesji nadal jest ręczne (decyzja Tomka
+## ⚡ PRZYCISK W PANELU (od 24.07) — „Zleć" (ikona robota)
+W nagłówku projektu `tn-sklepy/projekt.html` (obok selecta statusu) jest mały przycisk
+**„Zleć"** z ikoną robota. Modal pokazuje żywy spis kroków w 3 koszykach (🤖 wykonalne przez
+agenta · 🏁 decyzje/bramki Tomka · 👤 po stronie klienta) policzony z `wf2_steps`/`wf2_step_defs`,
+a przycisk **„Kopiuj polecenie autopilota"** składa gotową STOPKĘ SPAWNU z UUID projektu,
+kontekstem, żywym zrzutem stanu i otwartymi uwagami — do wklejenia w nowej sesji Claude Code
+(`c:\repos_tn\tn-crm`). „Tryb ciągły (steward)" = checkbox DOMYŚLNIE WŁĄCZONY (dokleja pętlę
+ScheduleWakeup ~30 min; kończy dopiero na jawne polecenie Tomka).
+
+**WZNOWIENIE PO PRZERWANIU:** każde skopiowanie loguje `wf2_activities(action='autopilot')` —
+to kotwica. Ponowne otwarcie modala robi ŚWIEŻY odczyt `wf2_steps` z bazy (panel mógł stać
+otwarty), pokazuje „poprzednie zlecenie + ile kroków ukończono od tego czasu + co ⏸w trakcie",
+a polecenie dostaje blok „🔁 WZNOWIENIE PO PRZERWANIU": kroki in_progress = praca częściowa →
+agent czyta checklisty/artefakty/repo i kontynuuje od pierwszej niezrobionej pozycji; sesja
+padła przed syncem panelu → najpierw uzgodnienie stanu (artefakty vs checklisty), potem praca.
+Czyli: klik „Zleć" po przerwaniu = kontynuacja dokładnie od miejsca przerwania, nigdy od zera.
+
+Klasyfikacja NIE opiera się na `owner` (landingi/materiały mają `owner='admin'`, a wykonuje je
+agent) — prawdziwe bramki człowieka są w jawnym zbiorze `AP_TOMEK_GATES` (wybór produktów ·
+ads_start · wynik testu · skalowanie · rotacja · stery/wdrażanie/monthly); `AP_ACCEPT_STEPS` =
+agent produkuje, człowiek domyka (lp_makiety/ads_grafiki → akcept, ads_kampanie → start,
+ads_opieka → karty decyzji wf2_proposals). Uruchomienie sesji nadal jest ręczne (decyzja Tomka
 2026-07-11: automatyzacja = prompty, nie Routines/API) — przycisk usuwa tylko składanie promptu.
 Prawdziwie bezobsługowy „jeden klik = agent w chmurze rusza sam" wymaga toru B (edge trigger +
 routine) i jest świadomie odłożony.
