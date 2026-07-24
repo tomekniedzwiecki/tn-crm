@@ -52,3 +52,20 @@ HEAD_M = (
  'High-fidelity MOBILE landing page SECTION mockup on a 2:3 portrait board (~390px design), a '
  'real phone-width webpage fragment designed FOR mobile (not a squeezed desktop), Figma-style, '
  'pixel-perfect, Polish e-commerce. ')
+
+# Blok wykluczen — idzie na koniec (przed DNA). Twarde zakazy z KARTA-PRAWDY/PASZPORT + standardowe.
+EXCL = (
+ ' STRICT: EXACTLY ONE SECTION AND NOTHING ELSE. Flat edge-to-edge section screenshot, no browser '
+ 'chrome, no URL bar, no tabs, no device/phone frame, no outer mockup shadow. No watermark, no '
+ 'lorem ipsum, no crossed-out prices, no bestseller / "NR 1 w Polsce" badges, no free-shipping '
+ 'claims, no fake urgency, no countdown timers, no low-stock counters. THIS LANDING HAS ZERO '
+ 'REVIEWS: absolutely NO star ratings, NO review counts, NO "sold" numbers and NO customer photos '
+ 'ANYWHERE on any section. No section numbering like "01 / 11" printed on the page (in-card step '
+ 'numbers 01/02/03 inside the montaz demo are allowed). HARD CONTENT BANS: NO printed brand text '
+ 'or logo on the webbing (white-label — never "eelhoe" or any shop/producer mark), NO reflective '
+ 'strips, NO metal length-adjuster buckles (adjusters are BLACK PLASTIC; only the ring, carabiner '
+ 'and seat-belt tongue are metal), NO belt padding / cover / sleeve / case, NO retractable-leash '
+ 'mechanism, NO harness or collar sold in the set (dogs wear their OWN), EXACTLY ONE flower charm, '
+ 'no invented dimensions or weights beyond "41-71 cm", "40-55 cm" and "360°". Prices only "19,90 '
+ 'zl". Light warm ivory / sandy-cream backgrounds only, absolutely NO dark sections, NO cold grey '
+ 'automotive tech look. No extra text beyond the quoted Polish strings. ')
