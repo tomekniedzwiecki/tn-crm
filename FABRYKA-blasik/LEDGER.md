@@ -27,3 +27,26 @@
 - Koszty F0: **$0** (kuracja bez generacji; cropy lokalnie Pillow).
 - Model: main-loop Opus (vision osąd zamknięty wg checklisty GALERIA-ALI).
 - Odstępstwa: brak.
+
+## F2.5 — STYL-MASTER + BRANDING + TOKENS (24.07.2026)
+- **Styl-master**: 1 plansza DNA 3:2 (`gen-styl.py` + `common.py`/`genlib.py` wzorem zapinka), local HIGH
+  1536×1024. Gate PASS **iter 1/2** — motyw↔korzyść (SWIAT = człowiek ze snopem w bounded-zmierzch =
+  „światło tam gdzie patrzysz"), jasno #F2F1EC, KOMPLET DNA (paleta 6 ról · Gabarito 800 ↔ Karla · radius 12 ·
+  4 ikony outline · trust-pille · sygnatura ((·)) ×2 · big numbers), CTA żółć + CIEMNY ink #1B1406, produkt
+  WIERNY (czarny korpus + żółto-limonkowa COB + XPE spot + moduł 1-stronny + czerwona dioda). Zero fake-danych.
+- **Branding**: brand-forge (idempotentna rezerwacja — Blasik 26874369 już istniała). 6 faviconów / **3 różne
+  metafory** (łuk-promieni-nad-czołem / klin-snopu-w-mroku / iskra-włącznika). Werdykt **RUBRYKĄ 6×T/N** na top-2
+  z różnych konceptów → **top-1 m1-0** (snop światła cięty w żółtym kole + kropka-źródło): **6×T PASS**
+  (32:T·16:T·metafora:T·flat:T·zero-liter:T·mono:T). Najsłabsza: abstrakcyjna metafora (może czytać się jako
+  wskaźnik/gauge) — ratuje kontekst marki + czytelność na obu tłach. **Rekoloracja znaku: NIE** (żółć #D9BE00
+  czytelna @16/32 na jasnym I ciemnym w brand-context — precedens Zapinka niepotrzebny).
+- **Korekta mono**: `favicon-mono.png` wyszedł near-white, bo `ink=paleta[2]=#F2F1EC` (kolejność palety narzucona
+  w zleceniu) — przekolorowany do **#1B1406** i re-upload; sylwetka teraz czytelna. Wordmark z fontu Gabarito-Bold
+  (NIE gpt-image), lockup favicon+wordmark (jasny/ciemny).
+- **TOKENS-MAKIETY.md**: KANON 1:1 + PARTYTURA z uzasadnieniami (Gabarito/Karla · #D9BE00 · ((·)) · bounded-mrok ·
+  archetyp D) + `:root` css (--cta-ink #1B1406, --radius-lg 12, --gal-aspect 3/2). `common.py` DNA = SSOT makiet F2.
+- **Panel**: krok `lp_styl_marka` **done** (8/8 checklist); artefakty styl_master + branding(lockup) +
+  branding(brand-context, meta werdyktu) + doc TOKENS; styl-master → `bud-assets/blasik/brand/00-styl-master.webp`.
+- **Koszty F2.5**: wf2_costs stage 2, kind openai-image — **$0,25** (styl-master) + **$1,50** (6 faviconów;
+  wordmark z fontu = $0).
+- Model: main-loop Opus. Odstępstwa: mono-fix (kolejność palety); rekoloracja znaku niepotrzebna.
