@@ -458,7 +458,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: p } = await sb
     .from("wf2_projects")
-    .select("id, name, customer_name, customer_email, customer_company, customer_nip, status, links, target_orders, domain, deadline_at, platform_account_email, platform_shop_id, platform_merchant_email, created_at, unique_token, client_password_hash, work_consent_at, work_consent_source")
+    .select("id, name, customer_name, customer_email, customer_company, customer_nip, status, links, target_orders, domain, deadline_at, platform_account_email, platform_shop_id, platform_merchant_email, created_at, unique_token, client_password_hash, work_consent_at, work_consent_source, is_old")
     .eq("unique_token", token)
     .maybeSingle();
   if (!p) { await sleep(300); return json({ error: "unauthorized" }, 401); }
@@ -1048,13 +1048,35 @@ Deno.serve(async (req: Request) => {
     }
     (p as Record<string, unknown>).work_consent_at = nowIso;
   }
+
+  // KLIENT OLD (przeniesiony z TN Workflow 1, decyzja Tomka 24.07): realizacja zlecenia
+  // uzgodniona w ramach wcześniejszej współpracy — bramki 14-dniowej NIE pokazujemy.
+  // Auto-akcept realizacji (grandfathering), atomowo, tylko gdy work_consent_at NULL.
+  const isOld = (p as Record<string, unknown>).is_old === true;
+  if (isOld && !p.work_consent_at && !p.work_consent_source) {
+    const nowIso = new Date().toISOString();
+    const { data: marked } = await sb.from("wf2_projects").update({
+      work_consent_at: nowIso,
+      work_consent_source: "old-workflow1",
+      work_consent_version: "old-workflow1",
+      work_consent_text: "Klient przeniesiony z TN Workflow 1 — realizacja zlecenia uzgodniona w ramach wcześniejszej współpracy; bramka 14-dniowego terminu odstąpienia pominięta (decyzja Tomka, 24.07.2026).",
+    }).eq("id", p.id).is("work_consent_at", null).select("id");
+    if (Array.isArray(marked) && marked.length > 0) {
+      await sb.from("wf2_activities").insert({
+        project_id: p.id, actor: "auto", action: "work_consent",
+        description: "Klient OLD (Workflow 1) — bramka zgody konsumenckiej pominięta, realizacja zlecenia zaakceptowana od razu (old-workflow1).",
+      });
+    }
+    (p as Record<string, unknown>).work_consent_at = nowIso;
+  }
+
   let workStartAfter: string | null = null;
   if (p.created_at) {
     const t = new Date(p.created_at).getTime();
     if (Number.isFinite(t)) workStartAfter = new Date(t + 15 * 24 * 3600 * 1000).toISOString();
   }
   const windowOpen = !!workStartAfter && Date.now() < new Date(workStartAfter).getTime();
-  const needs_work_consent = !readonly && !p.work_consent_at && windowOpen && !isB2B;
+  const needs_work_consent = !readonly && !p.work_consent_at && windowOpen && !isB2B && !isOld;
 
   return json({
     mode: readonly ? "preview" : "client",

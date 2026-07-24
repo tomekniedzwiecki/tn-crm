@@ -46,6 +46,8 @@ const OVERRIDES = {
 const die = (m) => { console.error(`[wf2-old] BŁĄD: ${m}`); process.exit(1); };
 const log = (m) => console.log(`[wf2-old] ${m}`);
 const qlit = (v) => (v === null || v === undefined) ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`;
+// OLD = auto-akcept realizacji (klient z Workflow 1, bramka 14 dni pominięta — decyzja Tomka).
+const CONSENT_TEXT = 'Klient przeniesiony z TN Workflow 1 — realizacja zlecenia uzgodniona w ramach wcześniejszej współpracy; bramka 14-dniowego terminu odstąpienia pominięta (decyzja Tomka, 24.07.2026).';
 
 // ── token Management API (Credential Manager blob UTF-8) ────────────────────
 function readTokenFromCredMan() {
@@ -154,7 +156,11 @@ const localPart = (email) => (email.split('@')[0] || email).trim();
   console.log('\n=== ZAPIS ===');
   // 1) oznacz istniejące
   for (const m of plan.mark) {
-    await sql(`UPDATE public.wf2_projects SET is_old = true, updated_at = now()
+    await sql(`UPDATE public.wf2_projects SET is_old = true, updated_at = now(),
+                 work_consent_at      = COALESCE(work_consent_at, now()),
+                 work_consent_source  = COALESCE(work_consent_source, 'old-workflow1'),
+                 work_consent_version = COALESCE(work_consent_version, 'old-workflow1'),
+                 work_consent_text    = COALESCE(work_consent_text, ${qlit(CONSENT_TEXT)})
                 WHERE id IN (${m.ids.map(qlit).join(', ')});`);
     for (const id of m.ids) {
       await sql(`INSERT INTO public.wf2_activities (project_id, actor, action, description)
@@ -165,8 +171,11 @@ const localPart = (email) => (email.split('@')[0] || email).trim();
   // 2) utwórz brakujące
   for (const c of plan.create) {
     const ins = await sql(`
-      INSERT INTO public.wf2_projects (customer_name, customer_email, customer_phone, is_old, notes)
-      VALUES (${qlit(c.name)}, ${qlit(c.email)}, ${qlit(c.phone)}, true, ${qlit(c.note)})
+      INSERT INTO public.wf2_projects
+        (customer_name, customer_email, customer_phone, is_old, notes,
+         work_consent_at, work_consent_source, work_consent_version, work_consent_text)
+      VALUES (${qlit(c.name)}, ${qlit(c.email)}, ${qlit(c.phone)}, true, ${qlit(c.note)},
+         now(), 'old-workflow1', 'old-workflow1', ${qlit(CONSENT_TEXT)})
       RETURNING id;`);
     const id = ins[0]?.id;
     if (!id) die(`INSERT nie zwrócił id dla ${c.email}`);

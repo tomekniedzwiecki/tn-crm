@@ -69,7 +69,6 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 flex-shrink-0 self-start flex-wrap justify-end">
-                                    <span id="p-old-badge" class="hidden"></span>
                                     <span id="p-lc-badge" class="hidden"></span>
                                     <select id="p-status" onchange="saveStatus()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none"></select>
                                 </div>
@@ -656,7 +655,7 @@
             const isDemo = project.is_test === true || /demo/i.test(((project.name || '') + ' ' + (project.customer_name || '')));
             const startAfter = project.created_at ? new Date(new Date(project.created_at).getTime() + 15 * 24 * 3600 * 1000) : null;
             const windowOpen = startAfter && !isNaN(startAfter) && Date.now() < startAfter.getTime();
-            if (project.work_consent_at || isDemo || !windowOpen) { el.className = 'hidden'; el.innerHTML = ''; return; }
+            if (project.work_consent_at || isDemo || project.is_old || !windowOpen) { el.className = 'hidden'; el.innerHTML = ''; return; }
             const startTxt = startAfter.toLocaleDateString('pl-PL');
             el.className = 'mb-4 rounded-lg border border-[#e5484d]/40 bg-[#e5484d]/10 px-4 py-3 flex items-center gap-2.5 text-[#f2787f] text-sm';
             el.innerHTML = `<i class="ph ph-warning-octagon text-lg flex-shrink-0"></i><span>⛔ Klient nie wyraził zgody na rozpoczęcie prac — fabryka NIE startuje (okno odstąpienia biegnie do ${startTxt}).</span>`;
@@ -700,17 +699,9 @@
                     lcEl.innerHTML = `<i class="ph ${m.icon}"></i>${m.label}`;
                 }
             }
-            // znacznik OLD — klient przeniesiony z TN Workflow 1 (obsługa w innym tempie)
-            const oldEl = document.getElementById('p-old-badge');
-            if (oldEl) {
-                if (project.is_old) {
-                    oldEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap';
-                    oldEl.style.cssText = 'color:#c2b8a3;border:1px solid #3a352c;background:#16130d';
-                    oldEl.title = 'Klient przeniesiony z TN Workflow 1 — obsługa w innym tempie niż nowi';
-                    oldEl.innerHTML = '<i class="ph ph-clock-counter-clockwise"></i>OLD · Workflow 1';
-                } else { oldEl.className = 'hidden'; oldEl.innerHTML = ''; }
-            }
             const meta = [];
+            // znacznik OLD — klient z Workflow 1: cichy chip prowadzący linię meta (obsługa w innym tempie)
+            if (project.is_old) meta.push(`<span class="flex items-center gap-1" style="color:#c9b483" title="Klient przeniesiony z TN Workflow 1 — obsługa w innym tempie niż nowi"><i class="ph ph-clock-counter-clockwise"></i>Workflow 1 · OLD</span>`);
             if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
             if (project.customer_phone) {
                 const waNum = project.customer_phone.replace(/\D/g, '').replace(/^00/, '');
@@ -3002,7 +2993,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 const startTxt = (startAfter && !isNaN(startAfter)) ? startAfter.toLocaleDateString('pl-PL') : '—';
                 if (project.work_consent_at) {
                     const d = new Date(project.work_consent_at);
-                    const srcLabel = src === 'checkout' ? 'kasa' : src === 'pre-regulamin' ? 'grandfathering' : src === 'portal' ? 'portal' : (src || '');
+                    const srcLabel = src === 'checkout' ? 'kasa' : src === 'pre-regulamin' ? 'grandfathering' : src === 'portal' ? 'portal' : src === 'b2b-nip' ? 'zakup na firmę' : src === 'old-workflow1' ? 'Workflow 1 (OLD)' : (src || '');
                     lines.push(`<div class="text-[#62c073]"><i class="ph ph-check-circle"></i> Zgoda na start prac: ${isNaN(d) ? '' : d.toLocaleString('pl-PL')}${srcLabel ? ' · ' + srcLabel : ''}</div>`);
                 } else if (windowOpen) {
                     lines.push(`<div class="text-[#e5484d]"><i class="ph ph-warning-octagon"></i> Zgoda na start prac: BRAK — okno odstąpienia biegnie do ${startTxt}, prace WSTRZYMANE</div>`);
@@ -3094,9 +3085,19 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 pixel_id: document.getElementById('set-pixel').value.trim() || null,
                 is_old: document.getElementById('set-old').checked === true,
             };
+            // Oznaczenie OLD = auto-akcept realizacji (klient z Workflow 1 nie przechodzi bramki
+            // 14 dni). Ustaw zgodę tylko gdy jej brak — nie nadpisuj wcześniejszej (portal/checkout).
+            const grantOldConsent = payload.is_old && !project.work_consent_at;
+            if (grantOldConsent) {
+                payload.work_consent_at = new Date().toISOString();
+                payload.work_consent_source = 'old-workflow1';
+                payload.work_consent_version = 'old-workflow1';
+                payload.work_consent_text = 'Klient przeniesiony z TN Workflow 1 — realizacja zlecenia uzgodniona w ramach wcześniejszej współpracy; bramka 14-dniowego terminu odstąpienia pominięta (decyzja Tomka).';
+            }
             const { error } = await supabaseClient.from('wf2_projects').update(payload).eq('id', projectId);
             if (error) { showToast('Błąd: '+error.message,'error'); return; }
             Object.assign(project, payload);
+            if (grantOldConsent) logActivity('work_consent', 'Klient OLD (Workflow 1) — realizacja zaakceptowana automatycznie, bramka 14 dni pominięta');
             if (payload.lifecycle !== prevLc) logActivity('lifecycle_changed', 'Stan projektu: ' + (LC_META[payload.lifecycle]?.label || payload.lifecycle));
             if (payload.is_old !== prevOld) logActivity(payload.is_old ? 'flag_old' : 'unflag_old', payload.is_old ? 'Oznaczono jako klient OLD (Workflow 1)' : 'Zdjęto oznaczenie OLD');
             closeSettings(); renderHeader(); renderFields(); showToast('Zapisano','success');
