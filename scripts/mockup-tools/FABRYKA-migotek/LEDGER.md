@@ -38,4 +38,25 @@ Koszty API twarde → `wf2_costs`. Claude (abonament) NIE liczony. x-upsert po k
 - Cross-landing partytura odbita od zaklipek(#0A6EBD,B,Bricolage)/ugniatek(#0B6B64,F,Space Grotesk).
 - Koszt API: $0.
 
-## Koszty API skumulowane: $0.00 (do F2.5 favicon / F2 makiety).
+## Faza: lp_styl_marka (F2.5) — DONE 2026-07-24
+- TOKENS-MAKIETY.md (PARTYTURA: bursztyn #E9A03A, Fraunces+Inter, dark-mood + pergamin dowodowo).
+- Favicon **bursztynowy płomień** na ciemnym (PIL, deterministyczny, $0 — wf2-gen gpt-image BLOKOWANY
+  brakiem WF2_GEN_SECRET; favicon zrobiony bez płatnej generacji): favicon-{512,180,32}.png + .svg.
+- Marka „Migotek" zarezerwowana (F0). brand_dir = FABRYKA-migotek/brand.
+- Koszt API: $0.
+
+## Faza: lp_makiety (F2) + lp_grafiki (F3) — DONE 2026-07-24
+- ⚠️ ODSTĘPSTWO (środowisko): standardowy tor makiet gpt-image (wf2-gen) NIEDOSTĘPNY (brak
+  WF2_GEN_SECRET w .env, 403 brak_uprawnien). Pivot na **fal nano-banana-pro/edit** (bud-fal-proxy,
+  BUD_TOOLS_SECRET działa) — silnik scen sankcjonowany (STANDARD-GRAFIKI). Zamiast osobnego renderu
+  pełnych makiet: **9 scen produkcyjnych** = jednocześnie makieta+grafika (art-direction review =
+  wizualna inspekcja _SHEET.png przez orkiestratora, KRYTYK samo-akcept z logiem).
+- **9 scen** (ref g0, produkt 1:1 wg PASZPORT): sc-hero-d/-m, sc-problem (realna świeca, bez produktu),
+  sc-kolacja, sc-sypialnia, sc-lazienka, sc-taras, sc-mid, sc-final. + realne g2 (wesele), g6 (akcesoria).
+  Distinct views = 10 (≥5 OK). Wszystkie ciepło-ciemne, spójne, wierne (biała smukła świeca + czarna
+  różdżka z bursztynowym grotem). Rehost → bud-assets/migotek/ (webp).
+- 5 zdjęć kupujących 5★ rehostowane (buy-1..5), podpisy VERBATIM.
+- MAPA-ASSETOW.md gotowa (asset→sekcja).
+- Koszt API fal: **~$1.80** (8 scen × $0.225 nano-banana-pro; sc-hero-d validation +$0.225 ≈ $2.03 total scen).
+
+## Koszty API skumulowane: ~$2.03 (fal nano-banana-pro sceny). Hero-video Kling w toku (F5).
