@@ -74,6 +74,30 @@ landing pokazuje MINI-MARKĘ produktu, nie parasol). Radar `bud_tt_products.id =
   favicon-LEWA + wordmark-PRAWA. Pliki → bud-assets/wiezyk/brand/ (11 plików) + brand-context.png (dowód).
 - **Fonty:** Newsreader + Source Sans 3 pobrane z Google Fonts (wariable → statyczne 600/700 przez fontTools).
 
+## F2 — MAKIETY (2026-07-24)
+- **KOMPLET 28 makiet** = 14 sekcji build × (desktop 1536×1024 + mobile 1024×1536), tor LOKALNY
+  gpt-image-2 HIGH (`makiety/_gen.py`+`_batch.py`+`_prompts.py`; ref=styl-DNA tekstowy + `_product-ref.png`
+  = g0 beż). Batch 26/26 OK + hero pilot 2/2. Prawdziwe dane WPROST w promptach (zero fake-specs).
+- **Obejrzane WSZYSTKIE 28 przez orkiestratora (Read PNG).** Styl-DNA spójny (krem+bursztyn, akcent
+  tylko CTA/swash/★/oś, ikony charcoal, Newsreader+Source Sans, radius 16, sygnatura pionowa oś 1–6);
+  wierność produktu 28/28 (6 poziomów, condo 2 łuki, hamak, kosz, perch, sizal — ZERO surowego drewna/
+  kół/kuwety/marki/miksu kolorów); archetyp D hero z nośnikiem ruchu; anty-szew zig-zag (pazury-L/azyl-R/
+  ruch-L); TOR-I stany (anatomia hotspoty, kolory 3 warianty); mobile OD ZERA (pionowe stosy z łącznikiem,
+  H1 duże, karta oferty nachodząca). CTA zaprojektowane: hero/mid-cta/final/zamow.
+- **KRYTYK MAKIET (subagent Opus, art-director+CRO) = PASS** (11/11 rubryki T; ZERO regeneracji obrazu).
+  Final wieczorny = premium ciepły dark-fallback, nie scam.
+- **⚠️ CARRY-FORWARD DO F4 (copy 1:1 z Karty, NIE regen makiety):**
+  1. **[TWARDE przed akceptem]** eyebrow `04-pazury`/`-m` „MEBLE CAŁE" → złagodzić (obietnica rezultatu);
+     np. „STREFA DRAPANIA" / „SIZAL ZAMIAST KANAPY".
+  2. Diakrytyki PL: „Wlasne→Własne", „wieze→wieżę", „Bezowy→Beżowy", „wiorowa→wiórowa", „place→płacę".
+  3. Złagodzić „nie chwieje się (przy skoku)" (07) i „pewność każdego skoku" (06-m) — rzeczowo.
+  4. `01-hero-m`: sticky mobile CTA / podnieść kartę ceny nad fold (@390×844); dedup „za pobraniem".
+  5. `06-ruch-m`: oś poziomów rysowana od nowa 1–6 (artefakt numeracji na makiecie).
+- **BRAMKA TOMKA:** `lp_makiety` = `in_progress` (NIE done) — makiety czekają na akcept Tomka; F3+ nie ruszam.
+
 ## Koszty API (twarde)
 - F1 plan: gpt-5.6-sol Responses — input 11 995 tok, output 12 000 tok (usage log) → ~$0,13 (wf2_costs).
 - F2.5 obrazy: styl-master gpt-image HIGH (~$0,19) + 6 faviconów medium (~$0,30) → ~$0,49 (wf2_costs).
+- F2 makiety: 28 × gpt-image-2 HIGH (~$0,17/obraz szac.) → ~$4,76 (wf2_costs). ⚠️ Powyżej orientacyjnego
+  budżetu Z3 ($1,7–2,0) — bo mandat KOMPLETU desktop+mobile (28) w jakości HIGH; nota sanity, nie decyzja.
+- RAZEM twarde API F0→F2 ≈ **$5,38**.
