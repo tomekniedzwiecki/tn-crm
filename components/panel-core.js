@@ -51,6 +51,10 @@
     { id: 'lead',     name: 'Lead (e-mail)',   icon: 'ph-user-plus',     color: 'text-sky-400',     dot: 'bg-sky-500' },
     { id: 'project',  name: 'Projekt',         icon: 'ph-images',        color: 'text-violet-400',  dot: 'bg-violet-500' },
     { id: 'green',    name: 'Zielony werdykt', icon: 'ph-check-circle',  color: 'text-emerald-400', dot: 'bg-emerald-500' },
+    // Zakwalifikowany = wniosek o współpracę przyjęty (instant-accept), ale bez rezerwacji.
+    // Pole wniosek_status jest tylko w /tn-aplikacje → w /tn-sklep etap zostaje pusty
+    // (optional:true → renderPipeline ukrywa kolumnę, gdy 0 kart). Segment „widoczny wyciek".
+    { id: 'wniosek',  name: 'Zakwalifikowany', icon: 'ph-handshake',     color: 'text-cyan-400',    dot: 'bg-cyan-400', optional: true },
     { id: 'paid',     name: 'Rezerwacja',      icon: 'ph-currency-circle-dollar', color: 'text-amber-400', dot: 'bg-amber-400' },
     // Etapy PO rezerwacji — wyliczane z pól sesji (full_paid_at / knowhow_closed_at).
     // Addytywne: dla paneli/sesji, które tych pól nie mają, derivedStageOf ich nie
@@ -69,6 +73,9 @@
     if (s.knowhow_closed_at) return 'knowhow_closed';
     if (s.full_paid_at) return 'full_paid';
     if (s.paid_at) return 'paid';
+    // Wniosek przyjęty/oczekujący, brak rezerwacji → etap „Zakwalifikowany" (aplikacja).
+    // Dla sklepu wniosek_status = undefined → warunek fałszywy, bez wpływu.
+    if (s.wniosek_status === 'accepted' || s.wniosek_status === 'pending') return 'wniosek';
     if (s.verdict === 'zielony') return 'green';
     if (s.preview_images && Object.keys(s.preview_images).length) return 'project';
     if (s.email) return 'lead';

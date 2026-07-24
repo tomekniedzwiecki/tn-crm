@@ -247,6 +247,16 @@
 
   <!-- ════════ KOMUNIKACJA (sekwencja odkrywania + wszystkie maile) ════════ -->
   <section id="view-komunikacja" class="hidden p-4 md:p-6 space-y-5">
+
+    <!-- DO DZIAŁANIA TERAZ — leady po kwalifikacji, które nie zarezerwowały (główny wyciek) -->
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <div class="flex items-center justify-between gap-4 mb-1">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-target mr-1.5 text-cyan-400"></i>Do działania teraz</h3>
+        <span class="text-[11px] text-zinc-500">zakwalifikowani, którzy nie zarezerwowali · followup leci sam, ale gorących warto pociągnąć ręcznie (WhatsApp / mail)</span>
+      </div>
+      <div class="grid md:grid-cols-2 gap-3 mt-3" id="akcja-cols"></div>
+    </div>
+
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
       <div class="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -419,6 +429,29 @@
             <tbody id="mail-rows"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- SKUTECZNOŚĆ WG RODZAJU — który mail koreluje z rezerwacją / wnioskiem -->
+    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+      <div class="flex items-center justify-between px-4 pt-4">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-chart-bar mr-1.5 text-emerald-400"></i>Skuteczność wg rodzaju maila</h3>
+        <span class="text-[11px] text-zinc-500">z ilu leadów PO tym mailu nastąpił wniosek / rezerwacja · sygnał korelacyjny (nie przyczynowy)</span>
+      </div>
+      <div class="px-4 pb-2 pt-1 text-[11px] text-zinc-600">Maile wysyłane do wszystkich (np. 1. odsłona) naturalnie „zbierają" więcej konwersji — patrz na <strong>%</strong>, nie na liczby bezwzględne.</div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+              <th class="px-4 py-3">Rodzaj</th>
+              <th class="px-4 py-3 text-right">Wysłano do</th>
+              <th class="px-4 py-3 text-right">Wniosek po</th>
+              <th class="px-4 py-3 text-right">Rezerwacja po</th>
+              <th class="px-4 py-3 text-right">Pełna wpłata po</th>
+            </tr>
+          </thead>
+          <tbody id="kind-eff-rows"></tbody>
+        </table>
       </div>
     </div>
 
@@ -647,7 +680,7 @@ function visibleSessions() {
 // Config źródła danych lejka APLIKACJA (różnice spar_*/bud_* → PanelCore.loadSessions).
 const LOAD_CFG = {
   table: 'spar_sessions',
-  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, inspiracje_consent_at, inspiracje_consent_version, inspiracje_consent_revoked_at, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, gen_error_count, wniosek_at, wniosek_status, wniosek_auto, wniosek_decided_at, raport_meta:market_report->_meta',
+  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, inspiracje_consent_at, inspiracje_consent_version, inspiracje_consent_revoked_at, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, gen_error_count, wniosek_at, wniosek_status, wniosek_auto, wniosek_decided_at, paywall_opened_at, paywall_abandoned_at, raport_meta:market_report->_meta',
   rpcCosts: 'spar_session_costs', rpcAvatars: 'spar_session_avatars', emailsTable: 'spar_emails',
 };
 async function loadAll() {
@@ -676,7 +709,8 @@ async function loadAll() {
 function renderPipeline() {
   const vis = leadList();
   $('sesje-count').textContent = `${vis.length} ${plural(vis.length, 'lead', 'leady', 'leadów')}`;
-  $('pipeline-cols').innerHTML = STAGES.map((st) => {
+  // Etapy „optional" (np. Zakwalifikowany) pokazujemy tylko gdy mają karty — inaczej pusta kolumna.
+  $('pipeline-cols').innerHTML = STAGES.filter((st) => !st.optional || vis.some((s) => stageOf(s) === st.id)).map((st) => {
     const items = vis.filter((s) => stageOf(s) === st.id);
     const cards = items.slice(0, 60).map((s) => {
       const manual = s.pipeline_override && STAGE_IDS.includes(s.pipeline_override);
@@ -2396,10 +2430,107 @@ function renderLeady() {
 
 // ── KOMUNIKACJA (sekwencja + maile + szablony) ──
 function renderKomunikacja() {
+  renderAkcjaInbox();
   renderSekwencja();
   renderReengStats();
   renderMaile();
+  renderKindEff();
   loadSzablony();
+}
+
+// ── DO DZIAŁANIA TERAZ (inbox akcji) ──
+// Dwa segmenty najwyższego priorytetu, na których stoi wyciek:
+//  1) Zakwalifikowani bez rezerwacji — wniosek przyjęty (instant-accept), brak paid_at.
+//  2) Porzucili paywall — otworzyli kartę rezerwacji, nie zapłacili.
+// Followup leci do nich automatycznie (wniosek_reminder/last, paywall_rescue),
+// ale najgorętszych Tomek może pociągnąć ręcznie (WhatsApp / mail). Klik = karta leada.
+function akcjaRow(s, right, rightTone) {
+  const days = (ts) => { const d = ts ? Math.floor((Date.now() - Date.parse(ts)) / 864e5) : null; return d == null ? '' : (d === 0 ? 'dziś' : d + ' dni'); };
+  return `<button onclick="openSession('${s.id}')" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white/5 transition text-left">
+    ${avatarThumb(s, 28)}
+    <span class="min-w-0 flex-1">
+      <span class="block text-sm text-white truncate">${accentDot(s)}${esc(projName(s))}</span>
+      <span class="block text-[11px] text-zinc-500 truncate">${esc(s.email || s.phone || 'bez kontaktu')}</span>
+    </span>
+    <span class="shrink-0 text-right flex items-center gap-2">${sourceMini(s)}<span class="text-[11px] ${rightTone || 'text-zinc-500'}">${right}</span></span>
+  </button>`;
+}
+function akcjaCol(title, icon, titleCls, hint, items, empty) {
+  const head = `<div class="flex items-center justify-between mb-1">
+    <span class="inline-flex items-center gap-1.5 text-xs font-medium ${titleCls}"><i class="ph ${icon}"></i>${title}</span>
+    <span class="text-[11px] text-zinc-600">${items.length}</span></div>
+    <div class="text-[10px] text-zinc-600 mb-2">${hint}</div>`;
+  const body = items.length ? items.slice(0, 8).map((it) => akcjaRow(it.s, it.right, it.tone)).join('')
+    + (items.length > 8 ? `<div class="text-[11px] text-zinc-600 px-2.5 pt-1">+ ${items.length - 8} więcej — pełna lista w zakładce Leady</div>` : '')
+    : `<div class="text-xs text-zinc-600 px-2.5 py-3">${empty}</div>`;
+  return `<div class="bg-zinc-900/40 border border-white/5 rounded-xl p-3.5">${head}${body}</div>`;
+}
+function renderAkcjaInbox() {
+  const box = $('akcja-cols'); if (!box) return;
+  const vis = sessions.filter((s) => !s.is_test);
+  const dni = (ts) => { const d = ts ? Math.floor((Date.now() - Date.parse(ts)) / 864e5) : null; return d == null ? '—' : (d === 0 ? 'dziś' : (d === 1 ? 'wczoraj' : d + ' dni temu')); };
+  // 1) zakwalifikowani (wniosek accepted/pending), brak rezerwacji
+  const zak = vis.filter((s) => (s.wniosek_status === 'accepted' || s.wniosek_status === 'pending') && !s.paid_at)
+    .map((s) => ({ s, t: Date.parse(s.wniosek_at || s.updated_at || s.created_at) }))
+    .sort((a, b) => b.t - a.t)
+    .map((it) => ({ s: it.s, right: 'czeka ' + dni(it.s.wniosek_at || it.s.updated_at || it.s.created_at), tone: 'text-cyan-400' }));
+  // 2) porzucili paywall — otworzyli kartę, brak wpłaty
+  const pw = vis.filter((s) => s.paywall_opened_at && !s.paid_at)
+    .map((s) => ({ s, t: Date.parse(s.paywall_opened_at) }))
+    .sort((a, b) => b.t - a.t)
+    .map((it) => ({ s: it.s, right: 'otworzył ' + dni(it.s.paywall_opened_at), tone: 'text-amber-400' }));
+  box.innerHTML =
+    akcjaCol('Zakwalifikowani — bez rezerwacji', 'ph-handshake', 'text-cyan-400', 'Wniosek przyjęty, jeszcze nie zarezerwowali. Followup leci automatycznie.', zak, 'Nikt nie czeka — świetnie.')
+    + akcjaCol('Porzucili paywall', 'ph-door-open', 'text-amber-400', 'Otworzyli kartę rezerwacji i nie zapłacili — najgorętszy moment na ręczny kontakt.', pw, 'Nikt nie porzucił karty.');
+}
+
+// ── SKUTECZNOŚĆ WG RODZAJU (per-kind) ──
+// RPC spar_followup_effectiveness: z ilu leadów, którzy dostali dany rodzaj,
+// PÓŹNIEJ (po dacie 1. takiego maila) nastąpił wniosek / rezerwacja / pełna wpłata.
+// Sygnał KORELACYJNY: maile do wszystkich (np. reveal_rynek) zbierają więcej — patrz %.
+function effKindLabel(kind) {
+  if (isRevealKind(kind)) { const m = revMeta(kind); return { label: 'Odsłona: ' + m.label, icon: m.icon, tone: m.tone }; }
+  const EXTRA = {
+    abandoned_chat:   { label: 'Porzucona rozmowa #1', icon: 'ph-chat-teardrop-slash', tone: 'text-amber-400' },
+    abandoned_chat_2: { label: 'Porzucona rozmowa #2', icon: 'ph-chat-teardrop-slash', tone: 'text-amber-400' },
+    abandoned_chat_3: { label: 'Porzucona rozmowa #3', icon: 'ph-chat-teardrop-slash', tone: 'text-amber-400' },
+    nurture_1: { label: 'Nurture #1', icon: 'ph-seedling', tone: 'text-emerald-400' },
+    nurture_2: { label: 'Nurture #2', icon: 'ph-seedling', tone: 'text-emerald-400' },
+    nurture_3: { label: 'Nurture #3', icon: 'ph-seedling', tone: 'text-emerald-400' },
+    nurture_4: { label: 'Nurture #4', icon: 'ph-seedling', tone: 'text-emerald-400' },
+    nurture_5: { label: 'Nurture #5', icon: 'ph-seedling', tone: 'text-emerald-400' },
+    nurture_6: { label: 'Nurture #6', icon: 'ph-seedling', tone: 'text-emerald-400' },
+    reclose_1: { label: 'Domknięcie #1', icon: 'ph-arrow-u-up-left', tone: 'text-sky-400' },
+    reclose_2: { label: 'Domknięcie #2', icon: 'ph-arrow-u-up-left', tone: 'text-sky-400' },
+    paywall_rescue:   { label: 'Ratunek paywall', icon: 'ph-lifebuoy', tone: 'text-amber-400' },
+    left_screen_back: { label: 'Powrót po wyjściu', icon: 'ph-sign-in', tone: 'text-sky-400' },
+    wniosek_reminder: { label: 'Przypomnienie wniosku', icon: 'ph-bell', tone: 'text-cyan-400' },
+    wniosek_last:     { label: 'Wniosek — ostatni', icon: 'ph-bell-ringing', tone: 'text-rose-400' },
+  };
+  if (EXTRA[kind]) return EXTRA[kind];
+  const m = mailKind(kind); return { label: m.label, icon: m.icon, tone: m.tone.split(' ')[0] };
+}
+async function renderKindEff() {
+  const box = $('kind-eff-rows'); if (!box) return;
+  box.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-zinc-500 text-sm"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Liczę skuteczność…</td></tr>';
+  let data;
+  try { const r = await supabaseClient.rpc('spar_followup_effectiveness'); if (r.error) throw r.error; data = r.data || []; }
+  catch (e) { box.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-rose-400 text-sm">Błąd: ${esc(e.message || e)}</td></tr>`; return; }
+  // Post-sprzedażowe/systemowe rodzaje pomijamy — mierzymy tylko drogę DO konwersji.
+  const HIDE = new Set(['paid_welcome', 'wniosek_accepted', 'knowhow_unlock', 'komplet_gotowy']);
+  const rows = data.filter((r) => !HIDE.has(r.kind) && Number(r.wyslano_do) > 0);
+  const pct = (n, d) => d ? Math.round((n / d) * 100) + '%' : '—';
+  const cell = (n, d, tone) => { const v = Number(n) || 0; return `<td class="px-4 py-3 text-right"><span class="${v ? tone : 'text-zinc-600'} font-medium">${v}</span>${v ? ` <span class="text-[10px] text-zinc-500">${pct(v, d)}</span>` : ''}</td>`; };
+  box.innerHTML = rows.length ? rows.map((r) => {
+    const m = effKindLabel(r.kind);
+    return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02]">
+      <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 text-sm ${m.tone}"><i class="ph ${m.icon}"></i>${esc(m.label)}</span></td>
+      <td class="px-4 py-3 text-right text-zinc-300 font-mono">${Number(r.wyslano_do) || 0}</td>
+      ${cell(r.wniosek_po, r.wyslano_do, 'text-cyan-300')}
+      ${cell(r.zarezerw_po, r.wyslano_do, 'text-emerald-300')}
+      ${cell(r.full_po, r.wyslano_do, 'text-emerald-400')}
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" class="px-4 py-8 text-center text-zinc-500 text-sm">Brak danych.</td></tr>';
 }
 
 // Skuteczność reaktywacji rozmów W TOKU: 3 maile abandoned + SMS powrotu.

@@ -711,7 +711,8 @@ async function loadAll() {
 function renderPipeline() {
   const vis = leadList();
   $('sesje-count').textContent = `${vis.length} ${plural(vis.length, 'lead', 'leady', 'leadów')}`;
-  $('pipeline-cols').innerHTML = STAGES.map((st) => {
+  // Etapy „optional" (np. Zakwalifikowany — tylko /tn-aplikacje) pokazujemy wyłącznie gdy mają karty.
+  $('pipeline-cols').innerHTML = STAGES.filter((st) => !st.optional || vis.some((s) => stageOf(s) === st.id)).map((st) => {
     const items = vis.filter((s) => stageOf(s) === st.id);
     const cards = items.slice(0, 60).map((s) => {
       const manual = s.pipeline_override && STAGE_IDS.includes(s.pipeline_override);
