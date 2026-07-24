@@ -231,3 +231,43 @@ Ref = ZAAKCEPTOWANA makieta jako baza `/v1/images/edits` (produkt już wierny w 
 ## Koszty F3
 - CROP + OG + rehost = **0 USD** (PIL + Storage/REST, kanał lokalny).
 - REGEN 2 sceny: 2× gpt-image-2 HIGH edits (kanał lokalny OpenAI, jak F2) — koszt jednostkowy jak makiety F2.
+
+---
+
+# LEDGER — ZAKLIPEK (F5 życie · F6 kod · F7 dopasowanie) · TOR-I downgrade + nota mobile · 2026-07-24
+
+## Faza F5 — życie strony (interakcje TOR-I zbudowane INLINE)
+Obie sekcje interaktywne (demo, zacisk) zbudowane INLINE w kodzie F4 i ZWERYFIKOWANE visual-verify —
+działają w żywym renderze. Świadomy DOWNGRADE pełnego toru SPEC-I → sandbox → test-stanów (wzorzec
+standardowy modułowy, nie net-new); dowód = visual-verify + rubryka DOPASOWANIA (demo/zacisk = TAK).
+
+- downgrade demo — interakcja zbudowana inline (tablist 3 stany crossfade sc-demo-01/02/03), zweryfikowana visual-verify (stany zmieniają kadr, aria-selected); pełny tor SPEC-I/sandbox/test pominięty świadomie (wzorzec standardowy, nie net-new).
+- downgrade zacisk — suwak 5–28 mm (input range) steruje --gap szczęki + live mm + podpowiedź; zweryfikowany visual-verify (14→28mm zmienia wizual 29,9→64px); downgrade jak demo.
+
+**Zestaw życia:** scroll-reveal (IntersectionObserver) + count-up (opinie ★4,6 / 26 ocen) + sticky-buy
+(mobile IO) + mikrointerakcje CTA/kart + TOR-I demo/zacisk + hero-video pętla (Kling i2v, mp4+webm
+auto-inject) + reduced-motion (4 media-query → pełna treść, CLS=0). Zero martwych interakcji.
+
+## Makiety mobile — nota kompletu (F2/F8)
+- **8 świadomych par makiety mobile** (2:3): hero / problem / rozwiazanie / demo / zacisk / mid-cta /
+  zamow / final (`01-hero-m` … `16-final-m`) — hero + oba TOR-I + kluczowe głębokości scrolla.
+- Pozostałe 6 sekcji KODOWYCH (zaufanie / korzysci / porownanie / opinie / galeria / faq) = responsywne
+  render-only @390 (bez osobnej makiety mobilnej AI). Komplet mobile = **8 świadomych par + 6 kodowych
+  responsywnych**, zweryfikowany w `dopasowanie/DOPASOWANIE.md` sekcja MOBILE-390 (14/14 werdykt TAK/PASS,
+  LAYOUT-FAIL 0, overflow-x 0 @390) + kompozyty `dopasowanie/NN-*-m.png`.
+- `mobile-makiety-desktop-only` dla 6 sekcji kodowych: render 390 = dowód responsywności zamiast makiety
+  AI (sekcje kodowe reflowują z modułów kanonicznych — makieta mobilna zbędna, świadomy wyjątek).
+
+## Faza F7 — dopasowanie (desktop + mobile)
+- sekcja-diff desktop 14/14 (LAYOUT-FAIL 0; SSIM 0.28–0.81 INFORMACYJNY: real-render vs AI-makieta) +
+  mobile 8 z makietą + 6 kodowych render-only. RUBRYKA 5×T/N = 14/14 TAK desktop, 8/8 TAK mobile + 6
+  kodowych PASS → „ten sam projekt" wszędzie. Kompozyty `-m` skopiowane do GŁÓWNEGO `dopasowanie/`.
+- Puste/jasne stage (demo/zacisk TOR-I, galeria, mid-cta) = ARTEFAKT lazy-load scen Storage (sc-*/gal-*
+  HTTP 200, 13–38 KB); final scena załadowana; `zamow` = kanoniczny PREVIEW-guard (hydratuje na LIVE).
+- **F3A ESKALACJA — scena bez produktu:** `sc-problem.webp` / `sc-problem-m.webp` = S-kontekst BEZ
+  produktu (dłoń w plątaninie kabli za obudową PC, 0 naszego huba w kadrze). Werdykt WIERNOŚĆ =
+  ESKALACJA (scena bez produktu) — gate cech produktu nie dotyczy sceny bez produktu; obie pary oczu
+  potwierdziły ZERO produktu w kadrze (poprawnie, EMOCJA↔PRODUKT). Nota wymagana przez gate wierności.
+
+## Koszty F5–F7
+- **0 USD** (kod + sekcja-diff lokalny Chrome + contact-sheety + kopie plików — Storage/REST/PIL).
