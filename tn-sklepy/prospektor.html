@@ -62,6 +62,15 @@
         .chip.on { color:#fff; border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.1); }
         .chip .c-n { font:600 10.5px/1 'JetBrains Mono',monospace; color:#6b6b74; }
         .chip.on .c-n { color:#c9c9d0; }
+        .za-fbtn { border:1px solid #232323; background:#0a0a0a; color:#8b8b94; border-radius:7px; padding:4px 11px; font-size:12px; cursor:pointer; transition:all .15s ease; }
+        .za-fbtn:hover { color:#e4e4e7; border-color:#333; }
+        .za-fbtn.za-on { color:#fff; border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.1); }
+        /* przełącznik (switch) — Sterowanie wysyłką */
+        .sw { position:relative; width:42px; height:24px; flex-shrink:0; border-radius:999px; background:#27272a; border:1px solid #333; cursor:pointer; transition:all .18s ease; }
+        .sw::after { content:''; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#a1a1aa; transition:all .18s ease; }
+        .sw.on { background:rgba(69,165,87,.25); border-color:rgba(69,165,87,.6); }
+        .sw.on::after { left:20px; background:#62c073; }
+        .sw.busy { opacity:.5; pointer-events:none; }
 
         /* ── Tabela sprzedawców ───────────────────────────────── */
         .pv-tbl { width:100%; border-collapse:collapse; min-width:880px; }
@@ -134,6 +143,7 @@
         <div class="border-b border-white/5 bg-black/40 px-6 flex items-center overflow-x-auto flex-shrink-0">
             <button class="tab-btn active" data-tab="pipeline"  onclick="showTab('pipeline')"><i class="ph ph-funnel"></i> Pipeline</button>
             <button class="tab-btn"        data-tab="kolejka"   onclick="showTab('kolejka')"><i class="ph ph-check-square-offset"></i> Kolejka <span id="ko-tabn" class="tb-n hidden">0</span></button>
+            <button class="tab-btn"        data-tab="zadania"   onclick="showTab('zadania')"><i class="ph ph-list-checks"></i> Zadania <span id="za-tabn" class="tb-n hidden">0</span></button>
             <button class="tab-btn"        data-tab="wertykale" onclick="showTab('wertykale')"><i class="ph ph-squares-four"></i> Wertykale</button>
             <button class="tab-btn"        data-tab="skan"      onclick="showTab('skan')"><i class="ph ph-radar"></i> Skan <span id="sk-tabn" class="tb-n hidden">0</span></button>
             <button class="tab-btn"        data-tab="ustawienia" onclick="showTab('ustawienia')"><i class="ph ph-gear"></i> Ustawienia</button>
@@ -199,6 +209,25 @@
                 <div id="ko-list" class="space-y-4"></div>
             </section>
 
+            <!-- ══════════ ZADANIA (kolejka handlowca) ══════════ -->
+            <section id="tab-zadania" class="tabpanel hidden p-5 lg:p-8 max-w-[920px] mx-auto animate-enter">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-white tracking-tight">Zadania handlowca</h1>
+                        <p class="text-zinc-500 text-sm mt-0.5">Osobiste kontakty do wykonania (LinkedIn / telefon), sortowane priorytetem. Maile bot wysyła sam — tu tylko to, co robi człowiek. „Odpowiedział" oddaje leada Tobie i wstrzymuje automat.</p>
+                    </div>
+                    <span id="za-counter" class="badge bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40 text-[12.5px]">0 zadań</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 mb-4 text-[12px]">
+                    <span class="text-zinc-600">Filtr:</span>
+                    <button class="za-fbtn za-on" data-f="all" onclick="setZaFilter('all')">Wszystkie</button>
+                    <button class="za-fbtn" data-f="reply_handling" onclick="setZaFilter('reply_handling')">Odpowiedzi</button>
+                    <button class="za-fbtn" data-f="linkedin" onclick="setZaFilter('linkedin')">LinkedIn</button>
+                    <button class="za-fbtn" data-f="telefon" onclick="setZaFilter('telefon')">Telefon</button>
+                </div>
+                <div id="za-list" class="space-y-3"></div>
+            </section>
+
             <!-- ══════════ WERTYKALE ══════════ -->
             <section id="tab-wertykale" class="tabpanel hidden p-5 lg:p-8 max-w-[1200px] mx-auto animate-enter">
                 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
@@ -239,18 +268,20 @@
             <!-- ══════════ USTAWIENIA ══════════ -->
             <section id="tab-ustawienia" class="tabpanel hidden p-5 lg:p-8 max-w-[1000px] mx-auto animate-enter">
                 <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Ustawienia</h1>
-                <p class="text-zinc-500 text-sm mb-6">Prompty AI, wagi scoringu, modele i opis oferty. Zapis tworzy kopię zapasową poprzedniej wartości (klucz <code>&lt;key&gt;_backup_RRRRMMDDHHMMSS</code>).</p>
+                <p class="text-zinc-500 text-sm mb-6">Sterowanie wysyłką, prompty AI, wagi scoringu, kadencja i szablony. Zapis tworzy kopię zapasową poprzedniej wartości (klucz <code>&lt;key&gt;_backup_RRRRMMDDHHMMSS</code>).</p>
+                <div id="set-controls" class="mb-8"></div>
+                <h2 class="text-sm font-semibold text-zinc-400 uppercase tracking-wide mb-3 mt-2">Prompty · scoring · kadencja</h2>
                 <div id="set-wrap" class="space-y-5"></div>
 
                 <div class="card p-5 mt-8">
-                    <div class="dw-sec-h"><i class="ph ph-scales"></i> Zasady (human-in-the-loop + RODO)</div>
+                    <div class="dw-sec-h"><i class="ph ph-scales"></i> Zasady (kadencja + RODO)</div>
                     <ul class="text-[13px] text-zinc-400 space-y-2 leading-relaxed list-none">
-                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> System NIGDY nie wysyła sam. Handlowiec realizuje kontakt ręcznie (LinkedIn DM / telefon / mail imienny).</li>
-                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Pierwszy kontakt bez cen i bez linków — serwer wycina URL-e ze wszystkich pól wiadomości.</li>
-                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Dane firmowe sprzedawcy B2B są jawne (obowiązek informacyjny). Stopka RODO art. 14 doklejana serwerowo dopiero przy realnej wysyłce.</li>
-                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Opt-out (STOP) nieodwracalny — rekord nie wraca do pipeline'u.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Maile (mail #1 + follow-upy) wysyła bot z maciej@ — za dwoma switchami. Osobiste kanały (LinkedIn, telefon) robi handlowiec z zakładki Zadania.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Gdy sprzedawca odpowie („Odpowiedział") — automat się wstrzymuje, lead przechodzi do handlowca (status „Odpowiedział").</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Maile bez cen i linków (serwer wycina URL-e). Stopka RODO art. 14 doklejana serwerowo; bez uzupełnionych danych nadawcy wysyłka jest zablokowana.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Opt-out / STOP nieodwracalny — trafia na suppression, rekord nie wraca do pipeline'u, otwarte zadania anulowane.</li>
                         <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Reseller cudzej marki → filar „brandowalność" ma twardy sufit (nie zbudujemy jego marki).</li>
-                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Jakość &gt; ilość — jeden handlowiec, minimalne wolumeny, dzienny limit generacji AI chroni wspólną quotę.</li>
+                        <li class="flex gap-2.5"><i class="ph ph-check-circle text-[#62c073] mt-0.5"></i> Jakość &gt; ilość — jeden handlowiec, limit ${'25'}/dobę na maile, dzienny limit generacji AI chroni wspólną quotę.</li>
                     </ul>
                 </div>
             </section>
@@ -302,14 +333,16 @@
             nowy:         { label:'Nowy',          cls:'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',   dot:'#a1a1aa' },
             research:     { label:'Zbadany',       cls:'bg-sky-500/10 text-sky-300 border-sky-500/30',       dot:'#38bdf8' },
             oceniony:     { label:'Oceniony',      cls:'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40', dot:'#0070f3' },
-            zaakceptowany:{ label:'Zaakceptowany', cls:'bg-teal-500/10 text-teal-300 border-teal-500/30',    dot:'#2dd4bf' },
+            zaakceptowany:{ label:'W kadencji',    cls:'bg-teal-500/10 text-teal-300 border-teal-500/30',    dot:'#2dd4bf' },
             kontakt:      { label:'Kontakt',       cls:'bg-[#0891b2]/10 text-[#3fc5e0] border-[#0891b2]/40', dot:'#0891b2' },
+            odpowiedzial: { label:'Odpowiedział',  cls:'bg-[#f5a623]/12 text-[#f5b955] border-[#f5a623]/45', dot:'#f5a623' },
             rozmowa:      { label:'Rozmowa',       cls:'bg-orange-500/10 text-orange-300 border-orange-500/30', dot:'#fb923c' },
             deal:         { label:'Deal',          cls:'bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40', dot:'#45a557' },
+            nurture:      { label:'Nurture',       cls:'bg-zinc-500/12 text-zinc-400 border-zinc-500/30',    dot:'#8a8a94' },
             odpadl:       { label:'Odpadł',        cls:'bg-zinc-600/15 text-zinc-500 border-zinc-600/30',    dot:'#52525b' },
             opt_out:      { label:'Opt-out',       cls:'bg-[#e5484d]/10 text-[#f26d78] border-[#e5484d]/40', dot:'#e5484d' },
         };
-        const RANK = { nowy:0, research:1, oceniony:2, zaakceptowany:3, kontakt:4, rozmowa:5, deal:6 };
+        const RANK = { nowy:0, research:1, oceniony:2, zaakceptowany:3, kontakt:4, odpowiedzial:5, rozmowa:6, deal:7 };
         // Segment (task: A zielony / B niebieski / C żółty / D szary — świadome odstępstwo od „zieleń tylko done" dla badge segmentu).
         const SEGMENT_META = {
             A: { label:'A', cls:'bg-[#45a557]/15 text-[#62c073] border-[#45a557]/50', dot:'#45a557', desc:'kontakt teraz (kanał osobisty)' },
@@ -343,9 +376,13 @@
             brak_researchu: 'Najpierw zbadaj sprzedawcę („Zbadaj") — scoring i pitch czerpią z researchu.',
             brak_oceny:     'Najpierw policz score — pitch dopasowuje się do segmentu.',
             brak_pitcha:    'Najpierw wygeneruj rekomendację (pitch) — z niej bierzemy kanał i kąt.',
-            brak_kanalu:    'Przy statusie „kontakt" wybierz kanał (LinkedIn / e-mail / telefon).',
+            brak_kanalu:    'Brak dostępnego kanału (e-mail / LinkedIn / telefon) — najpierw wzbogać dane sprzedawcy.',
             klucz_niedozwolony: 'Ten klucz ustawienia nie jest dozwolony przez silnik.',
             za_krotkie:     'Treść za krótka (min. 200 znaków — zabezpieczenie przed wyczyszczeniem).',
+            brak_danych_nadawcy: 'Uzupełnij dane nadawcy (RODO art. 14) przed wysyłką — silnik blokuje maile bez tożsamości administratora.',
+            zla_wartosc:    'Nieprawidłowa wartość (dla switchy: „true" albo „false").',
+            niespojne:      'Zadanie nie należy do tego sprzedawcy.',
+            brak_taska:     'Brak identyfikatora zadania.',
         };
         const SETTING_KEYS = [
             { key:'wf2p_prompt_research', kind:'prompt', label:'Prompt — research sprzedawcy', hint:'System prompt researchera B2B (min. 200 znaków).', rows:9 },
@@ -353,7 +390,9 @@
             { key:'wf2p_prompt_message', kind:'prompt', label:'Prompt — pierwszy kontakt', hint:'System prompt copy 1. kontaktu — bez cen/linków (min. 200 znaków).', rows:8 },
             { key:'wf2p_scoring_weights', kind:'json', label:'Wagi scoringu 2-osiowego', hint:'JSON: { nagroda:{brandowalnosc,luka,skala}, dotarcie:{decydent,ambicja,bol}, progi:{reward_high,reach_high}, sufit_reseller }. Progi = kwadrant A/B/C/D.', rows:9 },
             { key:'wf2p_models', kind:'json', label:'Modele AI per krok', hint:'JSON: { research, pitch, message } — score jest deterministyczny (bez AI).', rows:5 },
-            { key:'wf2p_oferta', kind:'text', label:'Opis oferty (SSOT dla wiadomości)', hint:'Co budujemy sprzedawcy — używane w prompcie 1. kontaktu (bez cen/linków). Klucz musi być dozwolony w silniku — patrz nota niżej.', rows:8 },
+            { key:'wf2p_oferta', kind:'text', label:'Opis oferty (SSOT dla wiadomości)', hint:'Co budujemy sprzedawcy — używane w prompcie 1. kontaktu (bez cen/linków).', rows:8 },
+            { key:'wf2p_cadence', kind:'json', label:'Kadencja (sekwencja kroków)', hint:'JSON: { steps:[{mode:auto|human, channel, kind|type, delay_days, requires, label}], nurture_days }. Kroki bez dostępnego kanału (requires) są pomijane.', rows:14 },
+            { key:'wf2p_mail_templates', kind:'json', label:'Szablony follow-up (mail bota)', hint:'JSON: { second:{temat,tresc}, breakup:{temat,tresc} }. Placeholdery {{imie}} {{firma}}. Mail #1 bierze się ze spersonalizowanej wiadomości, nie stąd.', rows:12 },
         ];
 
         // ═══════════ STAN ═══════════
@@ -371,6 +410,8 @@
         let curDrawerId = null;
         let msgBuf = {};
         let batchRunning = false, batchStop = false;
+        let tasks = [];             // wf2p_tasks (otwarte) — kolejka handlowca
+        let zaFilter = 'all';
 
         // ═══════════ HELPERY ═══════════
         function escapeHtml(str){
@@ -468,6 +509,7 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
             const panel = document.getElementById('tab-'+name); if (panel) panel.classList.remove('hidden');
             if (name==='kolejka') renderKolejka();
+            if (name==='zadania') renderZadania();
             if (name==='wertykale') renderWertykale();
             if (name==='skan') renderSkan();
             if (name==='ustawienia') renderSettings();
@@ -538,7 +580,7 @@
             if (vq.error){ console.error('wf2p_verticals', vq.error); showToast('Błąd wertykali: '+vq.error.message,'error'); }
             verticals = vq.data || [];
 
-            const [sRows, uMap] = await Promise.all([ fetchAllSellers(), fetchAllUsage() ]);
+            const [sRows, uMap] = await Promise.all([ fetchAllSellers(), fetchAllUsage(), fetchTasks() ]);
             sellers = sRows; usageBySeller = uMap;
             sellers.forEach(buildIdx);
             recompute();
@@ -549,6 +591,7 @@
             renderStatusChips();
             renderList();
             updateKoTabBadge();
+            updateZaTabBadge();
             updateSkTabBadge();
             await loadKpi();
             const active = document.querySelector('.tab-btn.active');
@@ -766,6 +809,7 @@
                 s.scoring ? renderScoring(s) : '',
                 s.pitch ? renderPitch(s) : '',
                 s.message ? renderMessageSection(s) : '',
+                renderCadenceSection(s),
                 renderStatusSection(s),
                 renderDangerSection(s),
                 `<div class="dw-sec"><div class="dw-sec-h"><i class="ph ph-clock-counter-clockwise"></i> Historia</div><div id="dw-history" class="text-[12px] text-zinc-500">Ładuję…</div></div>`
@@ -1016,6 +1060,35 @@
         }
         function toggleChannelSel(v){ const w=document.getElementById('dw-channel-wrap'); if (w) w.classList.toggle('hidden', v!=='kontakt'); }
 
+        const CADSTATE_PL = { active:'aktywna', paused:'wstrzymana', finished:'zakończona', nurture:'nurture', opted_out:'opt-out' };
+        function renderCadenceSection(s){
+            if (s.opted_out || s.status==='opt_out') return '';
+            const st = s.cadence_state;
+            const enrolled = st==='active' || st==='paused';
+            const canEnroll = !enrolled && ['oceniony','zaakceptowany','kontakt','odpowiedzial'].includes(s.status);
+            if (!enrolled && !canEnroll) return '';
+            const naa = s.next_action_at ? fmtDate(s.next_action_at) : '—';
+            const rows = enrolled ? `
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] mb-3">
+                    <div><span class="text-zinc-600">Stan:</span> <span class="text-zinc-200">${esc(CADSTATE_PL[st]||st||'—')}</span></div>
+                    <div><span class="text-zinc-600">Krok:</span> <span class="text-zinc-200">${s.cadence_step??'—'}</span></div>
+                    <div><span class="text-zinc-600">Następny kanał:</span> <span class="text-zinc-200">${esc(s.next_action_channel||'—')}</span></div>
+                    <div><span class="text-zinc-600">Kiedy:</span> <span class="text-zinc-200">${esc(naa)}</span></div>
+                    <div><span class="text-zinc-600">Tryb:</span> <span class="text-zinc-200">${esc(s.owner_mode||'auto')}</span></div>
+                    <div><span class="text-zinc-600">Właściciel:</span> <span class="text-zinc-200">${esc(s.assigned_to||'—')}</span></div>
+                </div>` : `<div class="text-[12px] text-zinc-500 mb-3">Sprzedawca nie jest jeszcze w kadencji.</div>`;
+            const enrollBtn = canEnroll ? `<button onclick="koAccept('${s.id}')" class="btn btn-s btn-sm"><i class="ph ph-play"></i> Wpisz do kadencji</button>` : '';
+            const inboundBtn = (enrolled && st==='active') ? `<button onclick="drawerInbound('${s.id}')" class="btn btn-w btn-sm"><i class="ph ph-arrow-u-up-left"></i> Odpowiedział</button>` : '';
+            return `<div class="dw-sec"><div class="dw-sec-h"><i class="ph ph-path"></i> Kadencja</div>
+                ${rows}
+                <div class="flex flex-wrap gap-2">${enrollBtn}${inboundBtn}</div>
+            </div>`;
+        }
+        async function drawerInbound(id){
+            await taskInbound(id, 'email');
+            if (curDrawerId===id) openDrawer(id);
+        }
+
         function renderDangerSection(s){
             if (s.opted_out || s.status==='opt_out') return '';
             return `<div class="dw-sec" style="border-color:rgba(229,72,77,.35)">
@@ -1176,10 +1249,16 @@
             } catch(e){ showToast(e.message,'error'); }
         }
         async function koAccept(id){
+            const s = sellers.find(x => x.id===id) || {};
+            const hasMsg = s.message && typeof s.message==='object' && s.message.tresc;
+            const warn = hasMsg ? '' : ' UWAGA: brak wygenerowanej treści 1. maila — pierwszy krok mailowy trafi jako zadanie ręczne do napisania.';
+            const ok = await uiConfirm({ title:'Wpisać do kadencji?', body:'Sprzedawca wejdzie w sekwencję: mail bota → kontakt handlowca → follow-upy. Nic nie wyśle się, dopóki nie włączysz pipeline w Ustawieniach.'+warn, confirmLabel:'Tak, do kadencji' });
+            if (!ok) return;
             try {
-                await callEngine({ action:'status_change', sellerId:id, status:'zaakceptowany' });
-                await refetchSeller(id); renderKolejka(); loadKpi();
-                showToast('Zaakceptowano — do kontaktu handlowca','success');
+                await callEngine({ action:'enroll', sellerId:id, ownerMode:'auto' });
+                await Promise.all([ refetchSeller(id), fetchTasks() ]);
+                renderKolejka(); renderList(); loadKpi();
+                showToast('Wpisano do kadencji','success');
             } catch(e){ showToast(e.message,'error'); }
         }
         async function koReject(id){
@@ -1189,6 +1268,104 @@
                 await callEngine({ action:'status_change', sellerId:id, status:'odpadl' });
                 await refetchSeller(id); renderKolejka(); loadKpi();
                 showToast('Odrzucono','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+
+        // ═══════════ ZADANIA (kolejka handlowca — wf2p_tasks) ═══════════
+        async function fetchTasks(){
+            try {
+                const { data, error } = await supabaseClient.from('wf2p_tasks').select('*')
+                    .in('status', ['open','in_progress','snoozed']).order('priority',{ascending:false}).order('due_at',{ascending:true}).limit(500);
+                if (error){ console.warn('wf2p_tasks', error); tasks = []; return []; }
+                tasks = data || []; return tasks;
+            } catch(e){ console.warn('tasks', e); tasks = []; return []; }
+        }
+        function zaRows(){
+            const rows = tasks.map(t => ({ t, s: sellers.find(x => x.id===t.seller_id) })).filter(x => x.s && !x.s.is_test);
+            if (zaFilter==='all') return rows;
+            if (zaFilter==='reply_handling') return rows.filter(x => x.t.type==='reply_handling');
+            return rows.filter(x => x.t.channel===zaFilter);
+        }
+        function updateZaTabBadge(){
+            const n = tasks.length;
+            const el = document.getElementById('za-tabn'); if (!el) return;
+            el.textContent = n; el.classList.toggle('hidden', n===0);
+        }
+        function setZaFilter(f){
+            zaFilter = f;
+            document.querySelectorAll('.za-fbtn').forEach(b => b.classList.toggle('za-on', b.dataset.f===f));
+            renderZadania();
+        }
+        const TASK_TYPE_PL = { first_touch:'Pierwszy kontakt', follow_up:'Follow-up', call_back:'Telefon', reply_handling:'Odpowiedź — oddzwoń' };
+        const TASK_CH_ICON = { linkedin:'ph-linkedin-logo', telefon:'ph-phone-call', email:'ph-envelope-simple', email_imienny:'ph-envelope-simple', allegro:'ph-storefront' };
+        function renderZadania(){
+            const wrap = document.getElementById('za-list'); if (!wrap) return;
+            const rows = zaRows();
+            const cnt = document.getElementById('za-counter'); if (cnt) cnt.textContent = rows.length + (rows.length===1?' zadanie':' zadań');
+            updateZaTabBadge();
+            if (!rows.length){ wrap.innerHTML = `<div class="card p-10 text-center text-zinc-600"><i class="ph ph-coffee text-3xl block mb-2 text-zinc-700"></i>Brak zadań w kolejce. Gdy pipeline ruszy, pojawią się tu osobiste kontakty do wykonania.</div>`; return; }
+            wrap.innerHTML = rows.map(zaCard).join('');
+        }
+        function zaCard({ t, s }){
+            const title = s.company_name || s.brand_name || ('@'+(s.allegro_login||'sprzedawca'));
+            const msg = (s.message && typeof s.message==='object') ? s.message : {};
+            const reply = t.type==='reply_handling';
+            // materiał pomocniczy zależny od kanału
+            let asset = '';
+            if (t.channel==='linkedin' && msg.linkedin_invite) asset = msg.linkedin_invite;
+            else if (t.channel==='telefon' && msg.telefon_skrypt) asset = msg.telefon_skrypt;
+            else if (msg.tresc) asset = msg.tresc;
+            const assetBox = (!reply && asset) ? `<details class="mt-2"><summary class="cursor-pointer text-[11.5px] text-[#52a8ff] hover:text-white"><i class="ph ph-note"></i> Materiał (${esc(TASK_CH_ICON[t.channel]?CONTACT_CHANNEL_PL[t.channel]||t.channel:t.channel)})</summary><div class="mt-1.5 bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 text-[12.5px] text-zinc-300 whitespace-pre-wrap">${esc(asset)}</div></details>` : '';
+            const contactLine = [ s.contact_person, s.phone, s.linkedin_url ].filter(Boolean).map(esc).join(' · ');
+            const border = reply ? 'style="border-color:rgba(245,166,35,.4)"' : '';
+            return `<div class="card p-4" ${border}>
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            ${segmentBadge(s.segment)}
+                            <span class="text-white font-semibold truncate">${esc(title)}</span>
+                            <span class="badge ${reply?'bg-[#f5a623]/12 text-[#f5b955] border-[#f5a623]/45':'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40'}"><i class="ph ${TASK_CH_ICON[t.channel]||'ph-dot'}"></i> ${esc(TASK_TYPE_PL[t.type]||t.type)}</span>
+                            <span class="text-zinc-600 text-[11px] font-mono">prio ${t.priority}</span>
+                        </div>
+                        ${contactLine?`<div class="text-zinc-500 text-[11.5px] mt-1">${contactLine}</div>`:'<div class="text-zinc-600 text-[11.5px] mt-1">brak imiennego kanału — sprawdź szczegóły</div>'}
+                    </div>
+                    <button onclick="openDrawer('${s.id}')" class="btn btn-g btn-sm flex-shrink-0"><i class="ph ph-arrow-square-out"></i></button>
+                </div>
+                ${t.context?`<div class="text-[12px] text-zinc-400 bg-[#080808] border border-[#1a1a1a] rounded-lg p-2.5">${esc(t.context)}</div>`:''}
+                ${assetBox}
+                <div class="flex flex-wrap items-center gap-2 mt-3">
+                    <select id="za-out-${t.id}" class="inp !w-auto !py-1.5 text-[12px] min-w-[150px]">
+                        <option value="">Wynik (opcjonalnie)…</option>
+                        <option value="connected">Dodzwoniłem / kontakt</option>
+                        <option value="no_answer">Brak odzewu</option>
+                        <option value="positive">Zainteresowany</option>
+                        <option value="meeting_booked">Umówione spotkanie</option>
+                        <option value="negative">Nie / brak zainteresowania</option>
+                    </select>
+                    <button onclick="taskDone('${t.id}','${s.id}')" class="btn btn-s btn-sm"><i class="ph ph-check"></i> Zamknij zadanie</button>
+                    ${!reply?`<button onclick="taskInbound('${s.id}','${t.channel}')" class="btn btn-w btn-sm"><i class="ph ph-arrow-u-up-left"></i> Odpowiedział</button>`:''}
+                </div>
+            </div>`;
+        }
+        async function taskDone(taskId, sellerId){
+            const outcome = document.getElementById('za-out-'+taskId)?.value || '';
+            const body = { action:'task_done', sellerId, taskId };
+            if (outcome) body.outcome = outcome;
+            try {
+                await callEngine(body);
+                await Promise.all([ fetchTasks(), refetchSeller(sellerId) ]);
+                renderZadania(); renderList(); loadKpi();
+                showToast('Zadanie zamknięte','success');
+            } catch(e){ showToast(e.message,'error'); }
+        }
+        async function taskInbound(sellerId, channel){
+            const ok = await uiConfirm({ title:'Sprzedawca odpowiedział?', body:'Automat (maile bota) zostanie WSTRZYMANY, a lead przejdzie do Ciebie (status „Odpowiedział"). Utworzę zadanie „oddzwoń/odpisz".', confirmLabel:'Tak, przejmuję' });
+            if (!ok) return;
+            try {
+                await callEngine({ action:'inbound', sellerId, channel: channel==='telefon'||channel==='linkedin'?channel:'email' });
+                await Promise.all([ fetchTasks(), refetchSeller(sellerId) ]);
+                renderZadania(); renderList(); loadKpi();
+                showToast('Handoff — automat wstrzymany, lead u Ciebie','success');
             } catch(e){ showToast(e.message,'error'); }
         }
 
@@ -1356,13 +1533,16 @@
         }
 
         // ═══════════ USTAWIENIA ═══════════
+        const CTRL_KEYS = ['wf2p_pipeline_enabled','wf2p_send_enabled','wf2p_send_daily_cap','wf2p_dane_nadawcy','wf2p_default_owner','wf2p_from_email','wf2p_from_name','wf2p_reply_to'];
         async function renderSettings(){
             const wrap = document.getElementById('set-wrap'); if (!wrap) return;
             try {
-                const { data, error } = await supabaseClient.from('settings').select('key,value').in('key', SETTING_KEYS.map(s=>s.key));
+                const allKeys = SETTING_KEYS.map(s=>s.key).concat(CTRL_KEYS);
+                const { data, error } = await supabaseClient.from('settings').select('key,value').in('key', allKeys);
                 if (error) console.warn('settings read', error);
                 settingsCache = {}; (data||[]).forEach(r => { settingsCache[r.key] = r.value; });
             } catch(e){ console.warn('settings', e); }
+            renderSendControls();
             wrap.innerHTML = SETTING_KEYS.map(s => {
                 const val = settingsCache[s.key];
                 const missing = (val===undefined || val===null);
@@ -1388,7 +1568,8 @@
                 if (val.trim().length < 200){ showToast('Prompt musi mieć min. 200 znaków','error'); return; }
             } else if (meta.kind==='json'){
                 try { const o = JSON.parse(val); if (!o || typeof o!=='object' || Array.isArray(o)) throw 0;
-                    if (key==='wf2p_scoring_weights' && (!o.wagi || typeof o.wagi!=='object')){ showToast('Brakuje obiektu „wagi" w JSON','error'); return; }
+                    if (key==='wf2p_scoring_weights' && (!o.nagroda || typeof o.nagroda!=='object')){ showToast('Brakuje obiektu „nagroda" w JSON (wagi 2-osiowe)','error'); return; }
+                    if (key==='wf2p_cadence' && !Array.isArray(o.steps)){ showToast('Brakuje tablicy „steps" w kadencji','error'); return; }
                 } catch(_){ showToast('Nieprawidłowy JSON','error'); return; }
             }
             try {
@@ -1396,6 +1577,66 @@
                 settingsCache[key] = val;
                 showToast('Zapisano (utworzono kopię zapasową poprzedniej wartości)','success');
             } catch(e){ showToast(e.message,'error'); }
+        }
+
+        // ── Sterowanie wysyłką (switche + nadawca) ──
+        function isOn(key){ return String(settingsCache[key]||'').trim().toLowerCase()==='true'; }
+        function danePlaceholder(){ const v=settingsCache['wf2p_dane_nadawcy']||''; return !v.trim() || /UZUPE[ŁL]NI[ĆC]|TODO|PLACEHOLDER/i.test(v); }
+        function renderSendControls(){
+            const box=document.getElementById('set-controls'); if(!box) return;
+            const pipe=isOn('wf2p_pipeline_enabled'), send=isOn('wf2p_send_enabled');
+            const cap=settingsCache['wf2p_send_daily_cap']||'25';
+            const dane=settingsCache['wf2p_dane_nadawcy']||'';
+            const ph=danePlaceholder();
+            box.innerHTML = `
+            <div class="card p-5" style="border-color:${send?'rgba(69,165,87,.35)':'#1f1f1f'}">
+                <div class="dw-sec-h"><i class="ph ph-broadcast"></i> Sterowanie wysyłką</div>
+                <div class="text-[12px] text-zinc-500 mb-4">Dwa bezpieczniki. <b>Silnik pipeline</b> uruchamia całą kadencję (zadania handlowca + planowanie kroków). <b>Wysyłka maili</b> pozwala botowi realnie wysyłać z ${esc(settingsCache['wf2p_from_email']||'maciej@…')}. Oba wyłączone = nic się nie dzieje.</div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between gap-4 bg-[#080808] border border-[#1a1a1a] rounded-lg p-3.5">
+                        <div><div class="text-white text-[13.5px] font-medium">Silnik pipeline (kadencja + zadania)</div><div class="text-[11.5px] text-zinc-600">Cron przetwarza leady, tworzy zadania handlowca, planuje maile.</div></div>
+                        <div class="sw ${pipe?'on':''}" onclick="toggleSwitch('wf2p_pipeline_enabled')"></div>
+                    </div>
+                    <div class="flex items-center justify-between gap-4 bg-[#080808] border border-[#1a1a1a] rounded-lg p-3.5">
+                        <div><div class="text-white text-[13.5px] font-medium">Wysyłka maili bota</div><div class="text-[11.5px] text-zinc-600">Realne maile przez Resend, limit ${esc(cap)}/dobę.${pipe?'':' <span class="text-[#f5b955]">wymaga włączonego silnika</span>'}</div></div>
+                        <div class="sw ${send?'on':''}" onclick="toggleSwitch('wf2p_send_enabled')"></div>
+                    </div>
+                </div>
+                ${ph?`<div class="mt-4 p-3 rounded-lg" style="background:rgba(229,72,77,.08);border:1px solid rgba(229,72,77,.35)"><div class="text-[#f26d78] text-[12.5px] font-medium mb-0.5"><i class="ph ph-warning"></i> Uzupełnij dane nadawcy przed wysyłką</div><div class="text-[11.5px] text-zinc-400">Stopka RODO art. 14 wymaga tożsamości administratora (imię i nazwisko, firma, adres, NIP). Póki tu jest placeholder, silnik BLOKUJE realną wysyłkę — nawet przy włączonym switchu.</div></div>`:''}
+                <div class="grid sm:grid-cols-2 gap-3 mt-4">
+                    <div><label class="lbl">Limit maili / dobę</label><div class="flex gap-2"><input id="ctl-cap" class="inp" value="${esc(cap)}" inputmode="numeric"><button onclick="saveCtl('wf2p_send_daily_cap','ctl-cap')" class="btn btn-g btn-sm">Zapisz</button></div></div>
+                    <div><label class="lbl">Domyślny właściciel (handlowiec)</label><div class="flex gap-2"><input id="ctl-owner" class="inp" value="${esc(settingsCache['wf2p_default_owner']||'')}"><button onclick="saveCtl('wf2p_default_owner','ctl-owner')" class="btn btn-g btn-sm">Zapisz</button></div></div>
+                    <div><label class="lbl">Nadawca — e-mail</label><div class="flex gap-2"><input id="ctl-from" class="inp" value="${esc(settingsCache['wf2p_from_email']||'')}"><button onclick="saveCtl('wf2p_from_email','ctl-from')" class="btn btn-g btn-sm">Zapisz</button></div></div>
+                    <div><label class="lbl">Nadawca — nazwa</label><div class="flex gap-2"><input id="ctl-fromname" class="inp" value="${esc(settingsCache['wf2p_from_name']||'')}"><button onclick="saveCtl('wf2p_from_name','ctl-fromname')" class="btn btn-g btn-sm">Zapisz</button></div></div>
+                </div>
+                <div class="mt-3"><label class="lbl">Dane nadawcy (wchodzą w stopkę RODO — <code>{{DANE_NADAWCY}}</code>)</label><textarea id="ctl-dane" class="inp" rows="2">${esc(dane)}</textarea><div class="mt-1.5"><button onclick="saveCtl('wf2p_dane_nadawcy','ctl-dane')" class="btn btn-g btn-sm">Zapisz dane nadawcy</button></div></div>
+            </div>`;
+        }
+        async function toggleSwitch(key){
+            const turningOn = !isOn(key);
+            if (turningOn && key==='wf2p_send_enabled'){
+                const ok=await uiConfirm({title:'Włączyć realną wysyłkę maili?',body:'Bot zacznie wysyłać maile do sprzedawców (gdy silnik pipeline też jest włączony), do '+(settingsCache['wf2p_send_daily_cap']||'25')+'/dobę. Upewnij się, że dane nadawcy są uzupełnione.',confirmLabel:'Włącz wysyłkę',danger:true});
+                if(!ok) return;
+            }
+            if (turningOn && key==='wf2p_pipeline_enabled'){
+                const ok=await uiConfirm({title:'Uruchomić silnik pipeline?',body:'Cron zacznie przetwarzać zaakceptowane leady: tworzyć zadania handlowca i (jeśli wysyłka włączona) planować maile.',confirmLabel:'Uruchom silnik'});
+                if(!ok) return;
+            }
+            try{
+                await callEngine({action:'save_setting',key,value: turningOn?'true':'false'});
+                settingsCache[key]= turningOn?'true':'false';
+                renderSendControls();
+                showToast((turningOn?'Włączono':'Wyłączono')+': '+(key==='wf2p_send_enabled'?'wysyłka maili':'silnik pipeline'), turningOn?'success':'info');
+            }catch(e){ showToast(e.message,'error'); }
+        }
+        async function saveCtl(key, inputId){
+            const val=(document.getElementById(inputId)?.value||'').trim();
+            try{
+                await callEngine({action:'save_setting',key,value:val});
+                settingsCache[key]=val;
+                renderSendControls();
+                showToast('Zapisano','success');
+            }catch(e){ showToast(e.message,'error'); }
         }
 
         // Deep-link ?id=<seller> — otwórz drawer jednorazowo po pierwszym załadowaniu.
