@@ -37,8 +37,17 @@ jest skompletowany, i NICZEGO nie losuje z własnej inicjatywy.**
   kolejność kart ZAWSZE losowa, tasowanie przy każdym wejściu [dyrektywa 22.07] — i/lub
   „Wylosuj" dopełniające do celu 3); niechciane produkty Tomek usuwa z listy portfela;
   losowanie = czysty los (Fisher-Yates, równe szanse, zero scoringu) z puli approved MINUS
-  produkty zajęte w JAKIMKOLWIEK projekcie (pkTakenGlobal — także w panelu, wcześniej tylko
-  CLI) MINUS obecny portfel.
+  obecny portfel MINUS produkty REALNIE użyte w innych projektach.
+  **AKTUALIZACJA 24.07 (dyrektywa Tomka — NADPISUJE zasadę „jeden produkt = jeden sklep"):**
+  produkt obecny w innym sklepie fabryki NIE jest blokowany w ręcznym pickerze — duplikaty
+  w wielu sklepach są dozwolone. Karta pokazuje jedynie licznik REALNYCH użyć
+  („landing w N innych sklepach fabryki"), a realne użycie = landing powstał lub powstaje
+  (`wf2_products.status` od `w_budowie` wzwyż: w_budowie/gotowy/live/test/winner/kill/skala —
+  `pkUsedElse` w projekt.html). Sam WYBÓR do portfela innego sklepu (kandydat/zaakceptowany)
+  nie liczy się do licznika i niczego nie blokuje („może być wybrany, a potem wcale go nie
+  użyjemy"). Losowanie (panel `pkAutoPropose` + CLI `_approved_pool`) nadal pomija produkty
+  realnie użyte — świadome powtórzenie produktu w drugim sklepie = wyłącznie ręczna decyzja
+  Tomka, nie ślepy los; produkty tylko wybrane gdzie indziej (bez landingu) wchodzą do puli.
   **AKTUALIZACJA 22.07 wieczór: pinezka (📌) + karta „Przelosuj portfel" USUNIĘTE decyzją
   Tomka** (UI + funkcje togglePin/rerollPortfolio wycięte z projekt.html i panel-core.js;
   kolumna `wf2_products.pinned` z migracji `20260722b` została w bazie, nieużywana; checklista

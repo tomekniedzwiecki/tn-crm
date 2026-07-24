@@ -99,9 +99,12 @@ Zastąpił dawny krok per-produkt „chip zawsze done" (decyzja Tomka 21.07: pro
 wybór z definicji dokonany, krok bez roboty). Przebieg JEDNEJ komendy:
 1. **Cel:** `--count N` albo domyślnie dopełnienie portfela do **3** (decyzja 19.07). `N=0`
    (portfel pełny) → komenda tylko domyka krok.
-2. **Pula:** `bud_tt_products status='approved'` z WYKLUCZENIEM id już użytych w
-   `wf2_products.tt_product_id` (JAKIKOLWIEK projekt — jeden produkt = jeden sklep). Pobierana
-   z PAGINACJĄ (PostgREST tnie do 1000) — losowanie równych szans wymaga PEŁNEJ puli.
+2. **Pula:** `bud_tt_products status='approved'` z WYKLUCZENIEM produktów TEGO projektu oraz
+   produktów REALNIE użytych w innych projektach (`wf2_products.status` od `w_budowie` wzwyż —
+   landing powstał/powstaje). Sam wybór do portfela innego sklepu (kandydat/zaakceptowany) NIE
+   wyklucza — duplikaty dozwolone (dyrektywa Tomka 24.07), ale losowanie ich nie tworzy:
+   powtórzenie produktu w drugim sklepie = ręczny wybór Tomka w panelu (licznik realnych użyć).
+   Pobierana z PAGINACJĄ (PostgREST tnie do 1000) — losowanie równych szans wymaga PEŁNEJ puli.
 3. **Losowanie:** `SystemRandom.shuffle` całej puli, dobór po kolei z filtrem różnorodności
    kategorii (bierz produkt, którego kategoria nie jest jeszcze w portfelu); gdy to nie dopełni
    celu → druga runda BEZ filtra kategorii (duplikat kategorii zamiast zawężania bazy).

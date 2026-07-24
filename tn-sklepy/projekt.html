@@ -2675,12 +2675,19 @@ ${snap.client}
         // Losowanie = PRAWDZIWY RANDOM (Fisher-Yates) z WSZYSTKICH zatwierdzonych na /trendy,
         // bez scoringu i dywersyfikacji (decyzja Tomka 2026-07-17). Domyślnie dopełnia portfel do 5.
         let pkProposal = [];
-        // tt_product_id zajęte w INNYCH projektach fabryki — żaden produkt nie trafia
-        // do dwóch sklepów naraz (zasada z panel-sync.py wybor, 22.07 także w panelu)
-        let pkTakenGlobal = new Set();
+        // REALNE użycie w INNYCH projektach fabryki: tt_product_id → Set(project_id) sklepów,
+        // w których landing POWSTAŁ lub POWSTAJE (status od 'w_budowie' wzwyż). Sam wybór do
+        // portfela (kandydat/zaakceptowany) NICZEGO nie blokuje i NIE liczy się do licznika —
+        // duplikaty w wielu sklepach dozwolone, karta pokazuje tylko liczbę realnych użyć
+        // (dyrektywa Tomka 24.07; wcześniejsza twarda blokada „jeden produkt = jeden sklep"
+        // była złym odczytaniem intencji).
+        const PK_USED_STATUSES = new Set(['w_budowie', 'gotowy', 'live', 'test', 'winner', 'kill', 'skala']);
+        let pkUsedElse = new Map();
+        function pkUsedN(id) { return (pkUsedElse.get(id) || { size: 0 }).size; }
+        function pkUsedLabel(n) { return `landing w ${n === 1 ? '1 innym sklepie' : n + ' innych sklepach'} fabryki`; }
         async function pkLoadData() {
             const [takenQ] = await Promise.all([
-                supabaseClient.from('wf2_products').select('tt_product_id, project_id').not('tt_product_id', 'is', null).range(0, 4999),
+                supabaseClient.from('wf2_products').select('tt_product_id, project_id, status').not('tt_product_id', 'is', null).range(0, 4999),
                 (async () => {
                     if (ttProducts) return;
                     const [{ data }] = await Promise.all([
@@ -2693,7 +2700,12 @@ ${snap.client}
                     pkShuffleTT();   // świeżo pobrana pula też od razu w losowej kolejności
                 })(),
             ]);
-            pkTakenGlobal = new Set((takenQ.data || []).filter(r => r.project_id !== projectId).map(r => r.tt_product_id));
+            pkUsedElse = new Map();
+            for (const r of (takenQ.data || [])) {
+                if (r.project_id === projectId || !PK_USED_STATUSES.has(r.status)) continue;
+                if (!pkUsedElse.has(r.tt_product_id)) pkUsedElse.set(r.tt_product_id, new Set());
+                pkUsedElse.get(r.tt_product_id).add(r.project_id);
+            }
         }
         async function openPicker() {
             document.getElementById('picker-modal').classList.remove('hidden');
@@ -2731,10 +2743,12 @@ ${snap.client}
             }
         }
         // Fisher-Yates na kopii puli — każdy zatwierdzony produkt ma RÓWNĄ szansę
-        // (pomija produkty tego portfela ORAZ zajęte w innych projektach fabryki)
+        // (pomija produkty tego portfela ORAZ realnie użyte w innych sklepach — świadome
+        // powtórzenie produktu w drugim sklepie = ręczny wybór Tomka, nie ślepy los;
+        // produkty tylko WYBRANE gdzie indziej, bez landingu, normalnie wchodzą do puli)
         function pkAutoPropose(n) {
             const inIds = new Set(products.map(p => p.tt_product_id).filter(Boolean));
-            const pool = (ttProducts || []).filter(t => !inIds.has(t.id) && !pkTakenGlobal.has(t.id));
+            const pool = (ttProducts || []).filter(t => !inIds.has(t.id) && !pkUsedElse.has(t.id));
             const arr = pool.slice();
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -2796,15 +2810,15 @@ ${snap.client}
             document.getElementById('pk-grid').innerHTML = items.map(t => {
                 const img = ttThumb(t);
                 const inPortfolio = products.some(p => p.tt_product_id === t.id);
-                const takenElse = !inPortfolio && pkTakenGlobal.has(t.id);
-                const dead = inPortfolio || takenElse;
+                const usedN = pkUsedN(t.id);
+                const dead = inPortfolio;
                 const ref = t.curated_image ? '<i class="ph ph-image text-[#62c073]" title="referencja kurowana"></i> ' : (t.ali_src === 'detail' ? '<i class="ph ph-check-circle text-[#62c073]" title="snapshot z aukcji (pewny)"></i> ' : '');
                 const price = t.ali_price ? `<span class="text-[#52a8ff] font-mono">$${escapeHtml(t.ali_price)}</span>` : '';
                 return `<div class="border border-[#2a2a2a] ${dead ? 'opacity-40' : 'hover:border-[#0070f3]/60 cursor-pointer'} rounded-md p-2.5 transition-colors" ${dead ? '' : `onclick="pickTT('${t.id}')"`}>
                     ${img ? `<img src="${escapeHtml(img)}" class="w-full aspect-square object-cover rounded mb-2" loading="lazy" onerror="this.style.display='none'">` : '<div class="w-full aspect-square bg-[#111] rounded mb-2 flex flex-col items-center justify-center gap-1"><i class="ph ph-package text-zinc-700 text-xl"></i><span class="text-[8.5px] text-zinc-600">brak zdjęcia z aukcji</span></div>'}
                     <div class="text-white text-[12px] font-medium leading-tight mb-1">${escapeHtml(t.pl_name)}</div>
                     <div class="flex items-center justify-between text-[10px] text-zinc-500"><span>${escapeHtml(t.category || '')}${price ? ' · ' + price : ''}</span><span class="font-mono">${ref}heat ${t.heat ?? '—'}</span></div>
-                    ${inPortfolio ? '<div class="text-[10px] text-[#52a8ff] mt-1">już w portfelu</div>' : takenElse ? '<div class="text-[10px] text-[#f5b955] mt-1">w innym sklepie fabryki</div>' : ''}
+                    ${inPortfolio ? '<div class="text-[10px] text-[#52a8ff] mt-1">już w portfelu</div>' : usedN ? `<div class="text-[10px] text-[#f5b955] mt-1" title="realne użycie (landing powstał lub powstaje) — sam wybór do portfela w innym sklepie się nie liczy i nie blokuje"><i class="ph ph-storefront"></i> ${pkUsedLabel(usedN)}</div>` : ''}
                 </div>`;
             }).join('') || '<div class="col-span-full text-center text-zinc-600 text-xs py-8">Brak wyników</div>';
         }

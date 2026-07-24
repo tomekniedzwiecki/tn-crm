@@ -731,11 +731,18 @@ def _get_all(table, params, page=1000):
 
 
 def _approved_pool(project):
-    """CAŁA pula bud_tt_products status='approved' NIE użytych w wf2_products (JAKIKOLWIEK
-    projekt — jeden produkt = jeden sklep). Zwraca listę {id, pl_name, category, cover, supplier}."""
+    """CAŁA pula bud_tt_products status='approved' minus produkty TEGO projektu i minus
+    produkty REALNIE użyte w innych projektach (landing powstał/powstaje: status od
+    'w_budowie' wzwyż). Sam WYBÓR do portfela innego sklepu (kandydat/zaakceptowany) NIE
+    wyklucza — duplikaty w wielu sklepach dozwolone (dyrektywa Tomka 24.07), ale ślepy los
+    ich nie tworzy: świadome powtórzenie produktu = ręczny wybór Tomka w panelu (tam karta
+    pokazuje licznik realnych użyć). Zwraca listę {id, pl_name, category, cover, supplier}."""
+    used_statuses = {"w_budowie", "gotowy", "live", "test", "winner", "kill", "skala"}
     used = {r["tt_product_id"] for r in
-            _get_all("wf2_products", {"select": "tt_product_id", "tt_product_id": "not.is.null"})
-            if r.get("tt_product_id")}
+            _get_all("wf2_products", {"select": "tt_product_id,project_id,status",
+                                      "tt_product_id": "not.is.null"})
+            if r.get("tt_product_id")
+            and (r.get("project_id") == project or r.get("status") in used_statuses)}
     rows = _get_all("bud_tt_products", {
         "status": "eq.approved",
         "select": "id,pl_name,category,curated_image,chosen_link,ali_main:ali_snapshot->>main_image"})
