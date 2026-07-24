@@ -5,6 +5,23 @@ wykonalne kroki projektu wf2 (wszystkich produktów) aż do stanu „100% albo w
 zewnętrzne". Odpowiedź na pytanie Tomka (22.07): „jak dokładnie mam wywołać robienie wszystkich
 kroków, które można zrobić".
 
+## ⚡ PRZYCISK W PANELU (od 24.07) — „Autopilot projektu"
+Nad steplerem etapów w `tn-sklepy/projekt.html` jest karta **Autopilot projektu** z jednym
+przyciskiem **„Zleć agentowi realizację"**. Modal pokazuje żywy spis kroków w 3 koszykach
+(🤖 wykonalne przez agenta · 🏁 decyzje/bramki Tomka · 👤 po stronie klienta) policzony z
+`wf2_steps`/`wf2_step_defs`, a przycisk **„Kopiuj polecenie autopilota"** składa gotową STOPKĘ
+SPAWNU z UUID projektu, kontekstem, żywym zrzutem stanu i otwartymi uwagami — do wklejenia w
+nowej sesji Claude Code (`c:\repos_tn\tn-crm`). Opcja „tryb ciągły (steward)" dokleja pętlę
+ScheduleWakeup. Klasyfikacja NIE opiera się na `owner` (landingi/materiały mają `owner='admin'`,
+a wykonuje je agent) — prawdziwe bramki człowieka są w jawnym zbiorze `AP_TOMEK_GATES`
+(wybór produktów · lp_makiety · ads_grafiki · ads_kampanie/ads_start · wynik testu · skalowanie ·
+rotacja · opieka · przekazanie sterów). Uruchomienie sesji nadal jest ręczne (decyzja Tomka
+2026-07-11: automatyzacja = prompty, nie Routines/API) — przycisk usuwa tylko składanie promptu.
+Prawdziwie bezobsługowy „jeden klik = agent w chmurze rusza sam" wymaga toru B (edge trigger +
+routine) i jest świadomie odłożony.
+
+Poniżej pełna, kanoniczna wersja polecenia (przycisk generuje jej wariant zasilony danymi projektu):
+
 ## STOPKA SPAWNU (wklej do nowej sesji Claude Code w c:\repos_tn\tn-crm — to całe wywołanie)
 
 ```

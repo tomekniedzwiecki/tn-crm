@@ -122,6 +122,22 @@
                     </div>
                 </div>
 
+                <!-- ══ AUTOPILOT: jeden przycisk — zleć agentowi realizację projektu do wyczerpania ══ -->
+                <div id="autopilot-card" class="relative overflow-hidden bg-[#0a0a0a] border border-[#0070f3]/40 rounded-lg mb-7">
+                    <div class="absolute inset-0 bg-gradient-to-r from-[#0070f3]/[.08] to-transparent pointer-events-none"></div>
+                    <div class="relative p-5 flex items-center gap-4 flex-wrap">
+                        <div class="w-11 h-11 rounded-lg bg-[#0070f3]/15 border border-[#0070f3]/40 text-[#52a8ff] text-xl flex items-center justify-center flex-shrink-0"><i class="ph ph-robot"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="text-white font-semibold">Autopilot projektu</h3>
+                                <span id="ap-badge" class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#0070f3]/40 text-[#52a8ff]">—</span>
+                            </div>
+                            <p id="ap-summary" class="text-zinc-500 text-[12.5px] mt-0.5">Agent wykona wszystkie wykonalne kroki — fundament, landingi, sklep, materiały i kampanie — aż zostaną tylko decyzje ludzi.</p>
+                        </div>
+                        <button onclick="openAutopilot()" class="inline-flex items-center gap-2 bg-[#0070f3] hover:bg-[#0060df] text-white rounded-md px-4 py-2.5 text-sm font-semibold transition-colors flex-shrink-0"><i class="ph ph-robot"></i> Zleć agentowi realizację</button>
+                    </div>
+                </div>
+
                 <!-- PROCES: stepper etapów (mini-bar postępu per etap) + wbudowany „następny krok" -->
                 <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg overflow-hidden mb-7">
                     <div id="stage-pills" class="flex overflow-x-auto no-scrollbar border-b border-[#1f1f1f]"></div>
@@ -365,6 +381,26 @@
                     <span class="text-zinc-600 text-[11px]">Zatwierdzone na /trendy · zdjęcia z aukcji AliExpress lub okładki TikToka · kolejność losowa</span>
                     <button onclick="closePicker(); openProductModal()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff]">Dodaj ręcznie (spoza radaru)</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: AUTOPILOT — zleć agentowi realizację projektu (kopiuje polecenie do sesji Claude Code) -->
+    <div id="autopilot-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 overflow-y-auto" onclick="if(event.target===this)closeAutopilot()">
+        <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-2xl my-8 flex flex-col max-h-[88vh]">
+            <div class="flex items-center justify-between p-5 border-b border-[#1f1f1f] flex-shrink-0">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-8 h-8 rounded-md bg-[#0070f3]/15 border border-[#0070f3]/40 text-[#52a8ff] flex items-center justify-center flex-shrink-0"><i class="ph ph-robot"></i></div>
+                    <h3 class="text-white text-lg font-semibold truncate">Autopilot projektu</h3>
+                </div>
+                <button onclick="closeAutopilot()" class="p-1.5 text-zinc-500 hover:text-white flex-shrink-0"><i class="ph ph-x"></i></button>
+            </div>
+            <div id="ap-body" class="p-5 overflow-y-auto"></div>
+            <div class="p-5 border-t border-[#1f1f1f] flex items-center justify-between gap-3 flex-wrap flex-shrink-0">
+                <label class="flex items-center gap-2 text-[12px] text-zinc-400 cursor-pointer select-none" data-tip-title="Tryb ciągły (steward)" data-tip-desc="Po pierwszym przebiegu sesja nie kończy — co ~30 min sprawdza, czy blokady zewnętrzne (zgoda, dane klienta, konto reklamowe, decyzje Tomka) ustąpiły, i dokańcza to, co się odblokowało.">
+                    <input id="ap-steward" type="checkbox" class="accent-[#0070f3]"> tryb ciągły (steward)
+                </label>
+                <button onclick="copyAutopilotPrompt()" class="inline-flex items-center gap-2 bg-[#0070f3] hover:bg-[#0060df] text-white rounded-md px-4 py-2.5 text-sm font-semibold transition-colors"><i class="ph ph-clipboard-text"></i> Kopiuj polecenie autopilota</button>
             </div>
         </div>
     </div>
@@ -645,7 +681,7 @@
                 const ttm = {}; (tts || []).forEach(t => ttm[t.id] = t);
                 products.forEach(p => { p.tiktoks = buildTiktoks(p.tt_product_id ? ttm[p.tt_product_id] : null); });
             } else { products.forEach(p => { p.tiktoks = []; }); }
-            syncP(); renderHeader(); renderConsentWarn(); renderLinks(); renderPortalChip(); renderPills(); renderNextStep(); renderStage();
+            syncP(); renderHeader(); renderConsentWarn(); renderLinks(); renderPortalChip(); renderPills(); renderNextStep(); renderStage(); renderAutopilotCard();
             renderActivity(actQ.data||[]); renderNotes(); renderFeedback(); renderSales(); renderCosts(); renderFields();
         }
 
@@ -2247,6 +2283,187 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             navigator.clipboard.writeText(txt)
                 .then(() => showToast('Prompt skopiowany — wklej w Claude Code', 'success'))
                 .catch(() => showToast('Nie udało się skopiować', 'error'));
+        }
+
+        // ══════════════════════ AUTOPILOT PROJEKTU ══════════════════════
+        // Jeden przycisk: buduje polecenie dla sesji Claude Code, która wykonuje WSZYSTKIE
+        // wykonalne kroki wszystkich etapów/produktów w pętli DO WYCZERPANIA (SSOT:
+        // docs/zbuduje/AUTOPILOT-WF2.md). Panel = wgląd; wykonanie = sesja agenta.
+        //
+        // UWAGA o kolumnie owner: 'admin' NIE znaczy „Tomek robi ręcznie" — landingi/materiały
+        // mają owner='admin', a wykonuje je AGENT (mają przycisk „Kopiuj prompt sesji"). Dlatego
+        // prawdziwe bramki człowieka trzymamy w jawnym zbiorze, nie wnioskujemy ich z owner.
+        const AP_TOMEK_GATES = new Set(['wybor','ads_start','test_wynik','skalowanie','rotacja','ads_opieka','stery','wdrazanie','monthly']);
+        // Kroki, które agent PRODUKUJE, ale zamyka je akcept Tomka — w koszyku agenta z tagiem.
+        const AP_ACCEPT_STEPS = new Set(['lp_makiety','ads_grafiki','ads_kampanie']);
+
+        // Bramka zgody konsumenckiej: zwraca datę końca okna odstąpienia gdy BLOKUJE, inaczej null.
+        function apConsentBlocked() {
+            const isDemo = project.is_test === true || /demo/i.test(((project.name || '') + ' ' + (project.customer_name || '')));
+            const hasNip = !!(project.customer_nip && String(project.customer_nip).trim());
+            const startAfter = project.created_at ? new Date(new Date(project.created_at).getTime() + 15 * 24 * 3600 * 1000) : null;
+            const windowOpen = startAfter && !isNaN(startAfter) && Date.now() < startAfter.getTime();
+            // zielone światło: zgoda / demo / OLD / okno odstąpienia minęło / zakup na firmę (NIP)
+            if (project.work_consent_at || isDemo || project.is_old || !windowOpen || hasNip) return null;
+            return startAfter ? startAfter.toLocaleDateString('pl-PL') : '—';
+        }
+
+        // Spis kroków wg roli wykonawcy — z żywych danych (stepDefs × produkty × instancje wf2_steps).
+        function apCensus() {
+            const done = [], agent = [], tomek = [], client = [];
+            const push = (d, p) => {
+                const st = stepFor(d.key, p ? p.id : null) || { status: 'pending', data: {} };
+                if (st.status === 'done' || st.status === 'skipped') { done.push({ d, p, st }); return; }
+                if (d.owner === 'client') { client.push({ d, p, st }); return; }
+                if (AP_TOMEK_GATES.has(d.key)) { tomek.push({ d, p, st }); return; }
+                agent.push({ d, p, st });
+            };
+            stepDefs.forEach(d => {
+                if (d.sub_of) return;                       // podkroki (agr_*/avi_*) rolują się w rodzica
+                if (d.scope === 'project') push(d, null);
+                else products.forEach(p => push(d, p));
+            });
+            return { done, agent, tomek, client };
+        }
+
+        // Odświeżenie karty nad steplerem (badge + jednolinijkowy bilans).
+        function renderAutopilotCard() {
+            const card = document.getElementById('autopilot-card');
+            if (!card) return;
+            const c = apCensus();
+            const consent = apConsentBlocked();
+            const noProducts = !products.length;
+            const badge = document.getElementById('ap-badge');
+            const sum = document.getElementById('ap-summary');
+            if (consent) {
+                badge.className = 'text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#e5484d]/40 text-[#f2787f]';
+                badge.textContent = 'zablokowane';
+            } else if (noProducts) {
+                badge.className = 'text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#f5a623]/40 text-[#f5b955]';
+                badge.textContent = 'najpierw portfel';
+            } else {
+                badge.className = 'text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#0070f3]/40 text-[#52a8ff]';
+                badge.textContent = c.agent.length + ' dla agenta';
+            }
+            sum.innerHTML = `🤖 <b class="text-zinc-300">${c.agent.length}</b> dla agenta · ⏳ <b class="text-zinc-300">${c.tomek.length}</b> Twoje decyzje · 👤 <b class="text-zinc-300">${c.client.length}</b> klient · ✓ ${c.done.length} gotowe`;
+        }
+
+        function closeAutopilot() { document.getElementById('autopilot-modal').classList.add('hidden'); }
+
+        function openAutopilot() {
+            const c = apCensus();
+            const consent = apConsentBlocked();
+            const noProducts = !products.length;
+            const item = (it, tagFn) => {
+                const { d, p } = it;
+                const tag = tagFn ? tagFn(it) : '';
+                return `<div class="flex items-center gap-2 text-[12px] py-1 border-b border-[#141414] last:border-0">
+                    <span class="text-[9px] font-mono text-zinc-600 bg-[#111] rounded px-1 py-0.5 flex-shrink-0">E${d.stage}</span>
+                    <span class="text-zinc-300 truncate">${escapeHtml(d.label)}${p ? ` <span class="text-zinc-500">· ${escapeHtml(p.name)}</span>` : ''}</span>
+                    ${tag ? `<span class="ml-auto text-[10px] text-[#f5b955] flex-shrink-0">${tag}</span>` : ''}
+                </div>`;
+            };
+            const section = (icon, color, title, arr, empty, tagFn) => `
+                <div class="mb-4">
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <i class="ph ${icon}" style="color:${color}"></i>
+                        <span class="text-[12.5px] font-semibold text-white">${title}</span>
+                        <span class="text-[11px] text-zinc-600">${arr.length}</span>
+                    </div>
+                    <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-md px-3 py-1.5 max-h-44 overflow-y-auto">
+                        ${arr.length ? arr.slice(0, 40).map(it => item(it, tagFn)).join('') : `<div class="text-[11px] text-zinc-600 py-1">${empty}</div>`}
+                        ${arr.length > 40 ? `<div class="text-[11px] text-zinc-600 py-1">+ ${arr.length - 40} więcej…</div>` : ''}
+                    </div>
+                </div>`;
+            const acceptTag = it => AP_ACCEPT_STEPS.has(it.d.key) ? '→ Twój akcept' : '';
+            let warn = '';
+            if (consent) warn = `<div class="mb-4 rounded-md border border-[#e5484d]/40 bg-[#e5484d]/10 px-3 py-2.5 text-[12px] text-[#f2787f] flex items-start gap-2"><i class="ph ph-warning-octagon flex-shrink-0 mt-0.5"></i><span>Klient nie wyraził zgody na start prac — fabryka NIE ruszy (okno odstąpienia do ${consent}). Polecenie i tak możesz skopiować: agent zaraportuje blokadę i zajmie się tym, co dozwolone.</span></div>`;
+            else if (noProducts) warn = `<div class="mb-4 rounded-md border border-[#f5a623]/40 bg-[#f5a623]/10 px-3 py-2.5 text-[12px] text-[#f5b955] flex items-start gap-2"><i class="ph ph-shopping-bag-open flex-shrink-0 mt-0.5"></i><span>Portfel jest pusty — <b>wybór produktów to Twoja bramka</b>. Dobierz portfel (przycisk „Produkty"), a agent ruszy z fundamentem, landingami i całą resztą.</span></div>`;
+            const body = `
+                ${warn}
+                <p class="text-[12.5px] text-zinc-400 mb-4 leading-relaxed">Kopiujesz jedno polecenie i wklejasz je w nowej sesji Claude Code (<span class="font-mono text-zinc-500">c:\\repos_tn\\tn-crm</span>). Sesja wykona <b class="text-zinc-200">wszystko, co da się zrobić bez Ciebie i klienta</b> — we wszystkich etapach i produktach — w pętli, aż zostaną tylko decyzje ludzi. Postęp widzisz tu, w panelu, na bieżąco.</p>
+                ${section('ph-robot', '#52a8ff', 'Agent zrobi to za Ciebie', c.agent, 'Nic wykonalnego teraz — wszystko zrobione albo czeka na człowieka.', acceptTag)}
+                ${section('ph-flag', '#f5b955', 'Wymaga Twojej decyzji', c.tomek, 'Brak otwartych decyzji.')}
+                ${section('ph-user', '#8a8f98', 'Po stronie klienta', c.client, 'Nic nie czeka na klienta.')}
+                <div class="text-[11px] text-zinc-600">✓ Zrobione: ${c.done.length} kroków.</div>`;
+            document.getElementById('ap-body').innerHTML = body;
+            document.getElementById('autopilot-modal').classList.remove('hidden');
+        }
+
+        // Kompaktowy zrzut stanu (grupowany etapami) do wklejenia w poleceniu.
+        function apSnapshot(c) {
+            const grp = (arr) => {
+                if (!arr.length) return '  (brak)';
+                const byStage = {};
+                arr.forEach(({ d, p }) => {
+                    (byStage[d.stage] = byStage[d.stage] || []).push(d.label + (p ? ` [${p.name}]` : ''));
+                });
+                return Object.keys(byStage).sort((a, b) => a - b)
+                    .map(s => `  · Etap ${s}: ${byStage[s].join(' · ')}`).join('\n');
+            };
+            return { agent: grp(c.agent), tomek: grp(c.tomek), client: grp(c.client) };
+        }
+
+        function buildAutopilotPrompt(steward) {
+            const c = apCensus();
+            const snap = apSnapshot(c);
+            const consent = apConsentBlocked();
+            const openNotes = notes.filter(n => n.status === 'open');
+            const notesTxt = openNotes.length
+                ? '\n\nOTWARTE UWAGI TOMKA (przetwórz wg zasad wf2_notes — zastosuj do właściwego kroku i ZAMKNIJ; sprzeczne/wymagające decyzji → zostaw otwarte i dopisz „DO DECYZJI TOMKA"):\n'
+                    + openNotes.slice(0, 25).map(n => `- [${n.tag || 'uwaga'} | id:${n.id}]${n.product_id ? ' [produkt]' : ''} ${n.body}`).join('\n')
+                : '';
+            const stewardTxt = steward
+                ? '\n\nTRYB CIĄGŁY (STEWARD): po pierwszym przebiegu NIE kończ — wejdź w pętlę autonomiczną (ScheduleWakeup) i co ~30 min sprawdzaj, czy blokady zewnętrzne ustąpiły (zgoda klienta, dane pl_dane, konto reklamowe Leadsie, decyzje Tomka w panelu, aktywacja domeny) i wykonuj to, co się odblokowało. Kończ dopiero na jawne polecenie Tomka.'
+                : '';
+            const consentTxt = consent
+                ? `\n\n⛔ BRAMKA ZGODY KONSUMENCKIEJ: klient NIE wyraził zgody na rozpoczęcie prac, a okno odstąpienia biegnie do ${consent}. NIE ruszaj produkcji (Etap 1+). Zweryfikuj w bazie work_consent_at / work_consent_source / customer_nip zanim uznasz blokadę za wiążącą (NIP niepusty = zielone światło b2b). Jeśli wiążąca — wypisz ją w tabeli blokad (odblokowuje: klient w portalu /twoj-biznes albo Tomek).`
+                : '';
+            const portfel = products.length
+                ? products.map(p => p.name + (p.slug ? ` (${p.slug})` : '')).join(', ')
+                : 'PUSTY — wybór produktów to bramka Tomka; bez portfela fabryka nie startuje';
+
+            return `AUTOPILOT WF2 — projekt ${projectId} (klient: ${project.customer_name || '—'} · marka: ${project.name || '—'}). Doprowadź projekt do 100% WYKONALNOŚCI: wykonaj wszystkie kroki, które da się zrobić BEZ udziału Tomka i klienta — we wszystkich etapach i dla wszystkich produktów — w PĘTLI DO WYCZERPANIA.
+
+URUCHOMIENIE: nowa sesja Claude Code w c:\\repos_tn\\tn-crm. Przeczytaj CLAUDE.md (sekcja „TN Sklepy — workflow v2") oraz docs/zbuduje/AUTOPILOT-WF2.md.
+
+KONTEKST PROJEKTU (Supabase yxmavwkwnfuphjqbelws):
+- wf2_projects.id = ${projectId}
+- marka parasolowa: ${project.name || '—'} · domena: ${project.domain || '—'}
+- sklep platformy Trevio: ${project.platform_shop_id || '—'} · pixel: ${project.pixel_id || '—'} · konto ads: ${project.meta_ad_account_id || '—'}
+- portfel (${products.length}): ${portfel}
+- źródła: kroki = wf2_steps · definicje = wf2_step_defs (owner/scope/sub_of/milestone) · portfel = wf2_products · radar = bud_tt_products · artefakty = wf2_artifacts · uwagi = wf2_notes · koszty = wf2_costs.
+
+PĘTLA (powtarzaj aż lista wykonalnych = 0):
+(1) Przeczytaj wf2_steps projektu i produktów (JEDYNE źródło postępu) oraz SSOT bieżącego kroku.
+(2) Zbuduj listę kroków WYKONALNYCH TERAZ: status pending/in_progress · właściciel ≠ klient · NIE bramka Tomka · zależności spełnione (landing wymaga wyboru produktu i kalkulacji; pl_prawne wymaga danych z pl_dane; kroki ads_* wymagają podłączonego konta reklamowego; nic nie startuje bez zgody na prace). Braku danych NIE zmyślaj — oznacz krok blocked z notą.
+(3) Wykonaj je w kolejności etapów (stage→sort), każdy wg SSOT: STANDARD-LANDING-SKLEPY.md (F0→F8) / STANDARD-GRAFIKI-SKLEPY.md / platforma-api/README.md (WYŁĄCZNIE przez edge wf2-platform, typed actions) / PRAWNE.md / STRONA-GLOWNA.md / WORKFLOW-V2-TESTY.md (§9). Gotowe prompty per krok masz w panelu projektu (przycisk „Kopiuj prompt sesji") — traktuj je jako specyfikację kroku. Bramki jakości = pętla poprawek DO WYCZERPANIA. Po KAŻDEJ fazie: sync do panelu (scripts/mockup-tools/panel-sync.py — checklisty VERBATIM z obiektu WS w tn-sklepy/projekt.html) + artefakty do wf2_artifacts + koszty do wf2_costs + commit jawną listą plików.
+(4) Wróć do (1).
+
+Kończysz DOPIERO, gdy lista wykonalnych = 0. Wtedy wypisz TABELĘ BLOKAD: krok → czego brakuje → kto odblokowuje (Tomek / klient / cron / sekret) i zrób JEDEN PushNotification do Tomka.
+
+🏁 BRAMKI TOMKA — NIGDY nie samo-akceptuj (przygotuj materiały i zostaw status in_progress z dowodami): wybór produktów · akcept makiet (lp_makiety) · akcept banerów (ads_grafiki) · start kampanii (ads_start) · wynik testu / skalowanie / rotacja · przekazanie sterów. Kampanie Meta ZAWSZE tworzone PAUSED (start = decyzja Tomka).
+
+ZAKAZY TWARDE: NIE PSUJ TPAY · zero publikacji/wpłat Meta · zero maili i draftów bez zlecenia · E2E checkout tylko sandbox/[Test] · dokumenty z marżami tylko prywatne buckety · operacje na platformie tylko przez wf2-platform (nigdy surowym kluczem API) · produkt na platformie NIE MA DELETE (ensure przed POST) · brak danych = STOP z notą, nie zmyślanie. Po zmianach w edge functions: deploy --no-verify-jwt + npm run test:webhooks.
+
+TRYB AUTONOMICZNY: nie pytaj; samoakcepty operatorskie z logiem (bramek Tomka NIE); decyzja biznesowa poza spec → INSERT wf2_notes tag='decyzja' z prefiksem „DO DECYZJI TOMKA" i jedź dalej z sensownym defaultem; lekcje natychmiast do SSOT. Wgląd Tomka = panel /tn-sklepy — emituj wszystko tam na bieżąco.${consentTxt}
+
+ZRZUT STANU NA DZIŚ (mapa startu — zweryfikuj z bazą, nie traktuj jako prawdy ostatecznej):
+🤖 WYKONALNE PRZEZ AGENTA (${c.agent.length}):
+${snap.agent}
+🏁 BRAMKI / DECYZJE TOMKA (${c.tomek.length}) — nie samo-akceptuj:
+${snap.tomek}
+👤 CZEKA NA KLIENTA (${c.client.length}) — portal /twoj-biznes:
+${snap.client}
+✓ Zrobione: ${c.done.length} kroków.${notesTxt}${stewardTxt}`;
+        }
+
+        function copyAutopilotPrompt() {
+            const stewardEl = document.getElementById('ap-steward');
+            const txt = buildAutopilotPrompt(stewardEl && stewardEl.checked);
+            navigator.clipboard.writeText(txt)
+                .then(() => showToast('Polecenie autopilota skopiowane — wklej w nowej sesji Claude Code (c:\\repos_tn\\tn-crm)', 'success'))
+                .catch(() => { window.prompt('Skopiuj polecenie ręcznie (Ctrl+C):', txt); });
         }
 
         // ============ WARSZTAT „KALKULACJA CENY" ============
